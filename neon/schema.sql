@@ -20,6 +20,19 @@ CREATE TABLE IF NOT EXISTS ifs_clients (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+CREATE TABLE IF NOT EXISTS ifs_therapist_clients (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  therapist_id VARCHAR(255) NOT NULL,
+  therapist_name VARCHAR(255),
+  client_id VARCHAR(255) NOT NULL,
+  client_name VARCHAR(255),
+  status VARCHAR(50) DEFAULT 'active',
+  assigned_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+  discharged_at TIMESTAMPTZ,
+  -- Allows multiple therapists per client; this only prevents duplicate pair rows.
+  UNIQUE (therapist_id, client_id)
+);
+
 CREATE TABLE IF NOT EXISTS ifs_assessment_results (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   client_id UUID REFERENCES ifs_clients(id) ON DELETE CASCADE,
@@ -217,13 +230,37 @@ CREATE TABLE IF NOT EXISTS ifs_therapy_homework (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+CREATE TABLE IF NOT EXISTS ifs_assigned_homework (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  therapist_id VARCHAR(255) NOT NULL,
+  client_id VARCHAR(255) NOT NULL,
+  module_id VARCHAR(255) NOT NULL,
+  status VARCHAR(50) DEFAULT 'assigned',
+  therapist_feedback TEXT,
+  assigned_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+  completed_at TIMESTAMPTZ
+);
+
+CREATE TABLE IF NOT EXISTS ifs_session_agendas (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  client_id VARCHAR(255) NOT NULL,
+  therapist_id VARCHAR(255) NOT NULL,
+  topics TEXT NOT NULL,
+  active_parts JSONB DEFAULT '[]'::jsonb,
+  stuck_points TEXT,
+  session_date DATE,
+  created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TABLE IF NOT EXISTS ifs_messages (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   therapist_id UUID NOT NULL,
   client_id UUID NOT NULL REFERENCES ifs_clients(id) ON DELETE CASCADE,
   sender_role VARCHAR(20) NOT NULL DEFAULT 'therapist',
   body TEXT NOT NULL,
+  is_urgent BOOLEAN DEFAULT false,
   read_at TIMESTAMPTZ,
+  boundary_acknowledged_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -280,6 +317,7 @@ CREATE TABLE IF NOT EXISTS ifs_therapist_notes (
   note_type VARCHAR(50) DEFAULT 'session',
   content TEXT,
   session_date DATE,
+  tagged_parts JSONB DEFAULT '[]'::jsonb,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -305,6 +343,28 @@ CREATE TABLE IF NOT EXISTS ifs_content_library (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+CREATE TABLE IF NOT EXISTS ifs_generated_reports (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  therapist_id VARCHAR(255) NOT NULL,
+  client_id VARCHAR(255) NOT NULL,
+  report_type VARCHAR(100) DEFAULT 'clinical',
+  options JSONB DEFAULT '{}'::jsonb,
+  storage_url TEXT NOT NULL,
+  generated_by VARCHAR(255),
+  generated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS ifs_treatment_plans (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  client_id VARCHAR(255) NOT NULL,
+  therapist_id VARCHAR(255) NOT NULL,
+  goal_title VARCHAR(255) NOT NULL,
+  target_wounds JSONB DEFAULT '[]'::jsonb,
+  status VARCHAR(50) DEFAULT 'active',
+  created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TABLE IF NOT EXISTS ifs_uploads (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   clerk_user_id TEXT NOT NULL,
@@ -326,3 +386,9 @@ CREATE INDEX IF NOT EXISTS idx_parts_client ON ifs_parts(client_id);
 CREATE INDEX IF NOT EXISTS idx_mood_client ON ifs_mood_entries(client_id);
 CREATE INDEX IF NOT EXISTS idx_messages_client ON ifs_messages(client_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_uploads_user ON ifs_uploads(clerk_user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_therapist_clients_therapist_status ON ifs_therapist_clients(therapist_id, status);
+CREATE INDEX IF NOT EXISTS idx_therapist_clients_client_status ON ifs_therapist_clients(client_id, status);
+CREATE INDEX IF NOT EXISTS idx_assigned_homework_client_status ON ifs_assigned_homework(client_id, status);
+CREATE INDEX IF NOT EXISTS idx_session_agendas_therapist_date ON ifs_session_agendas(therapist_id, session_date DESC);
+CREATE INDEX IF NOT EXISTS idx_generated_reports_client_generated ON ifs_generated_reports(client_id, generated_at DESC);
+CREATE INDEX IF NOT EXISTS idx_treatment_plans_client_status ON ifs_treatment_plans(client_id, status);

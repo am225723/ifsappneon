@@ -94,6 +94,21 @@ class NeonQueryBuilder {
     return this;
   }
 
+  is(column, value) {
+    this.payload.filters.push({ op: 'is', column, value });
+    return this;
+  }
+
+  gte(column, value) {
+    this.payload.filters.push({ op: 'gte', column, value });
+    return this;
+  }
+
+  lte(column, value) {
+    this.payload.filters.push({ op: 'lte', column, value });
+    return this;
+  }
+
   order(column, options = {}) {
     this.payload.order.push({ column, ascending: options.ascending !== false });
     return this;
