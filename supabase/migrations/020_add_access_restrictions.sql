@@ -1,0 +1,1 @@
+ALTER TABLE ifs_clients ADD COLUMN IF NOT EXISTS access_restrictions JSONB DEFAULT NULL;

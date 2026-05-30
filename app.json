@@ -1,0 +1,18 @@
+{
+  "expo": {
+    "extra": {
+      "eas": {
+        "projectId": "72024a83-8866-4e37-8740-f053dc002609"
+      }
+    },
+    "android": {
+      "package": "com.apuerta.ifsapp"
+    },
+    "ios": {
+      "bundleIdentifier": "com.apuerta.ifsapp",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    }
+  }
+}

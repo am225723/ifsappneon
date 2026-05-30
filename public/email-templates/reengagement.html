@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Continue Your Healing Journey</title>
+  <style>
+    body { margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f5f0eb; }
+    .container { max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
+    .header { background: linear-gradient(135deg, #d97706, #059669); padding: 40px 30px; text-align: center; }
+    .header h1 { color: #ffffff; margin: 0; font-size: 24px; font-weight: 700; }
+    .header p { color: rgba(255,255,255,0.9); margin: 8px 0 0; font-size: 14px; }
+    .body { padding: 40px 30px; }
+    .body h2 { color: #1f2937; font-size: 20px; margin: 0 0 16px; }
+    .body p { color: #4b5563; font-size: 15px; line-height: 1.6; margin: 0 0 16px; }
+    .cta-button { display: inline-block; background: linear-gradient(135deg, #d97706, #059669); color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-size: 16px; font-weight: 600; margin: 16px 0; }
+    .highlight { background: linear-gradient(135deg, #fffbeb, #ecfdf5); border-left: 4px solid #d97706; border-radius: 0 8px 8px 0; padding: 16px 20px; margin: 24px 0; }
+    .highlight p { margin: 0; color: #92400e; font-size: 14px; line-height: 1.5; }
+    .footer { background-color: #f9fafb; padding: 24px 30px; text-align: center; border-top: 1px solid #e5e7eb; }
+    .footer p { color: #9ca3af; font-size: 12px; margin: 0 0 4px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>We Miss You</h1>
+      <p>Your healing journey is waiting</p>
+    </div>
+    <div class="body">
+      <h2>Hello {{first_name}},</h2>
+      <p>It's been a while since you last visited your IFS self-therapy program, and we wanted to check in. Your inner parts haven't forgotten you, and your healing journey is right where you left it.</p>
+      <div class="highlight">
+        <p>Healing isn't linear. Taking a break is okay. What matters is that you come back when you're ready — and we're here whenever that is.</p>
+      </div>
+      <p>Here are some gentle ways to re-engage:</p>
+      <ul style="color: #4b5563; font-size: 15px; line-height: 1.8; padding-left: 20px;">
+        <li>Do a quick Daily Check-In to reconnect with yourself</li>
+        <li>Try a 5-minute guided meditation</li>
+        <li>Write a short journal entry about how you're feeling today</li>
+        <li>Draw a Parts Check-In Card for a reflective prompt</li>
+      </ul>
+      <p style="text-align: center;">
+        <a href="{{app_link}}" class="cta-button">Return to My Program</a>
+      </p>
+      <p>Your advisor is also available if you'd like to connect. Remember, every step forward — no matter how small — is meaningful.</p>
+      <p style="margin-top: 24px;">With warmth and care,<br><strong>Intrinsic Therapeutic Solutions</strong></p>
+    </div>
+    <div class="footer">
+      <p>This email was sent by your advisor through Intrinsic Therapeutic Solutions.</p>
+    </div>
+  </div>
+</body>
+</html>

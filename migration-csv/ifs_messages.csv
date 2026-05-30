@@ -1,0 +1,11 @@
+id,therapist_id,client_id,sender_role,body,read_at,created_at
+4cfb8fa0-9437-48ab-bcce-2217c2e4daa7,226ae091-325e-4084-a467-bee2bc8405f6,0dfc6875-7fcf-4522-ad9c-2b4d9bcd6d0e,therapist,Take a moment and complete the IFS Child Wound Assessment again. It will modify the lesson plans for you and update other metrics!,2026-02-22 12:51:19.425+00,2026-02-22 00:19:42.953869+00
+7af05d0b-2c1b-482d-bdfe-2111c624cf22,226ae091-325e-4084-a467-bee2bc8405f6,9fc90684-c503-4734-bed9-fb780e6ad271,therapist,Great progress this week! Keep up the good work.,2026-02-23 19:17:26.222+00,2026-02-23 19:17:03.733647+00
+39e1a60a-d8a6-4f2b-873d-7fde6125fc2c,226ae091-325e-4084-a467-bee2bc8405f6,9fc90684-c503-4734-bed9-fb780e6ad271,client,Thanks br0,2026-02-23 19:34:28.516+00,2026-02-23 19:17:36.892267+00
+02e887bc-9a0d-42e6-9167-3521522e573e,226ae091-325e-4084-a467-bee2bc8405f6,15fad9b4-bbec-4ac2-a68a-dead475553cb,therapist,Great progress this week! Keep up the good work. What are your thoughts on the app?,2026-02-27 16:11:10.55+00,2026-02-27 16:03:18.575535+00
+2c082194-a249-44c9-b327-373142eb1a5c,226ae091-325e-4084-a467-bee2bc8405f6,1e395a30-ffd9-40b3-bf77-0b9861a54018,therapist,Don't forget to complete your assessments.,2026-02-28 02:18:33.631+00,2026-02-27 08:55:07.261317+00
+4adcc983-8cbb-4861-bf4c-b0ad6b4e204e,226ae091-325e-4084-a467-bee2bc8405f6,9fc90684-c503-4734-bed9-fb780e6ad271,therapist,anytime homo,2026-03-09 03:09:01.116+00,2026-02-23 19:34:45.247512+00
+53cf8a06-0b53-4af4-8096-a419ebeb2393,226ae091-325e-4084-a467-bee2bc8405f6,9fc90684-c503-4734-bed9-fb780e6ad271,therapist,i mean honmie,2026-03-09 03:09:01.116+00,2026-02-23 19:34:49.821753+00
+82e94ac1-472a-45e5-ab81-30fe903d7369,226ae091-325e-4084-a467-bee2bc8405f6,9fc90684-c503-4734-bed9-fb780e6ad271,therapist,Do the rest of the assessments,2026-03-09 03:09:01.116+00,2026-02-27 08:54:42.877349+00
+dd0933f3-55be-4521-876d-d534072e9641,226ae091-325e-4084-a467-bee2bc8405f6,1e395a30-ffd9-40b3-bf77-0b9861a54018,therapist,Please complete your assessments,,2026-03-10 02:57:46.719372+00
+db4a3e99-dd31-4549-bf4c-add2e6cd244f,226ae091-325e-4084-a467-bee2bc8405f6,9fc90684-c503-4734-bed9-fb780e6ad271,therapist,Your messges are inappropriate,2026-03-10 03:46:09.456+00,2026-03-10 02:08:35.523143+00

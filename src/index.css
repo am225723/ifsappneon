@@ -1,0 +1,55 @@
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..600;1,9..144,400&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    @apply bg-brand-sanctuary dark:bg-brand-midnight text-brand-stone-900 dark:text-slate-100 min-h-screen antialiased transition-colors duration-500;
+  }
+
+  h1, h2, h3, .serif-heading {
+    font-family: 'Fraunces', serif;
+    @apply font-semibold tracking-tight;
+  }
+}
+
+@layer components {
+  .soft-card {
+    @apply bg-white/70 dark:bg-brand-cardDark/60 border border-brand-stone-200/50 dark:border-slate-800/60 shadow-premium backdrop-blur-md rounded-[28px] p-6 transition-all duration-300;
+  }
+
+  .soft-card-interactive {
+    @apply soft-card hover:-translate-y-0.5 hover:bg-white dark:hover:bg-brand-cardDark hover:shadow-xl hover:border-brand-gold-500/20 dark:hover:border-brand-gold-500/30;
+  }
+
+  .btn-sanctuary-primary {
+    @apply bg-gradient-to-r from-brand-gold-600 to-brand-emerald-700 text-white px-6 py-3.5 rounded-2xl font-medium shadow-md hover:shadow-xl hover:brightness-105 active:scale-[0.98] transition-all duration-300 flex items-center justify-center gap-2;
+  }
+
+  .btn-sanctuary-secondary {
+    @apply bg-brand-stone-100/80 dark:bg-slate-800/50 text-brand-stone-600 dark:text-slate-200 hover:bg-brand-stone-200/60 dark:hover:bg-slate-800 border border-brand-stone-200/30 dark:border-slate-700/50 px-6 py-3.5 rounded-2xl font-medium transition-all duration-300 flex items-center justify-center gap-2;
+  }
+
+  .card {
+    @apply soft-card;
+  }
+
+  .btn-primary {
+    @apply btn-sanctuary-primary;
+  }
+
+  .btn-secondary {
+    @apply btn-sanctuary-secondary;
+  }
+
+  .section-title {
+    @apply text-3xl font-serif font-normal text-brand-stone-900 dark:text-slate-100 mb-6;
+  }
+
+  .part-card {
+    @apply soft-card-interactive cursor-pointer;
+  }
+}

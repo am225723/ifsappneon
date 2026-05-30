@@ -1,0 +1,28 @@
+{
+  "appId": "com.intrinsictherapeutic.ifs",
+  "appName": "Intrinsic Therapeutic Solutions",
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "https"
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 2000,
+      "backgroundColor": "#f5f0eb",
+      "showSpinner": false,
+      "androidSplashResourceName": "splash",
+      "iosSplashResourceName": "Default"
+    },
+    "StatusBar": {
+      "style": "Dark",
+      "backgroundColor": "#d97706"
+    },
+    "Keyboard": {
+      "resize": "body",
+      "resizeOnFullScreen": true
+    },
+    "PushNotifications": {
+      "presentationOptions": ["badge", "sound", "alert"]
+    }
+  }
+}

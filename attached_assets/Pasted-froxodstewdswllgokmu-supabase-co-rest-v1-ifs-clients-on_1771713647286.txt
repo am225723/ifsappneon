@@ -1,0 +1,13 @@
+froxodstewdswllgokmu.supabase.co/rest/v1/ifs_clients?on_conflict=id:1  Failed to load resource: the server responded with a status of 400 ()Understand this error
+index-8jl3Sbv5.js:51 Error saving client data: Object
+saveClientData @ index-8jl3Sbv5.js:51Understand this error
+froxodstewdswllgokmu.supabase.co/rest/v1/ifs_client_progress?select=id%2Cclient_id%2Cmodule_id%2Ccompleted%2Cis_completed&client_id=in.%281dc37ed5-810e-417b-9ab1-07de3bc7c77e%2C1670411a-f658-4935-8ddc-e46a1179ca2e%2C229e0bbd-bf18-4f4e-869e-8239775ec1ab%2C1e395a30-ffd9-40b3-bf77-0b9861a54018%2C15fad9b4-bbec-4ac2-a68a-dead475553cb%2Cd086f303-41a2-4f44-b7c8-34a4d878b0c5%2C0dfc6875-7fcf-4522-ad9c-2b4d9bcd6d0e%29:1  Failed to load resource: the server responded with a status of 400 ()Understand this error
+froxodstewdswllgokmu.supabase.co/rest/v1/ifs_assessment_results?select=id%2Cclient_id%2Cprimary_wound%2Csecondary_wound%2Cabandonment_score%2Cshame_score%2Cneglect_score%2Cbetrayal_score%2Crejection_score%2Ccreated_at&client_id=in.%281dc37ed5-810e-417b-9ab1-07de3bc7c77e%2C1670411a-f658-4935-8ddc-e46a1179ca2e%2C229e0bbd-bf18-4f4e-869e-8239775ec1ab%2C1e395a30-ffd9-40b3-bf77-0b9861a54018%2C15fad9b4-bbec-4ac2-a68a-dead475553cb%2Cd086f303-41a2-4f44-b7c8-34a4d878b0c5%2C0dfc6875-7fcf-4522-ad9c-2b4d9bcd6d0e%29&order=created_at.desc:1  Failed to load resource: the server responded with a status of 400 ()Understand this error
+froxodstewdswllgokmu.supabase.co/rest/v1/ifs_messages?select=client_id&therapist_id=eq.226ae091-325e-4084-a467-bee2bc8405f6&sender_role=eq.client&read_at=is.null:1  Failed to load resource: the server responded with a status of 404 ()Understand this error
+index-8jl3Sbv5.js:173 Error loading unread counts: Object
+(anonymous) @ index-8jl3Sbv5.js:173Understand this error
+froxodstewdswllgokmu.supabase.co/rest/v1/ifs_messages?select=*&therapist_id=eq.226ae091-325e-4084-a467-bee2bc8405f6&client_id=eq.1dc37ed5-810e-417b-9ab1-07de3bc7c77e&order=created_at.asc:1  Failed to load resource: the server responded with a status of 404 ()Understand this error
+froxodstewdswllgokmu.supabase.co/rest/v1/ifs_messages?therapist_id=eq.226ae091-325e-4084-a467-bee2bc8405f6&client_id=eq.1dc37ed5-810e-417b-9ab1-07de3bc7c77e&sender_role=eq.client&read_at=is.null:1  Failed to load resource: the server responded with a status of 404 ()Understand this error
+froxodstewdswllgokmu.supabase.co/rest/v1/ifs_messages:1  Failed to load resource: the server responded with a status of 404 ()Understand this error
+Log.ts:34 `[Worker Messenger] [Page -> SW] Could not get ServiceWorkerRegistration to postMessage!
+(anonymous) @ Log.ts:34Understand this error

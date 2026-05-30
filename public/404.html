@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Redirecting...</title>
+    <script>
+      // SPA fallback: redirect unknown routes to index while preserving the path
+      (function redirectToSPA() {
+        var currentPath = window.location.pathname + window.location.search + window.location.hash;
+        var target = '/?redirect=' + encodeURIComponent(currentPath);
+        window.location.replace(target);
+      })();
+    </script>
+  </head>
+  <body>
+    <noscript>
+      This application requires JavaScript to handle routing. Please enable JavaScript and reload the page.
+    </noscript>
+  </body>
+</html>

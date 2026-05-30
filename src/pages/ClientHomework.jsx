@@ -1,0 +1,230 @@
+import { useState, useEffect, useCallback } from 'react';
+import {
+  ClipboardList, CheckCircle, Clock, AlertTriangle, Calendar,
+  ChevronDown, ChevronUp, RefreshCw, MessageSquare, Flag, BookOpen
+} from 'lucide-react';
+import { useTheme } from '../contexts/ThemeContext';
+import { supabase } from '../lib/supabase';
+import { clientAuth } from '../lib/supabasePersonalization';
+
+const categories = [
+  { value: 'general', label: 'General', color: 'bg-gray-100 text-gray-700' },
+  { value: 'journaling', label: 'Journaling', color: 'bg-blue-100 text-blue-700' },
+  { value: 'parts-work', label: 'Parts Work', color: 'bg-purple-100 text-purple-700' },
+  { value: 'meditation', label: 'Meditation', color: 'bg-emerald-100 text-emerald-700' },
+  { value: 'exercise', label: 'Exercise', color: 'bg-amber-100 text-amber-700' },
+  { value: 'reading', label: 'Reading', color: 'bg-rose-100 text-rose-700' },
+  { value: 'self-care', label: 'Self-Care', color: 'bg-teal-100 text-teal-700' },
+];
+
+const ClientHomework = () => {
+  const { theme } = useTheme();
+  const isDark = theme.isDark;
+  const client = clientAuth.getCurrentClient();
+  const [homework, setHomework] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [expandedItems, setExpandedItems] = useState({});
+  const [completionNotes, setCompletionNotes] = useState({});
+  const [filter, setFilter] = useState('active');
+
+  const textPrimary = isDark ? 'text-white' : 'text-gray-900';
+  const textSecondary = isDark ? 'text-slate-300' : 'text-gray-600';
+  const textMuted = isDark ? 'text-slate-400' : 'text-gray-500';
+  const cardBg = isDark ? 'bg-slate-800/60' : 'bg-white';
+  const cardBorder = isDark ? 'border-slate-700/50' : 'border-gray-200';
+  const inputBg = isDark ? 'bg-slate-700 border-slate-600 text-white' : 'bg-white border-gray-300 text-gray-900';
+
+  const loadHomework = useCallback(async () => {
+    if (!client?.id) return;
+    setLoading(true);
+    const { data } = await supabase
+      .from('ifs_therapy_homework')
+      .select('*')
+      .eq('client_id', client.id)
+      .order('created_at', { ascending: false });
+    if (data) setHomework(data);
+    setLoading(false);
+  }, [client?.id]);
+
+  useEffect(() => { loadHomework(); }, [loadHomework]);
+
+  const handleComplete = async (item) => {
+    const notes = completionNotes[item.id] || '';
+    await supabase
+      .from('ifs_therapy_homework')
+      .update({
+        completed: true,
+        status: 'completed',
+        completed_at: new Date().toISOString(),
+        completion_notes: notes || null,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', item.id);
+    await loadHomework();
+  };
+
+  const getStatusInfo = (item) => {
+    if (item.completed || item.status === 'completed') {
+      return { label: 'Completed', icon: CheckCircle, color: 'text-emerald-600', bg: 'bg-emerald-100', darkBg: 'bg-emerald-900/20' };
+    }
+    if (item.due_date && new Date(item.due_date) < new Date()) {
+      return { label: 'Overdue', icon: AlertTriangle, color: 'text-red-600', bg: 'bg-red-100', darkBg: 'bg-red-900/20' };
+    }
+    return { label: 'To Do', icon: Clock, color: 'text-amber-600', bg: 'bg-amber-100', darkBg: 'bg-amber-900/20' };
+  };
+
+  const filtered = homework.filter(h => {
+    if (filter === 'active') return !h.completed;
+    if (filter === 'completed') return h.completed;
+    return true;
+  });
+
+  const activeCount = homework.filter(h => !h.completed).length;
+  const completedCount = homework.filter(h => h.completed).length;
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <RefreshCw className="w-8 h-8 animate-spin text-amber-500" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-2xl mx-auto px-4 py-6">
+      <div className="flex items-center gap-3 mb-6">
+        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center">
+          <ClipboardList className="w-5 h-5 text-white" />
+        </div>
+        <div>
+          <h1 className={`text-xl font-bold ${textPrimary}`}>My Homework</h1>
+          <p className={`text-sm ${textMuted}`}>
+            {activeCount > 0 ? `${activeCount} assignment${activeCount > 1 ? 's' : ''} to complete` : 'All caught up!'}
+          </p>
+        </div>
+      </div>
+
+      <div className="flex gap-2 mb-4">
+        {[
+          { value: 'active', label: `To Do (${activeCount})` },
+          { value: 'completed', label: `Done (${completedCount})` },
+          { value: 'all', label: `All (${homework.length})` },
+        ].map(f => (
+          <button
+            key={f.value}
+            onClick={() => setFilter(f.value)}
+            className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
+              filter === f.value
+                ? 'bg-amber-500 text-white'
+                : isDark ? 'bg-slate-700 text-slate-300' : 'bg-gray-100 text-gray-600'
+            }`}
+          >
+            {f.label}
+          </button>
+        ))}
+      </div>
+
+      {filtered.length === 0 ? (
+        <div className={`${cardBg} rounded-2xl border ${cardBorder} p-12 text-center`}>
+          <ClipboardList className={`w-12 h-12 mx-auto mb-3 ${textMuted} opacity-30`} />
+          <p className={`text-sm font-medium ${textSecondary}`}>
+            {filter === 'active' ? 'No active assignments' : filter === 'completed' ? 'No completed assignments yet' : 'No homework assigned yet'}
+          </p>
+          <p className={`text-xs ${textMuted} mt-1`}>Assignments from your advisor will appear here</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {filtered.map(item => {
+            const statusInfo = getStatusInfo(item);
+            const StatusIcon = statusInfo.icon;
+            const catInfo = categories.find(c => c.value === item.category) || categories[0];
+            const isExpanded = expandedItems[item.id];
+
+            return (
+              <div key={item.id} className={`${cardBg} rounded-xl border ${cardBorder} overflow-hidden`}>
+                <div
+                  className="flex items-start gap-3 p-4 cursor-pointer"
+                  onClick={() => setExpandedItems(prev => ({ ...prev, [item.id]: !prev[item.id] }))}
+                >
+                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5 ${isDark ? statusInfo.darkBg : statusInfo.bg}`}>
+                    <StatusIcon className={`w-4 h-4 ${statusInfo.color}`} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className={`text-sm font-semibold ${textPrimary} ${item.completed ? 'line-through opacity-60' : ''}`}>
+                        {item.title}
+                      </p>
+                      {item.priority === 'high' && <Flag className="w-3.5 h-3.5 text-red-500" />}
+                    </div>
+                    <div className="flex items-center gap-2 mt-1 flex-wrap">
+                      <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${catInfo.color}`}>{catInfo.label}</span>
+                      {item.due_date && (
+                        <span className={`text-xs ${textMuted} flex items-center gap-1`}>
+                          <Calendar className="w-3 h-3" /> Due {new Date(item.due_date).toLocaleDateString()}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  {isExpanded ? <ChevronUp className={`w-4 h-4 ${textMuted} flex-shrink-0`} /> : <ChevronDown className={`w-4 h-4 ${textMuted} flex-shrink-0`} />}
+                </div>
+
+                {isExpanded && (
+                  <div className={`px-4 pb-4 border-t ${cardBorder}`}>
+                    {item.description && (
+                      <div className="mt-3">
+                        <p className={`text-xs font-semibold ${textMuted} uppercase tracking-wider mb-1`}>Instructions</p>
+                        <p className={`text-sm ${textSecondary} leading-relaxed whitespace-pre-wrap`}>{item.description}</p>
+                      </div>
+                    )}
+
+                    {!item.completed && (
+                      <div className="mt-4 space-y-3">
+                        <div>
+                          <label className={`block text-xs font-medium ${textMuted} mb-1`}>Reflection / Notes (optional)</label>
+                          <textarea
+                            value={completionNotes[item.id] || ''}
+                            onChange={e => setCompletionNotes(prev => ({ ...prev, [item.id]: e.target.value }))}
+                            placeholder="Share your thoughts, reflections, or what you noticed..."
+                            rows={3}
+                            className={`w-full px-3 py-2 rounded-lg border text-sm resize-none ${inputBg} focus:ring-2 focus:ring-amber-500 outline-none`}
+                          />
+                        </div>
+                        <button
+                          onClick={() => handleComplete(item)}
+                          className="w-full py-2.5 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-lg text-sm font-medium hover:from-emerald-600 hover:to-emerald-700 transition-all flex items-center justify-center gap-2"
+                        >
+                          <CheckCircle className="w-4 h-4" />
+                          Mark as Complete
+                        </button>
+                      </div>
+                    )}
+
+                    {item.completed && item.completion_notes && (
+                      <div className={`mt-3 p-3 rounded-lg ${isDark ? 'bg-emerald-900/20 border border-emerald-800/30' : 'bg-emerald-50 border border-emerald-200'}`}>
+                        <p className={`text-xs font-semibold ${isDark ? 'text-emerald-400' : 'text-emerald-600'} mb-1 flex items-center gap-1`}>
+                          <MessageSquare className="w-3 h-3" /> My Reflection
+                        </p>
+                        <p className={`text-sm ${isDark ? 'text-emerald-200' : 'text-emerald-700'} leading-relaxed`}>{item.completion_notes}</p>
+                      </div>
+                    )}
+
+                    {item.completed_at && (
+                      <p className={`text-xs ${textMuted} mt-2`}>
+                        Completed {new Date(item.completed_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                      </p>
+                    )}
+                    <p className={`text-xs ${textMuted} mt-1`}>
+                      Assigned {new Date(item.created_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                    </p>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default ClientHomework;

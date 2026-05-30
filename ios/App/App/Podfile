@@ -1,0 +1,15 @@
+platform :ios, '15.0'
+
+use_frameworks!
+
+target 'App' do
+  # Core Capacitor pods
+  pod 'Capacitor', '~> 6.0'
+  pod 'CapacitorCordova', '~> 6.0'
+
+  # Your other dependencies
+  pod 'Alamofire'
+
+  # Add any additional Capacitor plugins here, for example:
+  # pod 'CapacitorCommunity/Camera', '~> 5.0'
+end
