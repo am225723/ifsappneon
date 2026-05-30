@@ -23,10 +23,13 @@ CREATE TABLE IF NOT EXISTS ifs_clients (
 CREATE TABLE IF NOT EXISTS ifs_therapist_clients (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   therapist_id VARCHAR(255) NOT NULL,
+  therapist_name VARCHAR(255),
   client_id VARCHAR(255) NOT NULL,
+  client_name VARCHAR(255),
   status VARCHAR(50) DEFAULT 'active',
   assigned_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
   discharged_at TIMESTAMPTZ,
+  -- Allows multiple therapists per client; this only prevents duplicate pair rows.
   UNIQUE (therapist_id, client_id)
 );
 

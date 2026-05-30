@@ -1458,7 +1458,7 @@ const TherapistDashboard = () => {
       } else {
         const therapist = clientAuth.getCurrentClient();
         if (therapist?.id && data.user_role === 'client') {
-          const { error: assignmentError } = await assignClientToTherapist(therapist.id, data.id);
+          const { error: assignmentError } = await assignClientToTherapist(therapist.id, data.id, 'active', { therapistName: therapist.name, clientName: data.name });
           if (assignmentError) console.error('Error assigning new client to therapist:', assignmentError);
         }
         setNewClientResult({ success: true, name: data.name, pin, role: data.user_role });

@@ -32,18 +32,66 @@ export async function loadAssignedClients(therapistId, columns = 'id, name, pin,
   return clients || [];
 }
 
-export async function assignClientToTherapist(therapistId, clientId, status = 'active') {
+export async function assignClientToTherapist(therapistId, clientId, status = 'active', names = {}) {
   if (!therapistId || !clientId) return { data: null, error: { message: 'Missing therapist or client id' } };
+
+  const therapistName = names.therapistName || names.therapist_name;
+  const clientName = names.clientName || names.client_name;
 
   return supabase
     .from('ifs_therapist_clients')
     .upsert({
       therapist_id: therapistId,
+      ...(therapistName ? { therapist_name: therapistName } : {}),
       client_id: clientId,
+      ...(clientName ? { client_name: clientName } : {}),
       status,
       assigned_at: new Date().toISOString(),
       discharged_at: status === 'active' ? null : new Date().toISOString(),
     }, { onConflict: 'therapist_id,client_id' })
     .select()
     .single();
+}
+
+export async function loadAssignedTherapists(clientId) {
+  if (!clientId) return [];
+
+  const { data, error } = await supabase
+    .from('ifs_therapist_clients')
+    .select('*')
+    .eq('client_id', clientId)
+    .eq('status', 'active')
+    .order('assigned_at', { ascending: false });
+
+  if (error) {
+    console.error('Error loading assigned therapists:', error);
+    return [];
+  }
+
+  return data || [];
+}
+
+export async function assignTherapistsToClient(therapistIds, clientId, status = 'active', names = {}) {
+  const uniqueTherapistIds = [...new Set((therapistIds || []).filter(Boolean))];
+  if (!clientId || uniqueTherapistIds.length === 0) {
+    return { data: [], error: { message: 'Missing client id or therapist ids' } };
+  }
+
+  const clientName = names.clientName || names.client_name;
+
+  return supabase
+    .from('ifs_therapist_clients')
+    .upsert(uniqueTherapistIds.map((therapistId) => {
+      const therapistName = names.therapistNamesById?.[therapistId] || names.therapistName || names.therapist_name;
+      return {
+        therapist_id: therapistId,
+        ...(therapistName ? { therapist_name: therapistName } : {}),
+        client_id: clientId,
+        ...(clientName ? { client_name: clientName } : {}),
+        status,
+        assigned_at: new Date().toISOString(),
+        discharged_at: status === 'active' ? null : new Date().toISOString(),
+      };
+    }), { onConflict: 'therapist_id,client_id' })
+    .select();
 }
