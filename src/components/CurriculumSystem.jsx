@@ -25,6 +25,7 @@ const CurriculumSystem = ({ onModuleSelect, userProgress = {}, clientId }) => {
   const [loadingWound, setLoadingWound] = useState(true);
   const [woundFocus, setWoundFocus] = useState('primary');
   const [restartingModule, setRestartingModule] = useState(null);
+  const [assignedHomeworkIds, setAssignedHomeworkIds] = useState(new Set());
 
   useEffect(() => {
     if (userProgress.completedModules) {
@@ -37,7 +38,7 @@ const CurriculumSystem = ({ onModuleSelect, userProgress = {}, clientId }) => {
       if (!id) { setLoadingWound(false); return; }
 
       try {
-        const [curriculumRes, interactiveRes, progressRes] = await Promise.all([
+        const [curriculumRes, interactiveRes, progressRes, assignmentsRes] = await Promise.all([
           supabaseHelpers.getPersonalizedCurriculum(id),
           supabase.from('ifs_interactive_data')
             .select('data')
@@ -46,6 +47,9 @@ const CurriculumSystem = ({ onModuleSelect, userProgress = {}, clientId }) => {
             .maybeSingle(),
           supabase.from('ifs_client_progress')
             .select('module_id, completed')
+            .eq('client_id', id),
+          supabase.from('ifs_assigned_homework')
+            .select('module_id, status')
             .eq('client_id', id)
         ]);
 
@@ -53,6 +57,12 @@ const CurriculumSystem = ({ onModuleSelect, userProgress = {}, clientId }) => {
           setPersonalizedCurriculum(curriculumRes);
           setIsPersonalized(true);
         }
+
+        const activeAssignments = (assignmentsRes.data || []);
+        const assignedModules = (activeAssignments.length ? activeAssignments : [])
+          .filter(item => item.status !== 'completed' && item.status !== 'cancelled')
+          .map(item => item.module_id);
+        setAssignedHomeworkIds(new Set(assignedModules));
 
         const dbCompleted = (progressRes.data || [])
           .filter(p => p.completed)
@@ -163,11 +173,17 @@ const CurriculumSystem = ({ onModuleSelect, userProgress = {}, clientId }) => {
   ];
 
   const getModuleStatus = (module) => {
+    if (assignedHomeworkIds.has(module.id)) {
+      if (completedModules.includes(module.id)) return 'completed';
+      return 'available';
+    }
     if (!canAccessModule(module.id)) return 'restricted';
     if (completedModules.includes(module.id)) return 'completed';
     if (module.prerequisites?.length && !checkPrerequisites(module.id, completedModules)) return 'locked';
     return 'available';
   };
+
+  const isTherapistAssigned = (moduleId) => assignedHomeworkIds.has(moduleId);
 
   const getStatusIcon = (status) => {
     if (status === 'completed') return <CheckCircle className="w-6 h-6 text-green-500 flex-shrink-0" />;
@@ -546,6 +562,11 @@ const CurriculumSystem = ({ onModuleSelect, userProgress = {}, clientId }) => {
                                         {priority.badge}
                                       </span>
                                     )}
+                                    {isTherapistAssigned(module.id) && (
+                                      <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 flex-shrink-0">
+                                        Therapist Assigned
+                                      </span>
+                                    )}
                                     {module._secondaryPriority && secondaryWoundConfig && (module._secondaryPriority.level === 'core' || module._secondaryPriority.level === 'high') && (
                                       <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full flex-shrink-0 ${secondaryWoundConfig.darkBg} ${secondaryWoundConfig.textColor}`}>
                                         {module._secondaryPriority.level === 'core' ? `Also core for ${secondaryWoundConfig.childName}` : secondaryWoundConfig.childName}
@@ -586,6 +607,12 @@ const CurriculumSystem = ({ onModuleSelect, userProgress = {}, clientId }) => {
                                       <span className="flex items-center space-x-1">
                                         <Brain className="w-3 h-3" />
                                         <span>Personalized</span>
+                                      </span>
+                                    )}
+                                    {isTherapistAssigned(module.id) && (
+                                      <span className="flex items-center space-x-1 text-blue-600">
+                                        <Flag className="w-3 h-3" />
+                                        <span>Unlocked by therapist</span>
                                       </span>
                                     )}
                                     {module.prerequisites?.length > 0 && (

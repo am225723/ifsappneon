@@ -9,6 +9,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useData } from '../contexts/DataContext';
 import { supabaseHelpers } from '../lib/supabase';
 import { clientAuth } from '../lib/supabasePersonalization';
+import HealingTimeline from '../components/HealingTimeline';
 
 const milestoneTypes = {
   module: { label: 'Module', color: 'amber', icon: BookOpen, bg: 'bg-amber-100', text: 'text-amber-700', border: 'border-amber-300', dot: 'bg-amber-500', darkBg: 'bg-amber-900/30', darkText: 'text-amber-300', darkBorder: 'border-amber-700' },
@@ -120,6 +121,10 @@ export default function ProgressTimeline() {
             <p className={`text-sm ${isDark ? 'text-slate-400' : 'text-gray-500'}`}>Track your progress and celebrate milestones</p>
           </div>
         </div>
+      </div>
+
+      <div className="mb-6">
+        <HealingTimeline />
       </div>
 
       <div className="grid grid-cols-2 gap-3 mb-6">

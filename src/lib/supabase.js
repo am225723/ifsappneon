@@ -628,7 +628,8 @@ export const supabaseHelpers = {
         client_id: clientId,
         note_type: notes.noteType || 'session',
         content: notes.content,
-        session_date: notes.sessionDate
+        session_date: notes.sessionDate,
+        tagged_parts: notes.tagged_parts || []
       })
       .select()
       .single();
