@@ -65,11 +65,7 @@ Clerk is the required auth layer for production:
 3. User enters their old 6-digit PIN once.
 4. `/api/claim-client` verifies the Clerk token and links `ifs_clients.clerk_user_id`.
 5. Future logins load the profile with `/api/me`.
-
-## Required environment variables
-
-Copy `.env.example` to `.env.local` for local development, and add the same values to Vercel project environment variables.
-
+1
 Required:
 
 ```bash
