@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom';
 import { ArrowLeft, Plus, Calendar, FileText, CheckSquare, Clock, MessageSquare, Download, Trash2, Edit3, Save, X, ChevronDown, ChevronUp, Heart, Shield, Users, Play, Pause, Star, BookOpen, Target, Sparkles, Eye, Brain, AlertCircle, Lightbulb } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import { supabaseHelpers } from '../lib/supabase';
+import PreSessionCheckin from '../components/PreSessionCheckin';
+import GuidedBreathing from '../components/GuidedBreathing';
 import { clientAuth } from '../lib/supabasePersonalization';
 
 const therapistClientActivities = [
@@ -374,6 +376,8 @@ export default function TherapyIntegration() {
   const [showAddHomework, setShowAddHomework] = useState(false);
   const [expandedSession, setExpandedSession] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState('all');
+  const [showPreSessionCheckin, setShowPreSessionCheckin] = useState(false);
+  const [showGuidedBreathing, setShowGuidedBreathing] = useState(false);
   const [newSession, setNewSession] = useState({
     date: new Date().toISOString().split('T')[0],
     therapistNotes: '',
@@ -420,6 +424,17 @@ export default function TherapyIntegration() {
   }, []);
 
   useEffect(() => {
+    const client = clientAuth.getCurrentClient();
+    const room = client?.therapy_room || client?.id || 'default';
+    const events = new EventSource(`/api/sse-therapy-sync?room=${encodeURIComponent(room)}`);
+    events.addEventListener('start-exercise', (event) => {
+      const payload = JSON.parse(event.data || '{}');
+      if (payload.exercise === 'guided-breathing') setShowGuidedBreathing(true);
+    });
+    return () => events.close();
+  }, []);
+
+  useEffect(() => {
     let interval;
     if (isTimerRunning && activeActivity) {
       interval = setInterval(() => {
@@ -436,6 +451,16 @@ export default function TherapyIntegration() {
   };
 
   const startActivity = (activity) => {
+    if (activity.id === 'grounding-breath' || /breath/i.test(activity.title)) {
+      const client = clientAuth.getCurrentClient();
+      const room = client?.therapy_room || client?.id || 'default';
+      fetch(`/api/sse-therapy-sync?room=${encodeURIComponent(room)}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'start-exercise', exercise: 'guided-breathing', activityId: activity.id })
+      }).catch(() => {});
+      setShowGuidedBreathing(true);
+    }
     setActiveActivity(activity);
     setActiveStep(0);
     setStepTimer(0);
@@ -625,8 +650,6 @@ ${s.therapistNotes || 'N/A'}
   if (activeActivity) {
     const step = activeActivity.steps[activeStep];
     const isLastStep = activeStep === activeActivity.steps.length - 1;
-    const showReflection = isLastStep && activeStep === activeActivity.steps.length - 1;
-
     return (
       <div className={`min-h-screen ${theme.isDark ? 'text-slate-100' : ''}`}>
         <div className="max-w-3xl mx-auto px-4 py-8">
@@ -749,6 +772,8 @@ ${s.therapistNotes || 'N/A'}
 
   return (
     <div className={`min-h-screen ${theme.isDark ? 'text-slate-100' : ''}`}>
+      <PreSessionCheckin open={showPreSessionCheckin} onClose={() => setShowPreSessionCheckin(false)} />
+      {showGuidedBreathing && <GuidedBreathing onClose={() => setShowGuidedBreathing(false)} />}
       <div className="max-w-5xl mx-auto px-4 py-8">
         <Link
           to="/"
@@ -767,6 +792,14 @@ ${s.therapistNotes || 'N/A'}
               Bridge your in-person therapy with your self-guided healing work.
             </p>
           </div>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setShowPreSessionCheckin(true)}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl ${theme.isDark ? 'bg-slate-700 text-white' : 'bg-amber-100 text-amber-700'} ${getAnimationClass('transition')}`}
+            >
+              <Calendar className="w-4 h-4" />
+              Pre-session Check-in
+            </button>
           {sessions.length > 0 && (
             <button
               onClick={exportSessionNotes}
@@ -776,6 +809,7 @@ ${s.therapistNotes || 'N/A'}
               Export All
             </button>
           )}
+          </div>
         </div>
 
         <div className={`grid grid-cols-3 gap-3 mb-8 p-1 rounded-xl ${theme.isDark ? 'bg-slate-800/50' : 'bg-gray-100'}`}>

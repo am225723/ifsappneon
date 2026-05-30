@@ -19,6 +19,10 @@ import { curriculumModules } from '../data/curriculumData';
 import { getAvailableTemplates, getRenderedEmail } from '../lib/emailTemplates';
 import { sendEmail } from '../lib/onesignalEmail';
 import { assignClientToTherapist, loadAssignedClients } from '../lib/therapistAssignments';
+import TherapistHomeworkBuilder from '../components/TherapistHomeworkBuilder';
+import SessionPrepBrief from '../components/SessionPrepBrief';
+import SessionPrepSummary from '../components/SessionPrepSummary';
+import TreatmentPlanBuilder from '../components/TreatmentPlanBuilder';
 
 const woundColorMap = {
   abandonment: { bg: 'bg-blue-100', text: 'text-blue-700', dot: 'bg-blue-500' },
@@ -496,6 +500,9 @@ const TherapistDashboard = () => {
     notes: '',
     goals: ''
   });
+  const [noteParts, setNoteParts] = useState([]);
+  const [taggedParts, setTaggedParts] = useState([]);
+  const [showPartTagDropdown, setShowPartTagDropdown] = useState(false);
 
   const [clients, setClients] = useState([]);
   const [alerts, setAlerts] = useState([]);
@@ -1223,6 +1230,23 @@ const TherapistDashboard = () => {
     avgProgress: clients.length > 0 ? Math.round(clients.reduce((sum, c) => sum + c.progress, 0) / clients.length) : 0
   };
 
+  useEffect(() => {
+    if (!noteForm.clientId) { setNoteParts([]); return; }
+    supabase.from('ifs_parts').select('id, part_name, part_type').eq('client_id', noteForm.clientId).order('created_at', { ascending: false })
+      .then(({ data }) => setNoteParts(data || []));
+  }, [noteForm.clientId]);
+
+  const handleNoteTextChange = (value) => {
+    setNoteForm(f => ({ ...f, notes: value }));
+    setShowPartTagDropdown(/(^|\s)@$/.test(value));
+  };
+
+  const addTaggedPart = (part) => {
+    setTaggedParts(prev => prev.some(item => item.id === part.id) ? prev : [...prev, { id: part.id, name: part.part_name }]);
+    setNoteForm(f => ({ ...f, notes: `${f.notes.replace(/@$/, '')}@${part.part_name} ` }));
+    setShowPartTagDropdown(false);
+  };
+
   const handleSaveNote = async () => {
     if (!noteForm.clientId || !noteForm.notes) return;
     const therapist = clientAuth.getCurrentClient();
@@ -1243,7 +1267,8 @@ const TherapistDashboard = () => {
         const saved = await supabaseHelpers.saveTherapistNotes(therapistId, noteForm.clientId, {
           content: noteForm.notes,
           sessionDate: noteForm.date,
-          noteType: noteForm.sessionType
+          noteType: noteForm.sessionType,
+          tagged_parts: taggedParts
         });
         if (saved) newNote.id = saved.id;
       } catch (err) {
@@ -1259,6 +1284,7 @@ const TherapistDashboard = () => {
       notes: '',
       goals: ''
     });
+    setTaggedParts([]);
   };
 
   const handleTemplateSelect = (templateKey) => {
@@ -2804,7 +2830,7 @@ const TherapistDashboard = () => {
                 <label className={`block text-sm font-medium ${textSecondary} mb-1`}>Client</label>
                 <select
                   value={noteForm.clientId}
-                  onChange={(e) => setNoteForm(f => ({ ...f, clientId: e.target.value }))}
+                  onChange={(e) => { setNoteForm(f => ({ ...f, clientId: e.target.value })); setTaggedParts([]); }}
                   className={`w-full px-3 py-2.5 rounded-lg border ${inputBg} focus:ring-2 focus:ring-amber-500 outline-none`}
                 >
                   <option value="">Select a client...</option>
@@ -2857,11 +2883,25 @@ const TherapistDashboard = () => {
                 <label className={`block text-sm font-medium ${textSecondary} mb-1`}>Session Notes</label>
                 <textarea
                   value={noteForm.notes}
-                  onChange={(e) => setNoteForm(f => ({ ...f, notes: e.target.value }))}
+                  onChange={(e) => handleNoteTextChange(e.target.value)}
                   rows={selectedNoteTemplate !== 'none' ? 12 : 4}
                   placeholder="Document session observations, client responses, techniques used..."
                   className={`w-full px-3 py-2.5 rounded-lg border ${inputBg} focus:ring-2 focus:ring-amber-500 outline-none resize-y font-mono text-sm`}
                 />
+                {showPartTagDropdown && noteParts.length > 0 && (
+                  <div className="mt-2 rounded-lg border border-amber-200 bg-white shadow-sm overflow-hidden">
+                    {noteParts.slice(0, 6).map(part => (
+                      <button key={part.id} type="button" onClick={() => addTaggedPart(part)} className="block w-full px-3 py-2 text-left text-sm hover:bg-amber-50">
+                        @{part.part_name} <span className="text-xs text-gray-400">{part.part_type}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {taggedParts.length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-1">
+                    {taggedParts.map(part => <span key={part.id} className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-700">@{part.name}</span>)}
+                  </div>
+                )}
               </div>
               <div>
                 <label className={`block text-sm font-medium ${textSecondary} mb-1`}>Goals for Next Session</label>
@@ -2881,6 +2921,12 @@ const TherapistDashboard = () => {
                 <CheckCircle className="w-4 h-4" />
                 Save Session Note
               </button>
+            </div>
+            <div className="mt-5 space-y-4">
+              <SessionPrepBrief clientId={noteForm.clientId} />
+              <SessionPrepSummary clientId={noteForm.clientId} therapistId={clientAuth.getCurrentClient()?.id} />
+              <TherapistHomeworkBuilder clientId={noteForm.clientId} />
+              <TreatmentPlanBuilder clientId={noteForm.clientId} />
             </div>
           </div>
 

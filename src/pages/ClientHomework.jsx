@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import {
   ClipboardList, CheckCircle, Clock, AlertTriangle, Calendar,
   ChevronDown, ChevronUp, RefreshCw, MessageSquare, Flag, BookOpen
@@ -6,6 +7,7 @@ import {
 import { useTheme } from '../contexts/ThemeContext';
 import { supabase } from '../lib/supabase';
 import { clientAuth } from '../lib/supabasePersonalization';
+import { curriculumModules } from '../data/curriculumData';
 
 const categories = [
   { value: 'general', label: 'General', color: 'bg-gray-100 text-gray-700' },
@@ -22,6 +24,7 @@ const ClientHomework = () => {
   const isDark = theme.isDark;
   const client = clientAuth.getCurrentClient();
   const [homework, setHomework] = useState([]);
+  const [assignedModules, setAssignedModules] = useState([]);
   const [loading, setLoading] = useState(true);
   const [expandedItems, setExpandedItems] = useState({});
   const [completionNotes, setCompletionNotes] = useState({});
@@ -37,12 +40,25 @@ const ClientHomework = () => {
   const loadHomework = useCallback(async () => {
     if (!client?.id) return;
     setLoading(true);
-    const { data } = await supabase
-      .from('ifs_therapy_homework')
-      .select('*')
-      .eq('client_id', client.id)
-      .order('created_at', { ascending: false });
-    if (data) setHomework(data);
+    const [homeworkRes, assignedRes] = await Promise.all([
+      supabase
+        .from('ifs_therapy_homework')
+        .select('*')
+        .eq('client_id', client.id)
+        .order('created_at', { ascending: false }),
+      supabase
+        .from('ifs_assigned_homework')
+        .select('*')
+        .eq('client_id', client.id)
+        .order('assigned_at', { ascending: false })
+    ]);
+    if (homeworkRes.data) setHomework(homeworkRes.data);
+    if (assignedRes.data) {
+      setAssignedModules(assignedRes.data.map(item => ({
+        ...item,
+        module: curriculumModules.find(module => module.id === item.module_id)
+      })));
+    }
     setLoading(false);
   }, [client?.id]);
 
@@ -103,6 +119,29 @@ const ClientHomework = () => {
           </p>
         </div>
       </div>
+
+      {assignedModules.length > 0 && (
+        <div className="mb-6 rounded-2xl border border-blue-200 bg-blue-50 p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <BookOpen className="w-5 h-5 text-blue-600" />
+            <h2 className="font-bold text-blue-950">Assigned for you</h2>
+            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-white text-blue-700">Bypass</span>
+          </div>
+          <div className="space-y-2">
+            {assignedModules.map(item => (
+              <Link key={item.id} to={`/curriculum/module/${item.module_id}`} className="block rounded-xl bg-white p-3 hover:shadow-sm transition-shadow">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="font-semibold text-gray-900">{item.module?.title || item.module_id}</p>
+                    {item.therapist_feedback && <p className="mt-1 text-sm text-gray-600">{item.therapist_feedback}</p>}
+                  </div>
+                  <span className="shrink-0 rounded-full bg-blue-100 px-2 py-1 text-xs font-semibold text-blue-700">Assigned for you</span>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="flex gap-2 mb-4">
         {[

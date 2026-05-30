@@ -8,6 +8,8 @@ import { useTheme } from '../contexts/ThemeContext';
 import { supabase } from '../lib/supabase';
 import { clientAuth } from '../lib/supabasePersonalization';
 import { loadAssignedClients } from '../lib/therapistAssignments';
+import ProgressCharts from '../components/ProgressCharts';
+import ReportBuilder from '../components/ReportBuilder';
 
 const TherapistReports = () => {
   const { theme } = useTheme();
@@ -296,6 +298,11 @@ ${r.notes.recent.length > 0 ? `<div class="section">
             </button>
           </div>
         </div>
+      </div>
+
+      <div className="grid lg:grid-cols-[1fr_280px] gap-6 mb-6">
+        <ProgressCharts clientId={selectedClient} />
+        <ReportBuilder clientId={selectedClient} therapistId={therapist?.id} />
       </div>
 
       {reportData && (
