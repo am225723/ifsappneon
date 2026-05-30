@@ -1,3 +1,4 @@
+/* global process */
 import { neon } from '@neondatabase/serverless';
 import { verifyToken } from '@clerk/backend';
 
@@ -25,7 +26,12 @@ const TABLES = new Set([
   'ifs_client_preferences',
   'ifs_therapist_feedback',
   'ifs_therapy_activity_progress',
-  'ifs_uploads'
+  'ifs_uploads',
+  'ifs_therapist_clients',
+  'ifs_assigned_homework',
+  'ifs_session_agendas',
+  'ifs_generated_reports',
+  'ifs_treatment_plans'
 ]);
 
 const IDENT = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
@@ -65,6 +71,16 @@ function buildWhere(filters = [], params) {
     if (filter.op === 'like' || filter.op === 'ilike') {
       params.push(filter.value);
       return `${column} ${filter.op.toUpperCase()} $${params.length}`;
+    }
+    if (filter.op === 'gte' || filter.op === 'lte') {
+      params.push(filter.value);
+      return `${column} ${filter.op === 'gte' ? '>=' : '<='} $${params.length}`;
+    }
+    if (filter.op === 'is') {
+      if (filter.value === null) return `${column} IS NULL`;
+      if (filter.value === true) return `${column} IS TRUE`;
+      if (filter.value === false) return `${column} IS FALSE`;
+      throw new Error('Unsupported IS filter value');
     }
     throw new Error(`Unsupported filter operation: ${filter.op}`);
   });

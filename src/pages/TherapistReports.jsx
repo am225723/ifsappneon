@@ -7,6 +7,7 @@ import {
 import { useTheme } from '../contexts/ThemeContext';
 import { supabase } from '../lib/supabase';
 import { clientAuth } from '../lib/supabasePersonalization';
+import { loadAssignedClients } from '../lib/therapistAssignments';
 
 const TherapistReports = () => {
   const { theme } = useTheme();
@@ -30,21 +31,20 @@ const TherapistReports = () => {
   useEffect(() => {
     const loadClients = async () => {
       if (!therapist?.id) return;
-      const { data, error } = await supabase.from('ifs_clients').select('id, name, user_role, created_at').eq('user_role', 'client').order('name');
-      if (error) console.error('Error loading clients:', error);
-      if (data) setClients(data);
+      const data = await loadAssignedClients(therapist.id, 'id, name, user_role, created_at');
+      setClients(data);
       setLoading(false);
     };
     loadClients();
   }, [therapist?.id]);
 
-  const getDateFilter = () => {
+  const getDateFilter = useCallback(() => {
     const now = new Date();
     if (dateRange === '7d') return new Date(now - 7 * 86400000).toISOString();
     if (dateRange === '30d') return new Date(now - 30 * 86400000).toISOString();
     if (dateRange === '90d') return new Date(now - 90 * 86400000).toISOString();
     return null;
-  };
+  }, [dateRange]);
 
   const generateReport = useCallback(async () => {
     if (!selectedClient) return;
@@ -103,7 +103,7 @@ const TherapistReports = () => {
       console.error('Report generation error:', err);
     }
     setGenerating(false);
-  }, [selectedClient, dateRange, clients]);
+  }, [selectedClient, dateRange, clients, getDateFilter]);
 
   const downloadPDF = () => {
     if (!reportData) return;
