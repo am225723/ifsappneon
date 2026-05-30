@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   MessageSquare, Send, Search, ChevronLeft, Check, CheckCheck,
-  Clock, User, Shield, RefreshCw, Trash2
+  Clock, User, Shield, RefreshCw, Trash2, AlertCircle
 } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import { supabase } from '../lib/supabase';
 import { clientAuth } from '../lib/supabasePersonalization';
+import { loadAssignedClients } from '../lib/therapistAssignments';
 
 const TherapistMessages = () => {
   const { theme } = useTheme();
@@ -30,13 +31,8 @@ const TherapistMessages = () => {
 
   const loadClients = useCallback(async () => {
     if (!therapist?.id) return;
-    const { data, error } = await supabase
-      .from('ifs_clients')
-      .select('id, name, status, last_active, user_role')
-      .eq('user_role', 'client')
-      .order('name');
-    if (error) { console.error('Error loading clients:', error); return; }
-    if (data) setClients(data);
+    const data = await loadAssignedClients(therapist.id, 'id, name, status, last_active, user_role');
+    setClients(data);
   }, [therapist?.id]);
 
   const loadUnreadCounts = useCallback(async () => {
@@ -108,7 +104,8 @@ const TherapistMessages = () => {
       therapist_id: therapist.id,
       client_id: selectedClient.id,
       sender_role: 'therapist',
-      body: newMessage.trim()
+      body: newMessage.trim(),
+      is_urgent: false
     });
     if (error) {
       console.error('Send message error:', error);
@@ -167,7 +164,14 @@ const TherapistMessages = () => {
         </div>
         <div>
           <h1 className={`text-xl font-bold ${textPrimary}`}>Client Messages</h1>
-          <p className={`text-sm ${textMuted}`}>Secure messaging with your clients</p>
+          <p className={`text-sm ${textMuted}`}>Secure messaging with your assigned clients</p>
+        </div>
+      </div>
+
+      <div className={`mb-4 rounded-xl border px-4 py-3 ${isDark ? 'bg-amber-900/20 border-amber-700/40 text-amber-100' : 'bg-amber-50 border-amber-200 text-amber-800'}`}>
+        <div className="flex items-start gap-2 text-sm">
+          <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+          <p>Messages are checked during business hours. For emergencies, please call 911 or your local crisis line.</p>
         </div>
       </div>
 

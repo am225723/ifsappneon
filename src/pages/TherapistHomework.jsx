@@ -8,6 +8,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { supabase } from '../lib/supabase';
 import { clientAuth } from '../lib/supabasePersonalization';
 import { generateHomework, generateHomeworkBatch } from '../lib/homeworkAI';
+import { loadAssignedClients } from '../lib/therapistAssignments';
 
 const categories = [
   { value: 'general', label: 'General', color: 'bg-gray-100 text-gray-700' },
@@ -62,17 +63,11 @@ const TherapistHomework = () => {
   const loadData = useCallback(async () => {
     if (!therapist?.id) return;
     setLoading(true);
-    const { data: clientData, error: clientError } = await supabase
-      .from('ifs_clients')
-      .select('id, name, user_role')
-      .eq('user_role', 'client')
-      .order('name');
-
-    if (clientError) console.error('Error loading clients:', clientError);
-    if (clientData) setClients(clientData);
+    const clientData = await loadAssignedClients(therapist.id, 'id, name, user_role');
+    setClients(clientData);
 
     let hwRes = { data: [], error: null };
-    const clientIds = (clientData || []).map(client => client.id).filter(Boolean);
+    const clientIds = clientData.map(client => client.id).filter(Boolean);
     if (clientIds.length > 0) {
       hwRes = await supabase
         .from('ifs_therapy_homework')
@@ -176,6 +171,7 @@ const TherapistHomework = () => {
     if (!form.clientId || !form.title.trim()) return;
     const payload = {
       client_id: form.clientId,
+      therapist_id: therapist?.id || null,
       title: form.title.trim(),
       description: form.description.trim() || null,
       category: form.category,

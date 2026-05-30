@@ -18,6 +18,7 @@ import { WOUND_LESSON_PLANS, WOUND_DISPLAY } from '../lib/woundLessonPlans';
 import { curriculumModules } from '../data/curriculumData';
 import { getAvailableTemplates, getRenderedEmail } from '../lib/emailTemplates';
 import { sendEmail } from '../lib/onesignalEmail';
+import { assignClientToTherapist, loadAssignedClients } from '../lib/therapistAssignments';
 
 const woundColorMap = {
   abandonment: { bg: 'bg-blue-100', text: 'text-blue-700', dot: 'bg-blue-500' },
@@ -661,18 +662,15 @@ const TherapistDashboard = () => {
   const loadDashboardData = useCallback(async () => {
     setLoading(true);
     try {
-      const { data: clientRows, error: clientErr } = await supabase
-        .from('ifs_clients')
-        .select('id, name, pin, email, phone, status, last_active, created_at, user_role, access_restrictions')
-        .eq('user_role', 'client');
+      const therapist = clientAuth.getCurrentClient();
+      const clientList = await loadAssignedClients(therapist?.id);
 
-      if (clientErr) {
-        console.error('Error loading clients:', clientErr);
+      if (!therapist?.id) {
+        setClients([]);
+        setAlerts([]);
         setLoading(false);
         return;
       }
-
-      const clientList = clientRows || [];
 
       if (clientList.length === 0) {
         setClients([]);
@@ -1458,6 +1456,11 @@ const TherapistDashboard = () => {
       if (error) {
         setNewClientResult({ error: error.message });
       } else {
+        const therapist = clientAuth.getCurrentClient();
+        if (therapist?.id && data.user_role === 'client') {
+          const { error: assignmentError } = await assignClientToTherapist(therapist.id, data.id);
+          if (assignmentError) console.error('Error assigning new client to therapist:', assignmentError);
+        }
         setNewClientResult({ success: true, name: data.name, pin, role: data.user_role });
         await loadDashboardData();
       }
@@ -1505,7 +1508,12 @@ const TherapistDashboard = () => {
         'ifs_parts_dialogue',
         'ifs_therapy_activity_progress',
         'ifs_client_preferences',
-        'ifs_therapist_feedback'
+        'ifs_therapist_feedback',
+        'ifs_therapist_clients',
+        'ifs_assigned_homework',
+        'ifs_session_agendas',
+        'ifs_generated_reports',
+        'ifs_treatment_plans'
       ];
       for (const table of relatedTables) {
         const { error } = await supabase.from(table).delete().eq('client_id', clientId);
