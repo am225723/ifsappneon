@@ -44,6 +44,7 @@ import CustomAssessment from './pages/CustomAssessment';
 import GuidedMeditation from './pages/GuidedMeditation';
 import DailyCheckin from './pages/DailyCheckin';
 import MoodAnalytics from './pages/MoodAnalytics';
+import AdminHub from './pages/AdminHub';
 import Milestones from './pages/Milestones';
 import WeeklyReflection from './pages/WeeklyReflection';
 import LetterWriting from './pages/LetterWriting';
@@ -363,6 +364,7 @@ function AppContent({ authChecked, clerkLoaded, clerkSignedIn, isAuthenticated, 
   const bgClass = isAuthenticated ? 'bg-brand-sanctuary dark:bg-brand-midnight' : '';
   const [unreadMsgCount, setUnreadMsgCount] = useState(0);
   const isTherapist = currentClient?.user_role === 'therapist';
+  const isAdminOrSupervisor = currentClient?.user_role === 'admin' || currentClient?.user_role === 'supervisor';
   const messagePath = isTherapist ? '/advisor-messages' : '/inbox';
 
   const fetchUnreadCount = useCallback(async () => {
@@ -433,11 +435,11 @@ function AppContent({ authChecked, clerkLoaded, clerkSignedIn, isAuthenticated, 
             messagePath={messagePath}
             rightSlot={
               <>
-                {isTherapist && (
+                {(isTherapist || isAdminOrSupervisor) && (
                   <Link
-                    to="/therapist-dashboard"
+                    to={isAdminOrSupervisor ? '/admin-hub' : '/therapist-dashboard'}
                     className="p-2.5 rounded-xl transition-all text-brand-stone-500 dark:text-slate-400 hover:text-brand-gold-700 dark:hover:text-brand-gold-500 hover:bg-brand-gold-50 dark:hover:bg-slate-800/50"
-                    title="Advisor Dashboard"
+                    title={isAdminOrSupervisor ? 'Supervisor Admin Hub' : 'Advisor Dashboard'}
                   >
                     <ClipboardList className="w-5 h-5" />
                   </Link>
@@ -503,6 +505,11 @@ function AppContent({ authChecked, clerkLoaded, clerkSignedIn, isAuthenticated, 
                 <Route path="/therapist-dashboard" element={
                   currentClient?.user_role === 'therapist'
                     ? <TherapistDashboard />
+                    : <Home clientId={currentClient?.id} client={currentClient} />
+                } />
+                <Route path="/admin-hub" element={
+                  isAdminOrSupervisor
+                    ? <AdminHub />
                     : <Home clientId={currentClient?.id} client={currentClient} />
                 } />
                 <Route path="/co-therapy" element={

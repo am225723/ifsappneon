@@ -1,13 +1,15 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
-  MessageSquare, Send, Check, CheckCheck, RefreshCw, ArrowLeft, Trash2
+  MessageSquare, Send, Check, CheckCheck, RefreshCw, ArrowLeft, Trash2, AlertTriangle
 } from 'lucide-react';
+import { useLocation } from 'react-router-dom';
 import { useTheme } from '../contexts/ThemeContext';
 import { supabase } from '../lib/supabase';
 import { clientAuth } from '../lib/supabasePersonalization';
 
 const ClientInbox = () => {
   const { theme } = useTheme();
+  const location = useLocation();
   const isDark = theme.isDark;
   const client = clientAuth.getCurrentClient();
   const [messages, setMessages] = useState([]);
@@ -16,11 +18,12 @@ const ClientInbox = () => {
   const [sending, setSending] = useState(false);
   const [therapists, setTherapists] = useState([]);
   const [selectedTherapist, setSelectedTherapist] = useState(null);
+  const selectedTherapistId = selectedTherapist?.id;
   const [unreadCount, setUnreadCount] = useState(0);
   const messagesEndRef = useRef(null);
+  const templateAppliedRef = useRef(false);
 
   const textPrimary = isDark ? 'text-white' : 'text-gray-900';
-  const textSecondary = isDark ? 'text-slate-300' : 'text-gray-600';
   const textMuted = isDark ? 'text-slate-400' : 'text-gray-500';
   const cardBg = isDark ? 'bg-slate-800/60' : 'bg-white';
   const cardBorder = isDark ? 'border-slate-700/50' : 'border-gray-200';
@@ -28,33 +31,43 @@ const ClientInbox = () => {
 
   const loadTherapists = useCallback(async () => {
     if (!client?.id) return;
-    const { data: msgData } = await supabase
-      .from('ifs_messages')
-      .select('therapist_id')
-      .eq('client_id', client.id);
+    const [{ data: msgData }, { data: assignmentData }] = await Promise.all([
+      supabase
+        .from('ifs_messages')
+        .select('therapist_id')
+        .eq('client_id', client.id),
+      supabase
+        .from('ifs_therapist_clients')
+        .select('therapist_id, therapist_name')
+        .eq('client_id', client.id)
+        .eq('status', 'active')
+    ]);
 
-    const therapistIds = [...new Set(msgData?.map(m => m.therapist_id) || [])];
+    const therapistIds = [...new Set([...(assignmentData?.map(a => a.therapist_id) || []), ...(msgData?.map(m => m.therapist_id) || [])].filter(Boolean))];
     if (therapistIds.length > 0) {
       const { data: therapistData } = await supabase
         .from('ifs_clients')
         .select('id, name')
         .in('id', therapistIds);
-      if (therapistData) {
-        setTherapists(therapistData);
-        if (!selectedTherapist && therapistData.length > 0) {
-          setSelectedTherapist(therapistData[0]);
-        }
+      const assignmentNames = Object.fromEntries((assignmentData || []).map(a => [a.therapist_id, a.therapist_name]));
+      const mergedTherapists = therapistIds.map(id => {
+        const profile = therapistData?.find(t => t.id === id);
+        return profile || { id, name: assignmentNames[id] || 'Assigned therapist' };
+      });
+      setTherapists(mergedTherapists);
+      if (!selectedTherapist && mergedTherapists.length > 0) {
+        setSelectedTherapist(mergedTherapists[0]);
       }
     }
   }, [client?.id, selectedTherapist]);
 
   const loadMessages = useCallback(async () => {
-    if (!client?.id || !selectedTherapist?.id) return;
+    if (!client?.id || !selectedTherapistId) return;
     const { data } = await supabase
       .from('ifs_messages')
       .select('*')
       .eq('client_id', client.id)
-      .eq('therapist_id', selectedTherapist.id)
+      .eq('therapist_id', selectedTherapistId)
       .order('created_at', { ascending: true });
     if (data) setMessages(data);
 
@@ -62,10 +75,10 @@ const ClientInbox = () => {
       .from('ifs_messages')
       .update({ read_at: new Date().toISOString() })
       .eq('client_id', client.id)
-      .eq('therapist_id', selectedTherapist.id)
+      .eq('therapist_id', selectedTherapistId)
       .eq('sender_role', 'therapist')
       .is('read_at', null);
-  }, [client?.id, selectedTherapist?.id]);
+  }, [client?.id, selectedTherapistId]);
 
   const loadUnread = useCallback(async () => {
     if (!client?.id) return;
@@ -89,12 +102,26 @@ const ClientInbox = () => {
   }, [loadTherapists, loadUnread]);
 
   useEffect(() => {
-    if (selectedTherapist) loadMessages();
-  }, [selectedTherapist, loadMessages]);
+    if (selectedTherapistId) {
+      const timer = window.setTimeout(() => loadMessages(), 0);
+      return () => window.clearTimeout(timer);
+    }
+  }, [selectedTherapistId, loadMessages]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  useEffect(() => {
+    const template = location.state?.messageTemplate;
+    if (template && !templateAppliedRef.current) {
+      const timer = window.setTimeout(() => {
+        setNewMessage(template);
+        templateAppliedRef.current = true;
+      }, 0);
+      return () => window.clearTimeout(timer);
+    }
+  }, [location.state]);
 
   const [sendError, setSendError] = useState(null);
 
@@ -256,6 +283,12 @@ const ClientInbox = () => {
         </div>
 
         <div className={`p-3 border-t ${cardBorder}`}>
+          {location.state?.urgent && (
+            <div className="mb-2 flex items-start gap-2 rounded-lg bg-amber-100 px-3 py-2 text-xs text-amber-800 dark:bg-amber-900/30 dark:text-amber-200">
+              <AlertTriangle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" />
+              Your message has been drafted. Edit anything you want, then send when ready. This inbox is not monitored 24/7.
+            </div>
+          )}
           {sendError && (
             <div className="px-3 py-2 mb-2 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 text-xs rounded-lg">
               {sendError}

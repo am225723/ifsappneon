@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { CalendarCheck, X, Loader2 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { clientAuth } from '../lib/supabasePersonalization';
+import { schedulePreSessionAgendaReminder } from '../lib/pushNotifications';
 
 export default function PreSessionCheckin({ open, onClose, therapistId }) {
   const client = clientAuth.getCurrentClient();
@@ -28,14 +29,15 @@ export default function PreSessionCheckin({ open, onClose, therapistId }) {
     event.preventDefault();
     if (!client?.id || !form.topics.trim()) return;
     setSaving(true);
-    await supabase.from('ifs_session_agendas').insert({
+    const { data } = await supabase.from('ifs_session_agendas').insert({
       client_id: client.id,
       therapist_id: therapistId || client.therapist_id || client.assigned_therapist_id || 'unassigned',
       topics: form.topics,
       active_parts: form.activeParts,
       stuck_points: form.stuckPoints || null,
       session_date: form.sessionDate
-    });
+    }).select().single();
+    await schedulePreSessionAgendaReminder({ clientId: client.id, sessionDate: form.sessionDate, agendaId: data?.id });
     setSaving(false);
     onClose?.();
   };

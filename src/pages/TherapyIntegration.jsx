@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect, useRef } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import { ArrowLeft, Plus, Calendar, FileText, CheckSquare, Clock, MessageSquare, Download, Trash2, Edit3, Save, X, ChevronDown, ChevronUp, Heart, Shield, Users, Play, Pause, Star, BookOpen, Target, Sparkles, Eye, Brain, AlertCircle, Lightbulb } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import { supabaseHelpers } from '../lib/supabase';
@@ -363,6 +363,7 @@ const iconMap = {
 
 export default function TherapyIntegration() {
   const { theme, getAnimationClass } = useTheme();
+  const location = useLocation();
   const [activeTab, setActiveTab] = useState('activities');
   const [sessions, setSessions] = useState([]);
   const [homework, setHomework] = useState([]);
@@ -378,6 +379,9 @@ export default function TherapyIntegration() {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [showPreSessionCheckin, setShowPreSessionCheckin] = useState(false);
   const [showGuidedBreathing, setShowGuidedBreathing] = useState(false);
+  const [connectionState, setConnectionState] = useState('connecting');
+  const eventSourceRef = useRef(null);
+  const reconnectTimerRef = useRef(null);
   const [newSession, setNewSession] = useState({
     date: new Date().toISOString().split('T')[0],
     therapistNotes: '',
@@ -424,15 +428,55 @@ export default function TherapyIntegration() {
   }, []);
 
   useEffect(() => {
+    let disposed = false;
     const client = clientAuth.getCurrentClient();
     const room = client?.therapy_room || client?.id || 'default';
-    const events = new EventSource(`/api/sse-therapy-sync?room=${encodeURIComponent(room)}`);
-    events.addEventListener('start-exercise', (event) => {
-      const payload = JSON.parse(event.data || '{}');
-      if (payload.exercise === 'guided-breathing') setShowGuidedBreathing(true);
-    });
-    return () => events.close();
+
+    const connect = () => {
+      if (disposed) return;
+      setConnectionState('connecting');
+      eventSourceRef.current?.close();
+
+      const events = new EventSource(`/api/sse-therapy-sync?room=${encodeURIComponent(room)}`);
+      eventSourceRef.current = events;
+
+      events.onopen = () => {
+        if (!disposed) setConnectionState('connected');
+      };
+
+      events.addEventListener('start-exercise', (event) => {
+        const payload = JSON.parse(event.data || '{}');
+        if (payload.exercise === 'guided-breathing') setShowGuidedBreathing(true);
+      });
+
+      events.onerror = () => {
+        events.close();
+        if (disposed) return;
+        setConnectionState('offline');
+        reconnectTimerRef.current = window.setTimeout(connect, 3000);
+      };
+    };
+
+    connect();
+
+    return () => {
+      disposed = true;
+      if (reconnectTimerRef.current) window.clearTimeout(reconnectTimerRef.current);
+      eventSourceRef.current?.close();
+      eventSourceRef.current = null;
+    };
   }, []);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get('grounding') === 'guided-breathing') {
+      const timer = window.setTimeout(() => {
+        setActiveTab('activities');
+        setShowGuidedBreathing(true);
+      }, 0);
+      return () => window.clearTimeout(timer);
+    }
+  }, [location.search]);
 
   useEffect(() => {
     let interval;
@@ -773,6 +817,11 @@ ${s.therapistNotes || 'N/A'}
   return (
     <div className={`min-h-screen ${theme.isDark ? 'text-slate-100' : ''}`}>
       <PreSessionCheckin open={showPreSessionCheckin} onClose={() => setShowPreSessionCheckin(false)} />
+      <div className="fixed bottom-24 right-4 z-40 rounded-full border border-white/40 bg-white/90 px-3 py-2 text-xs font-semibold text-slate-700 shadow-lg backdrop-blur dark:border-slate-700 dark:bg-slate-900/90 dark:text-slate-200">
+        {connectionState === 'connected' && '🟢 Live Sync Connected'}
+        {connectionState === 'connecting' && '🟡 Connecting Live Sync...'}
+        {connectionState === 'offline' && '🟡 Reconnecting...'}
+      </div>
       {showGuidedBreathing && <GuidedBreathing onClose={() => setShowGuidedBreathing(false)} />}
       <div className="max-w-5xl mx-auto px-4 py-8">
         <Link
