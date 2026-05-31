@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { Haptics, ImpactStyle } from '@capacitor/haptics';
 
 const phases = [
   { label: 'Inhale', seconds: 4, scale: 'scale-125' },
@@ -6,9 +7,28 @@ const phases = [
   { label: 'Exhale', seconds: 6, scale: 'scale-90' }
 ];
 
+async function triggerImpact(style) {
+  try {
+    await Haptics.impact({ style });
+  } catch {
+    // Haptics are only available on supported Capacitor devices.
+  }
+}
+
 export default function GuidedBreathing({ onClose }) {
   const [index, setIndex] = useState(0);
   const [remaining, setRemaining] = useState(phases[0].seconds);
+  const lastPhaseRef = useRef(phases[0].label);
+
+  useEffect(() => {
+    const phase = phases[index];
+    if (lastPhaseRef.current !== phase.label) {
+      if (phase.label === 'Hold') triggerImpact(ImpactStyle.Light);
+      if (phase.label === 'Inhale') triggerImpact(ImpactStyle.Medium);
+      lastPhaseRef.current = phase.label;
+    }
+  }, [index]);
+
   useEffect(() => {
     const timer = setInterval(() => {
       setRemaining(prev => {
@@ -18,11 +38,22 @@ export default function GuidedBreathing({ onClose }) {
           setRemaining(phases[next].seconds);
           return next;
         });
-        return phases[(index + 1) % phases.length].seconds;
+        return prev;
       });
     }, 1000);
     return () => clearInterval(timer);
-  }, [index]);
+  }, []);
+
   const phase = phases[index];
-  return <div className="fixed inset-0 z-50 bg-slate-950/70 flex items-center justify-center"><div className="rounded-3xl bg-white p-8 text-center shadow-2xl max-w-sm w-full mx-4"><div className={`mx-auto mb-6 h-40 w-40 rounded-full bg-gradient-to-br from-blue-300 to-amber-300 transition-transform duration-1000 ${phase.scale}`} /><h2 className="text-2xl font-bold text-gray-900">{phase.label}</h2><p className="text-5xl font-bold text-amber-600 my-3">{remaining}</p><p className="text-sm text-gray-500 mb-5">Therapist-started grounding exercise</p><button onClick={onClose} className="rounded-lg bg-gray-900 px-4 py-2 text-white">Close</button></div></div>;
+  return (
+    <div className="fixed inset-0 z-50 bg-slate-950/70 flex items-center justify-center">
+      <div className="rounded-3xl bg-white p-8 text-center shadow-2xl max-w-sm w-full mx-4">
+        <div className={`mx-auto mb-6 h-40 w-40 rounded-full bg-gradient-to-br from-blue-300 to-amber-300 transition-transform duration-1000 ${phase.scale}`} />
+        <h2 className="text-2xl font-bold text-gray-900">{phase.label}</h2>
+        <p className="text-5xl font-bold text-amber-600 my-3">{remaining}</p>
+        <p className="text-sm text-gray-500 mb-5">Therapist-started grounding exercise</p>
+        <button onClick={onClose} className="rounded-lg bg-gray-900 px-4 py-2 text-white">Close</button>
+      </div>
+    </div>
+  );
 }

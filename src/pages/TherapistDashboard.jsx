@@ -23,6 +23,7 @@ import TherapistHomeworkBuilder from '../components/TherapistHomeworkBuilder';
 import SessionPrepBrief from '../components/SessionPrepBrief';
 import SessionPrepSummary from '../components/SessionPrepSummary';
 import TreatmentPlanBuilder from '../components/TreatmentPlanBuilder';
+import RiskAlertWidget from '../components/RiskAlertWidget';
 
 const woundColorMap = {
   abandonment: { bg: 'bg-blue-100', text: 'text-blue-700', dot: 'bg-blue-500' },
@@ -551,6 +552,7 @@ const TherapistDashboard = () => {
   const [emailLoading, setEmailLoading] = useState(false);
 
   const WOUND_TYPES = ['abandonment', 'shame', 'neglect', 'betrayal', 'helplessness'];
+  const therapist = clientAuth.getCurrentClient();
 
   const SESSION_NOTE_TEMPLATES = {
     'none': { label: 'Blank Note', sections: [] },
@@ -2457,6 +2459,12 @@ const TherapistDashboard = () => {
           </div>
         </div>
       </div>
+
+      <RiskAlertWidget
+        therapistId={therapist?.id}
+        clients={clients}
+        onSelectClient={(clientId) => { setSelectedInsightClient(clientId); setActiveTab('insights'); }}
+      />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         {[

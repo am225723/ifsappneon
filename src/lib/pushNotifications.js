@@ -1,5 +1,4 @@
 import { supabase } from './supabase';
-import { clientAuth } from './supabasePersonalization';
 
 const DEFAULT_PREFERENCES = {
   dailyCheckin: true,
@@ -64,7 +63,9 @@ export async function loadNotificationPreferences(clientId) {
     if (localPrefs) {
       try {
         return { ...DEFAULT_PREFERENCES, ...JSON.parse(localPrefs) };
-      } catch {}
+      } catch {
+        // Ignore invalid locally stored notification preferences.
+      }
     }
 
     return { ...DEFAULT_PREFERENCES };
@@ -73,7 +74,9 @@ export async function loadNotificationPreferences(clientId) {
     if (localPrefs) {
       try {
         return { ...DEFAULT_PREFERENCES, ...JSON.parse(localPrefs) };
-      } catch {}
+      } catch {
+        // Ignore invalid locally stored notification preferences.
+      }
     }
     return { ...DEFAULT_PREFERENCES };
   }
@@ -180,3 +183,65 @@ export const REMINDER_CATEGORIES = [
     icon: 'MessageSquare',
   },
 ];
+
+const PRE_SESSION_REMINDER_TEXT = 'Your session is tomorrow. Take 2 minutes to fill out your Pre-Session Agenda.';
+
+export async function schedulePreSessionAgendaReminder({ clientId, sessionDate, agendaId }) {
+  if (!clientId || !sessionDate) return { scheduled: false, reason: 'missing-client-or-date' };
+
+  const reminderAt = new Date(sessionDate);
+  reminderAt.setDate(reminderAt.getDate() - 1);
+  const now = new Date();
+  if (Number.isNaN(reminderAt.getTime()) || reminderAt <= now) {
+    return { scheduled: false, reason: 'reminder-time-past' };
+  }
+
+  const moduleName = '@capacitor/local-notifications';
+  const localNotificationsModule = await import(/* @vite-ignore */ moduleName).catch((err) => {
+    console.warn('Native local notification scheduling unavailable:', err.message);
+    return null;
+  });
+  if (localNotificationsModule?.LocalNotifications) {
+    const { LocalNotifications } = localNotificationsModule;
+    const permission = await LocalNotifications.requestPermissions().catch(() => ({ display: 'denied' }));
+    if (permission.display === 'granted') {
+      await LocalNotifications.schedule({
+        notifications: [{
+          id: Math.abs(`${clientId}-${agendaId || sessionDate}`.split('').reduce((acc, char) => ((acc << 5) - acc) + char.charCodeAt(0), 0)) % 2147483647,
+          title: 'Pre-Session Agenda Reminder',
+          body: PRE_SESSION_REMINDER_TEXT,
+          schedule: { at: reminderAt },
+          extra: { clientId, agendaId, sessionDate, type: 'pre-session-agenda' },
+        }]
+      });
+      return { scheduled: true, channel: 'capacitor-local-notification', reminderAt: reminderAt.toISOString() };
+    }
+  }
+
+  try {
+    localStorage.setItem(`pre_session_reminder_${clientId}_${agendaId || sessionDate}`, JSON.stringify({
+      clientId,
+      agendaId,
+      sessionDate,
+      reminderAt: reminderAt.toISOString(),
+      text: PRE_SESSION_REMINDER_TEXT,
+    }));
+  } catch {
+    // localStorage may be unavailable in private browsing or SSR-like contexts.
+  }
+
+  try {
+    if (window.OneSignalDeferred) {
+      window.OneSignalDeferred.push(async function (OneSignal) {
+        await OneSignal.User.addTags({
+          pre_session_agenda_reminder_at: reminderAt.toISOString(),
+          pre_session_agenda_session_date: sessionDate,
+        });
+      });
+    }
+  } catch (err) {
+    console.warn('Failed to store OneSignal reminder tags:', err.message);
+  }
+
+  return { scheduled: false, channel: 'fallback-metadata', reminderAt: reminderAt.toISOString() };
+}

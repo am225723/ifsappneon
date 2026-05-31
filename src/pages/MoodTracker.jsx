@@ -7,6 +7,7 @@ import {
 import { useTheme } from '../contexts/ThemeContext';
 import { supabaseHelpers } from '../lib/supabase';
 import { clientAuth } from '../lib/supabasePersonalization';
+import SOSSupportModal from '../components/SOSSupportModal';
 
 const moodOptions = [
   { value: 5, label: 'Great', icon: Sun, color: 'text-brand-gold-700', bg: 'bg-brand-gold-50', darkBg: 'bg-brand-gold-950/30', ring: 'ring-brand-gold-500' },
@@ -16,7 +17,7 @@ const moodOptions = [
   { value: 1, label: 'Struggling', icon: CloudRain, color: 'text-red-500', bg: 'bg-red-50', darkBg: 'bg-red-950/30', ring: 'ring-red-400' },
 ];
 
-const emotionTags = ['Calm', 'Anxious', 'Hopeful', 'Sad', 'Angry', 'Grateful', 'Peaceful', 'Overwhelmed'];
+const emotionTags = ['Calm', 'Anxious', 'Hopeful', 'Sad', 'Angry', 'Grateful', 'Peaceful', 'Overwhelmed', 'Helplessness', 'Shame'];
 
 const moodColors = {
   5: '#EAB308',
@@ -51,6 +52,7 @@ export default function MoodTracker() {
   const [viewRange, setViewRange] = useState('7');
   const [selectedBarDay, setSelectedBarDay] = useState(null);
   const [savedToday, setSavedToday] = useState(false);
+  const [showSOSModal, setShowSOSModal] = useState(false);
   const [weekStart] = useState(() => new Date(Date.now() - 7 * 86400000));
 
   useEffect(() => {
@@ -102,6 +104,10 @@ export default function MoodTracker() {
       const updated = [saved, ...filtered];
       setEntries(updated);
       setSavedToday(true);
+      const highDistressEmotions = selectedEmotions.some(emotion => ['helplessness', 'shame'].includes(emotion.toLowerCase()));
+      if (mood <= 2 || highDistressEmotions) {
+        setShowSOSModal(true);
+      }
     }
   };
 
@@ -147,6 +153,7 @@ export default function MoodTracker() {
 
   return (
     <div className="max-w-4xl mx-auto px-6 py-12 lg:py-16 space-y-8">
+      <SOSSupportModal open={showSOSModal} onClose={() => setShowSOSModal(false)} />
       <div className="flex items-center gap-3 mb-2">
         <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-brand-gold-500 to-brand-emerald-600 flex items-center justify-center shadow-lg shadow-brand-gold-500/20">
           <Heart className="w-5 h-5 text-white" />
