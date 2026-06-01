@@ -358,13 +358,21 @@ CREATE TABLE IF NOT EXISTS ifs_content_library (
 
 CREATE TABLE IF NOT EXISTS ifs_generated_reports (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  therapist_id VARCHAR(255) NOT NULL,
-  client_id VARCHAR(255) NOT NULL,
-  report_type VARCHAR(100) DEFAULT 'clinical',
-  options JSONB DEFAULT '{}'::jsonb,
-  storage_url TEXT NOT NULL,
-  generated_by VARCHAR(255),
-  generated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+  therapist_id UUID NOT NULL REFERENCES ifs_clients(id) ON DELETE CASCADE,
+  client_id UUID NOT NULL REFERENCES ifs_clients(id) ON DELETE CASCADE,
+  report_type VARCHAR(100) NOT NULL DEFAULT 'clinical_summary',
+  title VARCHAR(255),
+  sections_included JSONB DEFAULT '[]'::jsonb,
+  date_range_start DATE,
+  date_range_end DATE,
+  format VARCHAR(50) DEFAULT 'html_print',
+  status VARCHAR(50) DEFAULT 'generated',
+  storage_url TEXT,
+  file_name VARCHAR(255),
+  generated_by UUID REFERENCES ifs_clients(id) ON DELETE SET NULL,
+  generated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+  created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS ifs_treatment_plans (

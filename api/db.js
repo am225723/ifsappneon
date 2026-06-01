@@ -199,6 +199,9 @@ const CLIENT_SCOPED_TABLES = new Set([
 ]);
 
 
+const GENERATED_REPORT_INSERT_COLUMNS = new Set(['therapist_id', 'client_id', 'generated_by', 'report_type', 'title', 'sections_included', 'date_range_start', 'date_range_end', 'format', 'status', 'storage_url', 'file_name', 'generated_at', 'created_at', 'updated_at']);
+const GENERATED_REPORT_UPDATE_COLUMNS = new Set(['status', 'updated_at']);
+const GENERATED_REPORT_STATUSES = new Set(['generated', 'downloaded', 'archived', 'failed']);
 const ASSIGNED_HOMEWORK_CLIENT_UPDATE_COLUMNS = new Set(['status', 'started_at', 'completed_at', 'updated_at']);
 const TREATMENT_PLAN_THERAPIST_INSERT_COLUMNS = new Set(['therapist_id', 'client_id', 'goal_title', 'goal_description', 'target_wounds', 'target_parts', 'objectives', 'interventions', 'status', 'review_date', 'completed_at', 'created_at', 'updated_at']);
 const TREATMENT_PLAN_THERAPIST_UPDATE_COLUMNS = new Set(['goal_title', 'goal_description', 'target_wounds', 'target_parts', 'objectives', 'interventions', 'status', 'review_date', 'completed_at', 'updated_at']);
@@ -418,6 +421,44 @@ async function authorizePayload({ appUser, table, action, filters, values }) {
   }
 
 
+  if (table === 'ifs_generated_reports') {
+    const rows = getValueRows(values);
+    const valueClientIds = rows.map((row) => row.client_id).filter(Boolean);
+    const filterClientIds = getFilterValues(filters, 'client_id');
+    const existingClientIds = action === 'update' ? await loadClientIdsFromRows(table, filters) : [];
+    const clientIds = valueClientIds.length ? valueClientIds : (filterClientIds.length ? filterClientIds : existingClientIds);
+
+    if (appUser.user_role === 'client') {
+      throw Object.assign(new Error('Clients cannot access generated clinical report metadata'), { statusCode: 403 });
+    }
+
+    if (isTherapistUser(appUser)) {
+      if (action === 'delete' || action === 'upsert') {
+        throw Object.assign(new Error('Generated report metadata cannot be deleted or upserted'), { statusCode: 403 });
+      }
+      if (action === 'insert') {
+        assertOnlyColumns(values, GENERATED_REPORT_INSERT_COLUMNS, 'Therapists cannot set generated report fields');
+        assertAllowedStatuses(values, GENERATED_REPORT_STATUSES, 'generated report status');
+        if (!rows.length || rows.some((row) => String(row.therapist_id) !== String(appUser.id) || String(row.generated_by || appUser.id) !== String(appUser.id))) {
+          throw Object.assign(new Error('Therapists may only create their own generated report metadata'), { statusCode: 403 });
+        }
+        await assertAssignedClients(appUser, clientIds);
+        return;
+      }
+      if (action === 'update') {
+        assertOnlyColumns(values, GENERATED_REPORT_UPDATE_COLUMNS, 'Therapists cannot update generated report fields');
+        assertAllowedStatuses(values, new Set(['archived']), 'generated report status');
+        await assertAssignedClients(appUser, clientIds);
+        return;
+      }
+      if (action === 'select') {
+        if (clientIds.length) await assertAssignedClients(appUser, clientIds);
+        return;
+      }
+    }
+  }
+
+
   if (table === 'ifs_treatment_plans') {
     const rows = getValueRows(values);
     const valueClientIds = rows.map((row) => row.client_id).filter(Boolean);
@@ -501,6 +542,7 @@ async function authorizePayload({ appUser, table, action, filters, values }) {
     }
   }
 
+
   if (CLIENT_SCOPED_TABLES.has(table)) {
     const valueClientIds = getValueRows(values).map((row) => row.client_id).filter(Boolean);
     const filterClientIds = getFilterValues(filters, 'client_id');
@@ -558,6 +600,14 @@ function buildAuthClause(table, appUser, params, action = 'select') {
       return `${quoteIdent('therapist_id')} = $${params.length - 1} AND ${quoteIdent('client_id')} IN (SELECT client_id FROM ifs_therapist_clients WHERE therapist_id = $${params.length} AND COALESCE(status, 'active') = 'active')`;
     }
   }
+  if (table === 'ifs_generated_reports') {
+    if (appUser.user_role === 'client') return 'false';
+    if (isTherapistUser(appUser)) {
+      params.push(appUser.id, appUser.id);
+      return `${quoteIdent('therapist_id')} = $${params.length - 1} AND ${quoteIdent('client_id')} IN (SELECT client_id FROM ifs_therapist_clients WHERE therapist_id = $${params.length} AND COALESCE(status, 'active') = 'active')`;
+    }
+  }
+
   if (CLIENT_SCOPED_TABLES.has(table)) {
     if (appUser.user_role === 'client') {
       params.push(appUser.id);
