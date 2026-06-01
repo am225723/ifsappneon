@@ -1,12 +1,12 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import {
   TrendingUp, TrendingDown, Minus, ArrowLeft, BarChart3,
-  Calendar, Zap, Heart, Brain, Sun, Cloud, CloudRain, Smile, Meh,
-  Users, ChevronDown, RefreshCw, Activity, Star, Flame
+  Zap, Sun, Cloud, CloudRain, Smile, Meh,
+  ChevronDown, Flame, Sparkles
 } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
-import { supabase, supabaseHelpers } from '../lib/supabase';
+import { supabase } from '../lib/supabase';
 import { clientAuth } from '../lib/supabasePersonalization';
 import { loadAssignedClients } from '../lib/therapistAssignments';
 
@@ -110,34 +110,17 @@ export default function MoodAnalytics() {
   const currentClient = clientAuth.getCurrentClient();
   const currentClientId = currentClient?.id;
 
-  useEffect(() => {
-    if (!currentClientId) { setLoading(false); return; }
-    const role = currentClient?.user_role;
-    if (role === 'therapist') {
-      setIsAdvisor(true);
-      loadAdvisorClients();
-    } else {
-      loadClientData(currentClientId);
+  const loadClientData = useCallback(async (clientId) => {
+    if (!clientId) {
+      setMoodEntries([]);
+      setCheckinData([]);
+      setLoading(false);
+      return;
     }
-  }, [currentClientId]);
 
-  useEffect(() => {
-    if (selectedClient) loadClientData(selectedClient);
-  }, [selectedClient, range]);
-
-  const loadAdvisorClients = async () => {
-    const data = await loadAssignedClients(currentClientId, 'id, name');
-    setClients(data || []);
-    if (data && data.length > 0) {
-      setSelectedClient(data[0].id);
-    }
-    setLoading(false);
-  };
-
-  const loadClientData = async (clientId) => {
     setLoading(true);
     const since = new Date();
-    since.setDate(since.getDate() - parseInt(range));
+    since.setDate(since.getDate() - parseInt(range, 10));
     const sinceIso = since.toISOString();
 
     try {
@@ -160,9 +143,62 @@ export default function MoodAnalytics() {
       setCheckinData(checkins);
     } catch (e) {
       console.error('Error loading analytics:', e);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
-  };
+  }, [range]);
+
+  const loadAdvisorClients = useCallback(async () => {
+    setLoading(true);
+
+    try {
+      const assignedClients = await loadAssignedClients(currentClientId, 'id, name, user_role');
+      setClients(assignedClients);
+
+      if (assignedClients.length === 0) {
+        setSelectedClient('');
+        setMoodEntries([]);
+        setCheckinData([]);
+        return;
+      }
+
+      setSelectedClient((currentSelection) => (
+        assignedClients.some((client) => client.id === currentSelection)
+          ? currentSelection
+          : assignedClients[0].id
+      ));
+    } catch (e) {
+      console.error('Error loading assigned clients:', e);
+      setClients([]);
+      setSelectedClient('');
+      setMoodEntries([]);
+      setCheckinData([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [currentClientId]);
+
+  useEffect(() => {
+    if (!currentClientId) {
+      setLoading(false);
+      return;
+    }
+
+    const role = currentClient?.user_role;
+    if (role === 'therapist') {
+      setIsAdvisor(true);
+      loadAdvisorClients();
+    } else {
+      setIsAdvisor(false);
+      setClients([]);
+      setSelectedClient(null);
+      loadClientData(currentClientId);
+    }
+  }, [currentClientId, currentClient?.user_role, loadAdvisorClients, loadClientData]);
+
+  useEffect(() => {
+    if (isAdvisor && selectedClient) loadClientData(selectedClient);
+  }, [isAdvisor, selectedClient, loadClientData]);
 
   const analytics = useMemo(() => {
     if (!moodEntries.length && !checkinData.length) return null;
@@ -262,7 +298,7 @@ export default function MoodAnalytics() {
                 <ChevronDown size={14} className={`absolute right-2.5 top-2.5 pointer-events-none ${textMuted}`} />
               </div>
             )}
-            <select value={range} onChange={e => { setRange(e.target.value); if (!isAdvisor) loadClientData(currentClientId); }}
+            <select value={range} onChange={e => setRange(e.target.value)}
               className={`text-sm pl-3 pr-8 py-1.5 rounded-xl border appearance-none cursor-pointer ${isDark ? 'bg-slate-700 border-slate-600 text-slate-200' : 'bg-white border-amber-200 text-gray-700'}`}>
               <option value="7">7 days</option>
               <option value="14">14 days</option>
@@ -284,7 +320,11 @@ export default function MoodAnalytics() {
             <BarChart3 size={48} className={`mx-auto mb-4 opacity-40 ${textMuted}`} />
             <h3 className={`text-lg font-semibold mb-2 ${textPrimary}`}>No data yet</h3>
             <p className={`text-sm mb-6 ${textMuted}`}>
-              {isAdvisor ? 'This client has no mood or check-in entries yet.' : 'Start tracking your mood and doing daily check-ins to see patterns here.'}
+              {isAdvisor && clients.length === 0
+                ? 'No active assigned clients are available for analytics yet.'
+                : isAdvisor
+                  ? 'This client has no mood or check-in entries yet.'
+                  : 'Start tracking your mood and doing daily check-ins to see patterns here.'}
             </p>
             {!isAdvisor && (
               <div className="flex justify-center gap-3">
@@ -306,7 +346,7 @@ export default function MoodAnalytics() {
               <StatCard label="Avg Energy" value={analytics.avgEnergy ? `${analytics.avgEnergy}/10` : '—'} sub="Mood tracker"
                 icon={Zap} color="bg-gradient-to-br from-amber-500 to-orange-500" isDark={isDark} />
               <StatCard label="Self-Energy" value={analytics.avgSelf ? `${analytics.avgSelf}/10` : '—'} sub="From check-ins"
-                icon={Sparkles || Star} color="bg-gradient-to-br from-emerald-500 to-teal-600" isDark={isDark} />
+                icon={Sparkles} color="bg-gradient-to-br from-emerald-500 to-teal-600" isDark={isDark} />
               <StatCard label="Check-In Streak" value={`${analytics.dayStreak}d`} sub={`${analytics.totalEntries} total entries`}
                 icon={Flame} color="bg-gradient-to-br from-rose-500 to-pink-600" isDark={isDark} />
             </div>
