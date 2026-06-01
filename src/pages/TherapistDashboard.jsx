@@ -19,9 +19,9 @@ import { curriculumModules } from '../data/curriculumData';
 import { getAvailableTemplates, getRenderedEmail } from '../lib/emailTemplates';
 import { sendEmail } from '../lib/onesignalEmail';
 import { assignClientToTherapist, loadAssignedClients } from '../lib/therapistAssignments';
+import { loadUpcomingSessionPrepForTherapist } from '../lib/sessionAgendas';
 import TherapistHomeworkBuilder from '../components/TherapistHomeworkBuilder';
 import SessionPrepBrief from '../components/SessionPrepBrief';
-import SessionPrepSummary from '../components/SessionPrepSummary';
 import TreatmentPlanBuilder from '../components/TreatmentPlanBuilder';
 import RiskAlertWidget from '../components/RiskAlertWidget';
 
@@ -506,6 +506,8 @@ const TherapistDashboard = () => {
   const [showPartTagDropdown, setShowPartTagDropdown] = useState(false);
 
   const [clients, setClients] = useState([]);
+  const [sessionPrepRows, setSessionPrepRows] = useState([]);
+  const [selectedPrepClientId, setSelectedPrepClientId] = useState('');
   const [alerts, setAlerts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [clientInsights, setClientInsights] = useState(null);
@@ -676,6 +678,7 @@ const TherapistDashboard = () => {
 
       if (!therapist?.id) {
         setClients([]);
+        setSessionPrepRows([]);
         setAlerts([]);
         setLoading(false);
         return;
@@ -683,12 +686,14 @@ const TherapistDashboard = () => {
 
       if (clientList.length === 0) {
         setClients([]);
+        setSessionPrepRows([]);
         setAlerts([]);
         setLoading(false);
         return;
       }
 
       const clientIds = clientList.map(c => c.id);
+      loadUpcomingSessionPrepForTherapist(therapist.id).then(({ data }) => setSessionPrepRows(data || [])).catch((error) => console.error('Failed to load session prep rows:', error));
 
       const [
         { data: assessments },
@@ -2494,6 +2499,7 @@ const TherapistDashboard = () => {
         {[
           { id: 'clients', label: 'Clients', icon: Users },
           { id: 'notes', label: 'Session Notes', icon: FileText },
+          { id: 'session-prep', label: 'Session Prep', icon: ClipboardCheck },
           { id: 'progress', label: 'Progress', icon: BarChart3 },
           { id: 'alerts', label: 'Alerts', icon: AlertTriangle },
           { id: 'actions', label: 'Quick Actions', icon: Sparkles },
@@ -2515,6 +2521,11 @@ const TherapistDashboard = () => {
             >
               <Icon className="w-4 h-4" />
               {tab.label}
+              {tab.id === 'session-prep' && sessionPrepRows.filter(a => a.status === 'submitted').length > 0 && (
+                <span className="w-5 h-5 rounded-full bg-blue-500 text-white text-xs flex items-center justify-center">
+                  {sessionPrepRows.filter(a => a.status === 'submitted').length}
+                </span>
+              )}
               {tab.id === 'alerts' && alerts.filter(a => a.type === 'warning' || a.type === 'danger').length > 0 && (
                 <span className="w-5 h-5 rounded-full bg-red-500 text-white text-xs flex items-center justify-center">
                   {alerts.filter(a => a.type === 'warning' || a.type === 'danger').length}
@@ -2524,6 +2535,49 @@ const TherapistDashboard = () => {
           );
         })}
       </div>
+
+      {activeTab === 'session-prep' && (
+        <div className="grid grid-cols-1 xl:grid-cols-[0.9fr_1.1fr] gap-6">
+          <div className={`${cardBg} rounded-2xl border ${cardBorder} p-5`}>
+            <div className="flex items-center justify-between gap-3 mb-4">
+              <div>
+                <h2 className={`text-xl font-bold ${textPrimary} flex items-center gap-2`}><ClipboardCheck className="w-5 h-5 text-blue-500" /> Session Prep</h2>
+                <p className={`text-sm ${textSecondary}`}>Assigned clients with recent submitted pre-session agendas.</p>
+              </div>
+              <button onClick={() => loadUpcomingSessionPrepForTherapist(therapist?.id).then(({ data }) => setSessionPrepRows(data || []))} className={`px-3 py-2 rounded-lg border ${cardBorder} text-sm ${textSecondary}`}>
+                Refresh
+              </button>
+            </div>
+            {sessionPrepRows.length === 0 ? (
+              <div className={`rounded-xl border ${cardBorder} p-6 text-sm ${textSecondary}`}>No submitted pre-session agendas from assigned clients yet.</div>
+            ) : (
+              <div className="space-y-3">
+                {Object.values(sessionPrepRows.reduce((acc, agenda) => {
+                  const existing = acc[agenda.client_id];
+                  if (!existing || new Date(agenda.created_at || 0) > new Date(existing.created_at || 0)) acc[agenda.client_id] = agenda;
+                  return acc;
+                }, {})).map((agenda) => {
+                  const client = clients.find(c => c.id === agenda.client_id);
+                  const unreviewed = sessionPrepRows.filter(row => row.client_id === agenda.client_id && row.status === 'submitted').length;
+                  return (
+                    <button key={agenda.client_id} onClick={() => setSelectedPrepClientId(agenda.client_id)} className={`w-full text-left rounded-xl border ${selectedPrepClientId === agenda.client_id ? 'border-blue-400 bg-blue-50 dark:bg-blue-950/30' : cardBorder + ' ' + hoverBg} p-4 transition-colors`}>
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className={`font-semibold ${textPrimary}`}>{client?.name || agenda.client_name || 'Assigned client'}</p>
+                          <p className={`text-xs ${textMuted}`}>Most recent agenda: {agenda.created_at ? new Date(agenda.created_at).toLocaleDateString() : 'N/A'}</p>
+                        </div>
+                        <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${unreviewed ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}`}>{unreviewed} unreviewed</span>
+                      </div>
+                      <p className={`mt-2 text-sm ${textSecondary} line-clamp-2`}>{agenda.topics}</p>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+          <SessionPrepBrief clientId={selectedPrepClientId} therapistId={therapist?.id} clients={clients} />
+        </div>
+      )}
 
       {activeTab === 'clients' && (
         <div>
@@ -2931,8 +2985,7 @@ const TherapistDashboard = () => {
               </button>
             </div>
             <div className="mt-5 space-y-4">
-              <SessionPrepBrief clientId={noteForm.clientId} />
-              <SessionPrepSummary clientId={noteForm.clientId} therapistId={clientAuth.getCurrentClient()?.id} />
+              <SessionPrepBrief clientId={noteForm.clientId} therapistId={clientAuth.getCurrentClient()?.id} />
               <TherapistHomeworkBuilder clientId={noteForm.clientId} />
               <TreatmentPlanBuilder clientId={noteForm.clientId} />
             </div>
