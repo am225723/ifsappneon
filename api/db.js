@@ -1,8 +1,5 @@
 /* global process */
-import { neon } from '@neondatabase/serverless';
-import { verifyToken } from '@clerk/backend';
-
-const sql = neon(process.env.DATABASE_URL);
+import { sql, isAdminUser, isTherapistUser } from './_auth.js';
 
 const TABLES = new Set([
   'ifs_clients',
@@ -54,6 +51,7 @@ function normalizeColumns(columns) {
 function buildWhere(filters = [], params) {
   if (!filters.length) return '';
   const clauses = filters.map((filter) => {
+    if (filter.raw) return `(${filter.raw})`;
     const column = quoteIdent(filter.column);
     if (filter.op === 'eq') {
       params.push(filter.value);
@@ -156,17 +154,172 @@ function buildUpsert(table, values, onConflict, params) {
   return `${insertSql} ON CONFLICT (${conflictSql}) ${updateSql} RETURNING *`;
 }
 
-async function requireAuth(req) {
+async function getCurrentAppUserFromClerk(req) {
   if (process.env.ALLOW_PIN_AUTH_WITHOUT_CLERK === 'true') return null;
   const auth = req.headers.authorization || '';
   const token = auth.startsWith('Bearer ') ? auth.slice(7) : null;
   if (!token) throw Object.assign(new Error('Missing Clerk bearer token'), { statusCode: 401 });
 
+  const { verifyToken } = await import('@clerk/backend');
   const payload = await verifyToken(token, {
     secretKey: process.env.CLERK_SECRET_KEY,
     authorizedParties: process.env.CLERK_AUTHORIZED_PARTIES?.split(',').map((v) => v.trim()).filter(Boolean)
   });
-  return payload;
+
+  const rows = await sql.query('SELECT * FROM ifs_clients WHERE clerk_user_id = $1 LIMIT 1', [payload.sub]);
+  if (!rows[0]) throw Object.assign(new Error('No IFS app user is linked to this Clerk account'), { statusCode: 403 });
+  return rows[0];
+}
+
+const CLIENT_SCOPED_TABLES = new Set([
+  'ifs_assessment_results',
+  'ifs_personalized_curriculum',
+  'ifs_client_progress',
+  'ifs_module_answers',
+  'ifs_journal_entries',
+  'ifs_parts',
+  'ifs_interactive_data',
+  'ifs_exercise_progress',
+  'ifs_therapist_notes',
+  'ifs_milestones',
+  'ifs_mood_entries',
+  'ifs_therapy_sessions',
+  'ifs_therapy_homework',
+  'ifs_messages',
+  'ifs_parts_dialogue',
+  'ifs_gamification',
+  'ifs_client_preferences',
+  'ifs_therapist_feedback',
+  'ifs_therapy_activity_progress',
+  'ifs_uploads',
+  'ifs_assigned_homework',
+  'ifs_session_agendas',
+  'ifs_generated_reports',
+  'ifs_treatment_plans'
+]);
+
+function getFilterValues(filters, column) {
+  const values = [];
+  (filters || []).forEach((filter) => {
+    if (filter.column !== column) return;
+    if (filter.op === 'eq') values.push(filter.value);
+    if (filter.op === 'in' && Array.isArray(filter.value)) values.push(...filter.value);
+  });
+  return [...new Set(values.filter(Boolean).map(String))];
+}
+
+function getValueRows(values) {
+  if (!values) return [];
+  return Array.isArray(values) ? values : [values];
+}
+
+async function hasActiveAssignment(therapistId, clientId) {
+  const rows = await sql.query(`
+    SELECT 1
+    FROM ifs_therapist_clients
+    WHERE therapist_id = $1
+      AND client_id = $2
+      AND COALESCE(status, 'active') = 'active'
+    LIMIT 1
+  `, [therapistId, clientId]);
+  return rows.length > 0;
+}
+
+async function assertAssignedClients(appUser, clientIds) {
+  const ids = [...new Set((clientIds || []).filter(Boolean).map(String))];
+  if (!ids.length) throw Object.assign(new Error('A client_id filter or value is required for this operation'), { statusCode: 403 });
+  for (const clientId of ids) {
+    if (!(await hasActiveAssignment(appUser.id, clientId))) {
+      throw Object.assign(new Error('Client is not assigned to this therapist'), { statusCode: 403 });
+    }
+  }
+}
+
+async function authorizePayload({ appUser, table, action, filters, values }) {
+  if (!appUser || isAdminUser(appUser)) return;
+
+  if (table === 'ifs_therapist_clients') {
+    if (appUser.user_role === 'client') {
+      if (action !== 'select') throw Object.assign(new Error('Clients cannot modify therapist assignments'), { statusCode: 403 });
+      return;
+    }
+    if (!isTherapistUser(appUser)) throw Object.assign(new Error('Access denied'), { statusCode: 403 });
+    const rows = getValueRows(values);
+    if ((action === 'insert' || action === 'upsert') && rows.some((row) => String(row.therapist_id) !== String(appUser.id))) {
+      throw Object.assign(new Error('Therapists may only manage their own assignments'), { statusCode: 403 });
+    }
+    return;
+  }
+
+  if (table === 'ifs_clients') {
+    if (appUser.user_role === 'client') {
+      if (action === 'insert') throw Object.assign(new Error('Clients cannot create client profiles'), { statusCode: 403 });
+      return;
+    }
+    if (isTherapistUser(appUser)) {
+      if (action === 'insert') return;
+      const ids = getFilterValues(filters, 'id');
+      const clientIds = ids.filter((id) => id !== String(appUser.id));
+      if (clientIds.length) await assertAssignedClients(appUser, clientIds);
+      return;
+    }
+  }
+
+  if (CLIENT_SCOPED_TABLES.has(table)) {
+    const valueClientIds = getValueRows(values).map((row) => row.client_id).filter(Boolean);
+    const filterClientIds = getFilterValues(filters, 'client_id');
+    const clientIds = valueClientIds.length ? valueClientIds : filterClientIds;
+    if (appUser.user_role === 'client') {
+      if ((action === 'insert' || action === 'upsert') && !clientIds.length) {
+        throw Object.assign(new Error('client_id is required'), { statusCode: 403 });
+      }
+      if (clientIds.some((id) => String(id) !== String(appUser.id))) {
+        throw Object.assign(new Error('Clients may only access their own rows'), { statusCode: 403 });
+      }
+      return;
+    }
+    if (isTherapistUser(appUser)) {
+      if (action === 'insert' || action === 'upsert') await assertAssignedClients(appUser, clientIds);
+      else if (clientIds.length) await assertAssignedClients(appUser, clientIds);
+      return;
+    }
+  }
+}
+
+function buildAuthClause(table, appUser, params) {
+  if (!appUser || isAdminUser(appUser)) return '';
+  if (table === 'ifs_therapist_clients') {
+    params.push(appUser.id);
+    return appUser.user_role === 'client'
+      ? `${quoteIdent('client_id')} = $${params.length}`
+      : `${quoteIdent('therapist_id')} = $${params.length}`;
+  }
+  if (table === 'ifs_clients') {
+    if (appUser.user_role === 'client') {
+      params.push(appUser.id);
+      return `${quoteIdent('id')} = $${params.length}`;
+    }
+    if (isTherapistUser(appUser)) {
+      params.push(appUser.id, appUser.id);
+      return `(${quoteIdent('id')} = $${params.length - 1} OR ${quoteIdent('id')} IN (SELECT client_id FROM ifs_therapist_clients WHERE therapist_id = $${params.length} AND COALESCE(status, 'active') = 'active'))`;
+    }
+  }
+  if (CLIENT_SCOPED_TABLES.has(table)) {
+    if (appUser.user_role === 'client') {
+      params.push(appUser.id);
+      return `${quoteIdent('client_id')} = $${params.length}`;
+    }
+    if (isTherapistUser(appUser)) {
+      params.push(appUser.id);
+      return `${quoteIdent('client_id')} IN (SELECT client_id FROM ifs_therapist_clients WHERE therapist_id = $${params.length} AND COALESCE(status, 'active') = 'active')`;
+    }
+  }
+  return '';
+}
+
+function appendAuthFilter(filters, authClause) {
+  if (!authClause) return filters;
+  return [...(filters || []), { raw: authClause }];
 }
 
 export default async function handler(req, res) {
@@ -176,21 +329,23 @@ export default async function handler(req, res) {
   }
 
   try {
-    await requireAuth(req);
+    const appUser = await getCurrentAppUserFromClerk(req);
     const { table, action, columns = '*', filters = [], order = [], limit, values, onConflict, single, maybeSingle } = req.body || {};
     if (!TABLES.has(table)) throw new Error(`Unsupported table: ${table}`);
+    await authorizePayload({ appUser, table, action, filters, values });
 
     const params = [];
+    const scopedFilters = appendAuthFilter(filters, action === 'select' || action === 'update' || action === 'delete' ? buildAuthClause(table, appUser, params) : '');
     let query;
 
     if (action === 'select') {
-      query = `SELECT ${normalizeColumns(columns)} FROM ${quoteIdent(table)}${buildWhere(filters, params)}${buildOrder(order)}${buildLimit(limit, single, maybeSingle)}`;
+      query = `SELECT ${normalizeColumns(columns)} FROM ${quoteIdent(table)}${buildWhere(scopedFilters, params)}${buildOrder(order)}${buildLimit(limit, single, maybeSingle)}`;
     } else if (action === 'insert') {
       query = buildInsert(table, values, params);
     } else if (action === 'update') {
-      query = buildUpdate(table, values, filters, params);
+      query = buildUpdate(table, values, scopedFilters, params);
     } else if (action === 'delete') {
-      query = buildDelete(table, filters, params);
+      query = buildDelete(table, scopedFilters, params);
     } else if (action === 'upsert') {
       query = buildUpsert(table, values, onConflict, params);
     } else {
@@ -198,6 +353,20 @@ export default async function handler(req, res) {
     }
 
     const rows = await sql.query(query, params);
+
+    if (appUser && isTherapistUser(appUser) && table === 'ifs_clients' && action === 'insert') {
+      for (const row of rows) {
+        if (row?.id && row.user_role === 'client') {
+          await sql.query(`
+            INSERT INTO ifs_therapist_clients (therapist_id, client_id, status)
+            VALUES ($1, $2, 'active')
+            ON CONFLICT (therapist_id, client_id) DO UPDATE
+            SET status = 'active', discharged_at = NULL, updated_at = CURRENT_TIMESTAMP
+          `, [appUser.id, row.id]);
+        }
+      }
+    }
+
     return res.status(200).json({ data: normalizeRows(rows, single, maybeSingle) });
   } catch (error) {
     const status = error.statusCode || 400;

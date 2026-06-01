@@ -22,13 +22,15 @@ CREATE TABLE IF NOT EXISTS ifs_clients (
 
 CREATE TABLE IF NOT EXISTS ifs_therapist_clients (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  therapist_id VARCHAR(255) NOT NULL,
+  therapist_id UUID NOT NULL REFERENCES ifs_clients(id) ON DELETE CASCADE,
   therapist_name VARCHAR(255),
-  client_id VARCHAR(255) NOT NULL,
+  client_id UUID NOT NULL REFERENCES ifs_clients(id) ON DELETE CASCADE,
   client_name VARCHAR(255),
   status VARCHAR(50) DEFAULT 'active',
   assigned_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
   discharged_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
   -- Allows multiple therapists per client; this only prevents duplicate pair rows.
   UNIQUE (therapist_id, client_id)
 );
@@ -386,8 +388,8 @@ CREATE INDEX IF NOT EXISTS idx_parts_client ON ifs_parts(client_id);
 CREATE INDEX IF NOT EXISTS idx_mood_client ON ifs_mood_entries(client_id);
 CREATE INDEX IF NOT EXISTS idx_messages_client ON ifs_messages(client_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_uploads_user ON ifs_uploads(clerk_user_id, created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_therapist_clients_therapist_status ON ifs_therapist_clients(therapist_id, status);
-CREATE INDEX IF NOT EXISTS idx_therapist_clients_client_status ON ifs_therapist_clients(client_id, status);
+CREATE INDEX IF NOT EXISTS idx_ifs_therapist_clients_therapist ON ifs_therapist_clients(therapist_id, status);
+CREATE INDEX IF NOT EXISTS idx_ifs_therapist_clients_client ON ifs_therapist_clients(client_id, status);
 CREATE INDEX IF NOT EXISTS idx_assigned_homework_client_status ON ifs_assigned_homework(client_id, status);
 CREATE INDEX IF NOT EXISTS idx_session_agendas_therapist_date ON ifs_session_agendas(therapist_id, session_date DESC);
 CREATE INDEX IF NOT EXISTS idx_generated_reports_client_generated ON ifs_generated_reports(client_id, generated_at DESC);
