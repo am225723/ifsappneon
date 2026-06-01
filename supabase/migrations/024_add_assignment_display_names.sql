@@ -11,8 +11,8 @@ SET
     (
       SELECT therapist.name
       FROM ifs_clients therapist
-      WHERE therapist.id::text = assignment.therapist_id
-         OR therapist.clerk_user_id = assignment.therapist_id
+      WHERE therapist.id = assignment.therapist_id
+         OR therapist.clerk_user_id = assignment.therapist_id::text
       LIMIT 1
     )
   ),
@@ -21,8 +21,8 @@ SET
     (
       SELECT client.name
       FROM ifs_clients client
-      WHERE client.id::text = assignment.client_id
-         OR client.clerk_user_id = assignment.client_id
+      WHERE client.id = assignment.client_id
+         OR client.clerk_user_id = assignment.client_id::text
       LIMIT 1
     )
   )
