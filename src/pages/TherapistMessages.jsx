@@ -8,6 +8,8 @@ import { supabase } from '../lib/supabase';
 import { clientAuth } from '../lib/supabasePersonalization';
 import { loadAssignedClients } from '../lib/therapistAssignments';
 
+const MESSAGE_BOUNDARY = 'Messages are checked during business hours and are not monitored for emergencies. If you are in immediate danger or experiencing a crisis, call 911 or your local crisis line.';
+
 const TherapistMessages = () => {
   const { theme } = useTheme();
   const isDark = theme.isDark;
@@ -171,7 +173,7 @@ const TherapistMessages = () => {
       <div className={`mb-4 rounded-xl border px-4 py-3 ${isDark ? 'bg-amber-900/20 border-amber-700/40 text-amber-100' : 'bg-amber-50 border-amber-200 text-amber-800'}`}>
         <div className="flex items-start gap-2 text-sm">
           <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
-          <p>Messages are checked during business hours. For emergencies, please call 911 or your local crisis line.</p>
+          <p>{MESSAGE_BOUNDARY}</p>
         </div>
       </div>
 

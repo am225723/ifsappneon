@@ -1,0 +1,35 @@
+-- Backfill therapist-client assignments.
+-- Review carefully before running in production. This file is intentionally
+-- conservative because legacy data may not contain enough relationship detail
+-- to infer therapist caseloads safely.
+
+-- Option A: Assign all existing clients to one therapist.
+-- Replace the therapist email before running.
+--
+-- INSERT INTO ifs_therapist_clients (therapist_id, client_id, status)
+-- SELECT therapist.id, client.id, 'active'
+-- FROM ifs_clients therapist
+-- CROSS JOIN ifs_clients client
+-- WHERE therapist.user_role = 'therapist'
+--   AND therapist.email = 'REPLACE_WITH_THERAPIST_EMAIL'
+--   AND client.user_role = 'client'
+-- ON CONFLICT (therapist_id, client_id) DO NOTHING;
+
+-- Option B: Manually insert specific therapist/client pairs by email.
+-- Duplicate the SELECT block for each reviewed pair.
+--
+-- INSERT INTO ifs_therapist_clients (therapist_id, client_id, status)
+-- SELECT therapist.id, client.id, 'active'
+-- FROM ifs_clients therapist
+-- JOIN ifs_clients client ON client.email = 'CLIENT_EMAIL_TO_ASSIGN'
+-- WHERE therapist.user_role = 'therapist'
+--   AND therapist.email = 'THERAPIST_EMAIL_TO_ASSIGN'
+--   AND client.user_role = 'client'
+-- ON CONFLICT (therapist_id, client_id) DO NOTHING;
+
+-- Option C: Manually insert reviewed UUID pairs.
+--
+-- INSERT INTO ifs_therapist_clients (therapist_id, client_id, status)
+-- VALUES
+--   ('THERAPIST_IFS_CLIENTS_ID'::uuid, 'CLIENT_IFS_CLIENTS_ID'::uuid, 'active')
+-- ON CONFLICT (therapist_id, client_id) DO NOTHING;

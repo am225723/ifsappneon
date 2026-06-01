@@ -55,6 +55,7 @@ import { initializePushNotifications } from './lib/pushNotifications';
 import ResourceLibrary from './pages/ResourceLibrary';
 import InnerLibraryMockup from './pages/InnerLibraryMockup';
 import AuthDebug from './components/AuthDebug';
+import CaseloadManager from './components/CaseloadManager';
 import { DataProvider } from './contexts/DataContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { PartsProvider } from './contexts/PartsContext';
@@ -515,6 +516,11 @@ function AppContent({ authChecked, clerkLoaded, clerkSignedIn, isAuthenticated, 
                 <Route path="/co-therapy" element={
                   currentClient?.user_role === 'therapist'
                     ? <CoTherapySession />
+                    : <Home clientId={currentClient?.id} client={currentClient} />
+                } />
+                <Route path="/caseload" element={
+                  currentClient?.user_role === 'therapist'
+                    ? <CaseloadManager />
                     : <Home clientId={currentClient?.id} client={currentClient} />
                 } />
                 <Route path="/advisor-messages" element={

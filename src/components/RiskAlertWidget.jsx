@@ -2,6 +2,15 @@ import { useEffect, useState } from 'react';
 import { AlertTriangle, RefreshCw, ShieldAlert } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
+async function getAuthHeaders() {
+  try {
+    const token = await window.Clerk?.session?.getToken?.();
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  } catch {
+    return {};
+  }
+}
+
 export default function RiskAlertWidget({ therapistId, clients = [], onSelectClient }) {
   const [alerts, setAlerts] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -12,7 +21,7 @@ export default function RiskAlertWidget({ therapistId, clients = [], onSelectCli
     setLoading(true);
     setError('');
     try {
-      const response = await fetch(`/api/risk-alerts?therapistId=${encodeURIComponent(therapistId)}`);
+      const response = await fetch(`/api/risk-alerts?therapistId=${encodeURIComponent(therapistId)}`, { headers: await getAuthHeaders() });
       const payload = await response.json();
       if (!response.ok) throw new Error(payload?.error?.message || 'Unable to load risk alerts');
       setAlerts(payload.data || []);

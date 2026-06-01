@@ -8,6 +8,7 @@ import {
 import { useTheme } from '../contexts/ThemeContext';
 import { supabase, supabaseHelpers } from '../lib/supabase';
 import { clientAuth } from '../lib/supabasePersonalization';
+import { loadAssignedClients } from '../lib/therapistAssignments';
 
 const MOOD_LABELS = { 1: 'Struggling', 2: 'Low', 3: 'Okay', 4: 'Good', 5: 'Great' };
 const MOOD_COLORS = { 1: '#6366F1', 2: '#6B7280', 3: '#3B82F6', 4: '#22C55E', 5: '#EAB308' };
@@ -125,7 +126,7 @@ export default function MoodAnalytics() {
   }, [selectedClient, range]);
 
   const loadAdvisorClients = async () => {
-    const { data } = await supabase.from('ifs_clients').select('id, name').eq('user_role', 'client').order('name');
+    const data = await loadAssignedClients(currentClientId, 'id, name');
     setClients(data || []);
     if (data && data.length > 0) {
       setSelectedClient(data[0].id);
