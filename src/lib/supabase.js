@@ -626,10 +626,14 @@ export const supabaseHelpers = {
       .insert({
         therapist_id: therapistId,
         client_id: clientId,
-        note_type: notes.noteType || 'session',
+        note_type: notes.noteType || 'session_note',
+        clinical_summary: notes.clinicalSummary || notes.clinical_summary || null,
         content: notes.content,
         session_date: notes.sessionDate,
-        tagged_parts: notes.tagged_parts || []
+        tagged_parts: notes.tagged_parts || notes.taggedParts || [],
+        tagged_treatment_goals: notes.tagged_treatment_goals || notes.taggedTreatmentGoals || [],
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       })
       .select()
       .single();

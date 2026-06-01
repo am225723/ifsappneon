@@ -325,10 +325,12 @@ CREATE TABLE IF NOT EXISTS ifs_therapist_notes (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   therapist_id UUID,
   client_id UUID REFERENCES ifs_clients(id) ON DELETE CASCADE,
-  note_type VARCHAR(50) DEFAULT 'session',
+  note_type VARCHAR(100) DEFAULT 'session_note',
+  clinical_summary TEXT,
   content TEXT,
   session_date DATE,
   tagged_parts JSONB DEFAULT '[]'::jsonb,
+  tagged_treatment_goals JSONB DEFAULT '[]'::jsonb,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -367,11 +369,17 @@ CREATE TABLE IF NOT EXISTS ifs_generated_reports (
 
 CREATE TABLE IF NOT EXISTS ifs_treatment_plans (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  client_id VARCHAR(255) NOT NULL,
-  therapist_id VARCHAR(255) NOT NULL,
+  therapist_id UUID NOT NULL REFERENCES ifs_clients(id) ON DELETE CASCADE,
+  client_id UUID NOT NULL REFERENCES ifs_clients(id) ON DELETE CASCADE,
   goal_title VARCHAR(255) NOT NULL,
+  goal_description TEXT,
   target_wounds JSONB DEFAULT '[]'::jsonb,
+  target_parts JSONB DEFAULT '[]'::jsonb,
+  objectives JSONB DEFAULT '[]'::jsonb,
+  interventions JSONB DEFAULT '[]'::jsonb,
   status VARCHAR(50) DEFAULT 'active',
+  review_date DATE,
+  completed_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
