@@ -9,6 +9,13 @@ import { supabase } from '../lib/supabase';
 import { clientAuth } from '../lib/supabasePersonalization';
 import { generateHomework, generateHomeworkBatch } from '../lib/homeworkAI';
 import { loadAssignedClients } from '../lib/therapistAssignments';
+import { curriculumModules } from '../data/curriculumData';
+import {
+  archiveAssignedHomework,
+  assignModuleHomework,
+  loadAssignedHomeworkForTherapistClient,
+  markAssignedHomeworkReviewed
+} from '../lib/assignedHomework';
 
 const categories = [
   { value: 'general', label: 'General', color: 'bg-gray-100 text-gray-700' },
@@ -52,6 +59,13 @@ const TherapistHomework = () => {
   const [aiBatchResults, setAiBatchResults] = useState([]);
   const [showBatchResults, setShowBatchResults] = useState(false);
   const [clientWounds, setClientWounds] = useState({});
+  const [assignedClientId, setAssignedClientId] = useState('');
+  const [assignedModuleId, setAssignedModuleId] = useState(curriculumModules[0]?.id || '');
+  const [assignedInstructions, setAssignedInstructions] = useState('');
+  const [assignedHomework, setAssignedHomework] = useState([]);
+  const [assignedMessage, setAssignedMessage] = useState('');
+  const [assignedSaving, setAssignedSaving] = useState(false);
+  const [reviewFeedback, setReviewFeedback] = useState({});
 
   const textPrimary = isDark ? 'text-white' : 'text-gray-900';
   const textSecondary = isDark ? 'text-slate-300' : 'text-gray-600';
@@ -77,8 +91,9 @@ const TherapistHomework = () => {
     }
     if (hwRes.error) console.error('Error loading homework:', hwRes.error);
     if (hwRes.data) setHomework(hwRes.data);
+    if (!assignedClientId && clientData[0]?.id) setAssignedClientId(clientData[0].id);
     setLoading(false);
-  }, [therapist?.id]);
+  }, [therapist?.id, assignedClientId]);
 
   useEffect(() => { loadData(); }, [loadData]);
 
@@ -227,6 +242,76 @@ const TherapistHomework = () => {
     }
     return { label: 'Assigned', icon: Clock, color: 'text-blue-600', bg: 'bg-blue-100' };
   };
+
+
+
+  const selectedAssignedModule = curriculumModules.find(module => module.id === assignedModuleId);
+  const assignedModulesByCategory = curriculumModules.reduce((acc, module) => {
+    const category = module.category || 'Other';
+    acc[category] = acc[category] || [];
+    acc[category].push(module);
+    return acc;
+  }, {});
+
+  const loadAssignedModuleHomework = useCallback(async () => {
+    if (!therapist?.id || !assignedClientId) {
+      setAssignedHomework([]);
+      return;
+    }
+    const { data, error } = await loadAssignedHomeworkForTherapistClient(therapist.id, assignedClientId);
+    if (error) {
+      setAssignedMessage(error.message || 'Unable to load assigned curriculum modules.');
+      return;
+    }
+    setAssignedHomework((data || []).map(item => ({
+      ...item,
+      module: curriculumModules.find(module => module.id === item.module_id)
+    })));
+  }, [therapist?.id, assignedClientId]);
+
+  useEffect(() => { loadAssignedModuleHomework(); }, [loadAssignedModuleHomework]);
+
+  const handleAssignModule = async () => {
+    if (!therapist?.id || !assignedClientId || !selectedAssignedModule) return;
+    setAssignedSaving(true);
+    setAssignedMessage('');
+    const { error } = await assignModuleHomework({
+      therapistId: therapist.id,
+      clientId: assignedClientId,
+      moduleId: selectedAssignedModule.id,
+      title: selectedAssignedModule.title,
+      instructions: assignedInstructions.trim() || null
+    });
+    setAssignedSaving(false);
+    if (error) {
+      setAssignedMessage(error.message || 'Unable to assign curriculum module.');
+      return;
+    }
+    setAssignedInstructions('');
+    setAssignedMessage(`Assigned ${selectedAssignedModule.title} to ${getClientName(assignedClientId)}.`);
+    await loadAssignedModuleHomework();
+  };
+
+  const handleReviewAssignedModule = async (item) => {
+    const { error } = await markAssignedHomeworkReviewed(item.id, reviewFeedback[item.id] || item.therapist_feedback || '');
+    if (error) {
+      setAssignedMessage(error.message || 'Unable to review assigned module.');
+      return;
+    }
+    setAssignedMessage('Marked assigned module as reviewed.');
+    await loadAssignedModuleHomework();
+  };
+
+  const handleArchiveAssignedModule = async (item) => {
+    const { error } = await archiveAssignedHomework(item.id);
+    if (error) {
+      setAssignedMessage(error.message || 'Unable to archive assigned module.');
+      return;
+    }
+    setAssignedMessage('Archived assigned module.');
+    await loadAssignedModuleHomework();
+  };
+
 
   const filtered = homework.filter(h => {
     if (filterClient !== 'all' && h.client_id !== filterClient) return false;
@@ -540,6 +625,83 @@ const TherapistHomework = () => {
           </div>
         </div>
       )}
+
+      <div className={`${cardBg} rounded-2xl border ${cardBorder} p-6 mb-6`}>
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center">
+            <BookOpen className="w-5 h-5 text-white" />
+          </div>
+          <div>
+            <h2 className={`text-lg font-semibold ${textPrimary}`}>Assigned Curriculum Modules</h2>
+            <p className={`text-sm ${textMuted}`}>Assign locked or available curriculum modules to active assigned clients.</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+          <div>
+            <label className={`block text-sm font-medium ${textSecondary} mb-1.5`}>Active assigned client</label>
+            <select value={assignedClientId} onChange={e => setAssignedClientId(e.target.value)} className={`w-full px-3 py-2.5 rounded-lg border ${inputBg} focus:ring-2 focus:ring-blue-500 outline-none`}>
+              <option value="">Select a client...</option>
+              {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className={`block text-sm font-medium ${textSecondary} mb-1.5`}>Curriculum module</label>
+            <select value={assignedModuleId} onChange={e => setAssignedModuleId(e.target.value)} className={`w-full px-3 py-2.5 rounded-lg border ${inputBg} focus:ring-2 focus:ring-blue-500 outline-none`}>
+              {Object.entries(assignedModulesByCategory).map(([category, modules]) => (
+                <optgroup key={category} label={category.replace(/_/g, ' ')}>
+                  {modules.map(module => <option key={module.id} value={module.id}>{module.title}</option>)}
+                </optgroup>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {selectedAssignedModule && (
+          <div className={`rounded-xl border ${cardBorder} p-4 mb-4 ${isDark ? 'bg-slate-900/40' : 'bg-blue-50/50'}`}>
+            <p className={`font-semibold ${textPrimary}`}>{selectedAssignedModule.title}</p>
+            <p className={`text-sm ${textSecondary} mt-1`}>{selectedAssignedModule.description}</p>
+            <div className={`flex flex-wrap gap-3 text-xs ${textMuted} mt-2`}>
+              <span>Category: {selectedAssignedModule.category?.replace(/_/g, ' ') || 'Uncategorized'}</span>
+              <span>Estimated time: {selectedAssignedModule.estimatedTime || `${selectedAssignedModule.estimatedMinutes || 0} min`}</span>
+            </div>
+          </div>
+        )}
+
+        <label className={`block text-sm font-medium ${textSecondary} mb-1.5`}>Optional instructions</label>
+        <textarea value={assignedInstructions} onChange={e => setAssignedInstructions(e.target.value)} rows={3} className={`w-full px-3 py-2.5 rounded-lg border ${inputBg} focus:ring-2 focus:ring-blue-500 outline-none resize-none mb-3`} placeholder="Add focus points, pacing, or encouragement for this module..." />
+        <div className="flex items-center justify-between gap-3 mb-4">
+          {assignedMessage ? <p className={`text-sm ${assignedMessage.includes('already') || assignedMessage.includes('Unable') ? 'text-amber-600' : 'text-emerald-600'}`}>{assignedMessage}</p> : <span />}
+          <button onClick={handleAssignModule} disabled={assignedSaving || !assignedClientId || !assignedModuleId} className="px-5 py-2.5 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 disabled:opacity-50">
+            {assignedSaving ? 'Assigning...' : 'Assign Module'}
+          </button>
+        </div>
+
+        <div className="space-y-3">
+          {assignedHomework.length === 0 ? (
+            <p className={`text-sm ${textMuted}`}>No curriculum modules assigned for this client yet.</p>
+          ) : assignedHomework.map(item => (
+            <div key={item.id} className={`rounded-xl border ${cardBorder} p-4`}>
+              <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
+                <div>
+                  <p className={`font-semibold ${textPrimary}`}>{item.title || item.module?.title || item.module_id}</p>
+                  <p className={`text-xs ${textMuted} mt-1`}>Status: <span className="font-semibold capitalize">{item.status}</span> · Assigned {new Date(item.assigned_at).toLocaleDateString()}</p>
+                  {item.instructions && <p className={`text-sm ${textSecondary} mt-2`}>{item.instructions}</p>}
+                  {item.completed_at && <p className={`text-xs ${textMuted} mt-1`}>Completed {new Date(item.completed_at).toLocaleDateString()}</p>}
+                </div>
+                <button onClick={() => handleArchiveAssignedModule(item)} className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-gray-100 text-gray-700 hover:bg-gray-200">Archive</button>
+              </div>
+              {item.status === 'completed' || item.status === 'reviewed' ? (
+                <div className="mt-3">
+                  <label className={`block text-xs font-semibold ${textMuted} mb-1`}>Therapist feedback</label>
+                  <textarea value={reviewFeedback[item.id] ?? item.therapist_feedback ?? ''} onChange={e => setReviewFeedback(prev => ({ ...prev, [item.id]: e.target.value }))} rows={2} className={`w-full px-3 py-2 rounded-lg border ${inputBg} text-sm`} />
+                  <button onClick={() => handleReviewAssignedModule(item)} className="mt-2 px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 text-white hover:bg-emerald-700">Mark reviewed</button>
+                </div>
+              ) : null}
+            </div>
+          ))}
+        </div>
+      </div>
 
       <div className="flex flex-wrap gap-3 mb-4">
         <div className="relative flex-1 min-w-[200px]">

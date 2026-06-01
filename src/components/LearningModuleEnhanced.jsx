@@ -45,6 +45,7 @@ import { useData } from '../contexts/DataContext';
 import { progressTracker } from '../lib/supabasePersonalization';
 import { generatePersonalizedLesson } from '../lib/dynamicLessonContent';
 import { generatePersonalizedActivity } from '../lib/dynamicActivityContent';
+import { syncAssignedHomeworkCompletion } from '../lib/assignedHomework';
 
 const VoiceRecorder = ({ onRecordingComplete, label }) => {
   const [isRecording, setIsRecording] = useState(false);
@@ -481,17 +482,18 @@ const LearningModuleEnhanced = ({ module, onComplete, onBack, userProgress = {},
   };
 
   // Complete module
-  const completeModule = () => {
+  const completeModule = async () => {
     setIsCompleted(true);
     completeStep();
     
-    saveModuleProgress(module.id, {
+    await saveModuleProgress(module.id, {
       current_step: steps.length - 1,
       responses: activityResponses,
       completed_steps: [...completedSteps, currentStepIndex],
       is_completed: true,
       completedAt: new Date().toISOString()
     });
+    await syncAssignedHomeworkCompletion(userId, module.id);
     
     if (awardXP) awardXP('module_complete', 100);
     
