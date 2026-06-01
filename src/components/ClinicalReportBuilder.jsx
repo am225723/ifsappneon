@@ -12,6 +12,8 @@ const SECTION_OPTIONS = [
   ['includeParts', 'Parts Summary', 'Part names plus lightweight roles, burdens, and status.'],
   ['includeMoodEntries', 'Mood Summary', 'Recent mood and energy values in a simple table.'],
   ['includeJournals', 'Journal Excerpts', 'Default-off client journal titles and truncated excerpts.'],
+  ['includeHealingTimeline', 'Healing Timeline Summary', 'Optional client-safe milestones from goals, homework, and parts status; excludes therapist notes.'],
+  ['includeAnalyticsSummary', 'Analytics Summary', 'Optional compact therapist analytics summary without chart libraries.'],
   ['includeAiSessionSummary', 'AI Session Prep Summary', 'Default-off placeholder for existing on-demand AI prep summaries; does not auto-generate AI content.'],
   ['includeFullNoteText', 'Full Clinical Note Text', 'Default-off full note body excerpts. Use only when clinically appropriate.']
 ];
@@ -24,6 +26,8 @@ const DEFAULT_SECTIONS = {
   includeParts: true,
   includeMoodEntries: true,
   includeJournals: false,
+  includeHealingTimeline: false,
+  includeAnalyticsSummary: false,
   includeAiSessionSummary: false,
   includeFullNoteText: false
 };
@@ -94,6 +98,7 @@ export default function ClinicalReportBuilder() {
       includeTaggedNotes: false,
       includeJournals: false,
       includeAiSessionSummary: false,
+      includeAnalyticsSummary: false,
       includeFullNoteText: false
     };
   }, [reportType, sections]);
@@ -233,7 +238,7 @@ export default function ClinicalReportBuilder() {
               <h3 className="mb-3 text-sm font-semibold text-brand-stone-800 dark:text-slate-200">Sections</h3>
               <div className="space-y-3">
                 {SECTION_OPTIONS.map(([key, label, description]) => {
-                  const disabled = reportType === 'client_progress_summary' && ['includeTaggedNotes', 'includeJournals', 'includeAiSessionSummary', 'includeFullNoteText'].includes(key);
+                  const disabled = reportType === 'client_progress_summary' && ['includeTaggedNotes', 'includeJournals', 'includeAiSessionSummary', 'includeAnalyticsSummary', 'includeFullNoteText'].includes(key);
                   return (
                     <label key={key} className={`flex gap-3 rounded-2xl border p-3 transition ${disabled ? 'border-brand-stone-100 bg-brand-stone-50 opacity-60 dark:border-slate-800 dark:bg-slate-950' : 'border-brand-stone-200 hover:border-brand-gold-300 dark:border-slate-700 dark:hover:border-brand-gold-700'}`}>
                       <input
