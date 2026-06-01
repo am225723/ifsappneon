@@ -1,7 +1,5 @@
 /* global process */
-import { neon } from '@neondatabase/serverless';
-
-const sql = neon(process.env.DATABASE_URL);
+import { requireTherapist, sql } from './_auth.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
@@ -9,10 +7,9 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: { message: 'Method not allowed' } });
   }
 
-  const therapistId = req.query?.therapistId;
-  if (!therapistId) return res.status(400).json({ error: { message: 'Missing therapistId' } });
-
   try {
+    const therapist = await requireTherapist(req);
+    const therapistId = therapist.id;
     const rows = await sql`
       WITH assigned AS (
         SELECT tc.client_id, c.name, c.email, c.last_active
@@ -86,6 +83,6 @@ export default async function handler(req, res) {
 
     return res.status(200).json({ data: flagged });
   } catch (error) {
-    return res.status(500).json({ error: { message: error.message } });
+    return res.status(error.statusCode || 500).json({ error: { message: error.message } });
   }
 }

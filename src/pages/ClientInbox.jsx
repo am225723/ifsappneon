@@ -7,6 +7,8 @@ import { useTheme } from '../contexts/ThemeContext';
 import { supabase } from '../lib/supabase';
 import { clientAuth } from '../lib/supabasePersonalization';
 
+const MESSAGE_BOUNDARY = 'Messages are checked during business hours and are not monitored for emergencies. If you are in immediate danger or experiencing a crisis, call 911 or your local crisis line.';
+
 const ClientInbox = () => {
   const { theme } = useTheme();
   const location = useLocation();
@@ -200,6 +202,10 @@ const ClientInbox = () => {
             {unreadCount > 0 ? `${unreadCount} unread message${unreadCount > 1 ? 's' : ''}` : 'Chat with your advisor'}
           </p>
         </div>
+      </div>
+
+      <div className="mb-4 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-700 dark:bg-amber-900/20 dark:text-amber-100">
+        <AlertTriangle className="mr-2 inline h-4 w-4" />{MESSAGE_BOUNDARY}
       </div>
 
       {therapists.length > 1 && (

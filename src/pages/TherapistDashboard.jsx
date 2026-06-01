@@ -3253,6 +3253,7 @@ const TherapistDashboard = () => {
               {[
                 { id: 'create-client', label: 'Create New Client PIN', icon: Plus, color: 'from-brand-stone-500 to-brand-stone-600', desc: 'Generate a secure access PIN for a new client' },
                 { id: 'send-reminder', label: 'Send Reminder', icon: MessageSquare, color: 'from-brand-emerald-600 to-brand-emerald-700', desc: 'Send session or activity reminders to clients' },
+                { id: 'link:/caseload', label: 'Caseload Manager', icon: Users, color: 'from-emerald-500 to-teal-600', desc: 'Assign, discharge, and reactivate clients' },
                 { id: 'link:/advisor-messages', label: 'Client Messages', icon: MessageCircle, color: 'from-brand-stone-500 to-brand-stone-600', desc: 'Send and receive secure messages with clients' },
                 { id: 'link:/advisor-homework', label: 'Homework Manager', icon: Target, color: 'from-brand-gold-600 to-brand-emerald-700', desc: 'Create, assign, and track client homework' },
                 { id: 'link:/advisor-reports', label: 'Progress Reports', icon: Download, color: 'from-emerald-500 to-teal-600', desc: 'Generate and export client progress reports' },

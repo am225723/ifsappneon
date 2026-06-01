@@ -1,8 +1,41 @@
 import { supabase } from './supabase';
 
+async function getAuthToken() {
+  try {
+    const clerk = window.Clerk;
+    if (clerk?.session?.getToken) return await clerk.session.getToken();
+  } catch (error) {
+    console.warn('Unable to read Clerk token:', error);
+  }
+  return null;
+}
+
+async function getJson(path) {
+  const token = await getAuthToken();
+  const response = await fetch(path, {
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {})
+    }
+  });
+  const json = await response.json().catch(() => ({}));
+  if (!response.ok) return { data: null, error: json.error || { message: response.statusText } };
+  return { data: json.data, error: null };
+}
+
+function pickColumns(rows, columns) {
+  if (!columns || columns === '*') return rows;
+  const requested = columns.split(',').map((column) => column.trim()).filter(Boolean);
+  return rows.map((row) => Object.fromEntries(requested.map((column) => [column, row[column]])));
+}
+
 export async function loadAssignedClients(therapistId, columns = 'id, name, pin, email, phone, status, last_active, created_at, user_role, access_restrictions') {
   if (!therapistId) return [];
 
+  const { data, error } = await getJson('/api/therapist/assigned-clients');
+  if (!error && data) return pickColumns(data, columns);
+
+  console.warn('Secure assigned-clients route unavailable; falling back to scoped assignment query.', error);
   const { data: assignments, error: assignmentError } = await supabase
     .from('ifs_therapist_clients')
     .select('client_id, status')
@@ -32,6 +65,15 @@ export async function loadAssignedClients(therapistId, columns = 'id, name, pin,
   return clients || [];
 }
 
+export async function loadCaseloadClients() {
+  const { data, error } = await getJson('/api/therapist/assigned-clients?includeDischarged=true');
+  if (error) {
+    console.error('Error loading caseload:', error);
+    return [];
+  }
+  return data || [];
+}
+
 export async function assignClientToTherapist(therapistId, clientId, status = 'active', names = {}) {
   if (!therapistId || !clientId) return { data: null, error: { message: 'Missing therapist or client id' } };
 
@@ -49,6 +91,28 @@ export async function assignClientToTherapist(therapistId, clientId, status = 'a
       assigned_at: new Date().toISOString(),
       discharged_at: status === 'active' ? null : new Date().toISOString(),
     }, { onConflict: 'therapist_id,client_id' })
+    .select()
+    .single();
+}
+
+export async function dischargeClientAssignment(therapistId, clientId) {
+  if (!therapistId || !clientId) return { data: null, error: { message: 'Missing therapist or client id' } };
+  return supabase
+    .from('ifs_therapist_clients')
+    .update({ status: 'discharged', discharged_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+    .eq('therapist_id', therapistId)
+    .eq('client_id', clientId)
+    .select()
+    .single();
+}
+
+export async function reactivateClientAssignment(therapistId, clientId) {
+  if (!therapistId || !clientId) return { data: null, error: { message: 'Missing therapist or client id' } };
+  return supabase
+    .from('ifs_therapist_clients')
+    .update({ status: 'active', discharged_at: null, updated_at: new Date().toISOString() })
+    .eq('therapist_id', therapistId)
+    .eq('client_id', clientId)
     .select()
     .single();
 }
