@@ -1,58 +1,301 @@
 /* global process */
-import { neon } from '@neondatabase/serverless';
+import { requireTherapist, requireTherapistAssignment, sql } from './_auth.js';
 
-const sql = neon(process.env.DATABASE_URL);
+const OPENAI_CHAT_COMPLETIONS_URL = 'https://api.openai.com/v1/chat/completions';
+const DEFAULT_RANGE_DAYS = 7;
+const MAX_RANGE_DAYS = 30;
+const DISCLAIMER = 'AI-generated draft for clinician review. Verify against the chart and use clinical judgment.';
 
-function buildPrompt({ journals, moods, agenda }) {
-  return `Summarize the following client data from the past week for therapist session preparation. Focus on themes, active parts, risks, stuck points, and 3 suggested session questions. Avoid diagnosis.\n\nAgenda:\n${JSON.stringify(agenda || {}, null, 2)}\n\nMoods:\n${JSON.stringify(moods, null, 2)}\n\nJournals:\n${JSON.stringify(journals.map(j => ({ date: j.created_at, title: j.title, content: String(j.content || '').slice(0, 1500) })), null, 2)}`;
+function sendError(res, status, message, code = 'server_error') {
+  return res.status(status).json({ error: { code, message } });
 }
 
-async function streamWithOpenAI(prompt, res) {
-  const response = await fetch('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${process.env.OPENAI_API_KEY}` },
-    body: JSON.stringify({ model: process.env.OPENAI_MODEL || 'gpt-4o-mini', stream: true, messages: [{ role: 'user', content: prompt }] })
-  });
-  if (!response.ok || !response.body) throw new Error(`OpenAI request failed: ${response.status}`);
-  const reader = response.body.getReader();
-  const decoder = new TextDecoder();
-  let buffer = '';
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    buffer += decoder.decode(value, { stream: true });
-    const lines = buffer.split('\n');
-    buffer = lines.pop() || '';
-    for (const line of lines) {
-      if (!line.startsWith('data: ')) continue;
-      const data = line.slice(6);
-      if (data === '[DONE]') continue;
-      const json = JSON.parse(data);
-      const text = json.choices?.[0]?.delta?.content;
-      if (text) res.write(text);
+function clampRangeDays(value) {
+  const parsed = Number.parseInt(value, 10);
+  if (!Number.isFinite(parsed) || parsed <= 0) return DEFAULT_RANGE_DAYS;
+  return Math.min(parsed, MAX_RANGE_DAYS);
+}
+
+function truncateText(value, maxLength = 700) {
+  if (!value) return null;
+  const text = String(value).replace(/\s+/g, ' ').trim();
+  if (!text) return null;
+  return text.length > maxLength ? `${text.slice(0, maxLength)}…` : text;
+}
+
+function compactJson(value, maxLength = 500) {
+  if (value === null || value === undefined) return null;
+  const serialized = typeof value === 'string' ? value : JSON.stringify(value);
+  return truncateText(serialized, maxLength);
+}
+
+function normalizeAgenda(agenda) {
+  if (!agenda) return null;
+  return {
+    status: agenda.status,
+    session_date: agenda.session_date,
+    created_at: agenda.created_at,
+    topics: truncateText(agenda.topics),
+    active_parts: agenda.active_parts || [],
+    stuck_points: truncateText(agenda.stuck_points),
+    goals_for_session: truncateText(agenda.goals_for_session),
+    current_stress_level: agenda.current_stress_level,
+    current_mood_label: agenda.current_mood_label,
+    safety_concerns: truncateText(agenda.safety_concerns)
+  };
+}
+
+function normalizeMood(entry) {
+  return {
+    mood: entry.mood,
+    stress: entry.stress ?? null,
+    energy: entry.energy,
+    note: truncateText(entry.note || entry.notes, 300),
+    created_at: entry.created_at || entry.date
+  };
+}
+
+function normalizeJournal(entry) {
+  return {
+    title: truncateText(entry.title, 120),
+    excerpt: truncateText(entry.content, 500),
+    created_at: entry.created_at
+  };
+}
+
+function normalizePart(part) {
+  return {
+    name: part.name || part.part_name || 'Unnamed part',
+    role: truncateText(part.role || part.type || part.part_type, 180),
+    burden: compactJson(part.burden || part.burdens, 240),
+    status: part.status || part.unburdening_status || (part.is_active === false ? 'inactive' : 'active'),
+    updated_at: part.updated_at
+  };
+}
+
+function normalizeHomework(homework) {
+  return {
+    module_title: truncateText(homework.title || homework.module_id, 180),
+    status: homework.status,
+    assigned_at: homework.assigned_at,
+    completed_at: homework.completed_at,
+    reviewed_at: homework.reviewed_at,
+    therapist_feedback: truncateText(homework.therapist_feedback, 400)
+  };
+}
+
+function normalizeProgress(progress) {
+  return {
+    module_id: progress.module_id,
+    activity_id: progress.activity_id,
+    completed: progress.completed || progress.is_completed || false,
+    current_step: progress.current_step,
+    total_steps: progress.total_steps,
+    insights: truncateText(progress.insights, 300),
+    last_accessed: progress.last_accessed || progress.updated_at
+  };
+}
+
+function hasAnyClinicalData(data) {
+  return Boolean(
+    data.latestAgenda ||
+    data.moodEntries.length ||
+    data.journalEntries.length ||
+    data.parts.length ||
+    data.assignedHomework.length ||
+    data.progressSummary.length
+  );
+}
+
+function buildMessages({ client, currentUser, rangeDays, since, clinicalData }) {
+  const safetyText = clinicalData.latestAgenda?.safety_concerns
+    ? 'Safety-related content appears in submitted check-in data. Summarize it plainly and recommend therapist review.'
+    : 'No safety-related content was submitted in the available check-in data.';
+
+  return [
+    {
+      role: 'system',
+      content: [
+        'You create concise therapist-facing IFS session preparation summaries from scoped app data.',
+        'Do not diagnose, do not generate clinical notes, and do not score or infer risk beyond the supplied data.',
+        'Do not say the client is safe. Do not say low risk unless explicit clinician-reviewed risk data is supplied.',
+        'Clearly distinguish client-submitted language from cautious AI interpretation.',
+        'If information is missing, say so. Avoid invented details.',
+        'Use concise bullets under exactly the requested numbered section headings.'
+      ].join(' ')
+    },
+    {
+      role: 'user',
+      content: JSON.stringify({
+        task: 'Generate an on-demand AI Session Prep Summary for clinician review only.',
+        required_disclaimer: DISCLAIMER,
+        required_sections: [
+          '1. Quick Clinical Snapshot',
+          '2. What the Client Wants to Focus On',
+          '3. Active Parts / Internal System Themes',
+          '4. Mood, Stress, and Pattern Shifts',
+          '5. Homework / Between-Session Follow-Through',
+          '6. Safety-Related Content',
+          '7. Suggested Session Openers',
+          '8. Documentation Considerations'
+        ],
+        safety_instruction: safetyText,
+        client_context: {
+          client_id: client.id,
+          client_name: client.name || null,
+          generated_for_user_role: currentUser.user_role,
+          range_days: rangeDays,
+          since
+        },
+        data: clinicalData
+      }, null, 2)
     }
+  ];
+}
+
+async function callOpenAI(messages) {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) {
+    throw Object.assign(new Error('OpenAI API key missing. Configure OPENAI_API_KEY on the server.'), { statusCode: 500, code: 'openai_api_key_missing' });
   }
+
+  const response = await fetch(OPENAI_CHAT_COMPLETIONS_URL, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
+      messages,
+      temperature: 0.2
+    })
+  });
+
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const message = payload?.error?.message || `OpenAI request failed with status ${response.status}`;
+    throw Object.assign(new Error(message), { statusCode: response.status >= 500 ? 502 : 500, code: 'openai_request_failed' });
+  }
+
+  const summary = payload?.choices?.[0]?.message?.content?.trim();
+  if (!summary) throw Object.assign(new Error('OpenAI returned an empty summary.'), { statusCode: 502, code: 'openai_empty_response' });
+  return summary;
+}
+
+async function loadClinicalData(clientId, since) {
+  const [agendas, moods, journals, parts, homework, progress] = await Promise.all([
+    sql`
+      SELECT status, topics, active_parts, stuck_points, goals_for_session,
+             current_stress_level, current_mood_label, safety_concerns,
+             session_date, created_at
+      FROM ifs_session_agendas
+      WHERE client_id = ${clientId}
+        AND status IN ('submitted', 'reviewed')
+      ORDER BY created_at DESC
+      LIMIT 1
+    `,
+    sql`
+      SELECT mood, NULL::integer AS stress, energy, notes AS note, date, created_at
+      FROM ifs_mood_entries
+      WHERE client_id = ${clientId}
+        AND COALESCE(date, created_at) >= ${since}
+      ORDER BY COALESCE(date, created_at) DESC
+      LIMIT 20
+    `,
+    sql`
+      SELECT title, content, created_at
+      FROM ifs_journal_entries
+      WHERE client_id = ${clientId}
+        AND created_at >= ${since}
+      ORDER BY created_at DESC
+      LIMIT 10
+    `,
+    sql`
+      SELECT name, part_name, type, part_type, role, burdens, unburdening_status, is_active, updated_at
+      FROM ifs_parts
+      WHERE client_id = ${clientId}
+      ORDER BY updated_at DESC NULLS LAST, created_at DESC NULLS LAST
+      LIMIT 20
+    `,
+    sql`
+      SELECT module_id, title, status, assigned_at, completed_at, reviewed_at, therapist_feedback
+      FROM ifs_assigned_homework
+      WHERE client_id = ${clientId}
+      ORDER BY assigned_at DESC NULLS LAST, created_at DESC NULLS LAST
+      LIMIT 15
+    `,
+    sql`
+      SELECT module_id, activity_id, completed, is_completed, current_step, total_steps, insights, last_accessed, updated_at
+      FROM ifs_client_progress
+      WHERE client_id = ${clientId}
+      ORDER BY COALESCE(last_accessed, updated_at, created_at) DESC
+      LIMIT 10
+    `
+  ]);
+
+  return {
+    latestAgenda: normalizeAgenda(agendas[0]),
+    moodEntries: moods.map(normalizeMood),
+    journalEntries: journals.map(normalizeJournal),
+    parts: parts.map(normalizePart),
+    assignedHomework: homework.map(normalizeHomework),
+    progressSummary: progress.map(normalizeProgress)
+  };
 }
 
 export default async function handler(req, res) {
-  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
-  const { client_id: clientId } = req.body || {};
-  if (!clientId) return res.status(400).json({ error: 'client_id is required' });
+  if (req.method !== 'POST') return sendError(res, 405, 'Method not allowed', 'method_not_allowed');
+
   try {
-    const since = new Date(Date.now() - 7 * 86400000).toISOString();
-    const [journals, moods, agendas] = await Promise.all([
-      sql`SELECT id, title, content, created_at FROM ifs_journal_entries WHERE client_id::text = ${clientId} AND created_at >= ${since} ORDER BY created_at DESC LIMIT 20`,
-      sql`SELECT mood, energy, date FROM ifs_mood_entries WHERE client_id::text = ${clientId} AND COALESCE(date::timestamptz, created_at) >= ${since} ORDER BY date DESC`,
-      sql`SELECT topics, active_parts, stuck_points, session_date, created_at FROM ifs_session_agendas WHERE client_id::text = ${clientId} ORDER BY created_at DESC LIMIT 1`
-    ]);
-    const prompt = buildPrompt({ journals, moods, agenda: agendas[0] });
-    res.setHeader('Content-Type', 'text/plain; charset=utf-8');
-    res.setHeader('Cache-Control', 'no-cache');
-    await streamWithOpenAI(prompt, res);
-    return res.end();
+    const { clientId, client_id: legacyClientId, rangeDays: requestedRangeDays } = req.body || {};
+    const requestedClientId = clientId || legacyClientId;
+    if (!requestedClientId) return sendError(res, 400, 'clientId is required', 'missing_client_id');
+
+    const currentUser = await requireTherapist(req);
+    if (currentUser.user_role === 'therapist') {
+      await requireTherapistAssignment(currentUser.id, requestedClientId);
+    }
+
+    const clientRows = await sql`
+      SELECT id, name, user_role
+      FROM ifs_clients
+      WHERE id = ${requestedClientId}
+      LIMIT 1
+    `;
+    const client = clientRows[0];
+    if (!client || client.user_role !== 'client') return sendError(res, 404, 'Client not found', 'client_not_found');
+
+    const rangeDays = clampRangeDays(requestedRangeDays);
+    const since = new Date(Date.now() - rangeDays * 86400000).toISOString();
+    const clinicalData = await loadClinicalData(client.id, since);
+    if (!hasAnyClinicalData(clinicalData)) {
+      return sendError(res, 404, 'No recent session prep data is available for this client.', 'no_recent_data');
+    }
+
+    const messages = buildMessages({ client, currentUser, rangeDays, since, clinicalData });
+    const summary = await callOpenAI(messages);
+
+    return res.status(200).json({
+      data: {
+        summary,
+        disclaimer: DISCLAIMER,
+        generatedAt: new Date().toISOString(),
+        rangeDays,
+        dataSources: {
+          latestAgenda: Boolean(clinicalData.latestAgenda),
+          moodEntries: clinicalData.moodEntries.length,
+          journalEntries: clinicalData.journalEntries.length,
+          parts: clinicalData.parts.length,
+          assignedHomework: clinicalData.assignedHomework.length,
+          progressSummary: clinicalData.progressSummary.length
+        }
+      },
+      error: null
+    });
   } catch (error) {
-    if (!res.headersSent) return res.status(500).json({ error: error.message });
-    res.write(`\n\nError: ${error.message}`);
-    return res.end();
+    const status = error.statusCode || 500;
+    const code = error.code || (status === 401 ? 'unauthorized' : status === 403 ? 'forbidden' : 'server_error');
+    return sendError(res, status, error.message || 'Unable to generate AI session summary.', code);
   }
 }
