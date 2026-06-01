@@ -7,13 +7,6 @@ function buildPrompt({ journals, moods, agenda }) {
   return `Summarize the following client data from the past week for therapist session preparation. Focus on themes, active parts, risks, stuck points, and 3 suggested session questions. Avoid diagnosis.\n\nAgenda:\n${JSON.stringify(agenda || {}, null, 2)}\n\nMoods:\n${JSON.stringify(moods, null, 2)}\n\nJournals:\n${JSON.stringify(journals.map(j => ({ date: j.created_at, title: j.title, content: String(j.content || '').slice(0, 1500) })), null, 2)}`;
 }
 
-async function streamWithAiSdk(prompt, res) {
-  const { streamText } = await import('ai');
-  const { openai } = await import('@ai-sdk/openai');
-  const result = streamText({ model: openai(process.env.OPENAI_MODEL || 'gpt-4o-mini'), prompt });
-  for await (const chunk of result.textStream) res.write(chunk);
-}
-
 async function streamWithOpenAI(prompt, res) {
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
@@ -55,7 +48,7 @@ export default async function handler(req, res) {
     const prompt = buildPrompt({ journals, moods, agenda: agendas[0] });
     res.setHeader('Content-Type', 'text/plain; charset=utf-8');
     res.setHeader('Cache-Control', 'no-cache');
-    try { await streamWithAiSdk(prompt, res); } catch { await streamWithOpenAI(prompt, res); }
+    await streamWithOpenAI(prompt, res);
     return res.end();
   } catch (error) {
     if (!res.headersSent) return res.status(500).json({ error: error.message });
