@@ -2,9 +2,9 @@
 
 CREATE TABLE IF NOT EXISTS ifs_therapist_clients (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  therapist_id VARCHAR(255) NOT NULL,
+  therapist_id UUID NOT NULL REFERENCES ifs_clients(id) ON DELETE CASCADE,
   therapist_name VARCHAR(255),
-  client_id VARCHAR(255) NOT NULL,
+  client_id UUID NOT NULL REFERENCES ifs_clients(id) ON DELETE CASCADE,
   client_name VARCHAR(255),
   status VARCHAR(50) DEFAULT 'active',
   assigned_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
@@ -18,32 +18,10 @@ CREATE INDEX IF NOT EXISTS idx_therapist_clients_client_status
   ON ifs_therapist_clients(client_id, status);
 
 
-INSERT INTO ifs_therapist_clients (therapist_id, therapist_name, client_id, client_name, status, assigned_at)
-SELECT DISTINCT m.therapist_id::text, therapist.name, m.client_id::text, client.name, 'active', COALESCE(MIN(m.created_at), CURRENT_TIMESTAMP)
-FROM ifs_messages m
-LEFT JOIN ifs_clients therapist ON therapist.id::text = m.therapist_id::text OR therapist.clerk_user_id = m.therapist_id::text
-LEFT JOIN ifs_clients client ON client.id::text = m.client_id::text OR client.clerk_user_id = m.client_id::text
-WHERE m.therapist_id IS NOT NULL AND m.client_id IS NOT NULL
-GROUP BY m.therapist_id, therapist.name, m.client_id, client.name
-ON CONFLICT (therapist_id, client_id) DO NOTHING;
+-- Do not backfill therapist/client assignments in this migration.
+-- Production assignments are intentionally recovered through reviewed UUID pairs only;
+-- automatic recovery from messages, homework, or notes can reassign inactive clients.
 
-INSERT INTO ifs_therapist_clients (therapist_id, therapist_name, client_id, client_name, status, assigned_at)
-SELECT DISTINCT h.therapist_id::text, therapist.name, h.client_id::text, client.name, 'active', COALESCE(MIN(h.created_at), CURRENT_TIMESTAMP)
-FROM ifs_therapy_homework h
-LEFT JOIN ifs_clients therapist ON therapist.id::text = h.therapist_id::text OR therapist.clerk_user_id = h.therapist_id::text
-LEFT JOIN ifs_clients client ON client.id::text = h.client_id::text OR client.clerk_user_id = h.client_id::text
-WHERE h.therapist_id IS NOT NULL AND h.client_id IS NOT NULL
-GROUP BY h.therapist_id, therapist.name, h.client_id, client.name
-ON CONFLICT (therapist_id, client_id) DO NOTHING;
-
-INSERT INTO ifs_therapist_clients (therapist_id, therapist_name, client_id, client_name, status, assigned_at)
-SELECT DISTINCT n.therapist_id::text, therapist.name, n.client_id::text, client.name, 'active', COALESCE(MIN(n.created_at), CURRENT_TIMESTAMP)
-FROM ifs_therapist_notes n
-LEFT JOIN ifs_clients therapist ON therapist.id::text = n.therapist_id::text OR therapist.clerk_user_id = n.therapist_id::text
-LEFT JOIN ifs_clients client ON client.id::text = n.client_id::text OR client.clerk_user_id = n.client_id::text
-WHERE n.therapist_id IS NOT NULL AND n.client_id IS NOT NULL
-GROUP BY n.therapist_id, therapist.name, n.client_id, client.name
-ON CONFLICT (therapist_id, client_id) DO NOTHING;
 
 CREATE TABLE IF NOT EXISTS ifs_assigned_homework (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
