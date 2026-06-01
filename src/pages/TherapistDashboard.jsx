@@ -2539,6 +2539,7 @@ const TherapistDashboard = () => {
           { id: 'notes', label: 'Session Notes', icon: FileText },
           { id: 'session-prep', label: 'Session Prep', icon: ClipboardCheck },
           { id: 'progress', label: 'Progress', icon: BarChart3 },
+          { id: 'analytics', label: 'Longitudinal Analytics', icon: TrendingUp },
           { id: 'alerts', label: 'Alerts', icon: AlertTriangle },
           { id: 'actions', label: 'Quick Actions', icon: Sparkles },
           { id: 'lessons', label: 'Lesson Plans', icon: BookOpen },
@@ -3176,6 +3177,44 @@ const TherapistDashboard = () => {
         </div>
       )}
 
+
+      {activeTab === 'analytics' && (
+        <div className={`${cardBg} rounded-2xl border ${glowStyles.blue} p-6`}>
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <h2 className={`text-lg font-bold ${textPrimary} mb-2 flex items-center gap-2 tracking-tight`}>
+                <TrendingUp className="w-5 h-5 text-blue-500" />
+                Longitudinal Analytics
+              </h2>
+              <p className={`text-sm ${textSecondary} max-w-2xl`}>
+                Open the dedicated analytics workspace to select an assigned client and review mood, journal, parts, homework, session agenda, and treatment-plan trends. Heavy aggregation stays in the secure analytics API and is not loaded for every dashboard client.
+              </p>
+            </div>
+            <button
+              onClick={() => navigate('/analytics')}
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:from-blue-700 hover:to-indigo-700"
+            >
+              View Longitudinal Analytics
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
+          <div className="mt-6 grid gap-4 sm:grid-cols-3">
+            <div className={`rounded-xl border ${cardBorder} ${isDark ? 'bg-slate-800/60' : 'bg-blue-50'} p-4`}>
+              <p className={`text-xs uppercase tracking-wide ${textMuted}`}>Assigned clients</p>
+              <p className={`mt-2 text-2xl font-bold ${textPrimary}`}>{clients.length}</p>
+            </div>
+            <div className={`rounded-xl border ${cardBorder} ${isDark ? 'bg-slate-800/60' : 'bg-emerald-50'} p-4`}>
+              <p className={`text-xs uppercase tracking-wide ${textMuted}`}>Session agendas awaiting review</p>
+              <p className={`mt-2 text-2xl font-bold ${textPrimary}`}>{sessionPrepRows.filter((agenda) => agenda.status === 'submitted').length}</p>
+            </div>
+            <div className={`rounded-xl border ${cardBorder} ${isDark ? 'bg-slate-800/60' : 'bg-amber-50'} p-4`}>
+              <p className={`text-xs uppercase tracking-wide ${textMuted}`}>Treatment goals due soon</p>
+              <p className={`mt-2 text-2xl font-bold ${textPrimary}`}>{treatmentPlanSummary.reviewSoon || 0}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {activeTab === 'alerts' && (
         <div className="space-y-6">
           {(() => {
@@ -3375,6 +3414,7 @@ const TherapistDashboard = () => {
                 { id: 'link:/advisor-messages', label: 'Client Messages', icon: MessageCircle, color: 'from-brand-stone-500 to-brand-stone-600', desc: 'Send and receive secure messages with clients' },
                 { id: 'link:/advisor-homework', label: 'Homework Manager', icon: Target, color: 'from-brand-gold-600 to-brand-emerald-700', desc: 'Create, assign, and track client homework' },
                 { id: 'link:/advisor-reports', label: 'Progress Reports', icon: Download, color: 'from-emerald-500 to-teal-600', desc: 'Generate and export client progress reports' },
+                { id: 'link:/analytics', label: 'Longitudinal Analytics', icon: TrendingUp, color: 'from-blue-500 to-indigo-600', desc: 'Review secure trends for one assigned client at a time' },
                 { id: 'link:/assessment-builder', label: 'Assessment Builder', icon: FileText, color: 'from-brand-gold-600 to-brand-emerald-700', desc: 'Create custom assessments for clients' },
                 { id: 'link:/mood-analytics', label: 'Mood & Parts Analytics', icon: TrendingUp, color: 'from-brand-stone-500 to-brand-gold-600', desc: 'View mood trends, parts patterns, and self-energy over time' },
                 { id: 'export-reports', label: 'Export All Reports', icon: Download, color: 'from-brand-gold-600 to-brand-emerald-700', desc: 'Download comprehensive progress reports' },
