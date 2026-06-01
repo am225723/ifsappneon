@@ -14,15 +14,19 @@ import {
   Smile,
   Library,
   Feather,
-  Trophy
+  Trophy,
+  CalendarCheck,
+  CheckCircle2
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { loadClientSessionAgendas } from '../lib/sessionAgendas';
 
 const Home = ({ clientId, client }) => {
   const navigate = useNavigate();
   const [savedAssessment, setSavedAssessment] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('daily');
+  const [agendaSummary, setAgendaSummary] = useState({ lastSubmitted: null, hasDraft: false });
 
   useEffect(() => {
     const loadData = async () => {
@@ -36,6 +40,13 @@ const Home = ({ clientId, client }) => {
             .maybeSingle();
 
           if (data?.data) setSavedAssessment(data.data);
+
+          const agendasResult = await loadClientSessionAgendas(clientId);
+          const agendas = agendasResult.data || [];
+          setAgendaSummary({
+            lastSubmitted: agendas.find((agenda) => agenda.status === 'submitted' || agenda.status === 'reviewed')?.created_at || null,
+            hasDraft: agendas.some((agenda) => agenda.status === 'draft')
+          });
         } catch (err) {
           console.error('Error loading home data:', err);
         }
@@ -103,6 +114,27 @@ const Home = ({ clientId, client }) => {
               </button>
             )}
           </div>
+        </div>
+      </section>
+
+      <section className="mb-10">
+        <div className="soft-card border border-brand-gold-100 bg-brand-gold-50/70 dark:bg-brand-gold-950/20 p-6 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5">
+          <div className="flex items-start gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-brand-gold-100 text-brand-gold-700 dark:bg-brand-gold-950/50 dark:text-brand-gold-500 flex items-center justify-center shrink-0">
+              <CalendarCheck className="w-6 h-6" />
+            </div>
+            <div>
+              <h2 className="text-xl font-semibold text-brand-stone-900 dark:text-slate-100">Pre-Session Check-In</h2>
+              <p className="text-sm text-brand-stone-600 dark:text-slate-400 mt-1">Complete Pre-Session Check-In before your next therapist visit.</p>
+              <div className="flex flex-wrap gap-2 mt-3 text-xs">
+                {agendaSummary.lastSubmitted && <span className="inline-flex items-center gap-1 rounded-full bg-white px-2.5 py-1 text-brand-emerald-700"><CheckCircle2 className="w-3 h-3" /> Last submitted {new Date(agendaSummary.lastSubmitted).toLocaleDateString()}</span>}
+                {agendaSummary.hasDraft && <span className="rounded-full bg-amber-100 px-2.5 py-1 font-semibold text-amber-700">Draft in progress</span>}
+              </div>
+            </div>
+          </div>
+          <Link to="/pre-session-checkin" className="btn-sanctuary-primary justify-center">
+            Complete Pre-Session Check-In
+          </Link>
         </div>
       </section>
 

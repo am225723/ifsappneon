@@ -245,13 +245,22 @@ CREATE TABLE IF NOT EXISTS ifs_assigned_homework (
 
 CREATE TABLE IF NOT EXISTS ifs_session_agendas (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  client_id VARCHAR(255) NOT NULL,
-  therapist_id VARCHAR(255) NOT NULL,
+  client_id UUID NOT NULL REFERENCES ifs_clients(id) ON DELETE CASCADE,
+  therapist_id UUID NOT NULL REFERENCES ifs_clients(id) ON DELETE CASCADE,
+  session_date DATE,
+  session_datetime TIMESTAMPTZ,
   topics TEXT NOT NULL,
   active_parts JSONB DEFAULT '[]'::jsonb,
   stuck_points TEXT,
-  session_date DATE,
-  created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+  goals_for_session TEXT,
+  current_stress_level INTEGER,
+  current_mood_label VARCHAR(100),
+  safety_concerns TEXT,
+  status VARCHAR(50) DEFAULT 'submitted' CHECK (status IN ('draft', 'submitted', 'reviewed', 'archived')),
+  therapist_notes TEXT,
+  reviewed_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS ifs_messages (
@@ -391,6 +400,8 @@ CREATE INDEX IF NOT EXISTS idx_uploads_user ON ifs_uploads(clerk_user_id, create
 CREATE INDEX IF NOT EXISTS idx_ifs_therapist_clients_therapist ON ifs_therapist_clients(therapist_id, status);
 CREATE INDEX IF NOT EXISTS idx_ifs_therapist_clients_client ON ifs_therapist_clients(client_id, status);
 CREATE INDEX IF NOT EXISTS idx_assigned_homework_client_status ON ifs_assigned_homework(client_id, status);
-CREATE INDEX IF NOT EXISTS idx_session_agendas_therapist_date ON ifs_session_agendas(therapist_id, session_date DESC);
+CREATE INDEX IF NOT EXISTS idx_ifs_session_agendas_client_date ON ifs_session_agendas(client_id, session_date DESC);
+CREATE INDEX IF NOT EXISTS idx_ifs_session_agendas_therapist_date ON ifs_session_agendas(therapist_id, session_date DESC);
+CREATE INDEX IF NOT EXISTS idx_ifs_session_agendas_status ON ifs_session_agendas(status);
 CREATE INDEX IF NOT EXISTS idx_generated_reports_client_generated ON ifs_generated_reports(client_id, generated_at DESC);
 CREATE INDEX IF NOT EXISTS idx_treatment_plans_client_status ON ifs_treatment_plans(client_id, status);

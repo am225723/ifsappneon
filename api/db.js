@@ -200,6 +200,11 @@ const CLIENT_SCOPED_TABLES = new Set([
 
 
 const ASSIGNED_HOMEWORK_CLIENT_UPDATE_COLUMNS = new Set(['status', 'started_at', 'completed_at', 'updated_at']);
+const SESSION_AGENDA_CLIENT_INSERT_COLUMNS = new Set(['client_id', 'therapist_id', 'topics', 'active_parts', 'stuck_points', 'goals_for_session', 'current_stress_level', 'current_mood_label', 'safety_concerns', 'session_date', 'session_datetime', 'status', 'created_at', 'updated_at']);
+const SESSION_AGENDA_CLIENT_UPDATE_COLUMNS = new Set(['topics', 'active_parts', 'stuck_points', 'goals_for_session', 'current_stress_level', 'current_mood_label', 'safety_concerns', 'session_date', 'session_datetime', 'status', 'updated_at']);
+const SESSION_AGENDA_THERAPIST_UPDATE_COLUMNS = new Set(['therapist_notes', 'reviewed_at', 'status', 'updated_at']);
+const SESSION_AGENDA_CLIENT_STATUSES = new Set(['draft', 'submitted', 'archived']);
+const SESSION_AGENDA_THERAPIST_STATUSES = new Set(['reviewed', 'archived']);
 const ASSIGNED_HOMEWORK_THERAPIST_INSERT_COLUMNS = new Set(['therapist_id', 'client_id', 'module_id', 'title', 'instructions', 'status', 'assigned_at', 'created_at', 'updated_at']);
 const ASSIGNED_HOMEWORK_THERAPIST_UPDATE_COLUMNS = new Set(['therapist_feedback', 'reviewed_at', 'status', 'updated_at']);
 const ASSIGNED_HOMEWORK_CLIENT_STATUSES = new Set(['assigned', 'in_progress', 'completed']);
@@ -213,11 +218,11 @@ function assertOnlyColumns(values, allowed, message) {
   }
 }
 
-function assertAllowedStatuses(values, allowed) {
+function assertAllowedStatuses(values, allowed, label = 'status') {
   const statuses = getValueRows(values).map((row) => row?.status).filter(Boolean);
   const blocked = statuses.filter((status) => !allowed.has(status));
   if (blocked.length) {
-    throw Object.assign(new Error(`Unsupported assigned homework status: ${blocked.join(', ')}`), { statusCode: 403 });
+    throw Object.assign(new Error(`Unsupported ${label}: ${blocked.join(', ')}`), { statusCode: 403 });
   }
 }
 
@@ -272,6 +277,59 @@ async function authorizePayload({ appUser, table, action, filters, values }) {
       throw Object.assign(new Error('Therapists may only manage their own assignments'), { statusCode: 403 });
     }
     return;
+  }
+
+  if (table === 'ifs_session_agendas') {
+    const rows = getValueRows(values);
+    const valueClientIds = rows.map((row) => row.client_id).filter(Boolean);
+    const filterClientIds = getFilterValues(filters, 'client_id');
+    const clientIds = valueClientIds.length ? valueClientIds : filterClientIds;
+
+    if (appUser.user_role === 'client') {
+      if (action === 'select') return;
+      if (action === 'delete' || action === 'upsert') {
+        throw Object.assign(new Error('Clients may only create, read, update, or archive their own session agendas'), { statusCode: 403 });
+      }
+      if (action === 'insert') {
+        assertOnlyColumns(values, SESSION_AGENDA_CLIENT_INSERT_COLUMNS, 'Clients cannot set session agenda fields');
+        assertAllowedStatuses(values, SESSION_AGENDA_CLIENT_STATUSES, 'session agenda status');
+        const therapistIds = rows.map((row) => row.therapist_id).filter(Boolean);
+        if (!clientIds.length || clientIds.some((id) => String(id) !== String(appUser.id))) {
+          throw Object.assign(new Error('Clients may only create their own session agendas'), { statusCode: 403 });
+        }
+        if (!therapistIds.length) {
+          throw Object.assign(new Error('therapist_id is required'), { statusCode: 403 });
+        }
+        for (const row of rows) {
+          if (!(await hasActiveAssignment(row.therapist_id, row.client_id))) {
+            throw Object.assign(new Error('Session agenda therapist must be actively assigned to the client'), { statusCode: 403 });
+          }
+        }
+        return;
+      }
+      if (action === 'update') {
+        assertOnlyColumns(values, SESSION_AGENDA_CLIENT_UPDATE_COLUMNS, 'Clients cannot update session agenda fields');
+        assertAllowedStatuses(values, SESSION_AGENDA_CLIENT_STATUSES, 'session agenda status');
+        if (clientIds.length && clientIds.some((id) => String(id) !== String(appUser.id))) {
+          throw Object.assign(new Error('Clients may only access their own session agendas'), { statusCode: 403 });
+        }
+        return;
+      }
+    }
+
+    if (isTherapistUser(appUser)) {
+      if (action === 'select') {
+        if (clientIds.length) await assertAssignedClients(appUser, clientIds);
+        return;
+      }
+      if (action !== 'update') {
+        throw Object.assign(new Error('Therapists may only read or review session agendas'), { statusCode: 403 });
+      }
+      assertOnlyColumns(values, SESSION_AGENDA_THERAPIST_UPDATE_COLUMNS, 'Therapists cannot update session agenda fields');
+      assertAllowedStatuses(values, SESSION_AGENDA_THERAPIST_STATUSES, 'session agenda status');
+      if (clientIds.length) await assertAssignedClients(appUser, clientIds);
+      return;
+    }
   }
 
   if (table === 'ifs_assigned_homework') {
@@ -355,7 +413,7 @@ async function authorizePayload({ appUser, table, action, filters, values }) {
   }
 }
 
-function buildAuthClause(table, appUser, params) {
+function buildAuthClause(table, appUser, params, action = 'select') {
   if (!appUser || isAdminUser(appUser)) return '';
   if (table === 'ifs_therapist_clients') {
     params.push(appUser.id);
@@ -376,7 +434,11 @@ function buildAuthClause(table, appUser, params) {
   if (CLIENT_SCOPED_TABLES.has(table)) {
     if (appUser.user_role === 'client') {
       params.push(appUser.id);
-      return `${quoteIdent('client_id')} = $${params.length}`;
+      const ownRows = `${quoteIdent('client_id')} = $${params.length}`;
+      if (table === 'ifs_session_agendas' && action === 'update') {
+        return `(${ownRows} AND COALESCE(${quoteIdent('status')}, 'submitted') IN ('draft', 'submitted'))`;
+      }
+      return ownRows;
     }
     if (isTherapistUser(appUser)) {
       params.push(appUser.id);
@@ -404,7 +466,7 @@ export default async function handler(req, res) {
     await authorizePayload({ appUser, table, action, filters, values });
 
     const params = [];
-    const scopedFilters = appendAuthFilter(filters, action === 'select' || action === 'update' || action === 'delete' ? buildAuthClause(table, appUser, params) : '');
+    const scopedFilters = appendAuthFilter(filters, action === 'select' || action === 'update' || action === 'delete' ? buildAuthClause(table, appUser, params, action) : '');
     let query;
 
     if (action === 'select') {

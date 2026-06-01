@@ -37,6 +37,7 @@ import TherapistHomework from './pages/TherapistHomework';
 import TherapistReports from './pages/TherapistReports';
 import ClientInbox from './pages/ClientInbox';
 import ClientHomework from './pages/ClientHomework';
+import PreSessionCheckin from './components/PreSessionCheckin';
 import PartsRelationshipMap from './pages/PartsRelationshipMap';
 import UnburdeningProtocol from './pages/UnburdeningProtocol';
 import AssessmentBuilder from './pages/AssessmentBuilder';
@@ -544,6 +545,7 @@ function AppContent({ authChecked, clerkLoaded, clerkSignedIn, isAuthenticated, 
                     : <ClientInbox />
                 } />
                 <Route path="/my-homework" element={<ClientHomework />} />
+                <Route path="/pre-session-checkin" element={<PreSessionCheckin />} />
                 <Route path="/progress-timeline" element={<ProgressTimeline />} />
                 <Route path="/mood-tracker" element={<MoodTracker />} />
                 <Route path="/gamification" element={<GamificationHub />} />
