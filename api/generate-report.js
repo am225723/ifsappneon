@@ -10,6 +10,8 @@ const DEFAULT_SECTIONS = {
   includeParts: true,
   includeMoodEntries: true,
   includeJournals: false,
+  includeHealingTimeline: false,
+  includeAnalyticsSummary: false,
   includeAiSessionSummary: false,
   includeFullNoteText: false
 };
@@ -22,6 +24,8 @@ const SECTION_LABELS = {
   includeParts: 'Parts Summary',
   includeMoodEntries: 'Mood Summary',
   includeJournals: 'Journal Excerpts',
+  includeHealingTimeline: 'Healing Timeline Summary',
+  includeAnalyticsSummary: 'Analytics Summary',
   includeAiSessionSummary: 'AI Session Prep Summary',
   includeFullNoteText: 'Full Clinical Note Text'
 };
@@ -60,6 +64,7 @@ function normalizeSections(requestedSections = {}, reportType) {
     sections.includeTaggedNotes = false;
     sections.includeJournals = false;
     sections.includeAiSessionSummary = false;
+    sections.includeAnalyticsSummary = false;
     sections.includeFullNoteText = false;
   }
   return sections;
@@ -128,7 +133,7 @@ async function queryRows(baseSql, clientId, { start, end, dateColumn, limit = 10
   return rows;
 }
 
-async function loadReportData({ clientId, therapistId, sections, dateRangeStart, dateRangeEnd }) {
+async function loadReportData({ clientId, therapistId, sections, reportType, dateRangeStart, dateRangeEnd }) {
   const [clientRows, therapistRows] = await Promise.all([
     sql`SELECT id, name, user_role, created_at FROM ifs_clients WHERE id = ${clientId} LIMIT 1`,
     sql`SELECT id, name, user_role FROM ifs_clients WHERE id = ${therapistId} LIMIT 1`
@@ -140,7 +145,7 @@ async function loadReportData({ clientId, therapistId, sections, dateRangeStart,
   }
 
   const queries = {
-    treatmentPlans: sections.includeTreatmentPlans
+    treatmentPlans: (sections.includeTreatmentPlans || sections.includeHealingTimeline || sections.includeAnalyticsSummary || reportType === 'client_progress_summary')
       ? queryRows(
         `SELECT id, goal_title, goal_description, target_wounds, target_parts, objectives, interventions, status, review_date, completed_at, created_at FROM ifs_treatment_plans`,
         clientId,
@@ -161,14 +166,14 @@ async function loadReportData({ clientId, therapistId, sections, dateRangeStart,
         { start: dateRangeStart, end: dateRangeEnd, dateColumn: 'COALESCE(session_datetime, session_date::timestamptz, created_at)', limit: 50 }
       )
       : Promise.resolve([]),
-    assignedHomework: sections.includeAssignedHomework
+    assignedHomework: (sections.includeAssignedHomework || sections.includeHealingTimeline || sections.includeAnalyticsSummary || reportType === 'client_progress_summary')
       ? queryRows(
         `SELECT id, module_id, title, status, assigned_at, completed_at, reviewed_at, therapist_feedback, created_at FROM ifs_assigned_homework`,
         clientId,
         { start: dateRangeStart, end: dateRangeEnd, dateColumn: 'COALESCE(assigned_at, created_at)', limit: 100 }
       )
       : Promise.resolve([]),
-    parts: sections.includeParts
+    parts: (sections.includeParts || sections.includeHealingTimeline || sections.includeAnalyticsSummary)
       ? sql.query(
         `SELECT id, name, part_name, type, part_type, role, burdens, unburdening_status, is_active, updated_at, created_at
          FROM ifs_parts
@@ -178,7 +183,7 @@ async function loadReportData({ clientId, therapistId, sections, dateRangeStart,
         [clientId]
       )
       : Promise.resolve([]),
-    moodEntries: sections.includeMoodEntries
+    moodEntries: (sections.includeMoodEntries || sections.includeAnalyticsSummary)
       ? queryRows(
         `SELECT id, mood, energy, notes, date, created_at FROM ifs_mood_entries`,
         clientId,
@@ -278,14 +283,83 @@ function renderClinicalSections(data, sections) {
       </article>`)} </section>`);
   }
 
+  if (sections.includeHealingTimeline) {
+    sectionsHtml.push(renderHealingTimelineSummary(data));
+  }
+
+  if (sections.includeAnalyticsSummary) {
+    sectionsHtml.push(renderAnalyticsSummary(data));
+  }
+
   if (sections.includeAiSessionSummary) {
-    sectionsHtml.push(`<section class="report-section"><h2>AI Session Prep Summary</h2><p class="empty">AI-generated session prep summaries are generated on demand from the session prep workflow and are not automatically regenerated or stored in this report.</p></section>`);
+    sectionsHtml.push(`<section class="report-section"><h2>AI Session Prep Summary</h2><p class="empty">AI-generated session prep summaries are generated on demand from the session prep workflow and are not automatically regenerated or stored in this report. Clinicians must review any AI-generated material before relying on it.</p></section>`);
   }
 
   return sectionsHtml.join('\n');
 }
 
-function renderClientProgressSummary(data) {
+function renderHealingTimelineSummary(data) {
+  const milestones = [
+    ...(data.treatmentPlans || [])
+      .filter((goal) => goal.status === 'completed' || goal.completed_at)
+      .map((goal) => ({
+        date: goal.completed_at || goal.review_date || goal.created_at,
+        title: goal.goal_title || 'Treatment goal completed',
+        detail: 'A treatment-plan goal was marked complete.'
+      })),
+    ...(data.assignedHomework || [])
+      .filter((homework) => ['completed', 'reviewed'].includes(homework.status) || homework.completed_at || homework.reviewed_at)
+      .map((homework) => ({
+        date: homework.completed_at || homework.reviewed_at || homework.assigned_at || homework.created_at,
+        title: homework.title || homework.module_id || 'Homework completed',
+        detail: homework.reviewed_at ? 'A therapist-reviewed homework assignment was completed.' : 'A homework assignment was completed.'
+      })),
+    ...(data.parts || [])
+      .filter((part) => ['unburdened', 'resolved', 'integrated'].includes(String(part.unburdening_status || '').toLowerCase()))
+      .map((part) => ({
+        date: part.updated_at || part.created_at,
+        title: part.name || part.part_name || 'Part update',
+        detail: `Part status: ${part.unburdening_status}`
+      }))
+  ]
+    .filter((item) => item.date)
+    .sort((a, b) => new Date(b.date) - new Date(a.date))
+    .slice(0, 12);
+
+  return `<section class="report-section"><h2>Healing Timeline Summary</h2>
+    <p class="summary-line">Client-safe milestones drawn from goals, homework, and parts status. Therapist notes and internal clinical summaries are excluded.</p>
+    ${renderRows(milestones, 'No client-safe timeline milestones found for this date range.', (item) => `
+      <article class="item-card compact">
+        <div class="item-heading"><strong>${escapeHtml(item.title)}</strong><span>${formatDate(item.date)}</span></div>
+        <p>${escapeHtml(item.detail)}</p>
+      </article>`)}
+  </section>`;
+}
+
+function renderAnalyticsSummary(data) {
+  const moods = data.moodEntries || [];
+  const homework = data.assignedHomework || [];
+  const goals = data.treatmentPlans || [];
+  const completedHomework = homework.filter((row) => ['completed', 'reviewed'].includes(row.status) || row.completed_at).length;
+  const activeGoals = goals.filter((row) => row.status === 'active').length;
+  const completedGoals = goals.filter((row) => row.status === 'completed' || row.completed_at).length;
+  const avgMood = moods.length ? (moods.reduce((sum, row) => sum + Number(row.mood || 0), 0) / moods.length).toFixed(1) : null;
+  const avgEnergy = moods.length ? (moods.reduce((sum, row) => sum + Number(row.energy || 0), 0) / moods.length).toFixed(1) : null;
+
+  return `<section class="report-section"><h2>Analytics Summary</h2>
+    <p class="summary-line">Compact therapist analytics without chart libraries.</p>
+    <div class="metrics">
+      <div><strong>${escapeHtml(activeGoals)}</strong><span>Active goals</span></div>
+      <div><strong>${escapeHtml(completedGoals)}</strong><span>Completed goals</span></div>
+      <div><strong>${escapeHtml(`${completedHomework}/${homework.length}`)}</strong><span>Homework completed/reviewed</span></div>
+      <div><strong>${escapeHtml(avgMood ? `${avgMood}/10` : '—')}</strong><span>Average mood</span></div>
+      <div><strong>${escapeHtml(avgEnergy ? `${avgEnergy}/10` : '—')}</strong><span>Average energy</span></div>
+      <div><strong>${escapeHtml((data.parts || []).length)}</strong><span>Mapped parts</span></div>
+    </div>
+  </section>`;
+}
+
+function renderClientProgressSummary(data, sections = {}) {
   const activeGoals = data.treatmentPlans.filter((goal) => goal.status === 'active');
   const completedGoals = data.treatmentPlans.filter((goal) => goal.status === 'completed');
   const completedHomework = data.assignedHomework.filter((homework) => ['completed', 'reviewed'].includes(homework.status));
@@ -296,6 +370,7 @@ function renderClientProgressSummary(data) {
     </section>
     <section class="report-section"><h2>Goals</h2>${renderRows(data.treatmentPlans, 'No shareable goals found.', (goal) => `<article class="item-card"><div class="item-heading"><strong>${escapeHtml(goal.goal_title || 'Goal')}</strong><span>${escapeHtml(goal.status || 'active')}</span></div><p>${escapeHtml(truncate(goal.goal_description, 500) || 'Continuing to build insight, skills, and Self-led care.')}</p><p>Upcoming review: ${formatDate(goal.review_date)}</p></article>`)}</section>
     <section class="report-section"><h2>Homework Follow-Through</h2>${renderRows(data.assignedHomework, 'No homework assignments found.', (homework) => `<article class="item-card compact"><div class="item-heading"><strong>${escapeHtml(homework.title || homework.module_id || 'Assigned module')}</strong><span>${escapeHtml(homework.status || 'assigned')}</span></div><p>Assigned: ${formatDate(homework.assigned_at || homework.created_at)} · Completed: ${formatDate(homework.completed_at)}</p></article>`)}</section>
+    ${sections.includeHealingTimeline ? renderHealingTimelineSummary(data) : ''}
   `;
 }
 
@@ -303,7 +378,7 @@ function buildHtmlReport({ data, sections, reportType, dateRangeStart, dateRange
   const title = reportType === 'client_progress_summary' ? 'Client Progress Summary' : 'Clinical Summary Report';
   const period = `${dateRangeStart ? formatDate(dateRangeStart) : 'Start'} – ${dateRangeEnd ? formatDate(dateRangeEnd) : 'Present'}`;
   const body = reportType === 'client_progress_summary'
-    ? renderClientProgressSummary(data)
+    ? renderClientProgressSummary(data, sections)
     : renderClinicalSections(data, sections);
 
   return `<!doctype html>
@@ -395,6 +470,7 @@ export default async function handler(req, res) {
       clientId: requestedClientId,
       therapistId: currentUser.id,
       sections,
+      reportType,
       dateRangeStart,
       dateRangeEnd
     });
