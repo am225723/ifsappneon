@@ -8,6 +8,11 @@ import { useTheme } from '../contexts/ThemeContext';
 import { supabase } from '../lib/supabase';
 import { clientAuth } from '../lib/supabasePersonalization';
 import { curriculumModules } from '../data/curriculumData';
+import {
+  loadAssignedHomeworkForClient,
+  markAssignedHomeworkStarted,
+  syncAssignedHomeworkCompletion
+} from '../lib/assignedHomework';
 
 const categories = [
   { value: 'general', label: 'General', color: 'bg-gray-100 text-gray-700' },
@@ -40,25 +45,36 @@ const ClientHomework = () => {
   const loadHomework = useCallback(async () => {
     if (!client?.id) return;
     setLoading(true);
-    const [homeworkRes, assignedRes] = await Promise.all([
+    const [homeworkRes, assignedRes, progressRes] = await Promise.all([
       supabase
         .from('ifs_therapy_homework')
         .select('*')
         .eq('client_id', client.id)
         .order('created_at', { ascending: false }),
+      loadAssignedHomeworkForClient(client.id),
       supabase
-        .from('ifs_assigned_homework')
-        .select('*')
+        .from('ifs_client_progress')
+        .select('module_id, completed')
         .eq('client_id', client.id)
-        .order('assigned_at', { ascending: false })
     ]);
     if (homeworkRes.data) setHomework(homeworkRes.data);
-    if (assignedRes.data) {
-      setAssignedModules(assignedRes.data.map(item => ({
-        ...item,
-        module: curriculumModules.find(module => module.id === item.module_id)
-      })));
-    }
+    const completedIds = (progressRes.data || [])
+      .filter(progress => progress.completed)
+      .map(progress => progress.module_id);
+    await Promise.all(
+      (assignedRes.data || [])
+        .filter(item => completedIds.includes(item.module_id) && ['assigned', 'in_progress'].includes(item.status))
+        .map(item => syncAssignedHomeworkCompletion(client.id, item.module_id))
+    );
+    const finalAssigned = (assignedRes.data || []).map(item => (
+      completedIds.includes(item.module_id) && ['assigned', 'in_progress'].includes(item.status)
+        ? { ...item, status: 'completed', completed_at: item.completed_at || new Date().toISOString() }
+        : item
+    ));
+    setAssignedModules(finalAssigned.map(item => ({
+      ...item,
+      module: curriculumModules.find(module => module.id === item.module_id)
+    })));
     setLoading(false);
   }, [client?.id]);
 
@@ -98,6 +114,23 @@ const ClientHomework = () => {
   const activeCount = homework.filter(h => !h.completed).length;
   const completedCount = homework.filter(h => h.completed).length;
 
+
+  const formatDate = (value) => value ? new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : null;
+
+  const getAssignedActionLabel = (item) => {
+    if (item.status === 'assigned') return 'Start';
+    if (item.status === 'in_progress') return 'Continue';
+    if (item.status === 'completed') return 'Completed — awaiting review';
+    if (item.status === 'reviewed') return 'Review';
+    return 'Open';
+  };
+
+  const handleStartAssignedModule = async (item) => {
+    if (item.status === 'assigned') {
+      await markAssignedHomeworkStarted(item.id);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -121,23 +154,38 @@ const ClientHomework = () => {
       </div>
 
       {assignedModules.length > 0 && (
-        <div className="mb-6 rounded-2xl border border-blue-200 bg-blue-50 p-4">
+        <div className={`mb-6 rounded-2xl border p-4 ${isDark ? 'border-blue-800/40 bg-blue-950/30' : 'border-blue-200 bg-blue-50'}`}>
           <div className="flex items-center gap-2 mb-3">
             <BookOpen className="w-5 h-5 text-blue-600" />
-            <h2 className="font-bold text-blue-950">Assigned for you</h2>
-            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-white text-blue-700">Bypass</span>
+            <h2 className={`font-bold ${isDark ? 'text-blue-100' : 'text-blue-950'}`}>Assigned by Your Therapist</h2>
           </div>
-          <div className="space-y-2">
+          <div className="space-y-3">
             {assignedModules.map(item => (
-              <Link key={item.id} to={`/curriculum/module/${item.module_id}`} className="block rounded-xl bg-white p-3 hover:shadow-sm transition-shadow">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <p className="font-semibold text-gray-900">{item.module?.title || item.module_id}</p>
-                    {item.therapist_feedback && <p className="mt-1 text-sm text-gray-600">{item.therapist_feedback}</p>}
+              <div key={item.id} className={`rounded-xl p-3 ${isDark ? 'bg-slate-800/80 border border-slate-700' : 'bg-white border border-blue-100'}`}>
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className={`font-semibold ${textPrimary}`}>{item.title || item.module?.title || item.module_id}</p>
+                    <div className={`mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs ${textMuted}`}>
+                      <span>Status: <span className="font-semibold capitalize">{item.status === 'completed' ? 'completed — awaiting review' : item.status}</span></span>
+                      {formatDate(item.assigned_at) && <span>Assigned: {formatDate(item.assigned_at)}</span>}
+                      {formatDate(item.completed_at) && <span>Completed: {formatDate(item.completed_at)}</span>}
+                    </div>
+                    {item.instructions && <p className={`mt-2 text-sm ${textSecondary}`}>{item.instructions}</p>}
+                    {item.status === 'reviewed' && item.therapist_feedback && (
+                      <div className={`mt-2 rounded-lg p-2 text-sm ${isDark ? 'bg-emerald-900/20 text-emerald-200' : 'bg-emerald-50 text-emerald-800'}`}>
+                        <span className="font-semibold">Therapist feedback:</span> {item.therapist_feedback}
+                      </div>
+                    )}
                   </div>
-                  <span className="shrink-0 rounded-full bg-blue-100 px-2 py-1 text-xs font-semibold text-blue-700">Assigned for you</span>
+                  <Link
+                    to={`/curriculum/module/${item.module_id}`}
+                    onClick={() => handleStartAssignedModule(item)}
+                    className={`shrink-0 rounded-lg px-3 py-2 text-xs font-semibold ${item.status === 'completed' ? 'bg-gray-100 text-gray-600' : 'bg-blue-600 text-white hover:bg-blue-700'}`}
+                  >
+                    {getAssignedActionLabel(item)}
+                  </Link>
                 </div>
-              </Link>
+              </div>
             ))}
           </div>
         </div>

@@ -1,14 +1,14 @@
 import { useMemo, useState } from 'react';
 import { BookOpen, Send, CheckCircle, Loader2 } from 'lucide-react';
 import { curriculumModules } from '../data/curriculumData';
-import { supabase } from '../lib/supabase';
+import { assignModuleHomework } from '../lib/assignedHomework';
 import { clientAuth } from '../lib/supabasePersonalization';
 
 export default function TherapistHomeworkBuilder({ clientId, clients = [], onAssigned }) {
   const therapist = clientAuth.getCurrentClient();
   const [selectedClientId, setSelectedClientId] = useState(clientId || '');
   const [moduleId, setModuleId] = useState(curriculumModules[0]?.id || '');
-  const [therapistFeedback, setTherapistFeedback] = useState('');
+  const [instructions, setInstructions] = useState('');
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
 
@@ -27,13 +27,12 @@ export default function TherapistHomeworkBuilder({ clientId, clients = [], onAss
     if (!therapist?.id || !targetClientId || !moduleId) return;
     setSaving(true);
     setMessage('');
-    const { error } = await supabase.from('ifs_assigned_homework').insert({
-      therapist_id: therapist.id,
-      client_id: targetClientId,
-      module_id: moduleId,
-      status: 'assigned',
-      therapist_feedback: therapistFeedback || null,
-      assigned_at: new Date().toISOString()
+    const { error } = await assignModuleHomework({
+      therapistId: therapist.id,
+      clientId: targetClientId,
+      moduleId,
+      title: selectedModule?.title,
+      instructions: instructions || null
     });
     setSaving(false);
     if (error) {
@@ -41,7 +40,7 @@ export default function TherapistHomeworkBuilder({ clientId, clients = [], onAss
       return;
     }
     setMessage(`Assigned ${selectedModule?.title || 'module'} successfully.`);
-    setTherapistFeedback('');
+    setInstructions('');
     onAssigned?.();
   };
 
@@ -81,8 +80,8 @@ export default function TherapistHomeworkBuilder({ clientId, clients = [], onAss
       {selectedModule && <p className="rounded-lg bg-white/80 p-3 text-sm text-gray-600">{selectedModule.description}</p>}
 
       <label className="block text-sm font-medium text-gray-700">
-        Therapist Feedback (optional)
-        <textarea value={therapistFeedback} onChange={(e) => setTherapistFeedback(e.target.value)} rows={3} className="mt-1 w-full rounded-lg border border-amber-200 bg-white px-3 py-2" placeholder="Add context, focus points, or encouragement..." />
+        Instructions (optional)
+        <textarea value={instructions} onChange={(e) => setInstructions(e.target.value)} rows={3} className="mt-1 w-full rounded-lg border border-amber-200 bg-white px-3 py-2" placeholder="Add context, focus points, or encouragement..." />
       </label>
 
       <button type="submit" disabled={saving || !targetClientId || !moduleId} className="w-full rounded-lg bg-amber-600 px-4 py-2.5 font-semibold text-white hover:bg-amber-700 disabled:bg-gray-400 flex items-center justify-center gap-2">

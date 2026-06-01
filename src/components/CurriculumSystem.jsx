@@ -14,6 +14,7 @@ import { clientAuth } from '../lib/supabasePersonalization';
 import { supabase } from '../lib/supabase';
 import { WOUND_MODULE_PRIORITIES, LEVEL_ORDER } from '../lib/woundModulePriorities';
 import { canAccessModule } from '../lib/accessControl';
+import { loadAssignedHomeworkForClient } from '../lib/assignedHomework';
 
 const CurriculumSystem = ({ onModuleSelect, userProgress = {}, clientId }) => {
   const [completedModules, setCompletedModules] = useState([]);
@@ -48,9 +49,7 @@ const CurriculumSystem = ({ onModuleSelect, userProgress = {}, clientId }) => {
           supabase.from('ifs_client_progress')
             .select('module_id, completed')
             .eq('client_id', id),
-          supabase.from('ifs_assigned_homework')
-            .select('module_id, status')
-            .eq('client_id', id)
+          loadAssignedHomeworkForClient(id)
         ]);
 
         if (curriculumRes) {
@@ -60,7 +59,7 @@ const CurriculumSystem = ({ onModuleSelect, userProgress = {}, clientId }) => {
 
         const activeAssignments = (assignmentsRes.data || []);
         const assignedModules = (activeAssignments.length ? activeAssignments : [])
-          .filter(item => item.status !== 'completed' && item.status !== 'cancelled')
+          .filter(item => ['assigned', 'in_progress', 'completed', 'reviewed'].includes(item.status))
           .map(item => item.module_id);
         setAssignedHomeworkIds(new Set(assignedModules));
 
@@ -173,12 +172,9 @@ const CurriculumSystem = ({ onModuleSelect, userProgress = {}, clientId }) => {
   ];
 
   const getModuleStatus = (module) => {
-    if (assignedHomeworkIds.has(module.id)) {
-      if (completedModules.includes(module.id)) return 'completed';
-      return 'available';
-    }
-    if (!canAccessModule(module.id)) return 'restricted';
     if (completedModules.includes(module.id)) return 'completed';
+    if (assignedHomeworkIds.has(module.id)) return 'assigned';
+    if (!canAccessModule(module.id)) return 'restricted';
     if (module.prerequisites?.length && !checkPrerequisites(module.id, completedModules)) return 'locked';
     return 'available';
   };
@@ -215,7 +211,7 @@ const CurriculumSystem = ({ onModuleSelect, userProgress = {}, clientId }) => {
 
   const handleModuleSelect = (module) => {
     const status = getModuleStatus(module);
-    if (status === 'available' || status === 'completed') {
+    if (status === 'available' || status === 'assigned' || status === 'completed' || status === 'reviewed') {
       setCurrentModule(module);
       if (onModuleSelect) onModuleSelect(module);
     }
@@ -564,7 +560,7 @@ const CurriculumSystem = ({ onModuleSelect, userProgress = {}, clientId }) => {
                                     )}
                                     {isTherapistAssigned(module.id) && (
                                       <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 flex-shrink-0">
-                                        Therapist Assigned
+                                        Assigned by therapist
                                       </span>
                                     )}
                                     {module._secondaryPriority && secondaryWoundConfig && (module._secondaryPriority.level === 'core' || module._secondaryPriority.level === 'high') && (
@@ -626,7 +622,7 @@ const CurriculumSystem = ({ onModuleSelect, userProgress = {}, clientId }) => {
                               </div>
                             </div>
                             <div className="flex-shrink-0 ml-4">
-                              {status === 'available' && (
+                              {(status === 'available' || status === 'assigned') && (
                                 <Link
                                   to={`/curriculum/module/${module.id}`}
                                   onClick={() => handleModuleSelect(module)}

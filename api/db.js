@@ -198,6 +198,29 @@ const CLIENT_SCOPED_TABLES = new Set([
   'ifs_treatment_plans'
 ]);
 
+
+const ASSIGNED_HOMEWORK_CLIENT_UPDATE_COLUMNS = new Set(['status', 'started_at', 'completed_at', 'updated_at']);
+const ASSIGNED_HOMEWORK_THERAPIST_INSERT_COLUMNS = new Set(['therapist_id', 'client_id', 'module_id', 'title', 'instructions', 'status', 'assigned_at', 'created_at', 'updated_at']);
+const ASSIGNED_HOMEWORK_THERAPIST_UPDATE_COLUMNS = new Set(['therapist_feedback', 'reviewed_at', 'status', 'updated_at']);
+const ASSIGNED_HOMEWORK_CLIENT_STATUSES = new Set(['assigned', 'in_progress', 'completed']);
+const ASSIGNED_HOMEWORK_THERAPIST_STATUSES = new Set(['assigned', 'in_progress', 'completed', 'reviewed', 'archived']);
+
+function assertOnlyColumns(values, allowed, message) {
+  const keys = [...new Set(getValueRows(values).flatMap((row) => Object.keys(row || {})))];
+  const blocked = keys.filter((key) => !allowed.has(key));
+  if (blocked.length) {
+    throw Object.assign(new Error(`${message}: ${blocked.join(', ')}`), { statusCode: 403 });
+  }
+}
+
+function assertAllowedStatuses(values, allowed) {
+  const statuses = getValueRows(values).map((row) => row?.status).filter(Boolean);
+  const blocked = statuses.filter((status) => !allowed.has(status));
+  if (blocked.length) {
+    throw Object.assign(new Error(`Unsupported assigned homework status: ${blocked.join(', ')}`), { statusCode: 403 });
+  }
+}
+
 function getFilterValues(filters, column) {
   const values = [];
   (filters || []).forEach((filter) => {
@@ -249,6 +272,52 @@ async function authorizePayload({ appUser, table, action, filters, values }) {
       throw Object.assign(new Error('Therapists may only manage their own assignments'), { statusCode: 403 });
     }
     return;
+  }
+
+  if (table === 'ifs_assigned_homework') {
+    const rows = getValueRows(values);
+    const valueClientIds = rows.map((row) => row.client_id).filter(Boolean);
+    const filterClientIds = getFilterValues(filters, 'client_id');
+    const clientIds = valueClientIds.length ? valueClientIds : filterClientIds;
+
+    if (appUser.user_role === 'client') {
+      if (action === 'select') return;
+      if (action !== 'update') {
+        throw Object.assign(new Error('Clients may only read or update their assigned homework progress'), { statusCode: 403 });
+      }
+      assertOnlyColumns(values, ASSIGNED_HOMEWORK_CLIENT_UPDATE_COLUMNS, 'Clients cannot update assigned homework fields');
+      assertAllowedStatuses(values, ASSIGNED_HOMEWORK_CLIENT_STATUSES);
+      if (clientIds.length && clientIds.some((id) => String(id) !== String(appUser.id))) {
+        throw Object.assign(new Error('Clients may only access their own assigned homework'), { statusCode: 403 });
+      }
+      return;
+    }
+
+    if (isTherapistUser(appUser)) {
+      if (action === 'delete') {
+        throw Object.assign(new Error('Assigned homework should be archived instead of deleted'), { statusCode: 403 });
+      }
+      if (action === 'insert' || action === 'upsert') {
+        assertOnlyColumns(values, ASSIGNED_HOMEWORK_THERAPIST_INSERT_COLUMNS, 'Therapists cannot set assigned homework fields');
+        assertAllowedStatuses(values, ASSIGNED_HOMEWORK_THERAPIST_STATUSES);
+        const therapistIds = rows.map((row) => row.therapist_id).filter(Boolean);
+        if (!rows.length || rows.some((row) => String(row.therapist_id) !== String(appUser.id))) {
+          throw Object.assign(new Error('Therapists may only create their own assigned homework'), { statusCode: 403 });
+        }
+        if (therapistIds.some((id) => String(id) !== String(appUser.id))) {
+          throw Object.assign(new Error('Therapists may only create their own assigned homework'), { statusCode: 403 });
+        }
+        await assertAssignedClients(appUser, clientIds);
+        return;
+      }
+      if (action === 'update') {
+        assertOnlyColumns(values, ASSIGNED_HOMEWORK_THERAPIST_UPDATE_COLUMNS, 'Therapists cannot update assigned homework fields');
+        assertAllowedStatuses(values, ASSIGNED_HOMEWORK_THERAPIST_STATUSES);
+        if (clientIds.length) await assertAssignedClients(appUser, clientIds);
+        return;
+      }
+      return;
+    }
   }
 
   if (table === 'ifs_clients') {
