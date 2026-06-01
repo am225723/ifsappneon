@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { loadClientSessionAgendas } from '../lib/sessionAgendas';
+import { loadActiveTreatmentPlansForClient } from '../lib/treatmentPlans';
 
 const Home = ({ clientId, client }) => {
   const navigate = useNavigate();
@@ -27,6 +28,7 @@ const Home = ({ clientId, client }) => {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('daily');
   const [agendaSummary, setAgendaSummary] = useState({ lastSubmitted: null, hasDraft: false });
+  const [therapyGoals, setTherapyGoals] = useState([]);
 
   useEffect(() => {
     const loadData = async () => {
@@ -41,8 +43,12 @@ const Home = ({ clientId, client }) => {
 
           if (data?.data) setSavedAssessment(data.data);
 
-          const agendasResult = await loadClientSessionAgendas(clientId);
+          const [agendasResult, goalsResult] = await Promise.all([
+            loadClientSessionAgendas(clientId),
+            loadActiveTreatmentPlansForClient(clientId)
+          ]);
           const agendas = agendasResult.data || [];
+          setTherapyGoals((goalsResult.data || []).filter((goal) => ['active', 'completed'].includes(goal.status)).slice(0, 3));
           setAgendaSummary({
             lastSubmitted: agendas.find((agenda) => agenda.status === 'submitted' || agenda.status === 'reviewed')?.created_at || null,
             hasDraft: agendas.some((agenda) => agenda.status === 'draft')
@@ -137,6 +143,38 @@ const Home = ({ clientId, client }) => {
           </Link>
         </div>
       </section>
+
+
+      {therapyGoals.length > 0 && (
+        <section className="mb-10">
+          <div className="soft-card border border-brand-emerald-100 bg-white/80 dark:bg-brand-cardDark p-6">
+            <div className="flex items-start justify-between gap-4 mb-4">
+              <div>
+                <h2 className="text-xl font-semibold text-brand-stone-900 dark:text-slate-100">My Therapy Goals</h2>
+                <p className="text-sm text-brand-stone-600 dark:text-slate-400 mt-1">Read-only goals shared by your therapist.</p>
+              </div>
+              <CheckCircle2 className="w-6 h-6 text-brand-emerald-700 dark:text-brand-emerald-100" />
+            </div>
+            <div className="grid md:grid-cols-3 gap-3">
+              {therapyGoals.map((goal) => (
+                <div key={goal.id} className="rounded-2xl border border-brand-stone-100 dark:border-slate-800 p-4">
+                  <div className="flex items-center justify-between gap-2 mb-2">
+                    <h3 className="font-semibold text-brand-stone-900 dark:text-slate-100">{goal.goal_title}</h3>
+                    <span className="text-[10px] uppercase tracking-wide rounded-full bg-brand-emerald-50 px-2 py-0.5 text-brand-emerald-700">{goal.status}</span>
+                  </div>
+                  {goal.goal_description && <p className="text-sm text-brand-stone-600 dark:text-slate-400 line-clamp-3">{goal.goal_description}</p>}
+                  {Array.isArray(goal.objectives) && goal.objectives.length > 0 && (
+                    <ul className="mt-3 space-y-1 text-xs text-brand-stone-500 dark:text-slate-500 list-disc pl-4">
+                      {goal.objectives.slice(0, 3).map((objective, index) => <li key={index}>{typeof objective === 'string' ? objective : objective?.text}</li>)}
+                    </ul>
+                  )}
+                  {goal.review_date && <p className="mt-3 text-xs text-brand-stone-500 dark:text-slate-500">Review date: {new Date(goal.review_date).toLocaleDateString()}</p>}
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       <section className="mb-20">
         <div className="flex flex-col md:flex-row md:items-end justify-between mb-10 gap-4">

@@ -27,6 +27,7 @@ import MicroLearning from './pages/MicroLearning';
 import Affirmations from './pages/Affirmations';
 import TherapyIntegration from './pages/TherapyIntegration';
 import TherapistDashboard from './pages/TherapistDashboard';
+import TreatmentPlans from './pages/TreatmentPlans';
 import CoTherapySession from './pages/CoTherapySession';
 import ProgressTimeline from './pages/ProgressTimeline';
 import MoodTracker from './pages/MoodTracker';
@@ -507,6 +508,11 @@ function AppContent({ authChecked, clerkLoaded, clerkSignedIn, isAuthenticated, 
                 <Route path="/therapist-dashboard" element={
                   currentClient?.user_role === 'therapist'
                     ? <TherapistDashboard />
+                    : <Home clientId={currentClient?.id} client={currentClient} />
+                } />
+                <Route path="/treatment-plans" element={
+                  currentClient?.user_role === 'therapist'
+                    ? <TreatmentPlans />
                     : <Home clientId={currentClient?.id} client={currentClient} />
                 } />
                 <Route path="/admin-hub" element={

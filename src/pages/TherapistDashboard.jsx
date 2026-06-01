@@ -23,6 +23,8 @@ import { loadUpcomingSessionPrepForTherapist } from '../lib/sessionAgendas';
 import TherapistHomeworkBuilder from '../components/TherapistHomeworkBuilder';
 import SessionPrepBrief from '../components/SessionPrepBrief';
 import TreatmentPlanBuilder from '../components/TreatmentPlanBuilder';
+import TreatmentPlanManager from '../components/TreatmentPlanManager';
+import TherapistNoteEditor from '../components/TherapistNoteEditor';
 import RiskAlertWidget from '../components/RiskAlertWidget';
 
 const woundColorMap = {
@@ -493,6 +495,8 @@ const TherapistDashboard = () => {
   const [selectedInsightClient, setSelectedInsightClient] = useState('');
   const [therapistFeedback, setTherapistFeedback] = useState({});
   const [sessionNotes, setSessionNotes] = useState([]);
+  const [treatmentPlanSummary, setTreatmentPlanSummary] = useState({ active: 0, reviewSoon: 0 });
+  const [recentTaggedNotes, setRecentTaggedNotes] = useState([]);
   const [selectedNoteTemplate, setSelectedNoteTemplate] = useState('none');
   const [noteForm, setNoteForm] = useState({
     clientId: '',
@@ -680,6 +684,8 @@ const TherapistDashboard = () => {
         setClients([]);
         setSessionPrepRows([]);
         setAlerts([]);
+        setTreatmentPlanSummary({ active: 0, reviewSoon: 0 });
+        setRecentTaggedNotes([]);
         setLoading(false);
         return;
       }
@@ -688,6 +694,8 @@ const TherapistDashboard = () => {
         setClients([]);
         setSessionPrepRows([]);
         setAlerts([]);
+        setTreatmentPlanSummary({ active: 0, reviewSoon: 0 });
+        setRecentTaggedNotes([]);
         setLoading(false);
         return;
       }
@@ -703,7 +711,9 @@ const TherapistDashboard = () => {
         { data: gamificationRows },
         { data: interactiveWoundData },
         { data: moodEntries },
-        { data: checkinData }
+        { data: checkinData },
+        { data: treatmentPlansRaw },
+        { data: therapistNotesRaw }
       ] = await Promise.all([
         supabase
           .from('ifs_assessment_results')
@@ -744,8 +754,32 @@ const TherapistDashboard = () => {
           .in('client_id', clientIds)
           .like('module_id', 'daily_checkin_%')
           .order('updated_at', { ascending: false })
-          .limit(500)
+          .limit(500),
+        supabase
+          .from('ifs_treatment_plans')
+          .select('id, client_id, goal_title, status, review_date, created_at')
+          .in('client_id', clientIds)
+          .order('created_at', { ascending: false }),
+        supabase
+          .from('ifs_therapist_notes')
+          .select('id, client_id, note_type, clinical_summary, tagged_parts, tagged_treatment_goals, created_at')
+          .in('client_id', clientIds)
+          .order('created_at', { ascending: false })
+          .limit(12)
       ]);
+
+
+      const reviewSoonCutoff = new Date();
+      reviewSoonCutoff.setDate(reviewSoonCutoff.getDate() + 14);
+      setTreatmentPlanSummary({
+        active: (treatmentPlansRaw || []).filter((plan) => plan.status === 'active').length,
+        reviewSoon: (treatmentPlansRaw || []).filter((plan) => plan.status === 'active' && plan.review_date && new Date(plan.review_date) <= reviewSoonCutoff).length
+      });
+      const clientNamesById = Object.fromEntries(clientList.map((client) => [client.id, client.name]));
+      setRecentTaggedNotes((therapistNotesRaw || [])
+        .filter((note) => (note.tagged_parts || []).length > 0 || (note.tagged_treatment_goals || []).length > 0)
+        .slice(0, 5)
+        .map((note) => ({ ...note, clientName: clientNamesById[note.client_id] || 'Assigned client' })));
 
       const interactiveWoundsByClient = {};
       (interactiveWoundData || []).forEach(d => {
@@ -2471,12 +2505,14 @@ const TherapistDashboard = () => {
         onSelectClient={(clientId) => { setSelectedInsightClient(clientId); setActiveTab('insights'); }}
       />
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-2 lg:grid-cols-6 gap-4 mb-8">
         {[
           { label: 'Total Clients', value: stats.totalClients, icon: Users, color: 'from-brand-stone-500 to-brand-stone-600', glow: 'blue' },
           { label: 'Active Clients', value: stats.activeSessions, icon: Activity, color: 'from-brand-emerald-600 to-brand-emerald-700', glow: 'emerald' },
           { label: 'Assessments Done', value: stats.assessmentsCompleted, icon: Target, color: 'from-brand-gold-600 to-brand-emerald-700', glow: 'amber' },
-          { label: 'Avg Progress', value: `${stats.avgProgress}%`, icon: TrendingUp, color: 'from-brand-gold-600 to-brand-emerald-700', glow: 'amber' }
+          { label: 'Avg Progress', value: `${stats.avgProgress}%`, icon: TrendingUp, color: 'from-brand-gold-600 to-brand-emerald-700', glow: 'amber' },
+          { label: 'Active Goals', value: treatmentPlanSummary.active, icon: Target, color: 'from-amber-500 to-orange-600', glow: 'amber' },
+          { label: 'Review Soon', value: treatmentPlanSummary.reviewSoon, icon: Calendar, color: 'from-blue-500 to-cyan-600', glow: 'blue' }
         ].map((stat) => {
           const Icon = stat.icon;
           return (
@@ -2498,6 +2534,8 @@ const TherapistDashboard = () => {
       <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
         {[
           { id: 'clients', label: 'Clients', icon: Users },
+          { id: 'treatment-plans', label: 'Treatment Plans', icon: Target },
+          { id: 'clinical-notes', label: 'Clinical Notes', icon: FileText },
           { id: 'notes', label: 'Session Notes', icon: FileText },
           { id: 'session-prep', label: 'Session Prep', icon: ClipboardCheck },
           { id: 'progress', label: 'Progress', icon: BarChart3 },
@@ -2877,6 +2915,33 @@ const TherapistDashboard = () => {
               </div>
             )}
           </div>
+        </div>
+      )}
+
+
+      {activeTab === 'treatment-plans' && (
+        <TreatmentPlanManager assignedClients={clients} />
+      )}
+
+      {activeTab === 'clinical-notes' && (
+        <div className="space-y-5">
+          {recentTaggedNotes.length > 0 && (
+            <div className={`${cardBg} rounded-xl border ${cardBorder} p-5`}>
+              <h2 className={`text-lg font-semibold ${textPrimary} mb-3`}>Recent Tagged Notes</h2>
+              <div className="grid md:grid-cols-2 gap-3">
+                {recentTaggedNotes.map((note) => (
+                  <div key={note.id} className="rounded-lg border border-amber-100 bg-amber-50/60 p-3">
+                    <div className="flex justify-between gap-2 text-xs text-amber-700 font-semibold">
+                      <span>{note.clientName}</span>
+                      <span>{note.note_type || 'general'}</span>
+                    </div>
+                    <p className="text-sm text-gray-700 mt-1 line-clamp-2">{note.clinical_summary || 'Tagged clinical note'}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          <TherapistNoteEditor assignedClients={clients} onSaved={loadDashboardData} />
         </div>
       )}
 

@@ -200,6 +200,11 @@ const CLIENT_SCOPED_TABLES = new Set([
 
 
 const ASSIGNED_HOMEWORK_CLIENT_UPDATE_COLUMNS = new Set(['status', 'started_at', 'completed_at', 'updated_at']);
+const TREATMENT_PLAN_THERAPIST_INSERT_COLUMNS = new Set(['therapist_id', 'client_id', 'goal_title', 'goal_description', 'target_wounds', 'target_parts', 'objectives', 'interventions', 'status', 'review_date', 'completed_at', 'created_at', 'updated_at']);
+const TREATMENT_PLAN_THERAPIST_UPDATE_COLUMNS = new Set(['goal_title', 'goal_description', 'target_wounds', 'target_parts', 'objectives', 'interventions', 'status', 'review_date', 'completed_at', 'updated_at']);
+const TREATMENT_PLAN_STATUSES = new Set(['active', 'paused', 'completed', 'archived']);
+const THERAPIST_NOTE_INSERT_COLUMNS = new Set(['therapist_id', 'client_id', 'note_type', 'clinical_summary', 'content', 'session_date', 'tagged_parts', 'tagged_treatment_goals', 'created_at', 'updated_at']);
+const THERAPIST_NOTE_UPDATE_COLUMNS = new Set(['note_type', 'clinical_summary', 'content', 'session_date', 'tagged_parts', 'tagged_treatment_goals', 'updated_at']);
 const SESSION_AGENDA_CLIENT_INSERT_COLUMNS = new Set(['client_id', 'therapist_id', 'topics', 'active_parts', 'stuck_points', 'goals_for_session', 'current_stress_level', 'current_mood_label', 'safety_concerns', 'session_date', 'session_datetime', 'status', 'created_at', 'updated_at']);
 const SESSION_AGENDA_CLIENT_UPDATE_COLUMNS = new Set(['topics', 'active_parts', 'stuck_points', 'goals_for_session', 'current_stress_level', 'current_mood_label', 'safety_concerns', 'session_date', 'session_datetime', 'status', 'updated_at']);
 const SESSION_AGENDA_THERAPIST_UPDATE_COLUMNS = new Set(['therapist_notes', 'reviewed_at', 'status', 'updated_at']);
@@ -251,6 +256,40 @@ async function hasActiveAssignment(therapistId, clientId) {
     LIMIT 1
   `, [therapistId, clientId]);
   return rows.length > 0;
+}
+
+
+async function loadClientIdsFromRows(table, filters) {
+  const ids = getFilterValues(filters, 'id');
+  if (!ids.length) return [];
+  const rows = await sql.query(`SELECT DISTINCT client_id FROM ${quoteIdent(table)} WHERE id = ANY($1::uuid[])`, [ids]);
+  return rows.map((row) => row.client_id).filter(Boolean);
+}
+
+function extractTagIds(tags = []) {
+  if (!Array.isArray(tags)) return [];
+  return [...new Set(tags.map((tag) => tag?.id).filter(Boolean).map(String))];
+}
+
+async function assertTagsBelongToClients(clientIds, rows) {
+  const ids = [...new Set((clientIds || []).filter(Boolean).map(String))];
+  if (!ids.length) throw Object.assign(new Error('client_id is required for tagged notes'), { statusCode: 403 });
+
+  const partIds = extractTagIds(rows.flatMap((row) => row?.tagged_parts || []));
+  if (partIds.length) {
+    const partRows = await sql.query('SELECT id, client_id FROM ifs_parts WHERE id = ANY($1::uuid[])', [partIds]);
+    if (partRows.length !== partIds.length || partRows.some((row) => !ids.includes(String(row.client_id)))) {
+      throw Object.assign(new Error('Tagged parts must belong to the selected assigned client'), { statusCode: 403 });
+    }
+  }
+
+  const goalIds = extractTagIds(rows.flatMap((row) => row?.tagged_treatment_goals || []));
+  if (goalIds.length) {
+    const goalRows = await sql.query('SELECT id, client_id FROM ifs_treatment_plans WHERE id = ANY($1::uuid[])', [goalIds]);
+    if (goalRows.length !== goalIds.length || goalRows.some((row) => !ids.includes(String(row.client_id)))) {
+      throw Object.assign(new Error('Tagged treatment goals must belong to the selected assigned client'), { statusCode: 403 });
+    }
+  }
 }
 
 async function assertAssignedClients(appUser, clientIds) {
@@ -378,6 +417,76 @@ async function authorizePayload({ appUser, table, action, filters, values }) {
     }
   }
 
+
+  if (table === 'ifs_treatment_plans') {
+    const rows = getValueRows(values);
+    const valueClientIds = rows.map((row) => row.client_id).filter(Boolean);
+    const filterClientIds = getFilterValues(filters, 'client_id');
+    const existingClientIds = action === 'update' ? await loadClientIdsFromRows(table, filters) : [];
+    const clientIds = valueClientIds.length ? valueClientIds : (filterClientIds.length ? filterClientIds : existingClientIds);
+
+    if (appUser.user_role === 'client') {
+      if (action !== 'select') throw Object.assign(new Error('Clients cannot modify treatment plans'), { statusCode: 403 });
+      return;
+    }
+
+    if (isTherapistUser(appUser)) {
+      if (action === 'delete' || action === 'upsert') throw Object.assign(new Error('Treatment plans should be archived instead of deleted'), { statusCode: 403 });
+      if (action === 'insert') {
+        assertOnlyColumns(values, TREATMENT_PLAN_THERAPIST_INSERT_COLUMNS, 'Therapists cannot set treatment plan fields');
+        assertAllowedStatuses(values, TREATMENT_PLAN_STATUSES, 'treatment plan status');
+        if (!rows.length || rows.some((row) => String(row.therapist_id) !== String(appUser.id))) {
+          throw Object.assign(new Error('Therapists may only create their own treatment plans'), { statusCode: 403 });
+        }
+        await assertAssignedClients(appUser, clientIds);
+        return;
+      }
+      if (action === 'update') {
+        assertOnlyColumns(values, TREATMENT_PLAN_THERAPIST_UPDATE_COLUMNS, 'Therapists cannot update treatment plan fields');
+        assertAllowedStatuses(values, TREATMENT_PLAN_STATUSES, 'treatment plan status');
+        await assertAssignedClients(appUser, clientIds);
+        return;
+      }
+      if (action === 'select') {
+        if (clientIds.length) await assertAssignedClients(appUser, clientIds);
+        return;
+      }
+    }
+  }
+
+  if (table === 'ifs_therapist_notes') {
+    const rows = getValueRows(values);
+    const valueClientIds = rows.map((row) => row.client_id).filter(Boolean);
+    const filterClientIds = getFilterValues(filters, 'client_id');
+    const existingClientIds = action === 'update' ? await loadClientIdsFromRows(table, filters) : [];
+    const clientIds = valueClientIds.length ? valueClientIds : (filterClientIds.length ? filterClientIds : existingClientIds);
+
+    if (appUser.user_role === 'client') throw Object.assign(new Error('Clients cannot access therapist clinical notes'), { statusCode: 403 });
+
+    if (isTherapistUser(appUser)) {
+      if (action === 'delete' || action === 'upsert') throw Object.assign(new Error('Therapist notes should be archived instead of deleted'), { statusCode: 403 });
+      if (action === 'insert') {
+        assertOnlyColumns(values, THERAPIST_NOTE_INSERT_COLUMNS, 'Therapists cannot set therapist note fields');
+        if (!rows.length || rows.some((row) => String(row.therapist_id) !== String(appUser.id))) {
+          throw Object.assign(new Error('Therapists may only create their own clinical notes'), { statusCode: 403 });
+        }
+        await assertAssignedClients(appUser, clientIds);
+        await assertTagsBelongToClients(clientIds, rows);
+        return;
+      }
+      if (action === 'update') {
+        assertOnlyColumns(values, THERAPIST_NOTE_UPDATE_COLUMNS, 'Therapists cannot update therapist note fields');
+        await assertAssignedClients(appUser, clientIds);
+        await assertTagsBelongToClients(clientIds, rows);
+        return;
+      }
+      if (action === 'select') {
+        if (clientIds.length) await assertAssignedClients(appUser, clientIds);
+        return;
+      }
+    }
+  }
+
   if (table === 'ifs_clients') {
     if (appUser.user_role === 'client') {
       if (action === 'insert') throw Object.assign(new Error('Clients cannot create client profiles'), { statusCode: 403 });
@@ -429,6 +538,24 @@ function buildAuthClause(table, appUser, params, action = 'select') {
     if (isTherapistUser(appUser)) {
       params.push(appUser.id, appUser.id);
       return `(${quoteIdent('id')} = $${params.length - 1} OR ${quoteIdent('id')} IN (SELECT client_id FROM ifs_therapist_clients WHERE therapist_id = $${params.length} AND COALESCE(status, 'active') = 'active'))`;
+    }
+  }
+
+  if (table === 'ifs_treatment_plans') {
+    if (appUser.user_role === 'client') {
+      params.push(appUser.id);
+      return `${quoteIdent('client_id')} = $${params.length} AND COALESCE(${quoteIdent('status')}, 'active') IN ('active', 'completed')`;
+    }
+    if (isTherapistUser(appUser)) {
+      params.push(appUser.id, appUser.id);
+      return `${quoteIdent('therapist_id')} = $${params.length - 1} AND ${quoteIdent('client_id')} IN (SELECT client_id FROM ifs_therapist_clients WHERE therapist_id = $${params.length} AND COALESCE(status, 'active') = 'active')`;
+    }
+  }
+  if (table === 'ifs_therapist_notes') {
+    if (appUser.user_role === 'client') return 'false';
+    if (isTherapistUser(appUser)) {
+      params.push(appUser.id, appUser.id);
+      return `${quoteIdent('therapist_id')} = $${params.length - 1} AND ${quoteIdent('client_id')} IN (SELECT client_id FROM ifs_therapist_clients WHERE therapist_id = $${params.length} AND COALESCE(status, 'active') = 'active')`;
     }
   }
   if (CLIENT_SCOPED_TABLES.has(table)) {
