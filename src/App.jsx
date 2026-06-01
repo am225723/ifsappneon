@@ -46,6 +46,7 @@ import CustomAssessment from './pages/CustomAssessment';
 import GuidedMeditation from './pages/GuidedMeditation';
 import DailyCheckin from './pages/DailyCheckin';
 import MoodAnalytics from './pages/MoodAnalytics';
+import LongitudinalAnalytics from './pages/LongitudinalAnalytics';
 import AdminHub from './pages/AdminHub';
 import Milestones from './pages/Milestones';
 import WeeklyReflection from './pages/WeeklyReflection';
@@ -543,6 +544,16 @@ function AppContent({ authChecked, clerkLoaded, clerkSignedIn, isAuthenticated, 
                 <Route path="/advisor-reports" element={
                   currentClient?.user_role === 'therapist'
                     ? <TherapistReports />
+                    : <Home clientId={currentClient?.id} client={currentClient} />
+                } />
+                <Route path="/analytics" element={
+                  ['therapist', 'admin', 'supervisor'].includes(currentClient?.user_role)
+                    ? <LongitudinalAnalytics />
+                    : <Home clientId={currentClient?.id} client={currentClient} />
+                } />
+                <Route path="/longitudinal-analytics" element={
+                  ['therapist', 'admin', 'supervisor'].includes(currentClient?.user_role)
+                    ? <LongitudinalAnalytics />
                     : <Home clientId={currentClient?.id} client={currentClient} />
                 } />
                 <Route path="/inbox" element={
