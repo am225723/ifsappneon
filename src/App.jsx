@@ -47,6 +47,7 @@ import GuidedMeditation from './pages/GuidedMeditation';
 import DailyCheckin from './pages/DailyCheckin';
 import MoodAnalytics from './pages/MoodAnalytics';
 import LongitudinalAnalytics from './pages/LongitudinalAnalytics';
+import HealingTimeline from './components/HealingTimeline';
 import AdminHub from './pages/AdminHub';
 import Milestones from './pages/Milestones';
 import WeeklyReflection from './pages/WeeklyReflection';
@@ -564,6 +565,11 @@ function AppContent({ authChecked, clerkLoaded, clerkSignedIn, isAuthenticated, 
                 <Route path="/my-homework" element={<ClientHomework />} />
                 <Route path="/pre-session-checkin" element={<PreSessionCheckin />} />
                 <Route path="/progress-timeline" element={<ProgressTimeline />} />
+                <Route path="/healing-timeline" element={
+                  currentClient?.user_role === 'client'
+                    ? <HealingTimeline />
+                    : <Home clientId={currentClient?.id} client={currentClient} />
+                } />
                 <Route path="/mood-tracker" element={<MoodTracker />} />
                 <Route path="/gamification" element={<GamificationHub />} />
                 <Route path="/parts-dialogue" element={<FeatureGate feature="partsDialogue"><PartsDialogue /></FeatureGate>} />
