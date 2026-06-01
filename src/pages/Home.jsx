@@ -145,6 +145,29 @@ const Home = ({ clientId, client }) => {
       </section>
 
 
+
+      <section className="mb-10">
+        <div className="soft-card border border-brand-gold-100 bg-gradient-to-br from-white to-brand-gold-50/70 p-6 dark:border-brand-gold-900/30 dark:from-brand-cardDark dark:to-brand-gold-950/20">
+          <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+            <div className="flex items-start gap-4">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-brand-gold-100 text-brand-gold-700 dark:bg-brand-gold-950/40 dark:text-brand-gold-500">
+                <Trophy className="h-6 w-6" />
+              </div>
+              <div>
+                <h2 className="text-xl font-semibold text-brand-stone-900 dark:text-slate-100">My Healing Timeline</h2>
+                <p className="mt-1 max-w-2xl text-sm leading-relaxed text-brand-stone-600 dark:text-slate-400">
+                  See milestones from your parts work, check-ins, homework, goals, and reflections.
+                </p>
+              </div>
+            </div>
+            <Link to="/healing-timeline" className="btn-sanctuary-primary justify-center">
+              View Timeline
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+          </div>
+        </div>
+      </section>
+
       {therapyGoals.length > 0 && (
         <section className="mb-10">
           <div className="soft-card border border-brand-emerald-100 bg-white/80 dark:bg-brand-cardDark p-6">
