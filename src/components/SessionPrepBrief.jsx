@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { AlertTriangle, CalendarCheck, CheckCircle2, Loader2, RefreshCw } from 'lucide-react';
 import { clientAuth } from '../lib/supabasePersonalization';
 import { loadTherapistClientSessionAgendas, markSessionAgendaReviewed } from '../lib/sessionAgendas';
+import { generateSessionPrepSummary } from '../lib/sessionPrepSummary';
 
 function formatDate(value) {
   if (!value) return 'Not specified';
@@ -11,6 +12,36 @@ function formatDate(value) {
 function AgendaDetail({ label, value }) {
   if (!value && value !== 0) return null;
   return <div><p className="text-xs font-semibold uppercase tracking-wide text-blue-500">{label}</p><p className="text-sm text-blue-950 whitespace-pre-wrap">{value}</p></div>;
+}
+
+const AI_DISCLAIMER = 'AI-generated draft for clinician review. Verify against the chart and use clinical judgment.';
+
+function formatAiError(error) {
+  if (!error) return '';
+  if (error.code === 'unauthorized') return 'Unauthorized: please sign in again before generating an AI summary.';
+  if (error.code === 'forbidden') return 'Unauthorized: this client is not assigned to your therapist account.';
+  if (error.code === 'missing_client_id') return 'No client selected. Select an active assigned client first.';
+  if (error.code === 'no_recent_data') return 'No recent data is available to summarize for this client.';
+  if (error.code === 'openai_api_key_missing') return 'OpenAI API key missing. Ask an administrator to configure OPENAI_API_KEY on the server.';
+  return error.message || 'Server error: unable to generate AI summary.';
+}
+
+function AiSummaryContent({ summary }) {
+  if (!summary) return null;
+  return (
+    <div className="space-y-2 text-sm text-slate-800">
+      {summary.split('\n').map((line, index) => {
+        const trimmed = line.trim();
+        if (!trimmed) return <div key={index} className="h-1" />;
+        const isHeading = /^\d+\.\s/.test(trimmed);
+        return (
+          <p key={index} className={isHeading ? 'mt-3 font-semibold text-purple-950' : 'whitespace-pre-wrap'}>
+            {trimmed}
+          </p>
+        );
+      })}
+    </div>
+  );
 }
 
 export default function SessionPrepBrief({ clientId, therapistId, clients = [] }) {
@@ -23,10 +54,18 @@ export default function SessionPrepBrief({ clientId, therapistId, clients = [] }
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+  const [aiSummary, setAiSummary] = useState(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState('');
 
   useEffect(() => {
     if (clientId) setSelectedClientId(clientId);
   }, [clientId]);
+
+  useEffect(() => {
+    setAiSummary(null);
+    setAiError('');
+  }, [selectedClientId]);
 
   const selectedClient = clients.find((client) => client.id === selectedClientId);
   const latestAgenda = useMemo(() => agendas.find((agenda) => agenda.status === 'submitted') || agendas[0] || null, [agendas]);
@@ -48,6 +87,26 @@ export default function SessionPrepBrief({ clientId, therapistId, clients = [] }
   useEffect(() => {
     loadAgendas();
   }, [resolvedTherapistId, selectedClientId]);
+
+  const handleGenerateAiSummary = async () => {
+    setAiError('');
+    setAiSummary(null);
+    if (!selectedClientId) {
+      setAiError('No client selected. Select an active assigned client first.');
+      return;
+    }
+
+    setAiLoading(true);
+    const { data, error: summaryError } = await generateSessionPrepSummary({ clientId: selectedClientId, rangeDays: 7 });
+    setAiLoading(false);
+
+    if (summaryError) {
+      setAiError(formatAiError(summaryError));
+      return;
+    }
+
+    setAiSummary(data);
+  };
 
   const markReviewed = async () => {
     if (!latestAgenda?.id) return;
@@ -71,7 +130,7 @@ export default function SessionPrepBrief({ clientId, therapistId, clients = [] }
           <CalendarCheck className="w-5 h-5 text-blue-600" />
           <div>
             <h3 className="font-semibold text-blue-950">Session Prep Brief</h3>
-            <p className="text-xs text-blue-700">Structured client check-in data only. No AI summary is generated here.</p>
+            <p className="text-xs text-blue-700">Structured agenda data with an optional on-demand AI summary for clinician review.</p>
           </div>
           {loading && <RefreshCw className="w-4 h-4 animate-spin text-blue-600" />}
         </div>
@@ -141,6 +200,37 @@ export default function SessionPrepBrief({ clientId, therapistId, clients = [] }
           </div>
         </div>
       )}
+
+      <div className="rounded-xl border border-purple-100 bg-white p-4 space-y-3">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h4 className="font-semibold text-purple-950">AI Session Prep Summary</h4>
+            <p className="text-xs text-purple-700">Generate on demand from scoped agenda, mood, journal, parts, homework, and progress data. This does not replace the structured Session Prep Brief.</p>
+          </div>
+          <button
+            type="button"
+            onClick={handleGenerateAiSummary}
+            disabled={aiLoading || !selectedClientId}
+            className="inline-flex items-center justify-center gap-2 rounded-lg bg-purple-600 px-4 py-2 text-sm font-semibold text-white disabled:bg-gray-400"
+          >
+            {aiLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+            {aiLoading ? 'Generating summary...' : 'Generate AI Summary'}
+          </button>
+        </div>
+
+        <div className="rounded-lg border border-purple-100 bg-purple-50 p-3 text-xs font-medium text-purple-900">
+          {AI_DISCLAIMER}
+        </div>
+
+        {aiError && <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{aiError}</div>}
+        {aiLoading && <p className="flex items-center gap-2 text-sm text-purple-700"><Loader2 className="w-4 h-4 animate-spin" /> Generating summary...</p>}
+        {aiSummary?.summary && (
+          <div className="rounded-lg border border-purple-100 bg-white p-4">
+            <AiSummaryContent summary={aiSummary.summary} />
+            {aiSummary.generatedAt && <p className="mt-4 text-xs text-slate-500">Generated: {new Date(aiSummary.generatedAt).toLocaleString()}</p>}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
