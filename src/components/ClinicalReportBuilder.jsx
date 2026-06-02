@@ -5,14 +5,14 @@ import { loadAssignedClients } from '../lib/therapistAssignments';
 import ClinicalReportPreview from './ClinicalReportPreview';
 
 const SECTION_OPTIONS = [
-  ['includeTreatmentPlans', 'Treatment Plan Goals', 'Active/completed goals, objectives, interventions, target parts/wounds, and review date.'],
-  ['includeTaggedNotes', 'Tagged Clinical Notes', 'Note date/type, clinical summary, tagged parts, and tagged treatment goals.'],
+  ['includeTreatmentPlans', 'Growth Goals', 'Active/completed goals, objectives, interventions, target parts/wounds, and review date.'],
+  ['includeTaggedNotes', 'Tagged Advisor Notes', 'Note date/type, Advisor summary, tagged parts, and tagged Growth Goals.'],
   ['includeSessionAgendas', 'Session Agendas', 'Topics, active parts, stuck points, goals, mood/stress, safety-related content, and review status.'],
-  ['includeAssignedHomework', 'Assigned Homework', 'Module title, status, assigned/completed/reviewed dates, and therapist feedback.'],
+  ['includeAssignedHomework', 'Assigned IFS Practices', 'Module title, status, assigned/completed/reviewed dates, and Advisor feedback.'],
   ['includeParts', 'Parts Summary', 'Part names plus lightweight roles, burdens, and status.'],
   ['includeMoodEntries', 'Mood Summary', 'Recent mood and energy values in a simple table.'],
   ['includeJournals', 'Journal Excerpts', 'Default-off client journal titles and truncated excerpts.'],
-  ['includeHealingTimeline', 'Healing Timeline Summary', 'Optional client-safe milestones from goals, homework, and parts status; excludes therapist notes.'],
+  ['includeHealingTimeline', 'Healing Timeline Summary', 'Optional client-safe milestones from goals, assigned IFS practices, and parts status; excludes therapist notes.'],
   ['includeAnalyticsSummary', 'Analytics Summary', 'Optional compact therapist analytics summary without chart libraries.'],
   ['includeAiSessionSummary', 'AI Session Prep Summary', 'Default-off placeholder for existing on-demand AI prep summaries; does not auto-generate AI content.'],
   ['includeFullNoteText', 'Full Clinical Note Text', 'Default-off full note body excerpts. Use only when clinically appropriate.']
