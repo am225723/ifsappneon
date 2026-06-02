@@ -17,9 +17,13 @@ const THERAPIST_ACTIONS = new Set([
   'next_step',
   'previous_step',
   'set_activity_step',
-  'end_session'
+  'end_session',
+  'set_selected_part',
+  'update_map_draft',
+  'suggest_part'
 ]);
-const READ_ACTIONS = new Set(['get_state', 'get_active_for_client']);
+const READ_ACTIONS = new Set(['get_state', 'get_active_for_client', 'get_map_parts']);
+const CLIENT_CONFIRMATION_ACTIONS = new Set(['accept_suggestion', 'dismiss_suggestion', 'save_confirmed_map']);
 const EVENT_TYPES = new Set([
   'session_started',
   'client_joined',
@@ -39,7 +43,8 @@ const SUPPORTED_ACTIVITIES = new Set([
   'unblending_practice',
   'protector_appreciation',
   'feelings_needs_check',
-  'repair_after_conflict'
+  'repair_after_conflict',
+  'shared_parts_map'
 ]);
 const STEP_COUNTS = new Map([
   ['grounding_54321', 6],
@@ -51,6 +56,10 @@ const STEP_COUNTS = new Map([
   ['repair_after_conflict', 6]
 ]);
 const MAX_PROMPT_LENGTH = 500;
+const MAX_SUGGESTION_NAME_LENGTH = 100;
+const MAX_SUGGESTION_DESCRIPTION_LENGTH = 500;
+const MAP_MODES = new Set(['explore', 'protectors', 'exiles', 'relationships', 'self_energy']);
+const PART_TYPES = new Set(['protector', 'manager', 'firefighter', 'exile', 'self', 'unknown', '']);
 
 function sendError(res, status, message, code = 'live_session_error') {
   return res.status(status).json({ error: { code, message } });
@@ -75,6 +84,22 @@ function sanitizePrompt(value) {
 function normalizeActivityState(activity, requestedState = {}) {
   if (!SUPPORTED_ACTIVITIES.has(activity)) {
     throw Object.assign(new Error('Unsupported live activity'), { statusCode: 400, code: 'unsupported_activity' });
+  }
+
+  if (activity === 'shared_parts_map') {
+    const mapMode = MAP_MODES.has(requestedState.mapMode) ? requestedState.mapMode : 'explore';
+    return {
+      activity: 'shared_parts_map',
+      startedAt: new Date().toISOString(),
+      status: 'active',
+      selectedPartId: null,
+      mapMode,
+      advisorPrompt: String(requestedState.advisorPrompt || '').replace(/\s+/g, ' ').trim().slice(0, MAX_PROMPT_LENGTH),
+      pendingSuggestions: [],
+      layoutDraft: sanitizeLayoutDraft(requestedState.layoutDraft || {}),
+      clientConfirmationRequired: true,
+      hasUnsavedConfirmedChanges: false
+    };
   }
 
   if (activity !== 'guided_breathing') {
@@ -115,6 +140,103 @@ function normalizeActivityState(activity, requestedState = {}) {
     advisorPrompt: String(requestedState.advisorPrompt || '').replace(/\s+/g, ' ').trim().slice(0, MAX_PROMPT_LENGTH),
     message: String(requestedState.message || 'Follow the breathing circle gently.').slice(0, MAX_PROMPT_LENGTH)
   };
+}
+
+
+function sanitizeText(value, maxLength) {
+  return String(value || '').replace(/\s+/g, ' ').trim().slice(0, maxLength);
+}
+
+function sanitizePartId(value, label = 'partId') {
+  const text = String(value || '').trim();
+  if (!text || text.length > 100 || !/^[A-Za-z0-9_.:-]+$/.test(text)) {
+    throw Object.assign(new Error(`${label} is invalid`), { statusCode: 400, code: 'invalid_part_id' });
+  }
+  return text;
+}
+
+function sanitizePartType(value) {
+  const text = String(value || '').toLowerCase().trim();
+  return PART_TYPES.has(text) ? text : 'unknown';
+}
+
+function sanitizeNumber(value, label) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) {
+    throw Object.assign(new Error(`${label} must be a finite number`), { statusCode: 400, code: 'invalid_map_position' });
+  }
+  return Math.min(Math.max(number, 0), 100);
+}
+
+function sanitizeColor(value) {
+  const text = String(value || '').trim();
+  return /^#[0-9a-f]{6}$/i.test(text) || /^[a-z-]{3,30}$/i.test(text) ? text.slice(0, 50) : null;
+}
+
+function sanitizeLayoutDraft(value = {}) {
+  const draft = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+  return Object.entries(draft).slice(0, 100).reduce((acc, [partId, layout]) => {
+    if (!layout || typeof layout !== 'object') return acc;
+    const safePartId = sanitizePartId(partId);
+    const next = {};
+    if (layout.x !== undefined) next.x = sanitizeNumber(layout.x, 'x');
+    if (layout.y !== undefined) next.y = sanitizeNumber(layout.y, 'y');
+    if (layout.color !== undefined) next.color = sanitizeColor(layout.color);
+    if (Object.keys(next).length) acc[safePartId] = next;
+    return acc;
+  }, {});
+}
+
+function sanitizeSuggestion(raw = {}) {
+  const suggestionType = ['new_part', 'part_type', 'descriptor', 'layout'].includes(raw.suggestionType) ? raw.suggestionType : 'new_part';
+  const suggestion = {
+    id: raw.id || `suggestion_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+    suggestionType,
+    status: 'pending',
+    createdAt: new Date().toISOString()
+  };
+  if (raw.partId) suggestion.partId = sanitizePartId(raw.partId);
+  if (raw.name) suggestion.name = sanitizeText(raw.name, MAX_SUGGESTION_NAME_LENGTH);
+  if (raw.partType !== undefined) suggestion.partType = sanitizePartType(raw.partType);
+  if (raw.description) suggestion.description = sanitizeText(raw.description, MAX_SUGGESTION_DESCRIPTION_LENGTH);
+  if (raw.x !== undefined) suggestion.x = sanitizeNumber(raw.x, 'x');
+  if (raw.y !== undefined) suggestion.y = sanitizeNumber(raw.y, 'y');
+  if (raw.color !== undefined) suggestion.color = sanitizeColor(raw.color);
+  if (suggestionType === 'new_part' && !suggestion.name) {
+    throw Object.assign(new Error('Suggested part name is required'), { statusCode: 400, code: 'suggestion_name_required' });
+  }
+  if (suggestionType !== 'new_part' && !suggestion.partId) {
+    throw Object.assign(new Error('Existing part suggestions require a partId'), { statusCode: 400, code: 'suggestion_part_required' });
+  }
+  return suggestion;
+}
+
+async function assertPartBelongsToClient(clientId, partId) {
+  const rows = await sql`
+    SELECT id
+    FROM ifs_parts
+    WHERE client_id = ${clientId}
+      AND id = ${partId}
+      AND COALESCE(is_active, true) = true
+    LIMIT 1
+  `;
+  if (!rows[0]) throw Object.assign(new Error('Part not found for this client'), { statusCode: 404, code: 'part_not_found' });
+}
+
+async function loadPartsForClient(clientId) {
+  return sql`
+    SELECT id, name, part_name, type, part_type, role, description, x, y, size, color, notes, updated_at
+    FROM ifs_parts
+    WHERE client_id = ${clientId}
+      AND COALESCE(is_active, true) = true
+    ORDER BY updated_at DESC NULLS LAST, created_at DESC NULLS LAST
+  `;
+}
+
+function ensureSharedMapActivity(session) {
+  if (session.current_activity !== 'shared_parts_map' || session.activity_state?.activity !== 'shared_parts_map') {
+    throw Object.assign(new Error('Shared Parts Map is not active for this session'), { statusCode: 400, code: 'shared_map_not_active' });
+  }
 }
 
 function addPauseMetadata(state = {}) {
@@ -306,7 +428,7 @@ async function startActivity(user, body) {
     WHERE id = ${session.id}
     RETURNING *
   `;
-  await recordEvent(rows[0], 'activity_started', { activity });
+  await recordEvent(rows[0], 'activity_started', { activity, eventName: activity === 'shared_parts_map' ? 'shared_map_started' : 'activity_started' });
   return publicSession(rows[0]);
 }
 
@@ -416,6 +538,194 @@ async function moveActivityStep(user, body, delta) {
   return setActivityStep(user, { ...body, currentStep: (Number.isFinite(current) ? current : 0) + delta });
 }
 
+
+async function getMapParts(user, body) {
+  let clientId = body.clientId ? requireUuid(body.clientId, 'clientId') : null;
+  if (body.sessionId) {
+    const session = await getSession(requireUuid(body.sessionId, 'sessionId'));
+    await assertCanAccessSession(user, session);
+    clientId = session.client_id;
+  }
+  if (!clientId) throw Object.assign(new Error('clientId or sessionId is required'), { statusCode: 400, code: 'client_required' });
+  if (user.user_role === 'client') {
+    if (String(user.id) !== String(clientId)) throw Object.assign(new Error('Client access denied'), { statusCode: 403, code: 'client_access_denied' });
+  } else if (isTherapistUser(user) && !isAdminUser(user)) {
+    await requireTherapistAssignment(user.id, clientId);
+  } else if (!isAdminUser(user)) {
+    throw Object.assign(new Error('Access denied'), { statusCode: 403, code: 'access_denied' });
+  }
+  return { parts: await loadPartsForClient(clientId) };
+}
+
+async function setSelectedPart(user, body) {
+  const session = await getSession(requireUuid(body.sessionId, 'sessionId'));
+  await assertCanAccessSession(user, session);
+  ensureSharedMapActivity(session);
+  const selectedPartId = body.partId ? sanitizePartId(body.partId) : null;
+  if (selectedPartId) await assertPartBelongsToClient(session.client_id, selectedPartId);
+  const nextState = { ...(session.activity_state || {}), selectedPartId, selectedAt: new Date().toISOString() };
+  const rows = await sql`
+    UPDATE ifs_live_sessions
+    SET activity_state = ${JSON.stringify(nextState)}::jsonb, updated_at = CURRENT_TIMESTAMP
+    WHERE id = ${session.id}
+    RETURNING *
+  `;
+  await recordEvent(rows[0], 'prompt_sent', { eventName: 'part_selected', partId: selectedPartId });
+  return publicSession(rows[0]);
+}
+
+async function updateMapDraft(user, body) {
+  const session = await getSession(requireUuid(body.sessionId, 'sessionId'));
+  await assertTherapistControl(user, session);
+  ensureSharedMapActivity(session);
+  const layoutDraft = sanitizeLayoutDraft(body.layoutDraft || {});
+  for (const partId of Object.keys(layoutDraft)) await assertPartBelongsToClient(session.client_id, partId);
+  const mapMode = MAP_MODES.has(body.mapMode) ? body.mapMode : session.activity_state?.mapMode || 'explore';
+  const advisorPrompt = body.advisorPrompt !== undefined ? sanitizeText(body.advisorPrompt, MAX_PROMPT_LENGTH) : session.activity_state?.advisorPrompt || '';
+  const nextState = {
+    ...(session.activity_state || {}),
+    layoutDraft: { ...(session.activity_state?.layoutDraft || {}), ...layoutDraft },
+    mapMode,
+    advisorPrompt,
+    clientConfirmationRequired: true,
+    hasUnsavedConfirmedChanges: true,
+    draftUpdatedAt: new Date().toISOString()
+  };
+  const rows = await sql`
+    UPDATE ifs_live_sessions
+    SET activity_state = ${JSON.stringify(nextState)}::jsonb,
+        therapist_last_seen_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+    WHERE id = ${session.id}
+    RETURNING *
+  `;
+  await recordEvent(rows[0], 'prompt_sent', { eventName: 'map_draft_updated', mapMode, partCount: Object.keys(layoutDraft).length });
+  return publicSession(rows[0]);
+}
+
+async function suggestPart(user, body) {
+  const session = await getSession(requireUuid(body.sessionId, 'sessionId'));
+  await assertTherapistControl(user, session);
+  ensureSharedMapActivity(session);
+  const suggestion = sanitizeSuggestion(body.suggestion || body);
+  if (suggestion.partId) await assertPartBelongsToClient(session.client_id, suggestion.partId);
+  const pending = Array.isArray(session.activity_state?.pendingSuggestions) ? session.activity_state.pendingSuggestions : [];
+  const nextState = {
+    ...(session.activity_state || {}),
+    pendingSuggestions: [...pending.filter((item) => item.status === 'pending').slice(-19), suggestion],
+    clientConfirmationRequired: true,
+    hasUnsavedConfirmedChanges: true
+  };
+  const rows = await sql`
+    UPDATE ifs_live_sessions
+    SET activity_state = ${JSON.stringify(nextState)}::jsonb,
+        therapist_last_seen_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+    WHERE id = ${session.id}
+    RETURNING *
+  `;
+  await recordEvent(rows[0], 'prompt_sent', { eventName: 'part_suggested', suggestionId: suggestion.id, suggestionType: suggestion.suggestionType });
+  return publicSession(rows[0]);
+}
+
+async function updateSuggestionStatus(user, body, status) {
+  const session = await getSession(requireUuid(body.sessionId, 'sessionId'));
+  await assertCanAccessSession(user, session);
+  if (user.user_role !== 'client' || String(user.id) !== String(session.client_id)) {
+    throw Object.assign(new Error('Client confirmation is required'), { statusCode: 403, code: 'client_confirmation_required' });
+  }
+  ensureSharedMapActivity(session);
+  const suggestionId = String(body.suggestionId || '').trim();
+  const suggestions = Array.isArray(session.activity_state?.pendingSuggestions) ? session.activity_state.pendingSuggestions : [];
+  let found = false;
+  const nextSuggestions = suggestions.map((item) => {
+    if (String(item.id) !== suggestionId || item.status !== 'pending') return item;
+    found = true;
+    return { ...item, status, decidedAt: new Date().toISOString() };
+  });
+  if (!found) throw Object.assign(new Error('Suggestion not found'), { statusCode: 404, code: 'suggestion_not_found' });
+  const nextState = { ...(session.activity_state || {}), pendingSuggestions: nextSuggestions, hasUnsavedConfirmedChanges: status === 'accepted' ? true : session.activity_state?.hasUnsavedConfirmedChanges };
+  const rows = await sql`
+    UPDATE ifs_live_sessions
+    SET activity_state = ${JSON.stringify(nextState)}::jsonb,
+        client_last_seen_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+    WHERE id = ${session.id}
+    RETURNING *
+  `;
+  await recordEvent(rows[0], 'prompt_sent', { eventName: status === 'accepted' ? 'suggestion_accepted' : 'suggestion_dismissed', suggestionId });
+  return publicSession(rows[0]);
+}
+
+async function saveConfirmedMap(user, body) {
+  const session = await getSession(requireUuid(body.sessionId, 'sessionId'));
+  await assertCanAccessSession(user, session);
+  if (user.user_role !== 'client' || String(user.id) !== String(session.client_id)) {
+    throw Object.assign(new Error('Client confirmation is required before saving the Shared Parts Map'), { statusCode: 403, code: 'client_confirmation_required' });
+  }
+  ensureSharedMapActivity(session);
+  const state = session.activity_state || {};
+  const suggestions = Array.isArray(state.pendingSuggestions) ? state.pendingSuggestions : [];
+  const accepted = suggestions.filter((item) => item.status === 'accepted' && !item.savedAt);
+  const savedPartIds = [];
+
+  for (const suggestion of accepted) {
+    if (suggestion.suggestionType === 'new_part') {
+      const partId = `live_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+      await sql`
+        INSERT INTO ifs_parts (client_id, id, name, part_name, type, part_type, role, description, x, y, color, is_active, created_at, updated_at)
+        VALUES (${session.client_id}, ${partId}, ${suggestion.name}, ${suggestion.name}, ${suggestion.partType || 'unknown'}, ${suggestion.partType || 'unknown'}, ${suggestion.partType || 'unknown'}, ${suggestion.description || null}, ${suggestion.x ?? null}, ${suggestion.y ?? null}, ${suggestion.color || null}, true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+        ON CONFLICT (client_id, id) DO UPDATE SET updated_at = CURRENT_TIMESTAMP
+      `;
+      savedPartIds.push(partId);
+    } else if (suggestion.partId) {
+      await assertPartBelongsToClient(session.client_id, suggestion.partId);
+      if (suggestion.suggestionType === 'part_type') {
+        await sql`
+          UPDATE ifs_parts
+          SET part_type = ${suggestion.partType || 'unknown'}, type = ${suggestion.partType || 'unknown'}, updated_at = CURRENT_TIMESTAMP
+          WHERE client_id = ${session.client_id} AND id = ${suggestion.partId}
+        `;
+      }
+      if (suggestion.suggestionType === 'descriptor' && suggestion.description) {
+        await sql`
+          UPDATE ifs_parts
+          SET description = ${suggestion.description}, updated_at = CURRENT_TIMESTAMP
+          WHERE client_id = ${session.client_id} AND id = ${suggestion.partId}
+        `;
+      }
+      if (suggestion.suggestionType === 'layout') {
+        await sql`
+          UPDATE ifs_parts
+          SET x = COALESCE(${suggestion.x ?? null}, x), y = COALESCE(${suggestion.y ?? null}, y), color = COALESCE(${suggestion.color || null}, color), updated_at = CURRENT_TIMESTAMP
+          WHERE client_id = ${session.client_id} AND id = ${suggestion.partId}
+        `;
+      }
+      savedPartIds.push(suggestion.partId);
+    }
+  }
+
+  const layoutDraft = sanitizeLayoutDraft(state.layoutDraft || {});
+  for (const [partId, layout] of Object.entries(layoutDraft)) {
+    await assertPartBelongsToClient(session.client_id, partId);
+    await sql`
+      UPDATE ifs_parts
+      SET x = COALESCE(${layout.x ?? null}, x), y = COALESCE(${layout.y ?? null}, y), color = COALESCE(${layout.color || null}, color), updated_at = CURRENT_TIMESTAMP
+      WHERE client_id = ${session.client_id} AND id = ${partId}
+    `;
+    savedPartIds.push(partId);
+  }
+
+  const nextSuggestions = suggestions.map((item) => item.status === 'accepted' ? { ...item, savedAt: new Date().toISOString() } : item).filter((item) => item.status === 'pending');
+  const nextState = { ...state, pendingSuggestions: nextSuggestions, layoutDraft: {}, hasUnsavedConfirmedChanges: false, lastSavedAt: new Date().toISOString() };
+  const rows = await sql`
+    UPDATE ifs_live_sessions
+    SET activity_state = ${JSON.stringify(nextState)}::jsonb,
+        client_last_seen_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+    WHERE id = ${session.id}
+    RETURNING *
+  `;
+  await recordEvent(rows[0], 'prompt_sent', { eventName: 'map_saved', savedPartCount: Array.from(new Set(savedPartIds)).length });
+  return publicSession(rows[0]);
+}
+
 async function endSession(user, body) {
   const session = await getSession(requireUuid(body.sessionId, 'sessionId'));
   await assertTherapistControl(user, session);
@@ -481,7 +791,7 @@ export default async function handler(req, res) {
     const body = req.body || {};
     const action = String(body.action || '');
 
-    if (!action || (!THERAPIST_ACTIONS.has(action) && !READ_ACTIONS.has(action) && action !== 'heartbeat')) {
+    if (!action || (!THERAPIST_ACTIONS.has(action) && !READ_ACTIONS.has(action) && !CLIENT_CONFIRMATION_ACTIONS.has(action) && action !== 'heartbeat')) {
       return sendError(res, 400, 'Unsupported live session action', 'unsupported_action');
     }
 
@@ -489,6 +799,7 @@ export default async function handler(req, res) {
       start_session: () => startSession(user, body),
       get_state: () => getState(user, body),
       get_active_for_client: () => getActiveForClient(user),
+      get_map_parts: () => getMapParts(user, body),
       start_activity: () => startActivity(user, body),
       pause_activity: () => pauseActivity(user, body),
       resume_activity: () => resumeActivity(user, body),
@@ -497,6 +808,12 @@ export default async function handler(req, res) {
       next_step: () => moveActivityStep(user, body, 1),
       previous_step: () => moveActivityStep(user, body, -1),
       set_activity_step: () => setActivityStep(user, body),
+      set_selected_part: () => setSelectedPart(user, body),
+      update_map_draft: () => updateMapDraft(user, body),
+      suggest_part: () => suggestPart(user, body),
+      accept_suggestion: () => updateSuggestionStatus(user, body, 'accepted'),
+      dismiss_suggestion: () => updateSuggestionStatus(user, body, 'dismissed'),
+      save_confirmed_map: () => saveConfirmedMap(user, body),
       end_session: () => endSession(user, body),
       heartbeat: () => heartbeat(user, body)
     };

@@ -102,7 +102,15 @@ export default function LiveCoTherapy() {
           exhaleSeconds: 6,
           message: 'Follow the breathing circle gently.'
         }
-      : {
+      : selectedActivity === 'shared_parts_map'
+        ? {
+            mapMode: 'explore',
+            advisorPrompt: '',
+            pendingSuggestions: [],
+            layoutDraft: {},
+            clientConfirmationRequired: true
+          }
+        : {
           currentStep: 0,
           advisorPrompt: ''
         }
@@ -229,7 +237,7 @@ export default function LiveCoTherapy() {
                 <p className="font-mono text-xs text-brand-stone-700 dark:text-slate-300 break-all">{session.id}</p>
               </div>
               {session.current_activity ? (
-                <LiveActivityRenderer currentActivity={session.current_activity} activityState={session.activity_state} sessionStatus={session.status} />
+                <LiveActivityRenderer currentActivity={session.current_activity} activityState={session.activity_state} sessionStatus={session.status} sessionId={session.id} role="advisor" onSessionUpdate={setSession} />
               ) : (
                 <div className="rounded-3xl border border-dashed border-brand-stone-200 dark:border-slate-700 p-10 text-center">
                   <h2 className="text-xl font-semibold text-brand-stone-900 dark:text-slate-100">No activity currently running</h2>

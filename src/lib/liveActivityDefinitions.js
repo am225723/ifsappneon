@@ -104,6 +104,15 @@ export const LIVE_ACTIVITY_DEFINITIONS = {
       { title: 'Thank the part', prompt: 'Thank the part for communicating.', helper: 'Let it know you heard something important.' }
     ]
   },
+  shared_parts_map: {
+    id: 'shared_parts_map',
+    title: 'Shared Parts Map',
+    shortTitle: 'Parts Map',
+    description: 'A collaborative, client-owned Inner System Map for Advisor-guided reflection and confirmed parts updates.',
+    tone: 'IFS mapping',
+    estimatedMinutes: 10,
+    steps: []
+  },
   repair_after_conflict: {
     id: 'repair_after_conflict',
     title: 'Repair After Conflict Reflection',
