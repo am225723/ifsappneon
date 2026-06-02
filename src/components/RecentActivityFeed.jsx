@@ -37,11 +37,11 @@ export default function RecentActivityFeed({ limit = 3, title = 'Recent Activity
           </div>
           <div>
             <h2 className="text-lg font-semibold text-brand-stone-900 dark:text-slate-100">{title}</h2>
-            <p className="text-xs text-brand-stone-500 dark:text-slate-500">Latest secure in-app updates</p>
+            <p className="text-xs text-brand-stone-500 dark:text-slate-500">New Advisor-guided practices, reminders, and updates</p>
           </div>
         </div>
         <Link to="/notifications" className="text-sm font-semibold text-brand-gold-700 dark:text-brand-gold-500 inline-flex items-center gap-1">
-          View all <ArrowRight className="w-4 h-4" />
+          View Notifications <ArrowRight className="w-4 h-4" />
         </Link>
       </div>
 

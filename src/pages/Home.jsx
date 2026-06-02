@@ -5,7 +5,6 @@ import {
   Brain,
   Play,
   ArrowRight,
-  Users,
   Zap,
   BookOpen,
   Compass,
@@ -17,7 +16,12 @@ import {
   Trophy,
   CalendarCheck,
   CheckCircle2,
-  HeartPulse
+  HeartPulse,
+  MessageSquare,
+  Sparkles,
+  RefreshCw,
+  ShieldCheck,
+  Bell
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { loadClientSessionAgendas } from '../lib/sessionAgendas';
@@ -25,13 +29,57 @@ import { loadActiveTreatmentPlansForClient } from '../lib/treatmentPlans';
 import { getActiveLiveSessionForClient } from '../lib/liveSession';
 import RecentActivityFeed from '../components/RecentActivityFeed';
 
+const iconTones = {
+  emerald: 'bg-brand-emerald-50 text-brand-emerald-700 dark:bg-brand-emerald-950/40 dark:text-brand-emerald-100',
+  gold: 'bg-brand-gold-50 text-brand-gold-700 dark:bg-brand-gold-950/40 dark:text-brand-gold-500',
+  stone: 'bg-brand-stone-100 text-brand-stone-600 dark:bg-slate-800/60 dark:text-slate-200'
+};
+
+const SectionHeader = ({ eyebrow, title, subtitle }) => (
+  <div className="mb-6">
+    {eyebrow && <p className="mb-2 text-xs font-bold uppercase tracking-[0.24em] text-brand-gold-700 dark:text-brand-gold-500">{eyebrow}</p>}
+    <h2 className="text-3xl font-serif font-normal text-brand-stone-900 dark:text-slate-100">{title}</h2>
+    {subtitle && <p className="mt-2 max-w-3xl text-sm leading-relaxed text-brand-stone-600 dark:text-slate-400">{subtitle}</p>}
+  </div>
+);
+
+const ClientHomeTile = ({ icon: Icon, title, description, buttonLabel, to, badge, tone = 'emerald', progress }) => (
+  <Link to={to} className="soft-card-interactive group flex h-full flex-col justify-between gap-5 p-6">
+    <div>
+      <div className="mb-4 flex items-start justify-between gap-3">
+        <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ${iconTones[tone] || iconTones.emerald}`}>
+          <Icon className="h-6 w-6" />
+        </div>
+        {badge && <span className="rounded-full bg-white px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-brand-gold-700 shadow-sm dark:bg-slate-900/70">{badge}</span>}
+      </div>
+      <h3 className="font-sans text-lg font-semibold text-brand-stone-900 dark:text-slate-100">{title}</h3>
+      <p className="mt-2 text-sm leading-relaxed text-brand-stone-600 dark:text-slate-400">{description}</p>
+      {typeof progress === 'number' && (
+        <div className="mt-4">
+          <div className="mb-1 flex items-center justify-between text-[11px] font-semibold uppercase tracking-wide text-brand-stone-500 dark:text-slate-500">
+            <span>Progress</span>
+            <span>{progress}%</span>
+          </div>
+          <div className="h-2 overflow-hidden rounded-full bg-brand-stone-100 dark:bg-slate-800">
+            <div className="h-full rounded-full bg-brand-emerald-600 transition-all" style={{ width: `${progress}%` }} />
+          </div>
+        </div>
+      )}
+    </div>
+    <span className="inline-flex items-center gap-2 text-sm font-bold text-brand-gold-700 transition-transform group-hover:translate-x-1 dark:text-brand-gold-500">
+      {buttonLabel}
+      <ArrowRight className="h-4 w-4" />
+    </span>
+  </Link>
+);
+
 const Home = ({ clientId, client }) => {
   const navigate = useNavigate();
   const [savedAssessment, setSavedAssessment] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('daily');
+  const [activeTab, setActiveTab] = useState('anchors');
   const [agendaSummary, setAgendaSummary] = useState({ lastSubmitted: null, hasDraft: false });
-  const [therapyGoals, setTherapyGoals] = useState([]);
+  const [growthGoals, setGrowthGoals] = useState([]);
   const [activeLiveSession, setActiveLiveSession] = useState(null);
 
   useEffect(() => {
@@ -52,7 +100,7 @@ const Home = ({ clientId, client }) => {
             loadActiveTreatmentPlansForClient(clientId)
           ]);
           const agendas = agendasResult.data || [];
-          setTherapyGoals((goalsResult.data || []).filter((goal) => ['active', 'completed'].includes(goal.status)).slice(0, 3));
+          setGrowthGoals((goalsResult.data || []).filter((goal) => ['active', 'completed'].includes(goal.status)).slice(0, 3));
           setAgendaSummary({
             lastSubmitted: agendas.find((agenda) => agenda.status === 'submitted' || agenda.status === 'reviewed')?.created_at || null,
             hasDraft: agendas.some((agenda) => agenda.status === 'draft')
@@ -70,262 +118,218 @@ const Home = ({ clientId, client }) => {
     loadData();
   }, [clientId]);
 
+  const todayTiles = [
+    { to: '/daily-checkin', icon: HeartPulse, title: "Today's IFS Check-In", description: 'Notice which parts are present and return to Self-energy.', buttonLabel: 'Start Check-In', tone: 'emerald' },
+    { to: '/curriculum', icon: Sun, title: 'Continue Your IFS Path', description: 'Pick up where you left off in your guided curriculum.', buttonLabel: 'Resume Module', badge: '42%', progress: 42, tone: 'gold' },
+    { to: '/exercises', icon: Sparkles, title: 'Self-Energy Practice', description: 'Strengthen calm, curiosity, compassion, and inner leadership.', buttonLabel: 'Choose Practice', tone: 'stone' }
+  ];
+
+  const innerSystemTiles = [
+    { to: '/parts-mapping', icon: Compass, title: 'Parts Map', description: 'View and connect with the parts of your inner system.', buttonLabel: 'Open Parts Map', tone: 'emerald' },
+    { to: '/parts-dialogue', icon: MessageSquare, title: 'Parts Dialogue', description: 'Listen inward and begin a compassionate conversation with a part.', buttonLabel: 'Start Dialogue', tone: 'gold' },
+    { to: '/unburdening', icon: Feather, title: 'Unburdening Practice', description: 'Gently support parts carrying old pain when you feel ready.', buttonLabel: 'Begin Practice', tone: 'stone' }
+  ];
+
+  const dailyLifeTiles = [
+    { to: '/daily-checkin', icon: Smile, title: 'Notice a Part in the Moment', description: 'Pause and identify which part is showing up right now.', buttonLabel: 'Notice a Part', tone: 'emerald' },
+    { to: '/exercises', icon: ShieldCheck, title: 'Return to Self-Energy', description: 'Use a short grounding practice to reconnect with Self.', buttonLabel: 'Return to Self', tone: 'gold' },
+    { to: '/journal', icon: BookOpen, title: 'Reflect on a Trigger', description: 'Explore what happened, which parts reacted, and what they may need.', buttonLabel: 'Reflect', tone: 'stone' },
+    { to: '/weekly-reflection', icon: Heart, title: 'Repair After a Conflict', description: 'Use IFS to understand your reaction and move toward repair.', buttonLabel: 'Start Repair Reflection', tone: 'emerald' }
+  ];
+
   const toolCategories = {
-    daily: {
-      label: "Today's Practice",
-      description: 'Nervous system anchors for your current state',
+    anchors: {
+      label: 'Anchors',
+      description: 'Nervous system anchors and reflection tools for your current state.',
       items: [
-        { to: '/exercises', icon: Play, title: 'Guided Meditation', desc: 'Strengthen Self energy', badge: '10 min', color: 'bg-brand-gold-50 text-brand-gold-700 dark:bg-brand-gold-950/40 dark:text-brand-gold-500' },
-        { to: '/journal', icon: BookOpen, title: 'Healing Journal', desc: 'Reflect on your parts', color: 'bg-brand-emerald-50 text-brand-emerald-700 dark:bg-brand-emerald-950/40 dark:text-brand-emerald-100' },
-        { to: '/affirmations', icon: Heart, title: 'Affirmations', desc: 'Personalized healing', color: 'bg-brand-stone-100 text-brand-stone-600 dark:bg-slate-800/60 dark:text-slate-200' }
+        { to: '/exercises', icon: Play, title: 'Guided Meditation', description: 'Settle your nervous system and practice Self-energy.', buttonLabel: 'Begin Meditation', badge: '10 min', tone: 'gold' },
+        { to: '/journal', icon: BookOpen, title: 'Healing Journal', description: 'Reflect on your parts, needs, and moments of insight.', buttonLabel: 'Open Journal', tone: 'emerald' },
+        { to: '/affirmations', icon: Heart, title: 'Affirmations', description: 'Receive gentle reminders for healing and inner leadership.', buttonLabel: 'Read Affirmations', tone: 'stone' }
       ]
     },
-    explore: {
-      label: 'Deep Exploration',
-      description: 'Interactive tools to map your internal system',
+    resources: {
+      label: 'Resources',
+      description: 'Reference materials and supportive learning for IFS practice.',
       items: [
-        { to: '/parts-mapping', icon: Compass, title: 'Parts Map', desc: 'Identify protectors and exiles', color: 'bg-brand-emerald-50 text-brand-emerald-700 dark:bg-brand-emerald-950/40 dark:text-brand-emerald-100' },
-        { to: '/parts-studio', icon: Users, title: 'Parts Studio', desc: 'Visual relationship canvas', color: 'bg-brand-gold-50 text-brand-gold-700 dark:bg-brand-gold-950/40 dark:text-brand-gold-500' },
-        { to: '/unburdening', icon: Feather, title: 'Unburdening', desc: 'Release structural patterns', color: 'bg-brand-stone-100 text-brand-stone-600 dark:bg-slate-800/60 dark:text-slate-200' }
-      ]
-    },
-    track: {
-      label: 'Your Journey',
-      description: 'Synthesize insights and track growth',
-      items: [
-        { to: '/mood-tracker', icon: Smile, title: 'Mood Tracker', desc: 'Log system states', color: 'bg-brand-gold-50 text-brand-gold-700 dark:bg-brand-gold-950/40 dark:text-brand-gold-500' },
-        { to: '/weekly-reflection', icon: BarChart3, title: 'Weekly Review', desc: 'Reflective summary', color: 'bg-brand-emerald-50 text-brand-emerald-700 dark:bg-brand-emerald-950/40 dark:text-brand-emerald-100' },
-        { to: '/milestones', icon: Trophy, title: 'Milestones', desc: 'Honor your progress', color: 'bg-brand-stone-100 text-brand-stone-600 dark:bg-slate-800/60 dark:text-slate-200' }
+        { to: '/resources', icon: Library, title: 'Resource Library', description: 'Deepen your understanding of Internal Family Systems with curated books and videos.', buttonLabel: 'Browse Library', tone: 'emerald' },
+        { to: '/cheat-sheet', icon: Zap, title: 'IFS Cheat Sheet', description: "A quick reference guide to the 6 F's, the 8 C's, and the 5 P's of Self-energy.", buttonLabel: 'View Reference', tone: 'gold' },
+        { to: '/mood-tracker', icon: BarChart3, title: 'Feelings & Needs Check', description: 'Name what you feel, notice what is needed, and track patterns gently.', buttonLabel: 'Check In', tone: 'stone' }
       ]
     }
   };
 
+  const advisorTiles = [
+    { to: '/homework', icon: BookOpen, title: 'Assigned by My Advisor', description: 'IFS practices and reflections your Advisor has shared with you.', buttonLabel: 'View Assigned Practices', tone: 'gold' },
+    { to: '/pre-session-checkin', icon: CalendarCheck, title: 'Advisor Session Check-In', description: 'Share what feels important before your next Advisor session.', buttonLabel: agendaSummary.hasDraft ? 'Continue Check-In' : 'Start Check-In', badge: agendaSummary.lastSubmitted ? `Last ${new Date(agendaSummary.lastSubmitted).toLocaleDateString()}` : null, tone: 'emerald' },
+    { to: '/live-session', icon: HeartPulse, title: 'Live Advisor-Guided Practice', description: activeLiveSession ? 'Your Advisor has started a live guided practice.' : 'Join a guided IFS practice when your Advisor starts one.', buttonLabel: activeLiveSession ? 'Join Practice' : 'Check for Guided Practice', badge: activeLiveSession ? 'Active now' : null, tone: activeLiveSession ? 'emerald' : 'stone' },
+    { to: '/inbox', icon: MessageSquare, title: 'Messages', description: 'View supportive messages and updates from your Advisor.', buttonLabel: 'Open Messages', tone: 'gold' }
+  ];
+
+  const progressTiles = [
+    { to: '/healing-timeline', icon: Trophy, title: 'My Healing Timeline', description: 'See milestones from your parts work, check-ins, practices, goals, and reflections.', buttonLabel: 'View Timeline', tone: 'gold' },
+    { to: '/progress-timeline', icon: CheckCircle2, title: 'My Growth Goals', description: 'Review the goals you and your Advisor are supporting over time.', buttonLabel: 'View Goals', tone: 'emerald' },
+    { to: '/weekly-reflection', icon: RefreshCw, title: 'Weekly Reflection', description: 'Look back gently and notice what changed this week.', buttonLabel: 'Reflect on Week', tone: 'stone' }
+  ];
+
   if (loading) return null;
 
   return (
-    <div className="max-w-6xl mx-auto px-6 py-12 lg:py-20">
-      <section className="mb-20 text-center lg:text-left lg:flex lg:items-center lg:justify-between">
-        <div className="max-w-2xl">
-          <p className="text-xs font-bold uppercase tracking-[0.28em] text-brand-emerald-700 dark:text-brand-emerald-100 mb-4">
-            The Luminous Self
-          </p>
-          <h1 className="text-4xl lg:text-6xl font-normal text-brand-stone-900 dark:text-slate-100 mb-4">
-            Hello, <span className="italic font-serif text-brand-gold-700 dark:text-brand-gold-500">{client?.name?.split(' ')[0] || 'friend'}</span>
-          </h1>
-          <p className="text-lg text-brand-stone-600 dark:text-slate-400 mb-8 leading-relaxed">
-            Your internal world is a sacred space. Take a slow breath and choose a trailhead for today's healing.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
-            <button onClick={() => navigate('/curriculum')} className="btn-sanctuary-primary">
-              <Sun className="w-5 h-5" />
-              Continue Your Curriculum
-            </button>
-            {!savedAssessment && (
-              <button onClick={() => navigate('/assessments')} className="btn-sanctuary-secondary">
-                <Brain className="w-5 h-5" />
-                Take Wound Assessment
-              </button>
-            )}
-          </div>
-        </div>
-      </section>
-
-      <RecentActivityFeed limit={3} title="Recent Activity" className="mb-10" />
-
-      <section className="mb-10">
-        <div className="soft-card border border-brand-emerald-100 bg-brand-emerald-50/70 dark:bg-brand-emerald-950/20 p-6 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5">
-          <div className="flex items-start gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-brand-emerald-100 text-brand-emerald-700 dark:bg-brand-emerald-950/50 dark:text-brand-emerald-100 flex items-center justify-center shrink-0">
-              <HeartPulse className="w-6 h-6" />
-            </div>
-            <div>
-              <h2 className="text-xl font-semibold text-brand-stone-900 dark:text-slate-100">Live Co-Therapy Session</h2>
-              <p className="text-sm text-brand-stone-600 dark:text-slate-400 mt-1">
-                {activeLiveSession ? 'Your therapist has started a synchronized exercise.' : 'No live session active right now.'}
-              </p>
-              <p className="text-xs text-brand-stone-500 dark:text-slate-500 mt-2">Not monitored for emergencies; call 911 or your local crisis line if you are in immediate danger.</p>
-            </div>
-          </div>
-          <Link to="/live-session" className={activeLiveSession ? 'btn-sanctuary-primary justify-center' : 'btn-sanctuary-secondary justify-center'}>
-            {activeLiveSession ? 'Join Live Session' : 'Check Live Session'}
-            <ArrowRight className="h-4 w-4" />
-          </Link>
-        </div>
-      </section>
-
-      <section className="mb-10">
-        <div className="soft-card border border-brand-gold-100 bg-brand-gold-50/70 dark:bg-brand-gold-950/20 p-6 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5">
-          <div className="flex items-start gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-brand-gold-100 text-brand-gold-700 dark:bg-brand-gold-950/50 dark:text-brand-gold-500 flex items-center justify-center shrink-0">
-              <CalendarCheck className="w-6 h-6" />
-            </div>
-            <div>
-              <h2 className="text-xl font-semibold text-brand-stone-900 dark:text-slate-100">Pre-Session Check-In</h2>
-              <p className="text-sm text-brand-stone-600 dark:text-slate-400 mt-1">Complete Pre-Session Check-In before your next therapist visit.</p>
-              <div className="flex flex-wrap gap-2 mt-3 text-xs">
-                {agendaSummary.lastSubmitted && <span className="inline-flex items-center gap-1 rounded-full bg-white px-2.5 py-1 text-brand-emerald-700"><CheckCircle2 className="w-3 h-3" /> Last submitted {new Date(agendaSummary.lastSubmitted).toLocaleDateString()}</span>}
-                {agendaSummary.hasDraft && <span className="rounded-full bg-amber-100 px-2.5 py-1 font-semibold text-amber-700">Draft in progress</span>}
-              </div>
-            </div>
-          </div>
-          <Link to="/pre-session-checkin" className="btn-sanctuary-primary justify-center">
-            Complete Pre-Session Check-In
-          </Link>
-        </div>
-      </section>
-
-
-
-      <section className="mb-10">
-        <div className="soft-card border border-brand-gold-100 bg-gradient-to-br from-white to-brand-gold-50/70 p-6 dark:border-brand-gold-900/30 dark:from-brand-cardDark dark:to-brand-gold-950/20">
-          <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
-            <div className="flex items-start gap-4">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-brand-gold-100 text-brand-gold-700 dark:bg-brand-gold-950/40 dark:text-brand-gold-500">
-                <Trophy className="h-6 w-6" />
-              </div>
-              <div>
-                <h2 className="text-xl font-semibold text-brand-stone-900 dark:text-slate-100">My Healing Timeline</h2>
-                <p className="mt-1 max-w-2xl text-sm leading-relaxed text-brand-stone-600 dark:text-slate-400">
-                  See milestones from your parts work, check-ins, homework, goals, and reflections.
-                </p>
-              </div>
-            </div>
-            <Link to="/healing-timeline" className="btn-sanctuary-primary justify-center">
-              View Timeline
-              <ArrowRight className="h-4 w-4" />
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      {therapyGoals.length > 0 && (
-        <section className="mb-10">
-          <div className="soft-card border border-brand-emerald-100 bg-white/80 dark:bg-brand-cardDark p-6">
-            <div className="flex items-start justify-between gap-4 mb-4">
-              <div>
-                <h2 className="text-xl font-semibold text-brand-stone-900 dark:text-slate-100">My Therapy Goals</h2>
-                <p className="text-sm text-brand-stone-600 dark:text-slate-400 mt-1">Read-only goals shared by your therapist.</p>
-              </div>
-              <CheckCircle2 className="w-6 h-6 text-brand-emerald-700 dark:text-brand-emerald-100" />
-            </div>
-            <div className="grid md:grid-cols-3 gap-3">
-              {therapyGoals.map((goal) => (
-                <div key={goal.id} className="rounded-2xl border border-brand-stone-100 dark:border-slate-800 p-4">
-                  <div className="flex items-center justify-between gap-2 mb-2">
-                    <h3 className="font-semibold text-brand-stone-900 dark:text-slate-100">{goal.goal_title}</h3>
-                    <span className="text-[10px] uppercase tracking-wide rounded-full bg-brand-emerald-50 px-2 py-0.5 text-brand-emerald-700">{goal.status}</span>
-                  </div>
-                  {goal.goal_description && <p className="text-sm text-brand-stone-600 dark:text-slate-400 line-clamp-3">{goal.goal_description}</p>}
-                  {Array.isArray(goal.objectives) && goal.objectives.length > 0 && (
-                    <ul className="mt-3 space-y-1 text-xs text-brand-stone-500 dark:text-slate-500 list-disc pl-4">
-                      {goal.objectives.slice(0, 3).map((objective, index) => <li key={index}>{typeof objective === 'string' ? objective : objective?.text}</li>)}
-                    </ul>
-                  )}
-                  {goal.review_date && <p className="mt-3 text-xs text-brand-stone-500 dark:text-slate-500">Review date: {new Date(goal.review_date).toLocaleDateString()}</p>}
+    <div className="mx-auto max-w-6xl px-6 py-12 lg:py-20">
+      {activeLiveSession && (
+        <section className="mb-8">
+          <div className="soft-card border border-brand-emerald-100 bg-brand-emerald-50/80 p-5 dark:border-brand-emerald-900/40 dark:bg-brand-emerald-950/20">
+            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+              <div className="flex items-start gap-4">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-brand-emerald-100 text-brand-emerald-700 dark:bg-brand-emerald-950/50 dark:text-brand-emerald-100">
+                  <HeartPulse className="h-5 w-5" />
                 </div>
-              ))}
+                <div>
+                  <h2 className="text-lg font-semibold text-brand-stone-900 dark:text-slate-100">Live Advisor-Guided Practice is active</h2>
+                  <p className="mt-1 text-sm text-brand-stone-600 dark:text-slate-400">Your Advisor has started a live guided practice.</p>
+                </div>
+              </div>
+              <Link to="/live-session" className="btn-sanctuary-primary justify-center">Join Practice <ArrowRight className="h-4 w-4" /></Link>
             </div>
           </div>
         </section>
       )}
 
-      <section className="mb-20">
-        <div className="flex flex-col md:flex-row md:items-end justify-between mb-10 gap-4">
-          <div>
-            <h2 className="text-3xl font-serif font-normal text-brand-stone-900 dark:text-slate-100">Interactive Suite</h2>
-            <p className="text-brand-stone-600 dark:text-slate-400 text-sm mt-1">
-              {toolCategories[activeTab].description}
-            </p>
+      <section className="mb-16 text-center lg:flex lg:items-center lg:justify-between lg:text-left">
+        <div className="max-w-2xl">
+          <p className="mb-4 text-xs font-bold uppercase tracking-[0.28em] text-brand-emerald-700 dark:text-brand-emerald-100">The Luminous Self</p>
+          <h1 className="mb-4 text-4xl font-normal text-brand-stone-900 dark:text-slate-100 lg:text-6xl">
+            Hello, <span className="font-serif italic text-brand-gold-700 dark:text-brand-gold-500">{client?.name?.split(' ')[0] || 'friend'}</span>
+          </h1>
+          <p className="mb-8 text-lg leading-relaxed text-brand-stone-600 dark:text-slate-400">
+            Your internal world is a sacred space. Take a slow breath and choose a trailhead for today's healing.
+          </p>
+          <div className="flex flex-col justify-center gap-4 sm:flex-row lg:justify-start">
+            <button onClick={() => navigate('/curriculum')} className="btn-sanctuary-primary justify-center">
+              <Sun className="h-5 w-5" />
+              Continue Your IFS Path
+            </button>
+            {!savedAssessment && (
+              <button onClick={() => navigate('/assessments')} className="btn-sanctuary-secondary justify-center">
+                <Brain className="h-5 w-5" />
+                Take Wound Assessment
+              </button>
+            )}
           </div>
+          <div className="mt-5 flex flex-wrap justify-center gap-2 text-xs lg:justify-start">
+            <span className="rounded-full bg-white/80 px-3 py-1 font-semibold text-brand-emerald-700 shadow-sm dark:bg-slate-900/60 dark:text-brand-emerald-100">4 IFS practices this week</span>
+            {agendaSummary.hasDraft && <span className="rounded-full bg-brand-gold-50 px-3 py-1 font-semibold text-brand-gold-700 dark:bg-brand-gold-950/30 dark:text-brand-gold-500">2 reflections waiting</span>}
+            {activeLiveSession && <span className="rounded-full bg-brand-emerald-600 px-3 py-1 font-semibold text-white">Advisor-guided practice available</span>}
+          </div>
+        </div>
+        <div className="mt-10 hidden lg:block">
+          <div className="relative flex h-56 w-56 items-center justify-center rounded-full border border-brand-gold-100 bg-gradient-to-br from-white to-brand-gold-50 shadow-2xl shadow-brand-gold-500/10 dark:border-brand-gold-900/30 dark:from-brand-cardDark dark:to-brand-gold-950/20">
+            <Sun className="h-20 w-20 text-brand-gold-600" />
+            <div className="absolute -right-5 top-8 h-16 w-16 rounded-full bg-brand-emerald-100/70 blur-2xl" />
+          </div>
+        </div>
+      </section>
 
-          <div className="flex p-1 bg-brand-stone-100 dark:bg-slate-900 rounded-2xl border border-brand-stone-200/50 dark:border-slate-800/60">
+      <section className="mb-14">
+        <SectionHeader title="Today's IFS Focus" subtitle="Begin with the practices that help you notice parts, unblend, and return to Self-energy." />
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {todayTiles.map((tile) => <ClientHomeTile key={tile.title} {...tile} />)}
+        </div>
+      </section>
+
+      <section className="mb-14">
+        <SectionHeader title="My Inner System" subtitle="Compassionate tools for mapping, listening to, and supporting the parts of your inner system." />
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {innerSystemTiles.map((tile) => <ClientHomeTile key={tile.title} {...tile} />)}
+        </div>
+      </section>
+
+      <section className="mb-14">
+        <SectionHeader title="IFS in Daily Life" subtitle="Practice noticing parts, unblending, and returning to Self-energy in real moments." />
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
+          {dailyLifeTiles.map((tile) => <ClientHomeTile key={tile.title} {...tile} />)}
+        </div>
+      </section>
+
+      <section className="mb-14">
+        <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+          <SectionHeader title="Interactive Suite" subtitle={toolCategories[activeTab].description} />
+          <div className="flex rounded-2xl border border-brand-stone-200/50 bg-brand-stone-100 p-1 dark:border-slate-800/60 dark:bg-slate-900">
             {Object.keys(toolCategories).map((key) => (
               <button
                 key={key}
                 onClick={() => setActiveTab(key)}
-                className={`px-6 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all ${
+                className={`rounded-xl px-5 py-2.5 text-xs font-bold uppercase tracking-wider transition-all ${
                   activeTab === key
-                    ? 'bg-white dark:bg-brand-cardDark text-brand-gold-700 dark:text-brand-gold-500 shadow-sm'
-                    : 'text-brand-stone-500 dark:text-slate-400 hover:text-brand-stone-800 dark:hover:text-slate-100'
+                    ? 'bg-white text-brand-gold-700 shadow-sm dark:bg-brand-cardDark dark:text-brand-gold-500'
+                    : 'text-brand-stone-500 hover:text-brand-stone-800 dark:text-slate-400 dark:hover:text-slate-100'
                 }`}
               >
-                {toolCategories[key].label.split(' ')[0]}
+                {toolCategories[key].label}
               </button>
             ))}
           </div>
         </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-          {toolCategories[activeTab].items.map((tool) => {
-            const Icon = tool.icon;
-            return (
-              <Link key={tool.to} to={tool.to} className="soft-card-interactive flex items-start gap-5 group">
-                <div className={`w-12 h-12 rounded-2xl ${tool.color} flex items-center justify-center shrink-0`}>
-                  <Icon className="w-6 h-6" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2 mb-1">
-                    <h3 className="font-sans font-semibold text-brand-stone-900 dark:text-slate-100">{tool.title}</h3>
-                    {tool.badge && (
-                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-brand-gold-100 text-brand-gold-700">
-                        {tool.badge}
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-sm text-brand-stone-600 dark:text-slate-400 leading-relaxed">{tool.desc}</p>
-                </div>
-              </Link>
-            );
-          })}
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {toolCategories[activeTab].items.map((tool) => <ClientHomeTile key={tool.title} {...tool} />)}
         </div>
       </section>
 
-      <section className="mb-20">
-        <div className="soft-card bg-gradient-to-br from-brand-emerald-600 to-brand-emerald-700 text-white p-8 lg:p-12 overflow-hidden relative">
-          <div className="relative z-10 lg:flex items-center justify-between gap-12">
-            <div className="max-w-xl">
-              <h2 className="text-3xl font-serif mb-4 italic">Healing is a journey, not a destination.</h2>
-              <p className="text-brand-emerald-50 opacity-90 mb-8 leading-relaxed">
-                You have completed <span className="font-bold">42%</span> of your current module: <span className="italic">Self-Leadership Foundation</span>.
-              </p>
-              <div className="w-full bg-white/20 rounded-full h-3 mb-8">
-                <div className="bg-white h-3 rounded-full transition-all duration-1000" style={{ width: '42%' }} />
+      <section className="mb-14">
+        <SectionHeader title="My Progress" subtitle="Track growth gently without turning your healing into a metrics dashboard." />
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {progressTiles.map((tile) => <ClientHomeTile key={tile.title} {...tile} />)}
+        </div>
+
+        {growthGoals.length > 0 && (
+          <div className="soft-card mt-6 border border-brand-emerald-100 bg-white/80 p-6 dark:bg-brand-cardDark">
+            <div className="mb-4 flex items-start justify-between gap-4">
+              <div>
+                <h3 className="text-xl font-semibold text-brand-stone-900 dark:text-slate-100">Growth Goals Snapshot</h3>
+                <p className="mt-1 text-sm text-brand-stone-600 dark:text-slate-400">Client-safe goals you and your Advisor are supporting over time.</p>
               </div>
-              <Link to="/curriculum" className="inline-flex items-center gap-2 text-sm font-bold uppercase tracking-widest hover:translate-x-2 transition-transform">
-                Resume Module <ArrowRight className="w-4 h-4" />
-              </Link>
+              <CheckCircle2 className="h-6 w-6 text-brand-emerald-700 dark:text-brand-emerald-100" />
             </div>
-            <div className="hidden lg:block">
-              <div className="w-48 h-48 rounded-full border-8 border-white/10 flex items-center justify-center relative">
-                <Sun className="w-20 h-20 text-white animate-pulse" />
-              </div>
+            <div className="grid gap-3 md:grid-cols-3">
+              {growthGoals.map((goal) => (
+                <div key={goal.id} className="rounded-2xl border border-brand-stone-100 p-4 dark:border-slate-800">
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <h4 className="font-semibold text-brand-stone-900 dark:text-slate-100">{goal.goal_title}</h4>
+                    <span className="rounded-full bg-brand-emerald-50 px-2 py-0.5 text-[10px] uppercase tracking-wide text-brand-emerald-700">{goal.status}</span>
+                  </div>
+                  {goal.goal_description && <p className="line-clamp-3 text-sm text-brand-stone-600 dark:text-slate-400">{goal.goal_description}</p>}
+                  {goal.review_date && <p className="mt-3 text-xs text-brand-stone-500 dark:text-slate-500">Review date: {new Date(goal.review_date).toLocaleDateString()}</p>}
+                </div>
+              ))}
             </div>
           </div>
-          <div className="absolute top-0 right-0 -translate-y-1/2 translate-x-1/2 w-96 h-96 bg-white/5 rounded-full blur-3xl" />
-        </div>
+        )}
       </section>
 
-      <section className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        <div className="soft-card border-none bg-brand-stone-100 dark:bg-slate-900/40 p-8">
-          <Library className="w-8 h-8 text-brand-stone-400 mb-4" />
-          <h3 className="text-xl font-semibold mb-2">Resource Library</h3>
-          <p className="text-sm text-brand-stone-600 dark:text-slate-400 mb-6">
-            Deepen your understanding of Internal Family Systems with curated books and videos.
-          </p>
-          <Link to="/resources" className="text-brand-gold-700 dark:text-brand-gold-500 text-sm font-bold hover:underline">
-            Browse Library
-          </Link>
+      <section className="mb-14">
+        <SectionHeader title="Advisor-Guided Support" subtitle="Shared practices and session tools from your Advisor, when you are working with one." />
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
+          {advisorTiles.map((tile) => <ClientHomeTile key={tile.title} {...tile} />)}
         </div>
+        <p className="mt-4 rounded-2xl bg-brand-stone-100 px-4 py-3 text-xs text-brand-stone-600 dark:bg-slate-900/50 dark:text-slate-400">
+          This app supports reflection and IFS practice between sessions. It is not monitored for emergencies.
+        </p>
+      </section>
 
-        <div className="soft-card border-none bg-brand-stone-100 dark:bg-slate-900/40 p-8">
-          <Zap className="w-8 h-8 text-brand-stone-400 mb-4" />
-          <h3 className="text-xl font-semibold mb-2">IFS Cheat Sheet</h3>
-          <p className="text-sm text-brand-stone-600 dark:text-slate-400 mb-6">
-            A quick reference guide to the 6 F's, the 8 C's, and the 5 P's of Self-energy.
-          </p>
-          <Link to="/cheat-sheet" className="text-brand-gold-700 dark:text-brand-gold-500 text-sm font-bold hover:underline">
-            View Reference
-          </Link>
+      <section className="mb-6">
+        <RecentActivityFeed limit={3} title="Recent Updates" className="mb-6" />
+        <div className="soft-card border-none bg-brand-stone-100 p-6 dark:bg-slate-900/40">
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div className="flex items-start gap-4">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-brand-gold-50 text-brand-gold-700 dark:bg-brand-gold-950/30 dark:text-brand-gold-500">
+                <Bell className="h-5 w-5" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-brand-stone-900 dark:text-slate-100">Recent Updates</h3>
+                <p className="mt-1 text-sm text-brand-stone-600 dark:text-slate-400">See new Advisor-guided practices, reminders, and updates.</p>
+              </div>
+            </div>
+            <Link to="/notifications" className="btn-sanctuary-secondary justify-center">View Notifications <ArrowRight className="h-4 w-4" /></Link>
+          </div>
         </div>
       </section>
     </div>

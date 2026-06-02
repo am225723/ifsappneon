@@ -47,7 +47,7 @@ export default function SOSSupportModal({ open, onClose }) {
           </button>
           <button type="button" onClick={goToInbox} className="flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-amber-500/20 transition hover:scale-[1.01]">
             <MessageSquare className="h-4 w-4" />
-            Message my Therapist
+            Message my Advisor
           </button>
         </div>
 

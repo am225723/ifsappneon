@@ -82,16 +82,16 @@ export default function NotificationPreferences({ currentClient }) {
 
   const visibleCategories = useMemo(() => {
     const base = [
-      { key: 'homework_enabled', label: 'Homework', description: 'Assigned practice, starts, completions, and reviews.' },
+      { key: 'homework_enabled', label: 'Assigned practice', description: 'Advisor-guided practice starts, completions, and reviews.' },
       { key: 'session_agenda_enabled', label: 'Session agendas', description: 'Pre-session agenda submissions and reviews.' },
       { key: 'treatment_plan_enabled', label: 'Treatment goals', description: 'Treatment goal changes and completions.' },
-      { key: 'live_session_enabled', label: 'Live sessions', description: 'Live co-therapy session starts, joins, and endings.' },
+      { key: 'live_session_enabled', label: 'Live guided practices', description: 'Live Advisor-guided practice starts, joins, and endings.' },
       { key: 'general_updates_enabled', label: 'General updates', description: 'Routine app and care-workflow updates.' }
     ];
     if (isTherapist) {
       base.splice(4, 0,
         { key: 'report_enabled', label: 'Reports', description: 'Clinical report generation updates.' },
-        { key: 'therapist_note_activity_enabled', label: 'Therapist note activity', description: 'Therapist workflow updates in your activity feed.' }
+        { key: 'therapist_note_activity_enabled', label: 'Advisor note activity', description: 'Advisor workflow updates in your activity feed.' }
       );
     }
     return base;
@@ -213,7 +213,7 @@ export default function NotificationPreferences({ currentClient }) {
           />
           <ToggleRow
             label="Allow live session notifications during quiet hours"
-            description="Live co-therapy updates can bypass quiet hours so session coordination is visible."
+            description="Live Advisor-guided practice updates can bypass quiet hours so session coordination is visible."
             checked={preferences.allow_live_session_during_quiet_hours}
             onChange={(value) => updateField('allow_live_session_during_quiet_hours', value)}
           />

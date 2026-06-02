@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Home, Play, User, MessageSquare, Heart, Menu, X } from 'lucide-react';
+import { Home, Play, User, MessageSquare, Heart, Menu, X, Compass } from 'lucide-react';
 import { useState } from 'react';
 
 const Navbar = ({ unreadCount = 0, messagePath = '/inbox', rightSlot = null }) => {
@@ -10,7 +10,8 @@ const Navbar = ({ unreadCount = 0, messagePath = '/inbox', rightSlot = null }) =
     { path: '/', icon: Home, label: 'Home' },
     { path: '/exercises', icon: Play, label: 'Practice' },
     { path: '/journal', icon: User, label: 'Journal' },
-    { path: messagePath, icon: MessageSquare, label: 'Messages', badge: unreadCount },
+    { path: '/parts-mapping', icon: Compass, label: 'Parts' },
+    { path: messagePath, icon: MessageSquare, label: 'Advisor Support', badge: unreadCount },
     { path: '/profile', icon: Heart, label: 'Profile' },
   ];
 
