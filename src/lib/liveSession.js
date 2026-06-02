@@ -25,9 +25,9 @@ async function liveSessionRequest(payload) {
   if (!response.ok) {
     const message = json.error?.message || response.statusText || 'Live session request failed';
     const accessMessage = response.status === 401
-      ? 'Please sign in again to access live co-therapy.'
+      ? 'Please sign in again to access live guided practice.'
       : response.status === 403
-        ? 'You do not have access to this live co-therapy session.'
+        ? 'You do not have access to this live guided practice session.'
         : message;
     return { data: null, error: { ...(json.error || {}), status: response.status, message: accessMessage } };
   }
@@ -65,6 +65,18 @@ export function endLiveActivity({ sessionId }) {
 
 export function sendLivePrompt({ sessionId, prompt }) {
   return liveSessionRequest({ action: 'send_prompt', sessionId, prompt });
+}
+
+export function setLiveActivityStep({ sessionId, currentStep }) {
+  return liveSessionRequest({ action: 'set_activity_step', sessionId, currentStep });
+}
+
+export function nextLiveActivityStep({ sessionId }) {
+  return liveSessionRequest({ action: 'next_step', sessionId });
+}
+
+export function previousLiveActivityStep({ sessionId }) {
+  return liveSessionRequest({ action: 'previous_step', sessionId });
 }
 
 export function endLiveSession({ sessionId }) {
