@@ -40,6 +40,7 @@ import LiveCoTherapy from './pages/LiveCoTherapy';
 import ClientLiveSession from './pages/ClientLiveSession';
 import ClientInbox from './pages/ClientInbox';
 import ClientHomework from './pages/ClientHomework';
+import Notifications from './pages/Notifications';
 import PreSessionCheckin from './components/PreSessionCheckin';
 import PartsRelationshipMap from './pages/PartsRelationshipMap';
 import UnburdeningProtocol from './pages/UnburdeningProtocol';
@@ -62,6 +63,7 @@ import ResourceLibrary from './pages/ResourceLibrary';
 import InnerLibraryMockup from './pages/InnerLibraryMockup';
 import AuthDebug from './components/AuthDebug';
 import CaseloadManager from './components/CaseloadManager';
+import NotificationBell from './components/NotificationBell';
 import { DataProvider } from './contexts/DataContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { PartsProvider } from './contexts/PartsContext';
@@ -470,6 +472,7 @@ function AppContent({ authChecked, clerkLoaded, clerkSignedIn, isAuthenticated, 
                     <ClipboardList className="w-5 h-5" />
                   </Link>
                 )}
+                <NotificationBell />
                 <Link
                   to="/settings"
                   className="p-2.5 rounded-xl transition-all text-brand-stone-500 dark:text-slate-400 hover:text-brand-gold-700 dark:hover:text-brand-gold-500 hover:bg-brand-gold-50 dark:hover:bg-slate-800/50"
@@ -520,6 +523,7 @@ function AppContent({ authChecked, clerkLoaded, clerkSignedIn, isAuthenticated, 
                 <Route path="/journal" element={<FeatureGate feature="journal"><Journal /></FeatureGate>} />
                 <Route path="/profile" element={<Profile client={currentClient} />} />
                 <Route path="/settings" element={<Settings />} />
+                <Route path="/notifications" element={<Notifications currentClient={currentClient} />} />
                 <Route path="/parts-studio" element={<FeatureGate feature="partsStudio"><PartsStudio /></FeatureGate>} />
                 <Route path="/micro-learning" element={<MicroLearning />} />
                 <Route path="/affirmations" element={<Affirmations />} />

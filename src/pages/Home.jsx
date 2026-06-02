@@ -23,6 +23,7 @@ import { supabase } from '../lib/supabase';
 import { loadClientSessionAgendas } from '../lib/sessionAgendas';
 import { loadActiveTreatmentPlansForClient } from '../lib/treatmentPlans';
 import { getActiveLiveSessionForClient } from '../lib/liveSession';
+import RecentActivityFeed from '../components/RecentActivityFeed';
 
 const Home = ({ clientId, client }) => {
   const navigate = useNavigate();
@@ -128,6 +129,8 @@ const Home = ({ clientId, client }) => {
           </div>
         </div>
       </section>
+
+      <RecentActivityFeed limit={3} title="Recent Activity" className="mb-10" />
 
       <section className="mb-10">
         <div className="soft-card border border-brand-emerald-100 bg-brand-emerald-50/70 dark:bg-brand-emerald-950/20 p-6 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5">

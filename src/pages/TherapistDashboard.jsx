@@ -26,6 +26,7 @@ import TreatmentPlanBuilder from '../components/TreatmentPlanBuilder';
 import TreatmentPlanManager from '../components/TreatmentPlanManager';
 import TherapistNoteEditor from '../components/TherapistNoteEditor';
 import RiskAlertWidget from '../components/RiskAlertWidget';
+import RecentActivityFeed from '../components/RecentActivityFeed';
 
 const woundColorMap = {
   abandonment: { bg: 'bg-blue-100', text: 'text-blue-700', dot: 'bg-blue-500' },
@@ -2504,6 +2505,8 @@ const TherapistDashboard = () => {
         clients={clients}
         onSelectClient={(clientId) => { setSelectedInsightClient(clientId); setActiveTab('insights'); }}
       />
+
+      <RecentActivityFeed limit={5} title="Recent Activity" className="mb-8" />
 
       <div className="grid grid-cols-2 lg:grid-cols-6 gap-4 mb-8">
         {[

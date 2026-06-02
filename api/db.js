@@ -1,5 +1,6 @@
 /* global process */
 import { sql, isAdminUser, isTherapistUser, getCurrentAppUserFromClerk } from './_auth.js';
+import { safeCreateInAppNotification } from './_notifications.js';
 
 const TABLES = new Set([
   'ifs_clients',
@@ -28,7 +29,8 @@ const TABLES = new Set([
   'ifs_assigned_homework',
   'ifs_session_agendas',
   'ifs_generated_reports',
-  'ifs_treatment_plans'
+  'ifs_treatment_plans',
+  'ifs_notifications'
 ]);
 
 const IDENT = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
@@ -200,6 +202,7 @@ const ASSIGNED_HOMEWORK_THERAPIST_INSERT_COLUMNS = new Set(['therapist_id', 'cli
 const ASSIGNED_HOMEWORK_THERAPIST_UPDATE_COLUMNS = new Set(['therapist_feedback', 'reviewed_at', 'status', 'updated_at']);
 const ASSIGNED_HOMEWORK_CLIENT_STATUSES = new Set(['assigned', 'in_progress', 'completed']);
 const ASSIGNED_HOMEWORK_THERAPIST_STATUSES = new Set(['assigned', 'in_progress', 'completed', 'reviewed', 'archived']);
+const NOTIFICATION_UPDATE_COLUMNS = new Set(['read_at', 'archived_at', 'updated_at']);
 
 function assertOnlyColumns(values, allowed, message) {
   const keys = [...new Set(getValueRows(values).flatMap((row) => Object.keys(row || {})))];
@@ -290,6 +293,13 @@ async function assertAssignedClients(appUser, clientIds) {
 
 async function authorizePayload({ appUser, table, action, filters, values }) {
   if (!appUser || isAdminUser(appUser)) return;
+
+  if (table === 'ifs_notifications') {
+    if (action === 'delete') throw Object.assign(new Error('Notifications should be archived instead of deleted'), { statusCode: 403 });
+    if (action === 'insert' || action === 'upsert') throw Object.assign(new Error('Use server workflow hooks to create notifications'), { statusCode: 403 });
+    if (action === 'update') assertOnlyColumns(values, NOTIFICATION_UPDATE_COLUMNS, 'Users cannot update notification fields');
+    return;
+  }
 
   if (table === 'ifs_therapist_clients') {
     if (appUser.user_role === 'client') {
@@ -566,6 +576,11 @@ function buildAuthClause(table, appUser, params, action = 'select') {
     }
   }
 
+  if (table === 'ifs_notifications') {
+    params.push(appUser.id);
+    return `${quoteIdent('recipient_id')} = $${params.length}`;
+  }
+
   if (table === 'ifs_treatment_plans') {
     if (appUser.user_role === 'client') {
       params.push(appUser.id);
@@ -613,6 +628,142 @@ function appendAuthFilter(filters, authClause) {
   return [...(filters || []), { raw: authClause }];
 }
 
+
+async function createWorkflowNotifications({ appUser, table, action, rows }) {
+  if (!appUser || !rows?.length) return;
+
+  for (const row of rows) {
+    if (table === 'ifs_assigned_homework') {
+      if (action === 'insert') {
+        await safeCreateInAppNotification({
+          recipientId: row.client_id,
+          actorId: appUser.id,
+          clientId: row.client_id,
+          therapistId: row.therapist_id,
+          notificationType: 'homework_assigned',
+          title: 'New homework assigned',
+          message: 'Your therapist assigned a new module for you to review.',
+          entityType: 'assigned_homework',
+          entityId: row.id,
+          priority: 'normal',
+          metadata: { moduleId: row.module_id }
+        }, 'homework assigned notification');
+      }
+      if (action === 'update' && row.status === 'completed') {
+        await safeCreateInAppNotification({
+          recipientId: row.therapist_id,
+          actorId: row.client_id,
+          clientId: row.client_id,
+          therapistId: row.therapist_id,
+          notificationType: 'homework_completed',
+          title: 'Homework completed',
+          message: 'Your client completed assigned homework.',
+          entityType: 'assigned_homework',
+          entityId: row.id,
+          priority: 'normal',
+          metadata: { moduleId: row.module_id }
+        }, 'homework completed notification');
+      }
+      if (action === 'update' && row.status === 'reviewed') {
+        await safeCreateInAppNotification({
+          recipientId: row.client_id,
+          actorId: appUser.id,
+          clientId: row.client_id,
+          therapistId: row.therapist_id,
+          notificationType: 'homework_reviewed',
+          title: 'Homework reviewed',
+          message: 'Your therapist reviewed your homework.',
+          entityType: 'assigned_homework',
+          entityId: row.id,
+          priority: 'normal',
+          metadata: { moduleId: row.module_id }
+        }, 'homework reviewed notification');
+      }
+    }
+
+    if (table === 'ifs_session_agendas') {
+      if (action === 'insert' && row.status === 'submitted') {
+        await safeCreateInAppNotification({
+          recipientId: row.therapist_id,
+          actorId: row.client_id,
+          clientId: row.client_id,
+          therapistId: row.therapist_id,
+          notificationType: 'session_agenda_submitted',
+          title: 'Pre-session check-in submitted',
+          message: 'Your client submitted a check-in for the next session.',
+          entityType: 'session_agenda',
+          entityId: row.id,
+          priority: 'normal'
+        }, 'session agenda submitted notification');
+      }
+      if (action === 'update' && row.status === 'reviewed') {
+        await safeCreateInAppNotification({
+          recipientId: row.client_id,
+          actorId: appUser.id,
+          clientId: row.client_id,
+          therapistId: row.therapist_id,
+          notificationType: 'session_agenda_reviewed',
+          title: 'Pre-session check-in reviewed',
+          message: 'Your therapist reviewed your pre-session check-in.',
+          entityType: 'session_agenda',
+          entityId: row.id,
+          priority: 'normal'
+        }, 'session agenda reviewed notification');
+      }
+    }
+
+    if (table === 'ifs_treatment_plans') {
+      const completed = row.status === 'completed';
+      if (action === 'insert' || action === 'update') {
+        await safeCreateInAppNotification({
+          recipientId: row.client_id,
+          actorId: appUser.id,
+          clientId: row.client_id,
+          therapistId: row.therapist_id,
+          notificationType: action === 'insert' ? 'treatment_goal_created' : completed ? 'treatment_goal_completed' : 'treatment_goal_updated',
+          title: action === 'insert' ? 'Treatment goal added' : completed ? 'Treatment goal completed' : 'Treatment goal updated',
+          message: action === 'insert' ? 'A therapy goal was added to your care plan.' : completed ? 'A therapy goal was marked complete in your care plan.' : 'A therapy goal was updated in your care plan.',
+          entityType: 'treatment_plan',
+          entityId: row.id,
+          priority: completed ? 'important' : 'normal'
+        }, 'treatment goal notification');
+      }
+    }
+
+    if (table === 'ifs_generated_reports' && action === 'insert') {
+      await safeCreateInAppNotification({
+        recipientId: row.therapist_id,
+        actorId: appUser.id,
+        clientId: row.client_id,
+        therapistId: row.therapist_id,
+        notificationType: 'report_generated',
+        title: 'Clinical report generated',
+        message: 'A clinical report was generated and audit metadata was saved.',
+        entityType: 'generated_report',
+        entityId: row.id,
+        priority: 'low',
+        metadata: { reportType: row.report_type }
+      }, 'report generated notification');
+    }
+
+    if (table === 'ifs_therapist_notes' && action === 'insert') {
+      await safeCreateInAppNotification({
+        recipientId: row.therapist_id,
+        actorId: appUser.id,
+        clientId: row.client_id,
+        therapistId: row.therapist_id,
+        notificationType: 'therapist_note_created',
+        title: 'Therapist note saved',
+        message: 'A therapist note was saved to the client record.',
+        entityType: 'therapist_note',
+        entityId: row.id,
+        priority: 'low',
+        metadata: { noteType: row.note_type }
+      }, 'therapist note notification');
+    }
+  }
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
@@ -644,6 +795,8 @@ export default async function handler(req, res) {
     }
 
     const rows = await sql.query(query, params);
+
+    await createWorkflowNotifications({ appUser, table, action, rows });
 
     if (appUser && isTherapistUser(appUser) && table === 'ifs_clients' && action === 'insert') {
       for (const row of rows) {
