@@ -14,6 +14,9 @@ const THERAPIST_ACTIONS = new Set([
   'resume_activity',
   'end_activity',
   'send_prompt',
+  'next_step',
+  'previous_step',
+  'set_activity_step',
   'end_session'
 ]);
 const READ_ACTIONS = new Set(['get_state', 'get_active_for_client']);
@@ -28,7 +31,25 @@ const EVENT_TYPES = new Set([
   'session_ended',
   'heartbeat'
 ]);
-const SUPPORTED_ACTIVITIES = new Set(['guided_breathing', 'grounding_prompt', 'parts_check_in_prompt']);
+const SUPPORTED_ACTIVITIES = new Set([
+  'guided_breathing',
+  'grounding_54321',
+  'parts_check_in',
+  'self_energy_check',
+  'unblending_practice',
+  'protector_appreciation',
+  'feelings_needs_check',
+  'repair_after_conflict'
+]);
+const STEP_COUNTS = new Map([
+  ['grounding_54321', 6],
+  ['parts_check_in', 6],
+  ['self_energy_check', 6],
+  ['unblending_practice', 6],
+  ['protector_appreciation', 6],
+  ['feelings_needs_check', 6],
+  ['repair_after_conflict', 6]
+]);
 const MAX_PROMPT_LENGTH = 500;
 
 function sendError(res, status, message, code = 'live_session_error') {
@@ -57,10 +78,17 @@ function normalizeActivityState(activity, requestedState = {}) {
   }
 
   if (activity !== 'guided_breathing') {
+    const currentStep = Number(requestedState.currentStep || 0);
+    const stepCount = STEP_COUNTS.get(activity) || 1;
+    const safeStep = Number.isFinite(currentStep) ? Math.min(Math.max(Math.floor(currentStep), 0), stepCount - 1) : 0;
     return {
       activity,
+      currentStep: safeStep,
       startedAt: new Date().toISOString(),
-      message: String(requestedState.message || '').slice(0, MAX_PROMPT_LENGTH)
+      status: 'active',
+      steps: [],
+      advisorPrompt: String(requestedState.advisorPrompt || requestedState.message || '').replace(/\s+/g, ' ').trim().slice(0, MAX_PROMPT_LENGTH),
+      clientCanReflect: true
     };
   }
 
@@ -83,6 +111,8 @@ function normalizeActivityState(activity, requestedState = {}) {
     inhaleSeconds: safeInhale,
     holdSeconds: safeHold,
     exhaleSeconds: safeExhale,
+    status: 'active',
+    advisorPrompt: String(requestedState.advisorPrompt || '').replace(/\s+/g, ' ').trim().slice(0, MAX_PROMPT_LENGTH),
     message: String(requestedState.message || 'Follow the breathing circle gently.').slice(0, MAX_PROMPT_LENGTH)
   };
 }
@@ -91,20 +121,21 @@ function addPauseMetadata(state = {}) {
   return {
     ...state,
     pausedAt: new Date().toISOString(),
+    status: 'paused',
     isPaused: true
   };
 }
 
 function resumeWithAdjustedStart(state = {}) {
   if (!state.pausedAt || !state.startedAt) {
-    return { ...state, pausedAt: null, isPaused: false, resumedAt: new Date().toISOString() };
+    return { ...state, status: 'active', pausedAt: null, isPaused: false, resumedAt: new Date().toISOString() };
   }
 
   const pausedAt = new Date(state.pausedAt).getTime();
   const now = Date.now();
   const originalStartedAt = new Date(state.startedAt).getTime();
   if ([pausedAt, originalStartedAt].some((value) => Number.isNaN(value))) {
-    return { ...state, pausedAt: null, isPaused: false, resumedAt: new Date().toISOString() };
+    return { ...state, status: 'active', pausedAt: null, isPaused: false, resumedAt: new Date().toISOString() };
   }
 
   const pausedMs = Math.max(0, now - pausedAt);
@@ -112,6 +143,7 @@ function resumeWithAdjustedStart(state = {}) {
     ...state,
     startedAt: new Date(originalStartedAt + pausedMs).toISOString(),
     pausedAt: null,
+    status: 'active',
     isPaused: false,
     resumedAt: new Date().toISOString()
   };
@@ -145,7 +177,7 @@ async function assertCanAccessSession(user, session) {
   }
   if (isTherapistUser(user)) {
     if (String(user.id) !== String(session.therapist_id)) {
-      throw Object.assign(new Error('Therapist access denied'), { statusCode: 403, code: 'therapist_access_denied' });
+      throw Object.assign(new Error('Advisor access denied'), { statusCode: 403, code: 'therapist_access_denied' });
     }
     await requireTherapistAssignment(user.id, session.client_id);
     return;
@@ -155,11 +187,11 @@ async function assertCanAccessSession(user, session) {
 
 async function assertTherapistControl(user, session) {
   if (!isTherapistUser(user)) {
-    throw Object.assign(new Error('Therapist access required'), { statusCode: 403, code: 'therapist_required' });
+    throw Object.assign(new Error('Advisor access required'), { statusCode: 403, code: 'therapist_required' });
   }
   if (isAdminUser(user)) return;
   if (String(user.id) !== String(session.therapist_id)) {
-    throw Object.assign(new Error('Only the session therapist can control this live session'), { statusCode: 403, code: 'therapist_access_denied' });
+    throw Object.assign(new Error('Only the session Advisor can control this live guided practice'), { statusCode: 403, code: 'therapist_access_denied' });
   }
   await requireTherapistAssignment(user.id, session.client_id);
 }
@@ -191,7 +223,7 @@ function publicSession(session) {
 
 async function startSession(user, body) {
   if (!isTherapistUser(user)) {
-    throw Object.assign(new Error('Therapist access required'), { statusCode: 403, code: 'therapist_required' });
+    throw Object.assign(new Error('Advisor access required'), { statusCode: 403, code: 'therapist_required' });
   }
   const clientId = requireUuid(body.clientId, 'clientId');
   await assertClientExists(clientId);
@@ -233,7 +265,7 @@ async function startSession(user, body) {
     therapistId: session.therapist_id,
     notificationType: 'live_session_started',
     title: 'Live session started',
-    message: 'Your therapist started a live co-therapy exercise.',
+    message: 'Your Advisor started a live guided practice.',
     entityType: 'live_session',
     entityId: session.id,
     priority: 'important'
@@ -311,7 +343,7 @@ async function resumeActivity(user, body) {
 async function endActivity(user, body) {
   const session = await getSession(requireUuid(body.sessionId, 'sessionId'));
   await assertTherapistControl(user, session);
-  const nextState = { ...(session.activity_state || {}), completedAt: new Date().toISOString(), isComplete: true };
+  const nextState = { ...(session.activity_state || {}), status: 'complete', completedAt: new Date().toISOString(), isComplete: true };
   const rows = await sql`
     UPDATE ifs_live_sessions
     SET status = 'active', current_activity = NULL, activity_state = ${JSON.stringify(nextState)}::jsonb,
@@ -329,6 +361,7 @@ async function sendPrompt(user, body) {
   const prompt = sanitizePrompt(body.prompt);
   const nextState = {
     ...(session.activity_state || {}),
+    advisorPrompt: prompt,
     lastPrompt: prompt,
     lastPromptAt: new Date().toISOString()
   };
@@ -341,6 +374,46 @@ async function sendPrompt(user, body) {
   `;
   await recordEvent(rows[0], 'prompt_sent', { prompt });
   return publicSession(rows[0]);
+}
+
+function resolveStep(session, requestedStep) {
+  const activity = session.current_activity;
+  if (!STEP_COUNTS.has(activity)) {
+    throw Object.assign(new Error('Current activity does not support steps'), { statusCode: 400, code: 'activity_not_step_based' });
+  }
+  const stepCount = STEP_COUNTS.get(activity);
+  const numeric = Number(requestedStep);
+  const current = Number(session.activity_state?.currentStep || 0);
+  const fallback = Number.isFinite(current) ? current : 0;
+  const next = Number.isFinite(numeric) ? numeric : fallback;
+  return Math.min(Math.max(Math.floor(next), 0), stepCount - 1);
+}
+
+async function setActivityStep(user, body) {
+  const session = await getSession(requireUuid(body.sessionId, 'sessionId'));
+  await assertTherapistControl(user, session);
+  const currentStep = resolveStep(session, body.currentStep);
+  const nextState = {
+    ...(session.activity_state || {}),
+    activity: session.current_activity,
+    currentStep,
+    status: session.status === 'paused' ? 'paused' : 'active',
+    stepChangedAt: new Date().toISOString()
+  };
+  const rows = await sql`
+    UPDATE ifs_live_sessions
+    SET activity_state = ${JSON.stringify(nextState)}::jsonb,
+        therapist_last_seen_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+    WHERE id = ${session.id}
+    RETURNING *
+  `;
+  return publicSession(rows[0]);
+}
+
+async function moveActivityStep(user, body, delta) {
+  const session = await getSession(requireUuid(body.sessionId, 'sessionId'));
+  const current = Number(session.activity_state?.currentStep || 0);
+  return setActivityStep(user, { ...body, currentStep: (Number.isFinite(current) ? current : 0) + delta });
 }
 
 async function endSession(user, body) {
@@ -362,7 +435,7 @@ async function endSession(user, body) {
     therapistId: rows[0].therapist_id,
     notificationType: 'live_session_ended',
     title: 'Live session ended',
-    message: 'Your live co-therapy exercise has ended.',
+    message: 'Your live guided practice has ended.',
     entityType: 'live_session',
     entityId: rows[0].id,
     priority: 'normal'
@@ -388,7 +461,7 @@ async function heartbeat(user, body) {
       therapistId: rows[0].therapist_id,
       notificationType: 'live_session_joined',
       title: 'Client joined live session',
-      message: 'Your client joined the live co-therapy exercise.',
+      message: 'Your client joined the live guided practice.',
       entityType: 'live_session',
       entityId: rows[0].id,
       priority: 'normal'
@@ -421,6 +494,9 @@ export default async function handler(req, res) {
       resume_activity: () => resumeActivity(user, body),
       end_activity: () => endActivity(user, body),
       send_prompt: () => sendPrompt(user, body),
+      next_step: () => moveActivityStep(user, body, 1),
+      previous_step: () => moveActivityStep(user, body, -1),
+      set_activity_step: () => setActivityStep(user, body),
       end_session: () => endSession(user, body),
       heartbeat: () => heartbeat(user, body)
     };

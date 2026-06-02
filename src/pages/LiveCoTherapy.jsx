@@ -1,21 +1,24 @@
 import { useEffect, useMemo, useState } from 'react';
-import { AlertTriangle, HeartPulse, Loader2, Pause, Play, Send, Square, UserCheck } from 'lucide-react';
-import GuidedBreathingLive from '../components/GuidedBreathingLive';
+import { AlertTriangle, ChevronLeft, ChevronRight, HeartPulse, Loader2, Pause, Play, Send, Square, UserCheck } from 'lucide-react';
+import LiveActivityRenderer from '../components/live/LiveActivityRenderer';
+import { LIVE_ACTIVITY_OPTIONS, STEP_BASED_ACTIVITY_IDS, getLiveActivityDefinition } from '../lib/liveActivityDefinitions';
 import { clientAuth } from '../lib/supabasePersonalization';
-import { loadAssignedClients } from '../lib/therapistAssignments';
+import { loadAssignedClients } from '../lib/advisorAssignments';
 import {
   endLiveActivity,
   endLiveSession,
   getLiveSessionState,
   heartbeatLiveSession,
+  nextLiveActivityStep,
   pauseLiveActivity,
+  previousLiveActivityStep,
   resumeLiveActivity,
   sendLivePrompt,
   startLiveActivity,
   startLiveSession
 } from '../lib/liveSession';
 
-const SAFETY_COPY = 'Live co-therapy tools are used during scheduled sessions or therapist-guided care. They are not monitored for emergencies. If you are in immediate danger or may harm yourself or someone else, call 911 or your local crisis line now.';
+const SAFETY_COPY = 'Live guided practices are used during scheduled or Advisor-supported care. They are not monitored for emergencies. If you are in immediate danger or may harm yourself or someone else, call 911 or your local crisis line now.';
 
 function isRecentlySeen(value) {
   if (!value) return false;
@@ -24,9 +27,10 @@ function isRecentlySeen(value) {
 }
 
 export default function LiveCoTherapy() {
-  const therapist = clientAuth.getCurrentClient();
+  const advisor = clientAuth.getCurrentClient();
   const [clients, setClients] = useState([]);
   const [selectedClientId, setSelectedClientId] = useState('');
+  const [selectedActivity, setSelectedActivity] = useState('guided_breathing');
   const [session, setSession] = useState(null);
   const [prompt, setPrompt] = useState('');
   const [error, setError] = useState('');
@@ -35,13 +39,13 @@ export default function LiveCoTherapy() {
 
   useEffect(() => {
     let mounted = true;
-    loadAssignedClients(therapist?.id, 'id, name, email, status, user_role').then((rows) => {
+    loadAssignedClients(advisor?.id, 'id, name, email, status, user_role').then((rows) => {
       if (!mounted) return;
       setClients(rows || []);
       setLoadingClients(false);
     });
     return () => { mounted = false; };
-  }, [therapist?.id]);
+  }, [advisor?.id]);
 
   useEffect(() => {
     if (!session?.id || session.status === 'ended') return undefined;
@@ -61,7 +65,7 @@ export default function LiveCoTherapy() {
 
   useEffect(() => {
     if (!session?.id || session.status === 'ended') return undefined;
-    const interval = setInterval(() => heartbeatLiveSession({ sessionId: session.id, role: 'therapist' }), 25000);
+    const interval = setInterval(() => heartbeatLiveSession({ sessionId: session.id, role: 'advisor' }), 25000);
     return () => clearInterval(interval);
   }, [session?.id, session?.status]);
 
@@ -69,6 +73,11 @@ export default function LiveCoTherapy() {
     () => clients.find((client) => client.id === selectedClientId),
     [clients, selectedClientId]
   );
+  const activeDefinition = getLiveActivityDefinition(session?.current_activity);
+  const currentStep = Number(session?.activity_state?.currentStep || 0);
+  const isStepBased = STEP_BASED_ACTIVITY_IDS.includes(session?.current_activity);
+  const canGoBack = isStepBased && currentStep > 0;
+  const canGoForward = isStepBased && activeDefinition && currentStep < activeDefinition.steps.length - 1;
 
   const runAction = async (action) => {
     setBusy(true);
@@ -82,16 +91,21 @@ export default function LiveCoTherapy() {
 
   const handleStartSession = () => runAction(() => startLiveSession({ clientId: selectedClientId }));
 
-  const handleStartBreathing = () => runAction(() => startLiveActivity({
+  const handleLaunchPractice = () => runAction(() => startLiveActivity({
     sessionId: session.id,
-    activity: 'guided_breathing',
-    activityState: {
-      durationSeconds: 180,
-      inhaleSeconds: 4,
-      holdSeconds: 2,
-      exhaleSeconds: 6,
-      message: 'Follow the breathing circle gently.'
-    }
+    activity: selectedActivity,
+    activityState: selectedActivity === 'guided_breathing'
+      ? {
+          durationSeconds: 180,
+          inhaleSeconds: 4,
+          holdSeconds: 2,
+          exhaleSeconds: 6,
+          message: 'Follow the breathing circle gently.'
+        }
+      : {
+          currentStep: 0,
+          advisorPrompt: ''
+        }
   }));
 
   const handleSendPrompt = async (event) => {
@@ -107,10 +121,10 @@ export default function LiveCoTherapy() {
       <div className="soft-card p-6 border border-brand-emerald-100 dark:border-slate-700">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div>
-            <p className="text-xs font-bold uppercase tracking-[0.24em] text-brand-emerald-700 dark:text-brand-emerald-100">Live Guided Practice</p>
-            <h1 className="text-3xl font-serif text-brand-stone-900 dark:text-slate-100 mt-2">Synchronized session workspace</h1>
+            <p className="text-xs font-bold uppercase tracking-[0.24em] text-brand-emerald-700 dark:text-brand-emerald-100">Live Advisor-Guided Practice</p>
+            <h1 className="text-3xl font-serif text-brand-stone-900 dark:text-slate-100 mt-2">Synchronized practice workspace</h1>
             <p className="text-sm text-brand-stone-600 dark:text-slate-400 mt-2 max-w-3xl">
-              Launch lightweight Advisor-guided practices on an assigned client&apos;s screen. No video, audio, recording, transcripts, or emergency monitoring are included.
+              Launch lightweight Advisor-guided IFS practices on an assigned client&apos;s screen. No video, audio, recording, transcripts, or emergency monitoring are included.
             </p>
           </div>
           <HeartPulse className="w-12 h-12 text-brand-emerald-700 dark:text-brand-emerald-100" />
@@ -119,12 +133,12 @@ export default function LiveCoTherapy() {
 
       <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 flex gap-3">
         <AlertTriangle className="w-5 h-5 shrink-0 mt-0.5" />
-        <p>{SAFETY_COPY} Therapist controls session activities; clients can leave at any time.</p>
+        <p>{SAFETY_COPY} Advisor controls session activities; clients can leave at any time.</p>
       </div>
 
       {error && <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{error}</div>}
 
-      <div className="grid lg:grid-cols-[360px,1fr] gap-6">
+      <div className="grid lg:grid-cols-[380px,1fr] gap-6">
         <section className="soft-card p-6 space-y-5">
           <div>
             <label className="block text-sm font-medium text-brand-stone-700 dark:text-slate-300 mb-2">Assigned client</label>
@@ -146,22 +160,43 @@ export default function LiveCoTherapy() {
             className="btn-sanctuary-primary w-full justify-center disabled:opacity-50"
           >
             {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
-            Start live session
+            Start live guided practice
           </button>
 
           <div className="rounded-2xl bg-brand-stone-50 dark:bg-slate-900/50 p-4 space-y-2 text-sm">
             <div className="flex justify-between"><span>Client</span><strong>{selectedClient?.name || 'Not selected'}</strong></div>
             <div className="flex justify-between"><span>Status</span><strong>{session?.status || 'No session'}</strong></div>
             <div className="flex justify-between"><span>Client joined</span><strong className={clientOnline ? 'text-brand-emerald-700' : ''}>{clientOnline ? 'Recently active' : 'Not seen yet'}</strong></div>
+            {activeDefinition && <div className="flex justify-between"><span>Practice</span><strong>{activeDefinition.shortTitle}</strong></div>}
           </div>
 
           {session && session.status !== 'ended' && (
-            <div className="space-y-3">
-              <button type="button" onClick={handleStartBreathing} disabled={busy} className="btn-sanctuary-secondary w-full justify-center">
-                <HeartPulse className="w-4 h-4" /> Start Guided Breathing
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-brand-stone-700 dark:text-slate-300 mb-2">Choose practice</label>
+                <select
+                  value={selectedActivity}
+                  onChange={(event) => setSelectedActivity(event.target.value)}
+                  className="w-full rounded-2xl border border-brand-stone-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-3 text-brand-stone-900 dark:text-slate-100"
+                >
+                  {LIVE_ACTIVITY_OPTIONS.map((activity) => (
+                    <option key={activity.id} value={activity.id}>{activity.title}</option>
+                  ))}
+                </select>
+              </div>
+              <button type="button" onClick={handleLaunchPractice} disabled={busy} className="btn-sanctuary-secondary w-full justify-center">
+                <HeartPulse className="w-4 h-4" /> Launch selected practice
               </button>
+
+              {isStepBased && (
+                <div className="grid grid-cols-2 gap-2">
+                  <button type="button" onClick={() => runAction(() => previousLiveActivityStep({ sessionId: session.id }))} disabled={busy || !canGoBack} className="btn-sanctuary-secondary justify-center disabled:opacity-50"><ChevronLeft className="w-4 h-4" /> Previous</button>
+                  <button type="button" onClick={() => runAction(() => nextLiveActivityStep({ sessionId: session.id }))} disabled={busy || !canGoForward} className="btn-sanctuary-secondary justify-center disabled:opacity-50">Next <ChevronRight className="w-4 h-4" /></button>
+                </div>
+              )}
+
               <div className="grid grid-cols-2 gap-2">
-                <button type="button" onClick={() => runAction(() => pauseLiveActivity({ sessionId: session.id }))} disabled={busy || session.status === 'paused'} className="btn-sanctuary-secondary justify-center disabled:opacity-50"><Pause className="w-4 h-4" /> Pause</button>
+                <button type="button" onClick={() => runAction(() => pauseLiveActivity({ sessionId: session.id }))} disabled={busy || session.status === 'paused' || !session.current_activity} className="btn-sanctuary-secondary justify-center disabled:opacity-50"><Pause className="w-4 h-4" /> Pause</button>
                 <button type="button" onClick={() => runAction(() => resumeLiveActivity({ sessionId: session.id }))} disabled={busy || session.status !== 'paused'} className="btn-sanctuary-secondary justify-center disabled:opacity-50"><Play className="w-4 h-4" /> Resume</button>
               </div>
               <button type="button" onClick={() => runAction(() => endLiveActivity({ sessionId: session.id }))} disabled={busy || !session.current_activity} className="btn-sanctuary-secondary w-full justify-center disabled:opacity-50"><Square className="w-4 h-4" /> End activity</button>
@@ -169,11 +204,11 @@ export default function LiveCoTherapy() {
                 <textarea
                   value={prompt}
                   onChange={(event) => setPrompt(event.target.value.slice(0, 500))}
-                  placeholder="Send a short grounding prompt…"
+                  placeholder="Send a short Advisor prompt…"
                   className="w-full min-h-24 rounded-2xl border border-brand-stone-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-3 text-sm"
                   maxLength={500}
                 />
-                <button type="submit" disabled={busy || !prompt.trim()} className="btn-sanctuary-secondary w-full justify-center disabled:opacity-50"><Send className="w-4 h-4" /> Send grounding prompt</button>
+                <button type="submit" disabled={busy || !prompt.trim()} className="btn-sanctuary-secondary w-full justify-center disabled:opacity-50"><Send className="w-4 h-4" /> Send Advisor prompt</button>
               </form>
               <button type="button" onClick={() => runAction(() => endLiveSession({ sessionId: session.id }))} disabled={busy} className="w-full rounded-2xl bg-red-600 px-4 py-3 text-white font-semibold hover:bg-red-700 disabled:opacity-50">End session</button>
             </div>
@@ -193,18 +228,12 @@ export default function LiveCoTherapy() {
                 <p className="text-sm text-brand-stone-500 dark:text-slate-500">Session ID</p>
                 <p className="font-mono text-xs text-brand-stone-700 dark:text-slate-300 break-all">{session.id}</p>
               </div>
-              {session.current_activity === 'guided_breathing' ? (
-                <GuidedBreathingLive activityState={session.activity_state} sessionStatus={session.status} />
+              {session.current_activity ? (
+                <LiveActivityRenderer currentActivity={session.current_activity} activityState={session.activity_state} sessionStatus={session.status} />
               ) : (
                 <div className="rounded-3xl border border-dashed border-brand-stone-200 dark:border-slate-700 p-10 text-center">
                   <h2 className="text-xl font-semibold text-brand-stone-900 dark:text-slate-100">No activity currently running</h2>
-                  <p className="text-sm text-brand-stone-600 dark:text-slate-400 mt-2">Start Guided Breathing or send a short grounding prompt.</p>
-                </div>
-              )}
-              {session.activity_state?.lastPrompt && (
-                <div className="rounded-2xl border border-brand-gold-100 bg-brand-gold-50/70 dark:bg-brand-gold-950/20 p-4">
-                  <p className="text-xs font-bold uppercase tracking-wide text-brand-gold-700">Latest prompt</p>
-                  <p className="mt-2 text-brand-stone-800 dark:text-slate-100">{session.activity_state.lastPrompt}</p>
+                  <p className="text-sm text-brand-stone-600 dark:text-slate-400 mt-2">Choose and launch a live guided practice when you are ready.</p>
                 </div>
               )}
             </div>
