@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Archive, Bell, Check, CheckCheck, Clock, ExternalLink, Inbox } from 'lucide-react';
+import { Archive, Bell, Check, CheckCheck, Clock, ExternalLink, Inbox, SlidersHorizontal } from 'lucide-react';
 import { archiveNotification, loadNotifications, markAllNotificationsRead, markNotificationRead } from '../lib/notifications';
 
 const FILTERS = [
@@ -113,10 +113,16 @@ export default function Notifications({ currentClient }) {
           <h1 className="text-3xl font-serif font-semibold text-brand-stone-900 dark:text-slate-100">Notifications</h1>
           <p className="text-sm text-brand-stone-600 dark:text-slate-400 mt-2">Secure in-app updates for your care activity.</p>
         </div>
-        <button onClick={handleMarkAllRead} disabled={!unreadCount} className="btn-sanctuary-primary disabled:opacity-50 disabled:cursor-not-allowed">
-          <CheckCheck className="w-4 h-4" />
-          Mark all read
-        </button>
+        <div className="flex flex-col sm:flex-row gap-2">
+          <Link to="/notification-preferences" className="px-4 py-2.5 rounded-2xl font-semibold border border-brand-stone-200 dark:border-slate-700 text-brand-stone-700 dark:text-slate-200 bg-white/70 dark:bg-slate-900/60 hover:border-brand-gold-300 inline-flex items-center justify-center gap-2">
+            <SlidersHorizontal className="w-4 h-4" />
+            Notification Preferences
+          </Link>
+          <button onClick={handleMarkAllRead} disabled={!unreadCount} className="btn-sanctuary-primary disabled:opacity-50 disabled:cursor-not-allowed">
+            <CheckCheck className="w-4 h-4" />
+            Mark all read
+          </button>
+        </div>
       </div>
 
       <div className="flex gap-2 mb-6 overflow-x-auto">

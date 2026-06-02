@@ -41,6 +41,7 @@ import ClientLiveSession from './pages/ClientLiveSession';
 import ClientInbox from './pages/ClientInbox';
 import ClientHomework from './pages/ClientHomework';
 import Notifications from './pages/Notifications';
+import NotificationPreferences from './pages/NotificationPreferences';
 import PreSessionCheckin from './components/PreSessionCheckin';
 import PartsRelationshipMap from './pages/PartsRelationshipMap';
 import UnburdeningProtocol from './pages/UnburdeningProtocol';
@@ -524,6 +525,7 @@ function AppContent({ authChecked, clerkLoaded, clerkSignedIn, isAuthenticated, 
                 <Route path="/profile" element={<Profile client={currentClient} />} />
                 <Route path="/settings" element={<Settings />} />
                 <Route path="/notifications" element={<Notifications currentClient={currentClient} />} />
+                <Route path="/notification-preferences" element={<NotificationPreferences currentClient={currentClient} />} />
                 <Route path="/parts-studio" element={<FeatureGate feature="partsStudio"><PartsStudio /></FeatureGate>} />
                 <Route path="/micro-learning" element={<MicroLearning />} />
                 <Route path="/affirmations" element={<Affirmations />} />

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Bell } from 'lucide-react';
+import { Bell, SlidersHorizontal } from 'lucide-react';
 import { loadUnreadNotificationCount } from '../lib/notifications';
 
 const POLL_INTERVAL_MS = 30000;
@@ -26,7 +26,8 @@ export default function NotificationBell({ className = '' }) {
   }, []);
 
   return (
-    <Link
+    <div className="relative inline-flex items-center group">
+      <Link
       to="/notifications"
       className={`relative p-2.5 rounded-xl transition-all text-brand-stone-500 dark:text-slate-400 hover:text-brand-gold-700 dark:hover:text-brand-gold-500 hover:bg-brand-gold-50 dark:hover:bg-slate-800/50 ${className}`}
       title="Notifications"
@@ -38,6 +39,15 @@ export default function NotificationBell({ className = '' }) {
           {count > 99 ? '99+' : count}
         </span>
       )}
-    </Link>
+      </Link>
+      <Link
+        to="/notification-preferences"
+        className="absolute -bottom-1 -right-1 p-1 rounded-lg bg-white dark:bg-slate-900 border border-brand-stone-200 dark:border-slate-700 text-brand-stone-400 hover:text-brand-gold-700 dark:hover:text-brand-gold-500 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity"
+        title="Notification Preferences"
+        aria-label="Notification Preferences"
+      >
+        <SlidersHorizontal className="w-3 h-3" />
+      </Link>
+    </div>
   );
 }
