@@ -8,7 +8,7 @@ import {
   Play, Target, X, Copy, Download, ArrowLeft, RefreshCw,
   Award, Flame, Star, Zap, Trophy, Crown, Gem, Edit2, Save,
   Key, ToggleLeft, ToggleRight, UserX, UserCheck, Loader2,
-  List, Smile, PenTool, ClipboardCheck, Home as HomeIcon, Lock, Unlock, Mail
+  List, Smile, PenTool, ClipboardCheck, Home as HomeIcon, Lock, Unlock, Mail, Bell
 } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import { supabase, supabaseHelpers } from '../lib/supabase';
@@ -172,7 +172,7 @@ function generateSmartRecommendations(client, insights, gamData) {
     type: 'homework',
     priority: 'medium',
     icon: 'FileText',
-    title: `Homework: ${randomHomework.title}`,
+    title: `Assigned IFS Practice: ${randomHomework.title}`,
     desc: randomHomework.desc,
     action: `Assign for ${wound} wound`
   });
@@ -270,7 +270,7 @@ function generateSmartRecommendations(client, insights, gamData) {
         priority: daysSinceActive > 14 ? 'high' : 'medium',
         icon: 'Clock',
         title: `${daysSinceActive} Days Since Last Activity`,
-        desc: `${client?.name} hasn't engaged in ${daysSinceActive} days. A gentle check-in message or easy homework assignment can help re-engage.`,
+        desc: `${client?.name} hasn't engaged in ${daysSinceActive} days. A gentle check-in message or gentle assigned IFS practice can help re-engage.`,
         action: 'Send reminder'
       });
     }
@@ -491,7 +491,7 @@ const TherapistDashboard = () => {
   const [editClientForm, setEditClientForm] = useState({ name: '', email: '', phone: '' });
   const [editClientSaving, setEditClientSaving] = useState(false);
   const [showPinClient, setShowPinClient] = useState(null);
-  const [activeTab, setActiveTab] = useState('clients');
+  const [activeTab, setActiveTab] = useState('workspace');
   const [expandedModules, setExpandedModules] = useState({});
   const [expandedResponseModules, setExpandedResponseModules] = useState({});
   const [selectedInsightClient, setSelectedInsightClient] = useState('');
@@ -512,6 +512,13 @@ const TherapistDashboard = () => {
   const [showPartTagDropdown, setShowPartTagDropdown] = useState(false);
 
   const [clients, setClients] = useState([]);
+  const [workspaceError, setWorkspaceError] = useState('');
+  const [selectedWorkspaceClientId, setSelectedWorkspaceClientId] = useState('');
+  const [assignedPracticeRows, setAssignedPracticeRows] = useState([]);
+  const [workspaceGrowthGoals, setWorkspaceGrowthGoals] = useState([]);
+  const [notificationRows, setNotificationRows] = useState([]);
+  const [liveSessionRows, setLiveSessionRows] = useState([]);
+  const [generatedReportRows, setGeneratedReportRows] = useState([]);
   const [sessionPrepRows, setSessionPrepRows] = useState([]);
   const [selectedPrepClientId, setSelectedPrepClientId] = useState('');
   const [draftNotePrefill, setDraftNotePrefill] = useState({ clientId: '', sessionDate: '' });
@@ -573,8 +580,8 @@ const TherapistDashboard = () => {
         { heading: 'Background & History', placeholder: 'Relevant personal, family, and mental health history...' },
         { heading: 'Parts Identified', placeholder: 'Any parts that emerged during intake (managers, firefighters, exiles)...' },
         { heading: 'Initial Impressions', placeholder: 'Clinical observations, rapport quality, readiness for IFS work...' },
-        { heading: 'Treatment Goals', placeholder: 'Agreed-upon goals for therapy...' },
-        { heading: 'Homework Assigned', placeholder: 'Any initial tasks or exercises given to the client...' },
+        { heading: 'Growth Goals', placeholder: 'Agreed-upon goals for therapy...' },
+        { heading: 'Assigned IFS Practice', placeholder: 'Any initial tasks or exercises given to the client...' },
         { heading: 'Next Session Focus', placeholder: 'Planned focus areas for the next session...' }
       ]
     },
@@ -587,7 +594,7 @@ const TherapistDashboard = () => {
         { heading: 'Parts Interactions', placeholder: 'How parts related to each other and to Self during session...' },
         { heading: 'Interventions Used', placeholder: 'Techniques applied (direct access, in-sight, unblending, etc.)...' },
         { heading: 'Client Self-Energy Level', placeholder: 'Client\'s capacity for Self-leadership during session (low/medium/high)...' },
-        { heading: 'Homework Assigned', placeholder: 'Between-session practices or exercises...' },
+        { heading: 'Assigned IFS Practice', placeholder: 'Between-session IFS practices or exercises...' },
         { heading: 'Next Session Focus', placeholder: 'Planned focus for continued parts work...' }
       ]
     },
@@ -602,7 +609,7 @@ const TherapistDashboard = () => {
         { heading: 'Unburdening Details', placeholder: 'Method of release (water, fire, wind, earth, light) and what was released...' },
         { heading: 'Invitation & New Qualities', placeholder: 'What the part chose to take on after unburdening...' },
         { heading: 'Post-Unburdening Check', placeholder: 'How protectors responded, system recalibration observations...' },
-        { heading: 'Homework Assigned', placeholder: 'Follow-up practices to support integration...' },
+        { heading: 'Assigned IFS Practice', placeholder: 'Follow-up practices to support integration...' },
         { heading: 'Next Session Focus', placeholder: 'Planned follow-up and integration work...' }
       ]
     },
@@ -626,9 +633,9 @@ const TherapistDashboard = () => {
       sections: [
         { heading: 'Presenting Concern', placeholder: 'What the client shared about their week...' },
         { heading: 'Parts Identified', placeholder: 'Parts that were active since last session...' },
-        { heading: 'Progress Review', placeholder: 'Progress on previous homework and treatment goals...' },
+        { heading: 'Progress Review', placeholder: 'Progress on previous assigned IFS practices and Growth Goals...' },
         { heading: 'Interventions Used', placeholder: 'Techniques or approaches used during session...' },
-        { heading: 'Homework Assigned', placeholder: 'Tasks or exercises for the coming week...' },
+        { heading: 'Assigned IFS Practice', placeholder: 'Tasks or exercises for the coming week...' },
         { heading: 'Next Session Focus', placeholder: 'Planned topics for the next session...' }
       ]
     }
@@ -679,6 +686,7 @@ const TherapistDashboard = () => {
 
   const loadDashboardData = useCallback(async () => {
     setLoading(true);
+    setWorkspaceError('');
     try {
       const therapist = clientAuth.getCurrentClient();
       const clientList = await loadAssignedClients(therapist?.id);
@@ -689,6 +697,12 @@ const TherapistDashboard = () => {
         setAlerts([]);
         setTreatmentPlanSummary({ active: 0, reviewSoon: 0 });
         setRecentTaggedNotes([]);
+        setAssignedPracticeRows([]);
+        setWorkspaceGrowthGoals([]);
+        setNotificationRows([]);
+        setLiveSessionRows([]);
+        setGeneratedReportRows([]);
+        setSelectedWorkspaceClientId('');
         setLoading(false);
         return;
       }
@@ -699,12 +713,20 @@ const TherapistDashboard = () => {
         setAlerts([]);
         setTreatmentPlanSummary({ active: 0, reviewSoon: 0 });
         setRecentTaggedNotes([]);
+        setAssignedPracticeRows([]);
+        setWorkspaceGrowthGoals([]);
+        setNotificationRows([]);
+        setLiveSessionRows([]);
+        setGeneratedReportRows([]);
+        setSelectedWorkspaceClientId('');
         setLoading(false);
         return;
       }
 
       const clientIds = clientList.map(c => c.id);
-      loadUpcomingSessionPrepForTherapist(therapist.id).then(({ data }) => setSessionPrepRows(data || [])).catch((error) => console.error('Failed to load session prep rows:', error));
+      const { data: prepRows, error: prepError } = await loadUpcomingSessionPrepForTherapist(therapist.id);
+      if (prepError) console.error('Failed to load session prep rows:', prepError);
+      setSessionPrepRows(prepRows || []);
 
       const [
         { data: assessments },
@@ -716,7 +738,11 @@ const TherapistDashboard = () => {
         { data: moodEntries },
         { data: checkinData },
         { data: treatmentPlansRaw },
-        { data: therapistNotesRaw }
+        { data: therapistNotesRaw },
+        { data: assignedHomeworkRaw },
+        { data: notificationRaw },
+        { data: liveSessionsRaw },
+        { data: generatedReportsRaw }
       ] = await Promise.all([
         supabase
           .from('ifs_assessment_results')
@@ -768,9 +794,43 @@ const TherapistDashboard = () => {
           .select('id, client_id, note_type, clinical_summary, tagged_parts, tagged_treatment_goals, created_at')
           .in('client_id', clientIds)
           .order('created_at', { ascending: false })
-          .limit(12)
+          .limit(12),
+        supabase
+          .from('ifs_assigned_homework')
+          .select('id, client_id, module_id, title, status, assigned_at, started_at, completed_at, reviewed_at, created_at')
+          .in('client_id', clientIds)
+          .order('updated_at', { ascending: false })
+          .limit(200),
+        supabase
+          .from('ifs_notifications')
+          .select('id, client_id, therapist_id, notification_type, title, message, entity_type, entity_id, priority, read_at, created_at')
+          .eq('recipient_id', therapist.id)
+          .is('archived_at', null)
+          .order('created_at', { ascending: false })
+          .limit(50),
+        supabase
+          .from('ifs_live_sessions')
+          .select('id, client_id, status, current_activity, started_at, updated_at')
+          .eq('therapist_id', therapist.id)
+          .in('client_id', clientIds)
+          .in('status', ['active', 'paused'])
+          .order('updated_at', { ascending: false })
+          .limit(50),
+        supabase
+          .from('ifs_generated_reports')
+          .select('id, client_id, report_type, created_at')
+          .eq('therapist_id', therapist.id)
+          .in('client_id', clientIds)
+          .order('created_at', { ascending: false })
+          .limit(20)
       ]);
 
+
+      setAssignedPracticeRows(assignedHomeworkRaw || []);
+      setWorkspaceGrowthGoals(treatmentPlansRaw || []);
+      setNotificationRows(notificationRaw || []);
+      setLiveSessionRows(liveSessionsRaw || []);
+      setGeneratedReportRows(generatedReportsRaw || []);
 
       const reviewSoonCutoff = new Date();
       reviewSoonCutoff.setDate(reviewSoonCutoff.getDate() + 14);
@@ -861,6 +921,11 @@ const TherapistDashboard = () => {
         const currentModuleId = incompleteModules.length > 0 ? incompleteModules[0].module_id : null;
 
         const recentMoods = (moodsByClient[c.id] || []).slice(0, 5);
+        const clientPractices = (assignedHomeworkRaw || []).filter((practice) => practice.client_id === c.id);
+        const clientGoals = (treatmentPlansRaw || []).filter((plan) => plan.client_id === c.id && plan.status === 'active');
+        const latestAgenda = (prepRows || []).find((agenda) => agenda.client_id === c.id);
+        const latestPractice = clientPractices[0];
+        const latestNote = (therapistNotesRaw || []).find((note) => note.client_id === c.id);
 
         return {
           id: c.id,
@@ -887,11 +952,22 @@ const TherapistDashboard = () => {
           badges: gamData?.badges || {},
           currentModuleId,
           recentMoods,
+          latestCheckInStatus: latestAgenda?.status || 'none',
+          latestCheckInAt: latestAgenda?.created_at || null,
+          assignedPracticeStatus: latestPractice?.status || 'none',
+          assignedPracticeCompletedAt: latestPractice?.completed_at || null,
+          assignedPracticeCount: clientPractices.length,
+          completedPracticeCount: clientPractices.filter((practice) => practice.status === 'completed').length,
+          pendingPracticeReviewCount: clientPractices.filter((practice) => practice.status === 'completed' && !practice.reviewed_at).length,
+          growthGoalsCount: clientGoals.length,
+          recentAdvisorNotesCount: (therapistNotesRaw || []).filter((note) => note.client_id === c.id).length,
+          latestAdvisorNoteAt: latestNote?.created_at || null,
           accessRestrictions: c.access_restrictions || null
         };
       });
 
       setClients(enrichedClients);
+      setSelectedWorkspaceClientId((current) => current && enrichedClients.some((client) => client.id === current) ? current : (enrichedClients[0]?.id || ''));
 
       const riskScores = {};
       enrichedClients.forEach(client => {
@@ -921,6 +997,7 @@ const TherapistDashboard = () => {
 
     } catch (e) {
       console.error('Failed to load dashboard data:', e);
+      setWorkspaceError('Advisor Workspace could not load right now. Please try again.');
     }
     setLoading(false);
   }, []);
@@ -1199,7 +1276,7 @@ const TherapistDashboard = () => {
         timelineEvents.push({
           id: `homework-${hw.id}`,
           type: 'homework',
-          title: hw.completed ? 'Homework Completed' : 'Homework Assigned',
+          title: hw.completed ? 'Assigned IFS Practice Completed' : 'Assigned IFS Practice',
           description: hw.title || 'Untitled',
           timestamp: hw.created_at,
           colorKey: hw.completed ? 'emerald' : 'orange',
@@ -1827,7 +1904,7 @@ const TherapistDashboard = () => {
   };
 
   const reminderTemplates = {
-    session: 'Hi {name}, this is a friendly reminder about your upcoming IFS therapy session. Please review your journal entries and any homework from last session before we meet.',
+    session: 'Hi {name}, this is a friendly reminder about your upcoming IFS session. Please review your journal entries and any assigned IFS practices from last session before we meet.',
     activity: 'Hi {name}, you have some pending activities in your IFS healing program. Taking a few minutes to complete them will help reinforce what you\'ve learned.',
     checkin: 'Hi {name}, just checking in on you. How are you doing with your IFS practice? Remember, even a brief moment of Self-energy connection counts.',
     assessment: 'Hi {name}, it\'s been a while since your last assessment. Retaking the IFS Wound Assessment can help us track your healing progress together.'
@@ -2468,13 +2545,133 @@ const TherapistDashboard = () => {
     return `${Math.floor(days / 30)}mo ago`;
   };
 
+  const submittedCheckIns = sessionPrepRows.filter((agenda) => agenda.status === 'submitted');
+  const completedAssignedPractices = assignedPracticeRows.filter((practice) => practice.status === 'completed');
+  const practicesAwaitingReview = completedAssignedPractices.filter((practice) => !practice.reviewed_at);
+  const soonCutoff = new Date();
+  soonCutoff.setDate(soonCutoff.getDate() + 14);
+  const growthGoalsDue = workspaceGrowthGoals.filter((goal) => {
+    if (goal.status !== 'active' || !goal.review_date) return false;
+    const reviewDate = new Date(goal.review_date);
+    return reviewDate <= soonCutoff;
+  });
+  const unreadUpdates = notificationRows.filter((notification) => !notification.read_at);
+  const activeLiveSessions = liveSessionRows.filter((session) => ['active', 'paused'].includes(session.status));
+  const latestClientById = Object.fromEntries(clients.map((client) => [client.id, client]));
+  const selectedWorkspaceClient = latestClientById[selectedWorkspaceClientId] || clients[0] || null;
+  const selectedClientPractices = selectedWorkspaceClient
+    ? assignedPracticeRows.filter((practice) => practice.client_id === selectedWorkspaceClient.id)
+    : [];
+  const selectedClientGoals = selectedWorkspaceClient
+    ? workspaceGrowthGoals.filter((goal) => goal.client_id === selectedWorkspaceClient.id && goal.status === 'active')
+    : [];
+  const selectedClientNotes = selectedWorkspaceClient
+    ? recentTaggedNotes.filter((note) => note.client_id === selectedWorkspaceClient.id)
+    : [];
+  const selectedClientLatestCheckIn = selectedWorkspaceClient
+    ? sessionPrepRows.find((agenda) => agenda.client_id === selectedWorkspaceClient.id)
+    : null;
+
+  const workspaceOverviewCards = [
+    { label: 'Active Clients', value: clients.length, icon: Users, helper: 'Assigned active clients only', glow: 'emerald' },
+    { label: 'New Check-Ins', value: submittedCheckIns.length, icon: ClipboardCheck, helper: 'Pre-session check-ins awaiting review', glow: 'blue' },
+    { label: 'Completed Assigned Practices', value: completedAssignedPractices.length, icon: CheckCircle, helper: 'Assigned IFS practices completed', glow: 'amber' },
+    { label: 'Growth Goals Due', value: growthGoalsDue.length, icon: Target, helper: 'Due now or within 14 days', glow: 'amber' },
+    { label: 'Unread Updates', value: unreadUpdates.length, icon: Mail, helper: 'Advisor notifications and updates', glow: 'blue' },
+    { label: 'Live Guided Practice Active', value: activeLiveSessions.length, icon: Heart, helper: 'Active or paused guided sessions', glow: 'emerald' }
+  ];
+
+  const attentionItems = [
+    ...submittedCheckIns.slice(0, 4).map((agenda) => ({
+      id: `checkin-${agenda.id}`,
+      icon: ClipboardCheck,
+      title: 'Pre-session check-in awaiting review',
+      detail: latestClientById[agenda.client_id]?.name || agenda.client_name || 'Assigned client',
+      meta: agenda.created_at ? getRelativeTime(agenda.created_at) : 'Recently submitted',
+      action: 'Review Check-In',
+      onClick: () => { setSelectedPrepClientId(agenda.client_id); setActiveTab('session-prep'); }
+    })),
+    ...practicesAwaitingReview.slice(0, 4).map((practice) => ({
+      id: `practice-${practice.id}`,
+      icon: CheckCircle,
+      title: 'Assigned IFS practice completed',
+      detail: `${latestClientById[practice.client_id]?.name || 'Assigned client'}${practice.title ? ` — ${practice.title}` : ''}`,
+      meta: practice.completed_at ? getRelativeTime(practice.completed_at) : 'Awaiting Advisor review',
+      action: 'Review Practice',
+      onClick: () => navigate('/advisor-homework')
+    })),
+    ...growthGoalsDue.slice(0, 4).map((goal) => ({
+      id: `goal-${goal.id}`,
+      icon: Target,
+      title: 'Growth Goal ready for review',
+      detail: `${latestClientById[goal.client_id]?.name || 'Assigned client'}${goal.goal_title ? ` — ${goal.goal_title}` : ''}`,
+      meta: goal.review_date ? `Review date ${formatDate(goal.review_date)}` : 'Review soon',
+      action: 'Review Growth Goal',
+      onClick: () => setActiveTab('treatment-plans')
+    })),
+    ...unreadUpdates.slice(0, 3).map((notification) => ({
+      id: `update-${notification.id}`,
+      icon: Mail,
+      title: notification.title || 'Unread Advisor update',
+      detail: latestClientById[notification.client_id]?.name || 'Advisor update',
+      meta: notification.created_at ? getRelativeTime(notification.created_at) : 'Unread',
+      action: 'Open Messages',
+      onClick: () => navigate('/advisor-messages')
+    })),
+    ...activeLiveSessions.slice(0, 3).map((session) => ({
+      id: `live-${session.id}`,
+      icon: Heart,
+      title: 'Live guided practice is active',
+      detail: latestClientById[session.client_id]?.name || 'Assigned client',
+      meta: session.updated_at ? getRelativeTime(session.updated_at) : 'Active now',
+      action: 'Join Live Guided Practice',
+      onClick: () => navigate('/live-co-therapy')
+    }))
+  ].slice(0, 10);
+
+  const advisorToolTiles = [
+    { label: 'Advisor Session Prep', desc: 'Review submitted pre-session check-ins and prepare for client support.', icon: ClipboardCheck, onClick: () => setActiveTab('session-prep') },
+    { label: 'Assigned IFS Practices', desc: 'Create, assign, and review Advisor-guided practices.', icon: BookOpen, onClick: () => navigate('/advisor-homework') },
+    { label: 'Growth Goals', desc: 'Review IFS path goals and support plans.', icon: Target, onClick: () => setActiveTab('treatment-plans') },
+    { label: 'Advisor Notes', desc: 'Write Advisor-only notes with tagged parts and goals.', icon: FileText, onClick: () => setActiveTab('clinical-notes') },
+    { label: 'Draft Session Note', desc: 'AI-assisted draft for Advisor review; never auto-saved.', icon: Sparkles, onClick: () => setActiveTab('clinical-notes') },
+    { label: 'Longitudinal Insights', desc: 'Open assigned-client analytics and IFS trends.', icon: TrendingUp, onClick: () => navigate('/longitudinal-analytics') },
+    { label: 'Advisor Reports', desc: 'Generate and review Advisor reports for assigned clients.', icon: Download, onClick: () => navigate('/advisor-reports') },
+    { label: 'Live Guided Practice', desc: 'Start or join a synchronous Advisor-guided practice.', icon: Heart, onClick: () => navigate('/live-co-therapy') },
+    { label: 'Notifications', desc: 'Open unread updates and Advisor activity.', icon: Bell, onClick: () => navigate('/notifications') }
+  ];
+
+  const safeActivityItems = [
+    ...notificationRows.slice(0, 6).map((notification) => ({
+      id: `notification-${notification.id}`,
+      title: notification.title || 'Advisor update',
+      detail: latestClientById[notification.client_id]?.name || 'Advisor workspace',
+      time: notification.created_at,
+      icon: Mail
+    })),
+    ...generatedReportRows.slice(0, 3).map((report) => ({
+      id: `report-${report.id}`,
+      title: 'Advisor report generated',
+      detail: latestClientById[report.client_id]?.name || 'Assigned client',
+      time: report.created_at,
+      icon: Download
+    })),
+    ...recentTaggedNotes.slice(0, 3).map((note) => ({
+      id: `note-${note.id}`,
+      title: 'Advisor note saved',
+      detail: note.clientName || 'Assigned client',
+      time: note.created_at,
+      icon: FileText
+    }))
+  ].sort((a, b) => new Date(b.time || 0) - new Date(a.time || 0)).slice(0, 8);
+
   if (loading) {
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <div className="flex items-center justify-center py-20">
           <div className="text-center">
             <div className="w-12 h-12 border-4 border-amber-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-            <p className={`${textSecondary}`}>Loading dashboard data...</p>
+            <p className={`${textSecondary}`}>Loading Advisor Workspace...</p>
           </div>
         </div>
       </div>
@@ -2486,8 +2683,8 @@ const TherapistDashboard = () => {
       <div className="mb-8">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className={`text-3xl sm:text-4xl font-extrabold ${textPrimary} tracking-tight`}>Advisor Dashboard</h1>
-            <p className={`mt-1.5 text-sm ${textSecondary}`}>Monitor client progress, review responses, and manage sessions</p>
+            <h1 className={`text-3xl sm:text-4xl font-extrabold ${textPrimary} tracking-tight`}>Advisor Workspace</h1>
+            <p className={`mt-1.5 text-sm ${textSecondary}`}>A calm support space for reviewing client progress, preparing sessions, and guiding IFS practice.</p>
           </div>
           <div className="flex items-center gap-3">
             <button
@@ -2512,12 +2709,12 @@ const TherapistDashboard = () => {
 
       <div className="grid grid-cols-2 lg:grid-cols-6 gap-4 mb-8">
         {[
-          { label: 'Total Clients', value: stats.totalClients, icon: Users, color: 'from-brand-stone-500 to-brand-stone-600', glow: 'blue' },
-          { label: 'Active Clients', value: stats.activeSessions, icon: Activity, color: 'from-brand-emerald-600 to-brand-emerald-700', glow: 'emerald' },
-          { label: 'Assessments Done', value: stats.assessmentsCompleted, icon: Target, color: 'from-brand-gold-600 to-brand-emerald-700', glow: 'amber' },
-          { label: 'Avg Progress', value: `${stats.avgProgress}%`, icon: TrendingUp, color: 'from-brand-gold-600 to-brand-emerald-700', glow: 'amber' },
-          { label: 'Active Goals', value: treatmentPlanSummary.active, icon: Target, color: 'from-amber-500 to-orange-600', glow: 'amber' },
-          { label: 'Review Soon', value: treatmentPlanSummary.reviewSoon, icon: Calendar, color: 'from-blue-500 to-cyan-600', glow: 'blue' }
+          { label: 'Assigned Clients', value: stats.totalClients, icon: Users, color: 'from-brand-stone-500 to-brand-stone-600', glow: 'blue' },
+          { label: 'Steady IFS Paths', value: stats.activeSessions, icon: Activity, color: 'from-brand-emerald-600 to-brand-emerald-700', glow: 'emerald' },
+          { label: 'Assessments Completed', value: stats.assessmentsCompleted, icon: Target, color: 'from-brand-gold-600 to-brand-emerald-700', glow: 'amber' },
+          { label: 'Average Progress', value: `${stats.avgProgress}%`, icon: TrendingUp, color: 'from-brand-gold-600 to-brand-emerald-700', glow: 'amber' },
+          { label: 'Active Growth Goals', value: treatmentPlanSummary.active, icon: Target, color: 'from-amber-500 to-orange-600', glow: 'amber' },
+          { label: 'Growth Goal Reviews', value: treatmentPlanSummary.reviewSoon, icon: Calendar, color: 'from-blue-500 to-cyan-600', glow: 'blue' }
         ].map((stat) => {
           const Icon = stat.icon;
           return (
@@ -2538,18 +2735,19 @@ const TherapistDashboard = () => {
 
       <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
         {[
-          { id: 'clients', label: 'Clients', icon: Users },
-          { id: 'treatment-plans', label: 'Treatment Plans', icon: Target },
+          { id: 'workspace', label: 'Advisor Workspace', icon: HomeIcon },
+          { id: 'clients', label: 'Assigned Clients', icon: Users },
+          { id: 'treatment-plans', label: 'Growth Goals', icon: Target },
           { id: 'clinical-notes', label: 'Advisor Notes', icon: FileText },
-          { id: 'notes', label: 'Session Notes', icon: FileText },
-          { id: 'session-prep', label: 'Session Prep', icon: ClipboardCheck },
+          { id: 'notes', label: 'Advisor Notes', icon: FileText },
+          { id: 'session-prep', label: 'Advisor Session Prep', icon: ClipboardCheck },
           { id: 'progress', label: 'Progress', icon: BarChart3 },
-          { id: 'analytics', label: 'Longitudinal Analytics', icon: TrendingUp },
+          { id: 'analytics', label: 'Longitudinal Insights', icon: TrendingUp },
           { id: 'alerts', label: 'Alerts', icon: AlertTriangle },
           { id: 'actions', label: 'Quick Actions', icon: Sparkles },
           { id: 'lessons', label: 'Lesson Plans', icon: BookOpen },
           { id: 'insights', label: 'Client Insights', icon: Eye },
-          { id: 'co-therapy', label: 'Co-Therapy', icon: Heart },
+          { id: 'co-therapy', label: 'Live Guided Practice', icon: Heart },
           { id: 'roadmap', label: 'Future Features', icon: Gem }
         ].map(tab => {
           const Icon = tab.icon;
@@ -2579,6 +2777,198 @@ const TherapistDashboard = () => {
           );
         })}
       </div>
+
+      {workspaceError && (
+        <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800 dark:border-amber-700 dark:bg-amber-950/30 dark:text-amber-200">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <span>{workspaceError}</span>
+            <button onClick={loadDashboardData} className="inline-flex items-center gap-2 rounded-lg border border-amber-300 px-3 py-2 font-semibold">
+              <RefreshCw className="w-4 h-4" /> Retry
+            </button>
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'workspace' && (
+        <div className="space-y-8">
+          <section>
+            <div className="mb-4">
+              <p className={`text-xs uppercase tracking-[0.25em] ${textMuted}`}>Overview</p>
+              <h2 className={`text-2xl font-serif ${textPrimary}`}>Current Advisor support needs</h2>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-6 gap-4">
+              {workspaceOverviewCards.map((card) => {
+                const Icon = card.icon;
+                return (
+                  <div key={card.label} className={`${cardBg} rounded-2xl border ${glowStyles[card.glow]} p-4`}>
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className={`text-xs font-semibold uppercase tracking-wide ${textMuted}`}>{card.label}</p>
+                        <p className={`mt-2 text-3xl font-bold ${textPrimary}`}>{card.value}</p>
+                      </div>
+                      <div className="rounded-xl bg-brand-cream-100 p-2 text-brand-emerald-700 dark:bg-slate-700 dark:text-brand-gold-300">
+                        <Icon className="w-5 h-5" />
+                      </div>
+                    </div>
+                    <p className={`mt-3 text-xs ${textSecondary}`}>{card.helper}</p>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+
+          <div className="grid grid-cols-1 xl:grid-cols-[1fr_0.95fr] gap-6">
+            <section className={`${cardBg} rounded-3xl border ${cardBorder} p-5`}>
+              <div className="mb-4 flex items-start justify-between gap-3">
+                <div>
+                  <p className={`text-xs uppercase tracking-[0.25em] ${textMuted}`}>Needs Attention</p>
+                  <h2 className={`text-xl font-bold ${textPrimary}`}>Advisor actions to review next</h2>
+                </div>
+                <span className="rounded-full bg-brand-gold-100 px-3 py-1 text-xs font-semibold text-brand-gold-700 dark:bg-brand-gold-900/30 dark:text-brand-gold-200">{attentionItems.length} items</span>
+              </div>
+              {attentionItems.length === 0 ? (
+                <div className={`rounded-2xl border ${cardBorder} p-8 text-center ${textSecondary}`}>
+                  <CheckCircle className="mx-auto mb-3 h-8 w-8 text-brand-emerald-600" />
+                  No check-ins, assigned practices, Growth Goals, unread updates, or live guided practices need attention right now.
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {attentionItems.map((item) => {
+                    const Icon = item.icon;
+                    return (
+                      <div key={item.id} className={`rounded-2xl border ${cardBorder} p-4 ${isDark ? 'bg-slate-900/35' : 'bg-brand-cream-50/70'}`}>
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                          <div className="flex items-start gap-3">
+                            <div className="rounded-xl bg-white p-2 text-brand-emerald-700 shadow-sm dark:bg-slate-800 dark:text-brand-gold-300"><Icon className="h-5 w-5" /></div>
+                            <div>
+                              <p className={`font-semibold ${textPrimary}`}>{item.title}</p>
+                              <p className={`text-sm ${textSecondary}`}>{item.detail}</p>
+                              <p className={`text-xs ${textMuted}`}>{item.meta}</p>
+                            </div>
+                          </div>
+                          <button onClick={item.onClick} className="rounded-xl bg-brand-emerald-700 px-3 py-2 text-sm font-semibold text-white hover:bg-brand-emerald-800">
+                            {item.action}
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </section>
+
+            <section className={`${cardBg} rounded-3xl border ${cardBorder} p-5`}>
+              <div className="mb-4">
+                <p className={`text-xs uppercase tracking-[0.25em] ${textMuted}`}>Selected Client</p>
+                <h2 className={`text-xl font-bold ${textPrimary}`}>IFS support snapshot</h2>
+              </div>
+              {clients.length === 0 ? (
+                <div className={`rounded-2xl border ${cardBorder} p-8 text-center ${textSecondary}`}>No assigned clients yet.</div>
+              ) : selectedWorkspaceClient && (
+                <div className="space-y-4">
+                  <select value={selectedWorkspaceClient.id} onChange={(e) => setSelectedWorkspaceClientId(e.target.value)} className={`w-full rounded-xl border px-3 py-2 ${inputBg}`}>
+                    {clients.map((client) => <option key={client.id} value={client.id}>{client.name}</option>)}
+                  </select>
+                  <div className={`rounded-2xl border ${cardBorder} p-4 ${isDark ? 'bg-slate-900/35' : 'bg-white/70'}`}>
+                    <h3 className={`text-lg font-bold ${textPrimary}`}>{selectedWorkspaceClient.name}</h3>
+                    <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                      <div><p className={textMuted}>Latest check-in</p><p className={textPrimary}>{selectedClientLatestCheckIn ? `${selectedClientLatestCheckIn.status} · ${formatDate(selectedClientLatestCheckIn.created_at)}` : 'No check-ins yet'}</p></div>
+                      <div><p className={textMuted}>Assigned IFS practices</p><p className={textPrimary}>{selectedClientPractices.length ? `${selectedClientPractices.filter((p) => p.status === 'completed').length}/${selectedClientPractices.length} completed` : 'No assigned practices yet'}</p></div>
+                      <div><p className={textMuted}>Growth Goals</p><p className={textPrimary}>{selectedClientGoals.length || 'No active Growth Goals'}</p></div>
+                      <div><p className={textMuted}>Advisor Notes</p><p className={textPrimary}>{selectedWorkspaceClient.recentAdvisorNotesCount || selectedClientNotes.length || 'No recent notes'}</p></div>
+                      <div><p className={textMuted}>Inner system activity</p><p className={textPrimary}>{selectedWorkspaceClient.journalEntries} journal updates · {selectedWorkspaceClient.modulesCompleted}/{TOTAL_MODULES} modules</p></div>
+                      <div><p className={textMuted}>Recent activity</p><p className={textPrimary}>{selectedWorkspaceClient.lastActive ? getRelativeTime(selectedWorkspaceClient.lastActive) : 'No recent activity'}</p></div>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    {[
+                      ['Open Session Prep', () => { setSelectedPrepClientId(selectedWorkspaceClient.id); setActiveTab('session-prep'); }],
+                      ['Draft Session Note', () => { setDraftNotePrefill({ clientId: selectedWorkspaceClient.id, sessionDate: new Date().toISOString().split('T')[0] }); setActiveTab('clinical-notes'); }],
+                      ['Assign IFS Practice', () => navigate('/advisor-homework')],
+                      ['Open Growth Goals', () => setActiveTab('treatment-plans')],
+                      ['Open Advisor Notes', () => { setNoteForm((form) => ({ ...form, clientId: selectedWorkspaceClient.id })); setActiveTab('clinical-notes'); }],
+                      ['Start Live Guided Practice', () => navigate('/live-co-therapy')],
+                      ['View Healing Timeline', () => { setSelectedInsightClient(selectedWorkspaceClient.id); setActiveTab('insights'); }],
+                      ['View Analytics', () => navigate('/longitudinal-analytics')],
+                      ['Generate Report', () => navigate('/advisor-reports')]
+                    ].map(([label, onClick]) => (
+                      <button key={label} onClick={onClick} className={`rounded-xl border ${cardBorder} px-3 py-2 text-sm font-semibold ${textSecondary} ${hoverBg}`}>{label}</button>
+                    ))}
+                  </div>
+                  <p className={`rounded-2xl bg-brand-gold-50 p-3 text-xs ${isDark ? 'bg-brand-gold-900/20 text-brand-gold-100' : 'text-brand-stone-700'}`}>
+                    AI-assisted draft for Advisor review is available from Draft Session Note. It does not auto-generate, auto-save, or expose Advisor notes to clients.
+                  </p>
+                </div>
+              )}
+            </section>
+          </div>
+
+          <section>
+            <div className="mb-4">
+              <p className={`text-xs uppercase tracking-[0.25em] ${textMuted}`}>Assigned Clients</p>
+              <h2 className={`text-2xl font-serif ${textPrimary}`}>Assigned active clients</h2>
+            </div>
+            {clients.length === 0 ? (
+              <div className={`${cardBg} rounded-3xl border ${cardBorder} p-10 text-center ${textSecondary}`}>No assigned clients yet.</div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                {clients.slice(0, 6).map((client) => (
+                  <div key={client.id} className={`${cardBg} rounded-3xl border ${cardBorder} p-5`}>
+                    <div className="flex items-start justify-between gap-3">
+                      <div><h3 className={`font-bold ${textPrimary}`}>{client.name}</h3><p className={`text-xs ${textMuted}`}>{client.lastActive ? `Active ${getRelativeTime(client.lastActive)}` : 'No recent activity'}</p></div>
+                      <span className="rounded-full bg-brand-emerald-100 px-2.5 py-1 text-xs font-semibold text-brand-emerald-700">Assigned</span>
+                    </div>
+                    <div className="mt-4 space-y-2 text-sm">
+                      <p className={textSecondary}>Latest check-in: <span className={textPrimary}>{client.latestCheckInStatus === 'none' ? 'No check-ins yet' : client.latestCheckInStatus}</span></p>
+                      <p className={textSecondary}>Assigned practice status: <span className={textPrimary}>{client.assignedPracticeStatus === 'none' ? 'No assigned practices yet' : client.assignedPracticeStatus}</span></p>
+                      <p className={textSecondary}>Growth Goals: <span className={textPrimary}>{client.growthGoalsCount}</span></p>
+                    </div>
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      {[
+                        ['Session Prep', () => { setSelectedPrepClientId(client.id); setActiveTab('session-prep'); }],
+                        ['Assign Practice', () => navigate('/advisor-homework')],
+                        ['Growth Goals', () => setActiveTab('treatment-plans')],
+                        ['Advisor Notes', () => setActiveTab('clinical-notes')],
+                        ['Draft Session Note', () => { setDraftNotePrefill({ clientId: client.id, sessionDate: new Date().toISOString().split('T')[0] }); setActiveTab('clinical-notes'); }],
+                        ['Live Guided Practice', () => navigate('/live-co-therapy')],
+                        ['Analytics', () => navigate('/longitudinal-analytics')],
+                        ['Report', () => navigate('/advisor-reports')]
+                      ].map(([label, onClick]) => <button key={label} onClick={onClick} className={`rounded-full border ${cardBorder} px-3 py-1.5 text-xs font-semibold ${textSecondary} ${hoverBg}`}>{label}</button>)}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+
+          <div className="grid grid-cols-1 xl:grid-cols-[1fr_0.8fr] gap-6">
+            <section className={`${cardBg} rounded-3xl border ${cardBorder} p-5`}>
+              <p className={`text-xs uppercase tracking-[0.25em] ${textMuted}`}>Advisor Tools</p>
+              <h2 className={`mb-4 text-xl font-bold ${textPrimary}`}>Stable Advisor workflows</h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {advisorToolTiles.map((tool) => {
+                  const Icon = tool.icon;
+                  return <button key={tool.label} onClick={tool.onClick} className={`rounded-2xl border ${cardBorder} p-4 text-left ${hoverBg}`}><Icon className="mb-3 h-5 w-5 text-brand-emerald-700" /><p className={`font-semibold ${textPrimary}`}>{tool.label}</p><p className={`mt-1 text-xs ${textSecondary}`}>{tool.desc}</p></button>;
+                })}
+              </div>
+            </section>
+            <section className={`${cardBg} rounded-3xl border ${cardBorder} p-5`}>
+              <p className={`text-xs uppercase tracking-[0.25em] ${textMuted}`}>Recent Activity</p>
+              <h2 className={`mb-4 text-xl font-bold ${textPrimary}`}>Safe workspace updates</h2>
+              {safeActivityItems.length === 0 ? (
+                <div className={`rounded-2xl border ${cardBorder} p-8 text-center ${textSecondary}`}>No recent Advisor activity yet.</div>
+              ) : (
+                <div className="space-y-3">
+                  {safeActivityItems.map((activity) => {
+                    const Icon = activity.icon;
+                    return <div key={activity.id} className={`flex items-start gap-3 rounded-2xl border ${cardBorder} p-3`}><Icon className="mt-0.5 h-4 w-4 text-brand-gold-600" /><div><p className={`text-sm font-semibold ${textPrimary}`}>{activity.title}</p><p className={`text-xs ${textSecondary}`}>{activity.detail}</p><p className={`text-xs ${textMuted}`}>{activity.time ? getRelativeTime(activity.time) : 'Recently'}</p></div></div>;
+                  })}
+                </div>
+              )}
+            </section>
+          </div>
+        </div>
+      )}
 
       {activeTab === 'session-prep' && (
         <div className="grid grid-cols-1 xl:grid-cols-[0.9fr_1.1fr] gap-6">
@@ -3192,17 +3582,17 @@ const TherapistDashboard = () => {
             <div>
               <h2 className={`text-lg font-bold ${textPrimary} mb-2 flex items-center gap-2 tracking-tight`}>
                 <TrendingUp className="w-5 h-5 text-blue-500" />
-                Longitudinal Analytics
+                Longitudinal Insights
               </h2>
               <p className={`text-sm ${textSecondary} max-w-2xl`}>
-                Open the dedicated analytics workspace to select an assigned client and review mood, journal, parts, homework, session agenda, and treatment-plan trends. Heavy aggregation stays in the secure analytics API and is not loaded for every dashboard client.
+                Open the dedicated insights workspace to select an assigned client and review mood, journal, parts, assigned IFS practice, session agenda, and Growth Goal trends. Heavy aggregation stays in the secure analytics API and is not loaded for every dashboard client.
               </p>
             </div>
             <button
               onClick={() => navigate('/analytics')}
               className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:from-blue-700 hover:to-indigo-700"
             >
-              View Longitudinal Analytics
+              View Longitudinal Insights
               <ChevronRight className="h-4 w-4" />
             </button>
           </div>
@@ -3339,7 +3729,7 @@ const TherapistDashboard = () => {
                                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border ${cardBorder} ${hoverBg} ${textSecondary} transition-colors`}
                                 >
                                   <Target className="w-3 h-3" />
-                                  Assign Homework
+                                  Assign Practice
                                 </button>
                               </div>
                             </div>
@@ -3420,9 +3810,9 @@ const TherapistDashboard = () => {
                 { id: 'send-reminder', label: 'Send Reminder', icon: MessageSquare, color: 'from-brand-emerald-600 to-brand-emerald-700', desc: 'Send session or activity reminders to clients' },
                 { id: 'link:/caseload', label: 'Caseload Manager', icon: Users, color: 'from-emerald-500 to-teal-600', desc: 'Assign, discharge, and reactivate clients' },
                 { id: 'link:/advisor-messages', label: 'Client Messages', icon: MessageCircle, color: 'from-brand-stone-500 to-brand-stone-600', desc: 'Send and receive secure messages with clients' },
-                { id: 'link:/advisor-homework', label: 'Homework Manager', icon: Target, color: 'from-brand-gold-600 to-brand-emerald-700', desc: 'Create, assign, and track client homework' },
-                { id: 'link:/advisor-reports', label: 'Progress Reports', icon: Download, color: 'from-emerald-500 to-teal-600', desc: 'Generate and export client progress reports' },
-                { id: 'link:/analytics', label: 'Longitudinal Analytics', icon: TrendingUp, color: 'from-blue-500 to-indigo-600', desc: 'Review secure trends for one assigned client at a time' },
+                { id: 'link:/advisor-homework', label: 'Assigned Practices', icon: Target, color: 'from-brand-gold-600 to-brand-emerald-700', desc: 'Create, assign, and review assigned IFS practices' },
+                { id: 'link:/advisor-reports', label: 'Advisor Reports', icon: Download, color: 'from-emerald-500 to-teal-600', desc: 'Generate and export client progress reports' },
+                { id: 'link:/analytics', label: 'Longitudinal Insights', icon: TrendingUp, color: 'from-blue-500 to-indigo-600', desc: 'Review secure trends for one assigned client at a time' },
                 { id: 'link:/assessment-builder', label: 'Assessment Builder', icon: FileText, color: 'from-brand-gold-600 to-brand-emerald-700', desc: 'Create custom assessments for clients' },
                 { id: 'link:/mood-analytics', label: 'Mood & Parts Analytics', icon: TrendingUp, color: 'from-brand-stone-500 to-brand-gold-600', desc: 'View mood trends, parts patterns, and self-energy over time' },
                 { id: 'export-reports', label: 'Export All Reports', icon: Download, color: 'from-brand-gold-600 to-brand-emerald-700', desc: 'Download comprehensive progress reports' },
@@ -4374,7 +4764,7 @@ const TherapistDashboard = () => {
                       <div className={`mt-5 p-4 rounded-lg ${isDark ? 'bg-slate-700/50' : 'bg-amber-50'} border ${isDark ? 'border-slate-600' : 'border-amber-100'}`}>
                         <div className="flex items-center gap-2 mb-2">
                           <BookOpen className="w-4 h-4 text-amber-500" />
-                          <h4 className={`font-medium ${textPrimary} text-sm`}>Homework Assignment</h4>
+                          <h4 className={`font-medium ${textPrimary} text-sm`}>Assigned IFS Practice</h4>
                         </div>
                         <p className={`text-sm ${textSecondary}`}>{module.homework}</p>
                       </div>
@@ -5438,7 +5828,7 @@ const TherapistDashboard = () => {
                     { id: 'journal', label: 'Journals', icon: PenTool },
                     { id: 'assessment', label: 'Assessments', icon: ClipboardCheck },
                     { id: 'mood', label: 'Moods', icon: Smile },
-                    { id: 'homework', label: 'Homework', icon: ClipboardCheck },
+                    { id: 'homework', label: 'Assigned Practice', icon: ClipboardCheck },
                     { id: 'checkin', label: 'Check-Ins', icon: CheckCircle }
                   ];
                   const filtered = timelineFilter === 'all'
@@ -5562,7 +5952,7 @@ const TherapistDashboard = () => {
               <Heart className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h2 className={`text-lg font-semibold ${textPrimary}`}>Co-Therapy Sessions</h2>
+              <h2 className={`text-lg font-semibold ${textPrimary}`}>Live Guided Practice Sessions</h2>
               <p className={`text-sm ${textSecondary}`}>Guide therapy activities together with your client in real time</p>
             </div>
           </div>
@@ -5590,7 +5980,7 @@ const TherapistDashboard = () => {
                 className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-emerald-500 to-rose-600 text-white rounded-lg font-medium hover:from-emerald-600 hover:to-rose-700 transition-all shadow-md"
               >
                 <Play className="w-4 h-4" />
-                Live Co-Therapy
+                Live Guided Practice
               </Link>
               <Link
                 to="/co-therapy"
@@ -5609,7 +5999,7 @@ const TherapistDashboard = () => {
                 className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg border border-emerald-200 text-emerald-700 dark:text-emerald-200 font-medium hover:bg-emerald-50 dark:hover:bg-emerald-950/30 transition-all"
               >
                 <Play className="w-4 h-4" />
-                Legacy Co-Therapy Guide
+                Legacy Live Guided Practice Guide
               </Link>
             </div>
           </div>
@@ -5666,7 +6056,7 @@ const TherapistDashboard = () => {
               { title: 'Guided Unburdening Protocol', desc: '8-step digital unburdening ceremony with guided prompts, visualization, and burden release tracking. Includes post-unburdening integration exercises. Available under Therapy Integration.', icon: Heart, color: 'from-rose-500 to-emerald-600', status: 'Live' },
               { title: 'Assessment Builder', desc: 'Create custom assessments tailored to your practice — define questions, scoring, and wound mappings. Generate shareable client links. Available under Quick Actions.', icon: Target, color: 'from-sky-500 to-blue-600', status: 'Live' },
               { title: 'Parts Dialogue Voice Mode', desc: 'Voice-guided parts dialogue where clients speak to their parts using speech recognition, with AI facilitating the conversation and text-to-speech responses. Available under Parts Dialogue.', icon: MessageCircle, color: 'from-teal-500 to-emerald-600', status: 'Live' },
-              { title: 'AI-Powered Session Summaries', desc: 'Automatically generate structured session summaries from advisor notes using AI, with key themes, parts identified, progress markers, and suggested homework — saving advisors 15+ minutes per session.', icon: Sparkles, color: 'from-amber-500 to-stone-600', status: 'In Development' },
+              { title: 'AI-Powered Session Summaries', desc: 'Automatically generate structured session summaries from advisor notes using AI, with key themes, parts identified, progress markers, and suggested assigned IFS practice — saving advisors 15+ minutes per session.', icon: Sparkles, color: 'from-amber-500 to-stone-600', status: 'In Development' },
               { title: 'Mood & Parts Pattern Analytics', desc: 'Advanced analytics dashboard showing correlations between mood entries, active parts, triggers, and healing progress over time — with trend detection and early warning alerts.', icon: TrendingUp, color: 'from-emerald-500 to-teal-600', status: 'Live', link: '/mood-analytics' },
               { title: 'Client Self-Check-In Between Sessions', desc: 'Daily micro check-ins where clients rate their parts activity, Self-energy level, and emotional state — with automatic alerts to advisor if concerning patterns emerge.', icon: Activity, color: 'from-amber-500 to-yellow-600', status: 'Live', link: '/daily-checkin' },
               { title: 'Secure Video Session Integration', desc: 'Built-in HIPAA-compliant video sessions with real-time parts tracking sidebar, live session notes, and automatic recording transcription for review.', icon: Play, color: 'from-red-500 to-orange-600', status: 'Researching' },
@@ -5719,7 +6109,7 @@ const TherapistDashboard = () => {
                   <div>
                     <p className={`text-sm font-semibold ${isDark ? 'text-red-400' : 'text-red-700'}`}>This action is permanent and cannot be undone.</p>
                     <p className={`text-sm mt-1 ${isDark ? 'text-red-300/80' : 'text-red-600/80'}`}>
-                      All data for <strong>{deletingClient.name}</strong> will be permanently deleted, including assessments, progress, journal entries, parts, messages, homework, and curriculum.
+                      All data for <strong>{deletingClient.name}</strong> will be permanently deleted, including assessments, progress, journal entries, parts, messages, assigned IFS practices, and curriculum.
                     </p>
                   </div>
                 </div>

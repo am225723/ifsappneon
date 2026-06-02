@@ -389,9 +389,9 @@ export default function CoTherapySession() {
         <div className={`${cardBg} rounded-xl border ${cardBorder} p-12 text-center`}>
           <Heart className={`w-12 h-12 mx-auto mb-4 ${textMuted}`} />
           <h2 className={`text-xl font-semibold ${textPrimary} mb-2`}>No Client Selected</h2>
-          <p className={`${textSecondary} mb-4`}>Please select a client from the Therapist Dashboard to begin a co-therapy session.</p>
+          <p className={`${textSecondary} mb-4`}>Please select an assigned client from the Advisor Workspace to begin a live guided practice.</p>
           <button onClick={() => navigate('/therapist-dashboard')} className="px-5 py-2.5 bg-amber-600 text-white rounded-lg font-medium hover:bg-amber-700 transition-colors">
-            Go to Dashboard
+            Go to Advisor Workspace
           </button>
         </div>
       </div>
@@ -413,7 +413,7 @@ export default function CoTherapySession() {
           <div className="flex items-center gap-2">
             <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full ${isDark ? 'bg-emerald-900/30' : 'bg-emerald-50'} border ${isDark ? 'border-emerald-800' : 'border-emerald-200'}`}>
               <Heart className="w-4 h-4 text-emerald-500" />
-              <span className={`text-sm font-medium ${textPrimary}`}>Co-Therapy with {selectedClientName}</span>
+              <span className={`text-sm font-medium ${textPrimary}`}>Live Guided Practice with {selectedClientName}</span>
             </div>
             <button
               onClick={() => setPartsMapOpen(!partsMapOpen)}
@@ -653,8 +653,8 @@ export default function CoTherapySession() {
             <Heart className="w-5 h-5 text-white" />
           </div>
           <div>
-            <h1 className={`text-2xl font-bold ${textPrimary}`}>Co-Therapy Session</h1>
-            <p className={`text-sm ${textSecondary}`}>Guiding therapy activities with <span className="font-semibold text-emerald-500">{selectedClientName}</span></p>
+            <h1 className={`text-2xl font-bold ${textPrimary}`}>Live Guided Practice Session</h1>
+            <p className={`text-sm ${textSecondary}`}>Guiding IFS practices with <span className="font-semibold text-emerald-500">{selectedClientName}</span></p>
           </div>
         </div>
       </div>

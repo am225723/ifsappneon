@@ -107,10 +107,10 @@ export default function LiveCoTherapy() {
       <div className="soft-card p-6 border border-brand-emerald-100 dark:border-slate-700">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div>
-            <p className="text-xs font-bold uppercase tracking-[0.24em] text-brand-emerald-700 dark:text-brand-emerald-100">Live Co-Therapy</p>
+            <p className="text-xs font-bold uppercase tracking-[0.24em] text-brand-emerald-700 dark:text-brand-emerald-100">Live Guided Practice</p>
             <h1 className="text-3xl font-serif text-brand-stone-900 dark:text-slate-100 mt-2">Synchronized session workspace</h1>
             <p className="text-sm text-brand-stone-600 dark:text-slate-400 mt-2 max-w-3xl">
-              Launch lightweight therapist-guided exercises on an assigned client&apos;s screen. No video, audio, recording, transcripts, or emergency monitoring are included.
+              Launch lightweight Advisor-guided practices on an assigned client&apos;s screen. No video, audio, recording, transcripts, or emergency monitoring are included.
             </p>
           </div>
           <HeartPulse className="w-12 h-12 text-brand-emerald-700 dark:text-brand-emerald-100" />
