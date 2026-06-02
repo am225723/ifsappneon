@@ -10,7 +10,7 @@ async function getAuthToken() {
   return null;
 }
 
-async function liveSessionRequest(payload) {
+export async function liveSessionRequest(payload) {
   const token = await getAuthToken();
   const response = await fetch(LIVE_SESSION_API_PATH, {
     method: 'POST',
