@@ -1,5 +1,5 @@
 /* global process */
-import { sql, isAdminUser, isTherapistUser } from './_auth.js';
+import { sql, isAdminUser, isTherapistUser, getCurrentAppUserFromClerk } from './_auth.js';
 
 const TABLES = new Set([
   'ifs_clients',
@@ -152,23 +152,6 @@ function buildUpsert(table, values, onConflict, params) {
     : 'DO NOTHING';
 
   return `${insertSql} ON CONFLICT (${conflictSql}) ${updateSql} RETURNING *`;
-}
-
-async function getCurrentAppUserFromClerk(req) {
-  if (process.env.ALLOW_PIN_AUTH_WITHOUT_CLERK === 'true') return null;
-  const auth = req.headers.authorization || '';
-  const token = auth.startsWith('Bearer ') ? auth.slice(7) : null;
-  if (!token) throw Object.assign(new Error('Missing Clerk bearer token'), { statusCode: 401 });
-
-  const { verifyToken } = await import('@clerk/backend');
-  const payload = await verifyToken(token, {
-    secretKey: process.env.CLERK_SECRET_KEY,
-    authorizedParties: process.env.CLERK_AUTHORIZED_PARTIES?.split(',').map((v) => v.trim()).filter(Boolean)
-  });
-
-  const rows = await sql.query('SELECT * FROM ifs_clients WHERE clerk_user_id = $1 LIMIT 1', [payload.sub]);
-  if (!rows[0]) throw Object.assign(new Error('No IFS app user is linked to this Clerk account'), { statusCode: 403 });
-  return rows[0];
 }
 
 const CLIENT_SCOPED_TABLES = new Set([

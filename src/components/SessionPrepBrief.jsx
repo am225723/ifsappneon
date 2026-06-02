@@ -77,11 +77,19 @@ export default function SessionPrepBrief({ clientId, therapistId, clients = [] }
     }
     setLoading(true);
     setError('');
-    const { data, error: loadError } = await loadTherapistClientSessionAgendas(resolvedTherapistId, selectedClientId);
-    setAgendas(data || []);
-    setReviewNotes(data?.[0]?.therapist_notes || '');
-    if (loadError) setError(loadError.message || 'Unable to load session agendas.');
-    setLoading(false);
+    try {
+      const { data, error: loadError } = await loadTherapistClientSessionAgendas(resolvedTherapistId, selectedClientId);
+      if (loadError) throw loadError;
+      setAgendas(data || []);
+      setReviewNotes(data?.[0]?.therapist_notes || '');
+    } catch (loadError) {
+      console.error('Unable to load session agendas:', loadError);
+      setAgendas([]);
+      setReviewNotes('');
+      setError(loadError.message || 'Unable to load session agendas.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -97,15 +105,21 @@ export default function SessionPrepBrief({ clientId, therapistId, clients = [] }
     }
 
     setAiLoading(true);
-    const { data, error: summaryError } = await generateSessionPrepSummary({ clientId: selectedClientId, rangeDays: 7 });
-    setAiLoading(false);
+    try {
+      const { data, error: summaryError } = await generateSessionPrepSummary({ clientId: selectedClientId, rangeDays: 7 });
 
-    if (summaryError) {
+      if (summaryError) {
+        setAiError(formatAiError(summaryError));
+        return;
+      }
+
+      setAiSummary(data);
+    } catch (summaryError) {
+      console.error('Unable to generate AI session prep summary:', summaryError);
       setAiError(formatAiError(summaryError));
-      return;
+    } finally {
+      setAiLoading(false);
     }
-
-    setAiSummary(data);
   };
 
   const markReviewed = async () => {
@@ -113,14 +127,20 @@ export default function SessionPrepBrief({ clientId, therapistId, clients = [] }
     setSaving(true);
     setMessage('');
     setError('');
-    const { error: reviewError } = await markSessionAgendaReviewed(latestAgenda.id, reviewNotes);
-    setSaving(false);
-    if (reviewError) {
+    try {
+      const { error: reviewError } = await markSessionAgendaReviewed(latestAgenda.id, reviewNotes);
+      if (reviewError) {
+        setError(reviewError.message || 'Unable to mark agenda reviewed.');
+        return;
+      }
+      setMessage('Agenda marked reviewed.');
+      await loadAgendas();
+    } catch (reviewError) {
+      console.error('Unable to mark agenda reviewed:', reviewError);
       setError(reviewError.message || 'Unable to mark agenda reviewed.');
-      return;
+    } finally {
+      setSaving(false);
     }
-    setMessage('Agenda marked reviewed.');
-    await loadAgendas();
   };
 
   return (

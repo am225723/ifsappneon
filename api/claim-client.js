@@ -1,30 +1,4 @@
-import { neon } from '@neondatabase/serverless';
-import { verifyToken } from '@clerk/backend';
-
-const sql = neon(process.env.DATABASE_URL);
-
-function getAuthorizedParties() {
-  return process.env.CLERK_AUTHORIZED_PARTIES
-    ?.split(',')
-    .map((value) => value.trim())
-    .filter(Boolean);
-}
-
-async function requireClerkUser(req) {
-  const auth = req.headers.authorization || '';
-  const token = auth.startsWith('Bearer ') ? auth.slice(7) : null;
-
-  if (!token) {
-    throw Object.assign(new Error('Missing Clerk bearer token'), { statusCode: 401 });
-  }
-
-  const payload = await verifyToken(token, {
-    secretKey: process.env.CLERK_SECRET_KEY,
-    authorizedParties: getAuthorizedParties()
-  });
-
-  return payload.sub;
-}
+import { verifyClerkUser, sql } from './_auth.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -33,7 +7,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const clerkUserId = await requireClerkUser(req);
+    const clerkUserId = await verifyClerkUser(req);
     const { pin } = req.body || {};
 
     if (!pin || !/^\d{6}$/.test(String(pin))) {
@@ -70,6 +44,7 @@ export default async function handler(req, res) {
 
     return res.status(200).json({ client: updated[0] });
   } catch (error) {
-    return res.status(error.statusCode || 401).json({ error: error.message });
+    const status = error.statusCode || 401;
+    return res.status(status).json({ error: status === 500 ? 'Server environment is not configured.' : error.message });
   }
 }
