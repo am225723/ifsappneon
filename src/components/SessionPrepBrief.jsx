@@ -44,7 +44,7 @@ function AiSummaryContent({ summary }) {
   );
 }
 
-export default function SessionPrepBrief({ clientId, therapistId, clients = [] }) {
+export default function SessionPrepBrief({ clientId, therapistId, clients = [], onDraftSessionNote = null }) {
   const therapist = clientAuth.getCurrentClient();
   const resolvedTherapistId = therapistId || therapist?.id;
   const [selectedClientId, setSelectedClientId] = useState(clientId || '');
@@ -176,7 +176,18 @@ export default function SessionPrepBrief({ clientId, therapistId, clients = [] }
                 <p className="text-sm font-semibold text-blue-950">Session date: {formatDate(latestAgenda.session_date)}</p>
                 <p className="text-xs text-blue-600">Submitted: {formatDate(latestAgenda.created_at)}</p>
               </div>
-              <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${latestAgenda.status === 'reviewed' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>{latestAgenda.status}</span>
+              <div className="flex flex-wrap items-center gap-2">
+                {onDraftSessionNote && (
+                  <button
+                    type="button"
+                    onClick={() => onDraftSessionNote({ clientId: selectedClientId, sessionDate: latestAgenda.session_date || new Date().toISOString().slice(0, 10) })}
+                    className="rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white"
+                  >
+                    Draft Session Note
+                  </button>
+                )}
+                <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${latestAgenda.status === 'reviewed' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>{latestAgenda.status}</span>
+              </div>
             </div>
 
             {latestAgenda.safety_concerns && (
