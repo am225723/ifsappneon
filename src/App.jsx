@@ -36,6 +36,8 @@ import PartsDialogue from './pages/PartsDialogue';
 import TherapistMessages from './pages/TherapistMessages';
 import TherapistHomework from './pages/TherapistHomework';
 import TherapistReports from './pages/TherapistReports';
+import LiveCoTherapy from './pages/LiveCoTherapy';
+import ClientLiveSession from './pages/ClientLiveSession';
 import ClientInbox from './pages/ClientInbox';
 import ClientHomework from './pages/ClientHomework';
 import PreSessionCheckin from './components/PreSessionCheckin';
@@ -528,6 +530,7 @@ function AppContent({ authChecked, clerkLoaded, clerkSignedIn, isAuthenticated, 
                 <Route path="/treatment-plans" element={therapistOnly(<TreatmentPlans />)} />
                 <Route path="/admin-hub" element={isAdminOrSupervisor ? <AdminHub /> : <UnauthorizedRedirect currentClient={currentClient} message="Admin or supervisor access is required for this page." />} />
                 <Route path="/co-therapy" element={therapistOnly(<CoTherapySession />)} />
+                <Route path="/live-co-therapy" element={therapistOnly(<LiveCoTherapy />)} />
                 <Route path="/caseload" element={therapistOnly(<CaseloadManager />)} />
                 <Route path="/advisor-messages" element={therapistOnly(<TherapistMessages />)} />
                 <Route path="/messages" element={therapistOnly(<TherapistMessages />)} />
@@ -540,6 +543,7 @@ function AppContent({ authChecked, clerkLoaded, clerkSignedIn, isAuthenticated, 
                 <Route path="/my-homework" element={clientOnly(<ClientHomework />)} />
                 <Route path="/homework" element={clientOnly(<ClientHomework />)} />
                 <Route path="/pre-session-checkin" element={clientOnly(<PreSessionCheckin />)} />
+                <Route path="/live-session" element={clientOnly(<ClientLiveSession />)} />
                 <Route path="/progress-timeline" element={<ProgressTimeline />} />
                 <Route path="/healing-timeline" element={clientOnly(<HealingTimeline />)} />
                 <Route path="/mood-tracker" element={<MoodTracker />} />
