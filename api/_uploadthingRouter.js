@@ -1,8 +1,7 @@
 import { createUploadthing } from 'uploadthing/server';
-import { neon } from '@neondatabase/serverless';
+import { sql } from './_auth.js';
 
 const f = createUploadthing();
-const sql = neon(process.env.DATABASE_URL);
 
 export const ourFileRouter = {
   ifsAttachment: f({

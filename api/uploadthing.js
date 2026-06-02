@@ -1,22 +1,14 @@
 import { createRouteHandler } from 'uploadthing/server';
-import { verifyToken } from '@clerk/backend';
-import { ourFileRouter } from '../src/lib/uploadthingServer.js';
+import { verifyClerkUser } from './_auth.js';
+import { ourFileRouter } from './_uploadthingRouter.js';
 
 async function getUserId(req) {
-  const auth = req.headers.authorization || '';
-  const token = auth.startsWith('Bearer ') ? auth.slice(7) : null;
-
-  if (!token) {
+  const clerkUserId = await verifyClerkUser(req);
+  if (!clerkUserId) {
     if (process.env.ALLOW_PIN_AUTH_WITHOUT_CLERK === 'true') return 'pin-auth-user';
     throw new Error('Missing Clerk bearer token');
   }
-
-  const payload = await verifyToken(token, {
-    secretKey: process.env.CLERK_SECRET_KEY,
-    authorizedParties: process.env.CLERK_AUTHORIZED_PARTIES?.split(',').map((v) => v.trim()).filter(Boolean)
-  });
-
-  return payload.sub;
+  return clerkUserId;
 }
 
 const handlers = createRouteHandler({
@@ -34,6 +26,7 @@ export default async function handler(req, res) {
     req.userId = await getUserId(req);
     return handlers(req, res);
   } catch (error) {
-    return res.status(401).json({ error: error.message });
+    const status = error.statusCode || 401;
+    return res.status(status).json({ error: status === 500 ? 'Server environment is not configured.' : error.message });
   }
 }

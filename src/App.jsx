@@ -187,6 +187,20 @@ function FeatureGate({ feature, children }) {
   return children;
 }
 
+
+function UnauthorizedRedirect({ currentClient, message = 'This area is not available for your role.' }) {
+  return (
+    <div className="max-w-2xl mx-auto px-4 py-12">
+      <div className="soft-card p-6 text-center">
+        <h1 className="text-xl font-semibold text-brand-stone-900 dark:text-slate-100">Access restricted</h1>
+        <p className="mt-2 text-sm text-brand-stone-600 dark:text-slate-400">{message}</p>
+        <Link to="/" className="btn-sanctuary-primary inline-flex mt-5">Return home</Link>
+      </div>
+      <div className="sr-only">Current role: {currentClient?.user_role || 'unknown'}</div>
+    </div>
+  );
+}
+
 function BottomNav() {
   const location = useLocation();
   const navItems = [
@@ -368,9 +382,14 @@ function AppContent({ authChecked, clerkLoaded, clerkSignedIn, isAuthenticated, 
   const location = useLocation();
   const bgClass = isAuthenticated ? 'bg-brand-sanctuary dark:bg-brand-midnight' : '';
   const [unreadMsgCount, setUnreadMsgCount] = useState(0);
+  const isClient = currentClient?.user_role === 'client';
   const isTherapist = currentClient?.user_role === 'therapist';
   const isAdminOrSupervisor = currentClient?.user_role === 'admin' || currentClient?.user_role === 'supervisor';
-  const messagePath = isTherapist ? '/advisor-messages' : '/inbox';
+  const isTherapistRole = isTherapist || isAdminOrSupervisor;
+  const messagePath = isTherapistRole ? '/messages' : '/inbox';
+  const homeElement = <Home clientId={currentClient?.id} client={currentClient} />;
+  const clientOnly = (element, message) => isClient ? element : <UnauthorizedRedirect currentClient={currentClient} message={message || 'Client workspace access is required for this page.'} />;
+  const therapistOnly = (element, message) => isTherapistRole ? element : <UnauthorizedRedirect currentClient={currentClient} message={message || 'Therapist, supervisor, or admin access is required for this page.'} />;
 
   const fetchUnreadCount = useCallback(async () => {
     if (!currentClient?.id) return;
@@ -440,7 +459,7 @@ function AppContent({ authChecked, clerkLoaded, clerkSignedIn, isAuthenticated, 
             messagePath={messagePath}
             rightSlot={
               <>
-                {(isTherapist || isAdminOrSupervisor) && (
+                {isTherapistRole && (
                   <Link
                     to={isAdminOrSupervisor ? '/admin-hub' : '/therapist-dashboard'}
                     className="p-2.5 rounded-xl transition-all text-brand-stone-500 dark:text-slate-400 hover:text-brand-gold-700 dark:hover:text-brand-gold-500 hover:bg-brand-gold-50 dark:hover:bg-slate-800/50"
@@ -482,7 +501,8 @@ function AppContent({ authChecked, clerkLoaded, clerkSignedIn, isAuthenticated, 
               
               <div className="pb-20">
               <Routes>
-                <Route path="/" element={<Home clientId={currentClient?.id} client={currentClient} />} />
+                <Route path="/" element={homeElement} />
+                <Route path="/home" element={clientOnly(homeElement)} />
                 <Route path="/curriculum" element={<CurriculumSystem clientId={currentClient?.id} userProgress={{}} />} />
                 <Route path="/curriculum/module/:moduleId" element={<LearningModuleRenderer userProgress={{}} />} />
                 <Route path="/cheat-sheet" element={<CheatSheet />} />
@@ -502,74 +522,26 @@ function AppContent({ authChecked, clerkLoaded, clerkSignedIn, isAuthenticated, 
                 <Route path="/micro-learning" element={<MicroLearning />} />
                 <Route path="/affirmations" element={<Affirmations />} />
                 <Route path="/therapy" element={<TherapyIntegration />} />
-                <Route path="/admin" element={
-                  currentClient?.user_role === 'therapist' 
-                    ? <TherapistDashboard /> 
-                    : <Home clientId={currentClient?.id} client={currentClient} />
-                } />
-                <Route path="/therapist-dashboard" element={
-                  currentClient?.user_role === 'therapist'
-                    ? <TherapistDashboard />
-                    : <Home clientId={currentClient?.id} client={currentClient} />
-                } />
-                <Route path="/treatment-plans" element={
-                  currentClient?.user_role === 'therapist'
-                    ? <TreatmentPlans />
-                    : <Home clientId={currentClient?.id} client={currentClient} />
-                } />
-                <Route path="/admin-hub" element={
-                  isAdminOrSupervisor
-                    ? <AdminHub />
-                    : <Home clientId={currentClient?.id} client={currentClient} />
-                } />
-                <Route path="/co-therapy" element={
-                  currentClient?.user_role === 'therapist'
-                    ? <CoTherapySession />
-                    : <Home clientId={currentClient?.id} client={currentClient} />
-                } />
-                <Route path="/caseload" element={
-                  currentClient?.user_role === 'therapist'
-                    ? <CaseloadManager />
-                    : <Home clientId={currentClient?.id} client={currentClient} />
-                } />
-                <Route path="/advisor-messages" element={
-                  currentClient?.user_role === 'therapist'
-                    ? <TherapistMessages />
-                    : <Home clientId={currentClient?.id} client={currentClient} />
-                } />
-                <Route path="/advisor-homework" element={
-                  currentClient?.user_role === 'therapist'
-                    ? <TherapistHomework />
-                    : <Home clientId={currentClient?.id} client={currentClient} />
-                } />
-                <Route path="/advisor-reports" element={
-                  currentClient?.user_role === 'therapist'
-                    ? <TherapistReports />
-                    : <Home clientId={currentClient?.id} client={currentClient} />
-                } />
-                <Route path="/analytics" element={
-                  ['therapist', 'admin', 'supervisor'].includes(currentClient?.user_role)
-                    ? <LongitudinalAnalytics />
-                    : <Home clientId={currentClient?.id} client={currentClient} />
-                } />
-                <Route path="/longitudinal-analytics" element={
-                  ['therapist', 'admin', 'supervisor'].includes(currentClient?.user_role)
-                    ? <LongitudinalAnalytics />
-                    : <Home clientId={currentClient?.id} client={currentClient} />
-                } />
-                <Route path="/inbox" element={
-                  currentClient?.user_role === 'therapist'
-                    ? <TherapistMessages />
-                    : <ClientInbox />
-                } />
-                <Route path="/my-homework" element={<ClientHomework />} />
-                <Route path="/pre-session-checkin" element={<PreSessionCheckin />} />
+                <Route path="/admin" element={therapistOnly(<TherapistDashboard />)} />
+                <Route path="/therapist" element={therapistOnly(<TherapistDashboard />)} />
+                <Route path="/therapist-dashboard" element={therapistOnly(<TherapistDashboard />)} />
+                <Route path="/treatment-plans" element={therapistOnly(<TreatmentPlans />)} />
+                <Route path="/admin-hub" element={isAdminOrSupervisor ? <AdminHub /> : <UnauthorizedRedirect currentClient={currentClient} message="Admin or supervisor access is required for this page." />} />
+                <Route path="/co-therapy" element={therapistOnly(<CoTherapySession />)} />
+                <Route path="/caseload" element={therapistOnly(<CaseloadManager />)} />
+                <Route path="/advisor-messages" element={therapistOnly(<TherapistMessages />)} />
+                <Route path="/messages" element={therapistOnly(<TherapistMessages />)} />
+                <Route path="/advisor-homework" element={therapistOnly(<TherapistHomework />)} />
+                <Route path="/advisor-reports" element={therapistOnly(<TherapistReports />)} />
+                <Route path="/reports" element={therapistOnly(<TherapistReports />)} />
+                <Route path="/analytics" element={therapistOnly(<LongitudinalAnalytics />)} />
+                <Route path="/longitudinal-analytics" element={therapistOnly(<LongitudinalAnalytics />)} />
+                <Route path="/inbox" element={clientOnly(<ClientInbox />)} />
+                <Route path="/my-homework" element={clientOnly(<ClientHomework />)} />
+                <Route path="/homework" element={clientOnly(<ClientHomework />)} />
+                <Route path="/pre-session-checkin" element={clientOnly(<PreSessionCheckin />)} />
                 <Route path="/progress-timeline" element={<ProgressTimeline />} />
-                <Route path="/healing-timeline" element={
-                  currentClient?.user_role === 'client'
-                    ? <HealingTimeline />
-                    : <Home clientId={currentClient?.id} client={currentClient} />
-                } />
+                <Route path="/healing-timeline" element={clientOnly(<HealingTimeline />)} />
                 <Route path="/mood-tracker" element={<MoodTracker />} />
                 <Route path="/gamification" element={<GamificationHub />} />
                 <Route path="/parts-dialogue" element={<FeatureGate feature="partsDialogue"><PartsDialogue /></FeatureGate>} />
@@ -579,7 +551,7 @@ function AppContent({ authChecked, clerkLoaded, clerkSignedIn, isAuthenticated, 
                 <Route path="/custom-assessment/:assessmentId" element={<CustomAssessment />} />
                 <Route path="/meditation" element={<FeatureGate feature="meditations"><GuidedMeditation /></FeatureGate>} />
                 <Route path="/daily-checkin" element={<FeatureGate feature="dailyCheckin"><DailyCheckin /></FeatureGate>} />
-                <Route path="/mood-analytics" element={<FeatureGate feature="moodAnalytics"><MoodAnalytics /></FeatureGate>} />
+                <Route path="/mood-analytics" element={clientOnly(<FeatureGate feature="moodAnalytics"><MoodAnalytics /></FeatureGate>)} />
                 <Route path="/milestones" element={<FeatureGate feature="milestones"><Milestones /></FeatureGate>} />
                 <Route path="/weekly-reflection" element={<FeatureGate feature="weeklyReflection"><WeeklyReflection /></FeatureGate>} />
                 <Route path="/letters" element={<FeatureGate feature="letters"><LetterWriting /></FeatureGate>} />

@@ -2,7 +2,33 @@
 import { neon } from '@neondatabase/serverless';
 import { verifyToken } from '@clerk/backend';
 
-export const sql = neon(process.env.DATABASE_URL);
+function requiredServerEnv(name) {
+  const value = process.env[name];
+  if (!value) {
+    throw Object.assign(new Error(`${name} is not configured on the server.`), {
+      statusCode: 500,
+      code: `${name.toLowerCase()}_missing`
+    });
+  }
+  return value;
+}
+
+function createMissingDatabaseClient() {
+  const missing = () => {
+    throw Object.assign(new Error('DATABASE_URL is not configured on the server.'), {
+      statusCode: 500,
+      code: 'database_url_missing'
+    });
+  };
+  missing.query = missing;
+  return missing;
+}
+
+export function requireServerEnv(name) {
+  return requiredServerEnv(name);
+}
+
+export const sql = process.env.DATABASE_URL ? neon(process.env.DATABASE_URL) : createMissingDatabaseClient();
 
 export const THERAPIST_ROLES = new Set(['therapist', 'admin', 'supervisor']);
 export const ADMIN_ROLES = new Set(['admin', 'supervisor']);
@@ -21,7 +47,7 @@ export async function verifyClerkUser(req) {
   if (!token) throw Object.assign(new Error('Missing Clerk bearer token'), { statusCode: 401 });
 
   const payload = await verifyToken(token, {
-    secretKey: process.env.CLERK_SECRET_KEY,
+    secretKey: requiredServerEnv('CLERK_SECRET_KEY'),
     authorizedParties: getAuthorizedParties()
   });
   return payload.sub;

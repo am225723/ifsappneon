@@ -35,17 +35,34 @@ export default function PreSessionCheckin({ open, onClose, therapistId }) {
   const selectedPartIds = useMemo(() => new Set(form.activeParts.map((part) => part.id)), [form.activeParts]);
 
   const loadData = async () => {
-    if (!shouldRender || !client?.id) return;
+    if (!shouldRender) return;
+    if (!client?.id) {
+      setError('Client profile is not available. Please sign in again.');
+      setLoading(false);
+      return;
+    }
     setLoading(true);
-    const [{ data: partRows }, agendaResult, therapistResult] = await Promise.all([
-      supabase.from('ifs_parts').select('id, part_name, part_type').eq('client_id', client.id).order('created_at', { ascending: false }),
-      loadClientSessionAgendas(client.id),
-      therapistId ? Promise.resolve({ data: therapistId, error: null }) : loadClientAgendaTherapist(client.id)
-    ]);
-    setParts(partRows || []);
-    setAgendas(agendaResult.data || []);
-    if (therapistResult.data) setAssignedTherapistId(therapistResult.data);
-    setLoading(false);
+    setError('');
+    try {
+      const [partsResult, agendaResult, therapistResult] = await Promise.all([
+        supabase.from('ifs_parts').select('id, part_name, part_type').eq('client_id', client.id).order('created_at', { ascending: false }),
+        loadClientSessionAgendas(client.id),
+        therapistId ? Promise.resolve({ data: therapistId, error: null }) : loadClientAgendaTherapist(client.id)
+      ]);
+      if (partsResult.error) throw partsResult.error;
+      if (agendaResult.error) throw agendaResult.error;
+      if (therapistResult.error) throw therapistResult.error;
+      setParts(partsResult.data || []);
+      setAgendas(agendaResult.data || []);
+      if (therapistResult.data) setAssignedTherapistId(therapistResult.data);
+    } catch (loadError) {
+      console.error('Error loading pre-session check-in:', loadError);
+      setParts([]);
+      setAgendas([]);
+      setError(loadError.message || 'Unable to load check-in details. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -81,19 +98,25 @@ export default function PreSessionCheckin({ open, onClose, therapistId }) {
     }
 
     setSaving(true);
-    const payload = { ...form, clientId: client.id, therapistId: assignedTherapistId };
-    const result = status === 'draft' ? await saveDraftSessionAgenda(payload) : await submitSessionAgenda(payload);
-    setSaving(false);
+    try {
+      const payload = { ...form, clientId: client.id, therapistId: assignedTherapistId };
+      const result = status === 'draft' ? await saveDraftSessionAgenda(payload) : await submitSessionAgenda(payload);
 
-    if (result.error) {
-      setError(result.error.message || 'Unable to save check-in.');
-      return;
+      if (result.error) {
+        setError(result.error.message || 'Unable to save check-in.');
+        return;
+      }
+
+      setMessage(status === 'draft' ? 'Draft saved.' : 'Pre-session check-in submitted.');
+      setForm(emptyForm);
+      await loadData();
+      if (status === 'submitted') onClose?.();
+    } catch (saveError) {
+      console.error('Error saving pre-session check-in:', saveError);
+      setError(saveError.message || 'Unable to save check-in.');
+    } finally {
+      setSaving(false);
     }
-
-    setMessage(status === 'draft' ? 'Draft saved.' : 'Pre-session check-in submitted.');
-    setForm(emptyForm);
-    await loadData();
-    if (status === 'submitted') onClose?.();
   };
 
   const archiveAgenda = async (agendaId) => {

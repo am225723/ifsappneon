@@ -31,6 +31,7 @@ const ClientHomework = () => {
   const [homework, setHomework] = useState([]);
   const [assignedModules, setAssignedModules] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const [expandedItems, setExpandedItems] = useState({});
   const [completionNotes, setCompletionNotes] = useState({});
   const [filter, setFilter] = useState('active');
@@ -43,39 +44,55 @@ const ClientHomework = () => {
   const inputBg = isDark ? 'bg-slate-700 border-slate-600 text-white' : 'bg-white border-gray-300 text-gray-900';
 
   const loadHomework = useCallback(async () => {
-    if (!client?.id) return;
+    if (!client?.id) {
+      setError('Client profile is not available. Please sign in again.');
+      setLoading(false);
+      return;
+    }
     setLoading(true);
-    const [homeworkRes, assignedRes, progressRes] = await Promise.all([
-      supabase
-        .from('ifs_therapy_homework')
-        .select('*')
-        .eq('client_id', client.id)
-        .order('created_at', { ascending: false }),
-      loadAssignedHomeworkForClient(client.id),
-      supabase
-        .from('ifs_client_progress')
-        .select('module_id, completed')
-        .eq('client_id', client.id)
-    ]);
-    if (homeworkRes.data) setHomework(homeworkRes.data);
-    const completedIds = (progressRes.data || [])
-      .filter(progress => progress.completed)
-      .map(progress => progress.module_id);
-    await Promise.all(
-      (assignedRes.data || [])
-        .filter(item => completedIds.includes(item.module_id) && ['assigned', 'in_progress'].includes(item.status))
-        .map(item => syncAssignedHomeworkCompletion(client.id, item.module_id))
-    );
-    const finalAssigned = (assignedRes.data || []).map(item => (
-      completedIds.includes(item.module_id) && ['assigned', 'in_progress'].includes(item.status)
-        ? { ...item, status: 'completed', completed_at: item.completed_at || new Date().toISOString() }
-        : item
-    ));
-    setAssignedModules(finalAssigned.map(item => ({
-      ...item,
-      module: curriculumModules.find(module => module.id === item.module_id)
-    })));
-    setLoading(false);
+    setError('');
+    try {
+      const [homeworkRes, assignedRes, progressRes] = await Promise.all([
+        supabase
+          .from('ifs_therapy_homework')
+          .select('*')
+          .eq('client_id', client.id)
+          .order('created_at', { ascending: false }),
+        loadAssignedHomeworkForClient(client.id),
+        supabase
+          .from('ifs_client_progress')
+          .select('module_id, completed')
+          .eq('client_id', client.id)
+      ]);
+      if (homeworkRes.error) throw homeworkRes.error;
+      if (assignedRes.error) throw assignedRes.error;
+      if (progressRes.error) throw progressRes.error;
+      setHomework(homeworkRes.data || []);
+      const completedIds = (progressRes.data || [])
+        .filter(progress => progress.completed)
+        .map(progress => progress.module_id);
+      await Promise.all(
+        (assignedRes.data || [])
+          .filter(item => completedIds.includes(item.module_id) && ['assigned', 'in_progress'].includes(item.status))
+          .map(item => syncAssignedHomeworkCompletion(client.id, item.module_id))
+      );
+      const finalAssigned = (assignedRes.data || []).map(item => (
+        completedIds.includes(item.module_id) && ['assigned', 'in_progress'].includes(item.status)
+          ? { ...item, status: 'completed', completed_at: item.completed_at || new Date().toISOString() }
+          : item
+      ));
+      setAssignedModules(finalAssigned.map(item => ({
+        ...item,
+        module: curriculumModules.find(module => module.id === item.module_id)
+      })));
+    } catch (loadError) {
+      console.error('Error loading client homework:', loadError);
+      setHomework([]);
+      setAssignedModules([]);
+      setError(loadError.message || 'Unable to load homework. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   }, [client?.id]);
 
   useEffect(() => { loadHomework(); }, [loadHomework]);
@@ -135,6 +152,23 @@ const ClientHomework = () => {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <RefreshCw className="w-8 h-8 animate-spin text-amber-500" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="max-w-2xl mx-auto px-4 py-10">
+        <div className="rounded-2xl border border-red-200 bg-red-50 p-5 text-red-700 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-300">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="w-5 h-5 mt-0.5 flex-shrink-0" />
+            <div>
+              <h1 className="font-semibold">Unable to load homework</h1>
+              <p className="mt-1 text-sm">{error}</p>
+              <button type="button" onClick={loadHomework} className="mt-4 inline-flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white"><RefreshCw className="w-4 h-4" /> Retry</button>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
