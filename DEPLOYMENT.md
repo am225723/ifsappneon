@@ -2,263 +2,75 @@
 
 ## Quick Start
 
-Your IFS Program React App is now ready for deployment! The repository is available at:
-**https://github.com/am225723/ifs-program-react-app**
+This repository deploys as a Vite React application with Vercel serverless API routes in `api/`.
 
 ## 📦 Production Build
 
-The app has been successfully built for production:
+Install exactly from the lockfile and build the Vite app:
 
 ```bash
+npm ci
 npm run build
 ```
 
-Build results:
-- ✅ **dist/index.html** (0.45 kB)
-- ✅ **dist/assets/index-Bno-Dstr.css** (38.05 kB) 
-- ✅ **dist/assets/index-ChC3EAnw.js** (322.92 kB)
+The production-ready frontend files are emitted to `dist/`. Serverless API handlers remain in `api/` for Vercel.
 
-Total: ~361 kB (gzipped: ~101 kB)
+## 🌐 Vercel Deployment
 
-## 🌐 Deployment Options
+The repo includes `vercel.json` with:
 
-### 1. GitHub Pages (Easiest)
+- build command: `npm run build`
+- output directory: `dist`
+- framework: `vite`
+- SPA rewrites that keep `/api/*` routed to Vercel serverless functions before falling back to `index.html`
 
-1. Install GitHub Pages CLI:
-   ```bash
-   npm install --save-dev gh-pages
-   ```
+Connect the repository in Vercel and use the committed lockfile as the dependency source. The deployment gate should be a clean Vercel Preview Build after the required environment variables below are configured.
 
-2. Add to package.json:
-   ```json
-   {
-     "scripts": {
-       "predeploy": "npm run build",
-       "deploy": "gh-pages -d dist"
-     }
-   }
-   ```
+## ⚙️ Required Environment Variables
 
-3. Deploy:
-   ```bash
-   npm run deploy
-   ```
+Configure these in Vercel Project Settings → Environment Variables:
 
-4. Enable GitHub Pages in repository settings:
-   - Go to Settings → Pages
-   - Source: Deploy from a branch
-   - Branch: gh-pages / (root)
-
-### 2. Netlify (Recommended)
-
-1. **Drag & Drop**:
-   - Drag the `dist` folder to [netlify.com](https://netlify.com)
-   - Get instant deployment
-
-2. **Git Integration**:
-   - Connect your GitHub repository
-   - Build command: `npm run build`
-   - Publish directory: `dist`
-
-### 3. Vercel
-
-1. Install Vercel CLI:
-   ```bash
-   npm i -g vercel
-   ```
-
-2. Deploy:
-   ```bash
-   vercel --prod
-   ```
-
-3. Or connect repository at [vercel.com](https://vercel.com)
-
-### 4. Surge.sh (Free)
-
-1. Install Surge:
-   ```bash
-   npm install -g surge
-   ```
-
-2. Deploy:
-   ```bash
-   npm run build
-   surge dist your-app-name.surge.sh
-   ```
-
-### 5. Firebase Hosting
-
-1. Install Firebase CLI:
-   ```bash
-   npm install -g firebase-tools
-   ```
-
-2. Initialize:
-   ```bash
-   firebase init hosting
-   ```
-
-3. Deploy:
-   ```bash
-   firebase deploy
-   ```
-
-### 6. Traditional Web Hosting
-
-1. Build the app:
-   ```bash
-   npm run build
-   ```
-
-2. Upload the `dist` folder contents to your web server
-
-3. Make sure your server serves `index.html` for any 404 errors (SPA routing)
-
-## ⚙️ Environment Variables
-
-This app doesn't require any environment variables - it's completely client-side!
-
-## 🔒 Security & Privacy
-
-- ✅ No server required
-- ✅ All data stored locally (localStorage)
-- ✅ No external API calls
-- ✅ Private by design
-
-## 📱 Responsive Design
-
-The app works perfectly on:
-- ✅ Desktop computers
-- ✅ Tablets (iPad, etc.)
-- ✅ Mobile phones (iOS, Android)
-- ✅ All modern browsers
-
-## 🎯 Performance
-
-- **First Load**: < 1 second on 3G
-- **Navigation**: Instant page transitions
-- **Animations**: 60fps smooth interactions
-- **SEO Optimized**: Meta tags, semantic HTML
-
-## 🔄 Automatic Deployment (CI/CD)
-
-### GitHub Actions Example
-
-Create `.github/workflows/deploy.yml`:
-
-```yaml
-name: Deploy to GitHub Pages
-
-on:
-  push:
-    branches: [ main ]
-
-jobs:
-  build-and-deploy:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v2
-    
-    - name: Setup Node.js
-      uses: actions/setup-node@v2
-      with:
-        node-version: '18'
-        
-    - name: Install dependencies
-      run: npm ci
-      
-    - name: Build
-      run: npm run build
-      
-    - name: Deploy
-      uses: peaceiris/actions-gh-pages@v3
-      with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        publish_dir: ./dist
+```text
+DATABASE_URL
+CLERK_SECRET_KEY
+OPENAI_API_KEY
 ```
 
-## 📊 Analytics (Optional)
+`OPENAI_API_KEY` must remain server-side only. Do not create a `VITE_OPENAI_API_KEY` variable.
 
-If you want to add analytics:
+## ⚙️ Optional Environment Variables
 
-### Google Analytics
-
-Add to `index.html`:
-```html
-<!-- Google Analytics -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=GA_MEASUREMENT_ID"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-  gtag('config', 'GA_MEASUREMENT_ID');
-</script>
+```text
+CLERK_AUTHORIZED_PARTIES
 ```
 
-### Plausible (Privacy-Friendly)
+Use `CLERK_AUTHORIZED_PARTIES` when Clerk JWT verification should be restricted to known production/preview origins.
 
-Add to `index.html`:
-```html
-<script defer data-domain="your-domain.com" src="https://plausible.io/js/plausible.js"></script>
+Upload support also uses the existing UploadThing server variables when upload flows are enabled:
+
+```text
+UPLOADTHING_APP_ID
+UPLOADTHING_SECRET
+UPLOADTHING_CALLBACK_URL
 ```
 
-## 🎨 Customization
+## 🔐 Server/Client Boundary Expectations
 
-### Brand Colors
+- `DATABASE_URL`, `CLERK_SECRET_KEY`, and `OPENAI_API_KEY` are read by server-side API code only.
+- Frontend code may use `VITE_*` variables only for non-secret client configuration.
+- UploadThing database writes must remain in the server router under `api/_uploadthingRouter.js`.
+- Session prep summaries use the OpenAI server API path and do not require Perplexity/PPLX configuration.
 
-Edit `tailwind.config.js`:
-```javascript
-theme: {
-  extend: {
-    colors: {
-      primary: { /* your colors */ },
-      secondary: { /* your colors */ }
-    }
-  }
-}
+## ✅ Pre-Deploy Verification
+
+Run these before relying on a preview deployment:
+
+```bash
+npm ci
+npm run build
+git diff --check
+rg "uploadthing|_uploadthingRouter|DATABASE_URL|CLERK_SECRET_KEY" src api
+rg "OPENAI_API_KEY|VITE_OPENAI_API_KEY|DATABASE_URL|CLERK_SECRET_KEY|CLERK_AUTHORIZED_PARTIES|PERPLEXITY|PPLX" src api . --glob '!node_modules'
 ```
 
-### Content
-
-Edit files in `src/data/ifsData.js` to customize:
-- Wounds descriptions
-- 8 C's and 5 P's content
-- Resource links
-- Assessment questions
-
-## 🐛 Troubleshooting
-
-### Build Errors
-- Clear cache: `rm -rf node_modules package-lock.json && npm install`
-- Check Node version: `node --version` (should be 16+)
-
-### Deployment Issues
-- Ensure base URL is correct (if not deployed to root)
-- Check server configuration for SPA routing
-- Verify file permissions
-
-### Performance Issues
-- Enable gzip compression on server
-- Use CDN for static assets
-- Consider lazy loading for large content
-
-## 📞 Support
-
-For deployment issues:
-1. Check platform-specific documentation
-2. Review build logs
-3. Test locally first: `npm run preview`
-
-## 🎉 Success Metrics
-
-Your deployed app should:
-- ✅ Load in under 3 seconds
-- ✅ Be mobile-responsive
-- ✅ Have all interactive features working
-- ✅ Store data locally
-- ✅ Be accessible to all users
-
----
-
-**Your app is now ready for the world! 🌍**
+A successful local build plus a successful Vercel Preview Build means the app is ready to promote.
