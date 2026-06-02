@@ -30,7 +30,7 @@ export function requireServerEnv(name) {
 
 export const sql = process.env.DATABASE_URL ? neon(process.env.DATABASE_URL) : createMissingDatabaseClient();
 
-export const THERAPIST_ROLES = new Set(['therapist', 'admin', 'supervisor']);
+export const THERAPIST_ROLES = new Set(['therapist', 'advisor', 'admin', 'supervisor']);
 export const ADMIN_ROLES = new Set(['admin', 'supervisor']);
 
 function getAuthorizedParties() {
@@ -80,7 +80,7 @@ export function isAdminUser(appUser) {
 export async function requireTherapist(req) {
   const appUser = await getCurrentAppUserFromClerk(req);
   if (!isTherapistUser(appUser)) {
-    throw Object.assign(new Error('Therapist access required'), { statusCode: 403 });
+    throw Object.assign(new Error('Advisor access required'), { statusCode: 403 });
   }
   return appUser;
 }

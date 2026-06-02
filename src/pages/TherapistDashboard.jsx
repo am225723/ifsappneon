@@ -25,6 +25,7 @@ import SessionPrepBrief from '../components/SessionPrepBrief';
 import TreatmentPlanBuilder from '../components/TreatmentPlanBuilder';
 import TreatmentPlanManager from '../components/TreatmentPlanManager';
 import TherapistNoteEditor from '../components/TherapistNoteEditor';
+import AdvisorSessionNoteDraft from '../components/AdvisorSessionNoteDraft';
 import RiskAlertWidget from '../components/RiskAlertWidget';
 import RecentActivityFeed from '../components/RecentActivityFeed';
 
@@ -513,6 +514,7 @@ const TherapistDashboard = () => {
   const [clients, setClients] = useState([]);
   const [sessionPrepRows, setSessionPrepRows] = useState([]);
   const [selectedPrepClientId, setSelectedPrepClientId] = useState('');
+  const [draftNotePrefill, setDraftNotePrefill] = useState({ clientId: '', sessionDate: '' });
   const [alerts, setAlerts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [clientInsights, setClientInsights] = useState(null);
@@ -2538,7 +2540,7 @@ const TherapistDashboard = () => {
         {[
           { id: 'clients', label: 'Clients', icon: Users },
           { id: 'treatment-plans', label: 'Treatment Plans', icon: Target },
-          { id: 'clinical-notes', label: 'Clinical Notes', icon: FileText },
+          { id: 'clinical-notes', label: 'Advisor Notes', icon: FileText },
           { id: 'notes', label: 'Session Notes', icon: FileText },
           { id: 'session-prep', label: 'Session Prep', icon: ClipboardCheck },
           { id: 'progress', label: 'Progress', icon: BarChart3 },
@@ -2617,7 +2619,7 @@ const TherapistDashboard = () => {
               </div>
             )}
           </div>
-          <SessionPrepBrief clientId={selectedPrepClientId} therapistId={therapist?.id} clients={clients} />
+          <SessionPrepBrief clientId={selectedPrepClientId} therapistId={therapist?.id} clients={clients} onDraftSessionNote={({ clientId, sessionDate }) => { setDraftNotePrefill({ clientId, sessionDate }); setActiveTab('clinical-notes'); }} />
         </div>
       )}
 
@@ -2945,7 +2947,10 @@ const TherapistDashboard = () => {
               </div>
             </div>
           )}
-          <TherapistNoteEditor assignedClients={clients} onSaved={loadDashboardData} />
+          <div className="space-y-6">
+            <AdvisorSessionNoteDraft initialClientId={draftNotePrefill.clientId} initialSessionDate={draftNotePrefill.sessionDate} assignedClients={clients} onSaved={loadDashboardData} />
+            <TherapistNoteEditor assignedClients={clients} onSaved={loadDashboardData} />
+          </div>
         </div>
       )}
 

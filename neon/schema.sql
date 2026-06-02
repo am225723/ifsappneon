@@ -331,6 +331,10 @@ CREATE TABLE IF NOT EXISTS ifs_therapist_notes (
   session_date DATE,
   tagged_parts JSONB DEFAULT '[]'::jsonb,
   tagged_treatment_goals JSONB DEFAULT '[]'::jsonb,
+  status VARCHAR(50) DEFAULT 'draft',
+  ai_generated BOOLEAN DEFAULT false,
+  ai_generation_metadata JSONB DEFAULT '{}'::jsonb,
+  finalized_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );

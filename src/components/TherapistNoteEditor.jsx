@@ -9,8 +9,8 @@ import { createTherapistNote, loadTherapistNotesForClient } from '../lib/therapi
 const noteTypes = [
   { value: 'session_note', label: 'Session note' },
   { value: 'prep_note', label: 'Prep note' },
-  { value: 'homework_review', label: 'Homework review' },
-  { value: 'treatment_plan_review', label: 'Treatment plan review' },
+  { value: 'homework_review', label: 'Assigned IFS practice review' },
+  { value: 'treatment_plan_review', label: 'Growth Goals review' },
   { value: 'general', label: 'General' }
 ];
 
@@ -86,7 +86,7 @@ export default function TherapistNoteEditor({ initialClientId = '', assignedClie
       taggedTreatmentGoals: taggedGoals
     });
     if (error) {
-      setMessage(error.message || 'Unable to save clinical note.');
+      setMessage(error.message || 'Unable to save Advisor note.');
       return;
     }
     setForm({ noteType: 'session_note', clinicalSummary: '', content: '', sessionDate: new Date().toISOString().split('T')[0] });
@@ -94,15 +94,15 @@ export default function TherapistNoteEditor({ initialClientId = '', assignedClie
     setTaggedGoals([]);
     await loadClientContext();
     onSaved?.(data);
-    setMessage('Clinical note saved.');
+    setMessage('Advisor note saved.');
   };
 
   return (
     <div className="rounded-xl border border-gray-200 bg-white p-5 space-y-5">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2"><FileText className="w-5 h-5 text-amber-600" /> Clinical Notes</h3>
-          <p className="text-sm text-gray-500">Tag notes to client parts and treatment plan goals.</p>
+          <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2"><FileText className="w-5 h-5 text-amber-600" /> Advisor Notes</h3>
+          <p className="text-sm text-gray-500">Tag Advisor notes to client parts and Growth Goals.</p>
         </div>
         {!initialClientId && (
           <select value={clientId} onChange={(e) => setClientId(e.target.value)} className="rounded-lg border px-3 py-2 text-sm">
@@ -123,16 +123,16 @@ export default function TherapistNoteEditor({ initialClientId = '', assignedClie
               </select>
               <input type="date" value={form.sessionDate} onChange={(e) => setForm({ ...form, sessionDate: e.target.value })} className="rounded-lg border px-3 py-2" />
             </div>
-            <input value={form.clinicalSummary} onChange={(e) => setForm({ ...form, clinicalSummary: e.target.value })} placeholder="Brief clinical summary" className="w-full rounded-lg border px-3 py-2" />
-            <textarea value={form.content} onChange={(e) => setForm({ ...form, content: e.target.value })} rows={8} placeholder="Write note..." className="w-full rounded-lg border px-3 py-2" />
+            <input value={form.clinicalSummary} onChange={(e) => setForm({ ...form, clinicalSummary: e.target.value })} placeholder="Brief Advisor note summary" className="w-full rounded-lg border px-3 py-2" />
+            <textarea value={form.content} onChange={(e) => setForm({ ...form, content: e.target.value })} rows={8} placeholder="Write Advisor note..." className="w-full rounded-lg border px-3 py-2" />
 
             <div>
               <p className="text-xs font-semibold uppercase text-gray-500 mb-2">Tag parts</p>
               <div className="flex flex-wrap gap-2">{parts.length ? parts.map((part) => <button type="button" key={part.id} onClick={() => togglePart(part)} className={`px-2 py-1 rounded-full text-xs ${taggedParts.some((item) => item.id === part.id) ? 'bg-amber-600 text-white' : 'bg-white border text-gray-600'}`}>{part.part_name}</button>) : <span className="text-xs text-gray-500">No parts found.</span>}</div>
             </div>
             <div>
-              <p className="text-xs font-semibold uppercase text-gray-500 mb-2">Tag treatment plan goals</p>
-              <div className="flex flex-wrap gap-2">{goals.length ? goals.map((goal) => <button type="button" key={goal.id} onClick={() => toggleGoal(goal)} className={`px-2 py-1 rounded-full text-xs ${taggedGoals.some((item) => item.id === goal.id) ? 'bg-emerald-600 text-white' : 'bg-white border text-gray-600'}`}>{goal.goal_title}</button>) : <span className="text-xs text-gray-500">No active goals found.</span>}</div>
+              <p className="text-xs font-semibold uppercase text-gray-500 mb-2">Tag Growth Goals</p>
+              <div className="flex flex-wrap gap-2">{goals.length ? goals.map((goal) => <button type="button" key={goal.id} onClick={() => toggleGoal(goal)} className={`px-2 py-1 rounded-full text-xs ${taggedGoals.some((item) => item.id === goal.id) ? 'bg-emerald-600 text-white' : 'bg-white border text-gray-600'}`}>{goal.goal_title}</button>) : <span className="text-xs text-gray-500">No active Growth Goals found.</span>}</div>
             </div>
             {(taggedParts.length > 0 || taggedGoals.length > 0) && (
               <div className="flex flex-wrap gap-1">
@@ -140,7 +140,7 @@ export default function TherapistNoteEditor({ initialClientId = '', assignedClie
                 {taggedGoals.map((goal) => <span key={goal.id} className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-xs text-emerald-700">{goal.goal_title}<X className="w-3 h-3" /></span>)}
               </div>
             )}
-            <button onClick={saveNote} disabled={!form.content.trim()} className="w-full rounded-lg bg-amber-600 px-3 py-2 text-white disabled:bg-gray-400 flex items-center justify-center gap-2"><CheckCircle className="w-4 h-4" /> Save note</button>
+            <button onClick={saveNote} disabled={!form.content.trim()} className="w-full rounded-lg bg-amber-600 px-3 py-2 text-white disabled:bg-gray-400 flex items-center justify-center gap-2"><CheckCircle className="w-4 h-4" /> Save Advisor note</button>
           </div>
 
           <div className="space-y-3 max-h-[640px] overflow-y-auto pr-1">
