@@ -5,6 +5,7 @@ import {
   requireTherapistAssignment,
   sql
 } from './_auth.js';
+import { safeCreateInAppNotification } from './_notifications.js';
 
 const THERAPIST_ACTIONS = new Set([
   'start_session',
@@ -225,6 +226,18 @@ async function startSession(user, body) {
   }
 
   await recordEvent(session, 'session_started', { reused: Boolean(existing[0]) });
+  await safeCreateInAppNotification({
+    recipientId: session.client_id,
+    actorId: user.id,
+    clientId: session.client_id,
+    therapistId: session.therapist_id,
+    notificationType: 'live_session_started',
+    title: 'Live session started',
+    message: 'Your therapist started a live co-therapy exercise.',
+    entityType: 'live_session',
+    entityId: session.id,
+    priority: 'important'
+  }, 'live session started notification');
   return publicSession(session);
 }
 
@@ -342,6 +355,18 @@ async function endSession(user, body) {
     RETURNING *
   `;
   await recordEvent(rows[0], 'session_ended', {});
+  await safeCreateInAppNotification({
+    recipientId: rows[0].client_id,
+    actorId: user.id,
+    clientId: rows[0].client_id,
+    therapistId: rows[0].therapist_id,
+    notificationType: 'live_session_ended',
+    title: 'Live session ended',
+    message: 'Your live co-therapy exercise has ended.',
+    entityType: 'live_session',
+    entityId: rows[0].id,
+    priority: 'normal'
+  }, 'live session ended notification');
   return publicSession(rows[0]);
 }
 
@@ -355,6 +380,20 @@ async function heartbeat(user, body) {
     [session.id]
   );
   await recordEvent(rows[0], role === 'client' ? 'client_joined' : 'heartbeat', { role });
+  if (role === 'client' && !session.client_last_seen_at) {
+    await safeCreateInAppNotification({
+      recipientId: rows[0].therapist_id,
+      actorId: user.id,
+      clientId: rows[0].client_id,
+      therapistId: rows[0].therapist_id,
+      notificationType: 'live_session_joined',
+      title: 'Client joined live session',
+      message: 'Your client joined the live co-therapy exercise.',
+      entityType: 'live_session',
+      entityId: rows[0].id,
+      priority: 'normal'
+    }, 'live session joined notification');
+  }
   return publicSession(rows[0]);
 }
 

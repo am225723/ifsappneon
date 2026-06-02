@@ -1,5 +1,6 @@
 /* global process */
 import { isAdminUser, requireTherapist, requireTherapistAssignment, sql } from './_auth.js';
+import { safeCreateInAppNotification } from './_notifications.js';
 
 const REPORT_TYPES = new Set(['clinical_summary', 'client_progress_summary']);
 const DEFAULT_SECTIONS = {
@@ -493,6 +494,19 @@ export default async function handler(req, res) {
     `;
 
     const reportId = auditRows[0]?.id;
+    await safeCreateInAppNotification({
+      recipientId: currentUser.id,
+      actorId: currentUser.id,
+      clientId: requestedClientId,
+      therapistId: currentUser.id,
+      notificationType: 'report_generated',
+      title: 'Clinical report generated',
+      message: 'A clinical report was generated and audit metadata was saved.',
+      entityType: 'generated_report',
+      entityId: reportId,
+      priority: 'low',
+      metadata: { reportType }
+    }, 'report generated notification');
     const html = buildHtmlReport({ data, sections, reportType, dateRangeStart, dateRangeEnd, generatedAt, reportId });
 
     return res.status(200).json({
