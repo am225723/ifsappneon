@@ -5576,25 +5576,34 @@ const TherapistDashboard = () => {
                 ))}
               </select>
             </div>
-            <Link
-              to="/co-therapy"
-              onClick={(e) => {
-                const select = document.getElementById('co-therapy-client-select');
-                const clientId = select?.value;
-                if (clientId) {
-                  sessionStorage.setItem('co_therapy_client_id', clientId);
-                  const client = clients.find(c => c.id === clientId);
-                  if (client) sessionStorage.setItem('co_therapy_client_name', client.name);
-                } else {
-                  e.preventDefault();
-                  alert('Please select a client first');
-                }
-              }}
-              className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-emerald-500 to-rose-600 text-white rounded-lg font-medium hover:from-emerald-600 hover:to-rose-700 transition-all shadow-md"
-            >
-              <Play className="w-4 h-4" />
-              Launch Co-Therapy Session
-            </Link>
+            <div className="flex flex-wrap gap-3">
+              <Link
+                to="/live-co-therapy"
+                className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-emerald-500 to-rose-600 text-white rounded-lg font-medium hover:from-emerald-600 hover:to-rose-700 transition-all shadow-md"
+              >
+                <Play className="w-4 h-4" />
+                Live Co-Therapy
+              </Link>
+              <Link
+                to="/co-therapy"
+                onClick={(e) => {
+                  const select = document.getElementById('co-therapy-client-select');
+                  const clientId = select?.value;
+                  if (clientId) {
+                    sessionStorage.setItem('co_therapy_client_id', clientId);
+                    const client = clients.find(c => c.id === clientId);
+                    if (client) sessionStorage.setItem('co_therapy_client_name', client.name);
+                  } else {
+                    e.preventDefault();
+                    alert('Please select a client first');
+                  }
+                }}
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg border border-emerald-200 text-emerald-700 dark:text-emerald-200 font-medium hover:bg-emerald-50 dark:hover:bg-emerald-950/30 transition-all"
+              >
+                <Play className="w-4 h-4" />
+                Legacy Co-Therapy Guide
+              </Link>
+            </div>
           </div>
 
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">

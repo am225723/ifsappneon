@@ -16,11 +16,13 @@ import {
   Feather,
   Trophy,
   CalendarCheck,
-  CheckCircle2
+  CheckCircle2,
+  HeartPulse
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { loadClientSessionAgendas } from '../lib/sessionAgendas';
 import { loadActiveTreatmentPlansForClient } from '../lib/treatmentPlans';
+import { getActiveLiveSessionForClient } from '../lib/liveSession';
 
 const Home = ({ clientId, client }) => {
   const navigate = useNavigate();
@@ -29,6 +31,7 @@ const Home = ({ clientId, client }) => {
   const [activeTab, setActiveTab] = useState('daily');
   const [agendaSummary, setAgendaSummary] = useState({ lastSubmitted: null, hasDraft: false });
   const [therapyGoals, setTherapyGoals] = useState([]);
+  const [activeLiveSession, setActiveLiveSession] = useState(null);
 
   useEffect(() => {
     const loadData = async () => {
@@ -53,6 +56,9 @@ const Home = ({ clientId, client }) => {
             lastSubmitted: agendas.find((agenda) => agenda.status === 'submitted' || agenda.status === 'reviewed')?.created_at || null,
             hasDraft: agendas.some((agenda) => agenda.status === 'draft')
           });
+
+          const liveResult = await getActiveLiveSessionForClient();
+          if (!liveResult.error) setActiveLiveSession(liveResult.data || null);
         } catch (err) {
           console.error('Error loading home data:', err);
         }
@@ -120,6 +126,27 @@ const Home = ({ clientId, client }) => {
               </button>
             )}
           </div>
+        </div>
+      </section>
+
+      <section className="mb-10">
+        <div className="soft-card border border-brand-emerald-100 bg-brand-emerald-50/70 dark:bg-brand-emerald-950/20 p-6 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5">
+          <div className="flex items-start gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-brand-emerald-100 text-brand-emerald-700 dark:bg-brand-emerald-950/50 dark:text-brand-emerald-100 flex items-center justify-center shrink-0">
+              <HeartPulse className="w-6 h-6" />
+            </div>
+            <div>
+              <h2 className="text-xl font-semibold text-brand-stone-900 dark:text-slate-100">Live Co-Therapy Session</h2>
+              <p className="text-sm text-brand-stone-600 dark:text-slate-400 mt-1">
+                {activeLiveSession ? 'Your therapist has started a synchronized exercise.' : 'No live session active right now.'}
+              </p>
+              <p className="text-xs text-brand-stone-500 dark:text-slate-500 mt-2">Not monitored for emergencies; call 911 or your local crisis line if you are in immediate danger.</p>
+            </div>
+          </div>
+          <Link to="/live-session" className={activeLiveSession ? 'btn-sanctuary-primary justify-center' : 'btn-sanctuary-secondary justify-center'}>
+            {activeLiveSession ? 'Join Live Session' : 'Check Live Session'}
+            <ArrowRight className="h-4 w-4" />
+          </Link>
         </div>
       </section>
 
