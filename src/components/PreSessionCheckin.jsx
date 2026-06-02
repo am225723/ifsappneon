@@ -89,7 +89,7 @@ export default function PreSessionCheckin({ open, onClose, therapistId }) {
       return;
     }
     if (!assignedTherapistId) {
-      setError('No active therapist assignment was found for this check-in.');
+      setError('No active Advisor assignment was found for this check-in.');
       return;
     }
     if (!form.sessionDate || !form.topics.trim()) {
@@ -136,7 +136,7 @@ export default function PreSessionCheckin({ open, onClose, therapistId }) {
           <CalendarCheck className="w-7 h-7 text-amber-600 mt-1" />
           <div>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Pre-Session Check-In</h1>
-            <p className="text-sm text-gray-600 dark:text-slate-300">Use this to let your therapist know what feels important before your next session.</p>
+            <p className="text-sm text-gray-600 dark:text-slate-300">Use this to share what feels important before your next Advisor session.</p>
           </div>
         </div>
         {onClose && <button type="button" onClick={onClose} aria-label="Close"><X className="w-5 h-5" /></button>}
@@ -188,7 +188,7 @@ export default function PreSessionCheckin({ open, onClose, therapistId }) {
 
             <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
               <div className="flex gap-2"><AlertTriangle className="w-5 h-5 flex-shrink-0" /><p>This form is reviewed as part of routine care and is not monitored for emergencies. If you are in immediate danger or may harm yourself or someone else, call 911 or your local crisis line now.</p></div>
-              <label className="block font-medium mt-3">Safety concerns / anything urgent the therapist should know
+              <label className="block font-medium mt-3">Safety concerns / anything urgent your Advisor should know
                 <textarea value={form.safetyConcerns} onChange={(e) => setForm({ ...form, safetyConcerns: e.target.value })} rows={3} className="mt-1 w-full rounded-lg border border-amber-300 px-3 py-2 bg-white text-gray-900" />
               </label>
             </div>

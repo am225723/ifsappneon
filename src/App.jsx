@@ -1,7 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Link, useLocation, Navigate } from 'react-router-dom';
 import { useState, useEffect, useCallback } from 'react';
 import { SignIn, SignUp, useAuth, UserButton } from '@clerk/clerk-react';
-import { Settings as SettingsIcon, Home as HomeIcon, BookOpen, ClipboardList, BookHeart, Handshake, LogOut, MessageSquare } from 'lucide-react';
+import { Settings as SettingsIcon, Home as HomeIcon, BookOpen, ClipboardList, BookHeart, Handshake, LogOut, MessageSquare, Compass as CompassIcon } from 'lucide-react';
 import { useTheme } from './contexts/ThemeContext';
 import { supabase } from './lib/supabase';
 import SSOCallback from './components/SSOCallback';
@@ -211,8 +211,9 @@ function BottomNav() {
   const navItems = [
     { path: '/', icon: HomeIcon, label: 'Home' },
     { path: '/exercises', icon: BookOpen, label: 'Practice' },
-    { path: '/inbox', icon: MessageSquare, label: 'Messages' },
     { path: '/journal', icon: BookHeart, label: 'Journal' },
+    { path: '/parts-mapping', icon: CompassIcon, label: 'Parts' },
+    { path: '/inbox', icon: MessageSquare, label: 'Advisor' },
     { path: '/profile', icon: Handshake, label: 'Profile' },
   ];
 
@@ -394,7 +395,7 @@ function AppContent({ authChecked, clerkLoaded, clerkSignedIn, isAuthenticated, 
   const messagePath = isTherapistRole ? '/messages' : '/inbox';
   const homeElement = <Home clientId={currentClient?.id} client={currentClient} />;
   const clientOnly = (element, message) => isClient ? element : <UnauthorizedRedirect currentClient={currentClient} message={message || 'Client workspace access is required for this page.'} />;
-  const therapistOnly = (element, message) => isTherapistRole ? element : <UnauthorizedRedirect currentClient={currentClient} message={message || 'Therapist, supervisor, or admin access is required for this page.'} />;
+  const therapistOnly = (element, message) => isTherapistRole ? element : <UnauthorizedRedirect currentClient={currentClient} message={message || 'Advisor, supervisor, or admin access is required for this page.'} />;
 
   const fetchUnreadCount = useCallback(async () => {
     if (!currentClient?.id) return;

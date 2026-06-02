@@ -10,10 +10,10 @@ const FILTERS = [
 ];
 
 const TYPE_LABELS = {
-  homework_assigned: 'Homework',
-  homework_started: 'Homework',
-  homework_completed: 'Homework',
-  homework_reviewed: 'Homework',
+  homework_assigned: 'Assigned Practice',
+  homework_started: 'Assigned Practice',
+  homework_completed: 'Assigned Practice',
+  homework_reviewed: 'Assigned Practice',
   session_agenda_submitted: 'Agenda',
   session_agenda_reviewed: 'Agenda',
   treatment_goal_created: 'Treatment Goal',
@@ -23,7 +23,7 @@ const TYPE_LABELS = {
   live_session_joined: 'Live Session',
   live_session_ended: 'Live Session',
   report_generated: 'Report',
-  therapist_note_created: 'Therapist Activity',
+  therapist_note_created: 'Advisor Activity',
   general_update: 'Update'
 };
 

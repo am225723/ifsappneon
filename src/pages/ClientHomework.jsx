@@ -89,7 +89,7 @@ const ClientHomework = () => {
       console.error('Error loading client homework:', loadError);
       setHomework([]);
       setAssignedModules([]);
-      setError(loadError.message || 'Unable to load homework. Please try again.');
+      setError(loadError.message || 'Unable to load assigned practice. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -163,7 +163,7 @@ const ClientHomework = () => {
           <div className="flex items-start gap-3">
             <AlertTriangle className="w-5 h-5 mt-0.5 flex-shrink-0" />
             <div>
-              <h1 className="font-semibold">Unable to load homework</h1>
+              <h1 className="font-semibold">Unable to load assigned practice</h1>
               <p className="mt-1 text-sm">{error}</p>
               <button type="button" onClick={loadHomework} className="mt-4 inline-flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white"><RefreshCw className="w-4 h-4" /> Retry</button>
             </div>
@@ -180,7 +180,7 @@ const ClientHomework = () => {
           <ClipboardList className="w-5 h-5 text-white" />
         </div>
         <div>
-          <h1 className={`text-xl font-bold ${textPrimary}`}>My Homework</h1>
+          <h1 className={`text-xl font-bold ${textPrimary}`}>Assigned IFS Practice</h1>
           <p className={`text-sm ${textMuted}`}>
             {activeCount > 0 ? `${activeCount} assignment${activeCount > 1 ? 's' : ''} to complete` : 'All caught up!'}
           </p>
@@ -191,7 +191,7 @@ const ClientHomework = () => {
         <div className={`mb-6 rounded-2xl border p-4 ${isDark ? 'border-blue-800/40 bg-blue-950/30' : 'border-blue-200 bg-blue-50'}`}>
           <div className="flex items-center gap-2 mb-3">
             <BookOpen className="w-5 h-5 text-blue-600" />
-            <h2 className={`font-bold ${isDark ? 'text-blue-100' : 'text-blue-950'}`}>Assigned by Your Therapist</h2>
+            <h2 className={`font-bold ${isDark ? 'text-blue-100' : 'text-blue-950'}`}>Assigned by My Advisor</h2>
           </div>
           <div className="space-y-3">
             {assignedModules.map(item => (
@@ -207,7 +207,7 @@ const ClientHomework = () => {
                     {item.instructions && <p className={`mt-2 text-sm ${textSecondary}`}>{item.instructions}</p>}
                     {item.status === 'reviewed' && item.therapist_feedback && (
                       <div className={`mt-2 rounded-lg p-2 text-sm ${isDark ? 'bg-emerald-900/20 text-emerald-200' : 'bg-emerald-50 text-emerald-800'}`}>
-                        <span className="font-semibold">Therapist feedback:</span> {item.therapist_feedback}
+                        <span className="font-semibold">Advisor reflection:</span> {item.therapist_feedback}
                       </div>
                     )}
                   </div>
@@ -249,9 +249,9 @@ const ClientHomework = () => {
         <div className={`${cardBg} rounded-2xl border ${cardBorder} p-12 text-center`}>
           <ClipboardList className={`w-12 h-12 mx-auto mb-3 ${textMuted} opacity-30`} />
           <p className={`text-sm font-medium ${textSecondary}`}>
-            {filter === 'active' ? 'No active assignments' : filter === 'completed' ? 'No completed assignments yet' : 'No homework assigned yet'}
+            {filter === 'active' ? 'No active assignments' : filter === 'completed' ? 'No completed assignments yet' : 'No assigned practice yet'}
           </p>
-          <p className={`text-xs ${textMuted} mt-1`}>Assignments from your advisor will appear here</p>
+          <p className={`text-xs ${textMuted} mt-1`}>Advisor-guided practices will appear here</p>
         </div>
       ) : (
         <div className="space-y-3">
