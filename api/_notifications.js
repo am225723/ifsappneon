@@ -1,4 +1,5 @@
 import { sql } from './_auth.js';
+import { shouldCreateNotification } from './_notificationPreferences.js';
 
 const ALLOWED_NOTIFICATION_TYPES = new Set([
   'homework_assigned',
@@ -68,6 +69,13 @@ export async function createInAppNotification({
   if (!safeRecipientId || !safeTitle) {
     throw Object.assign(new Error('recipientId and title are required for notifications'), { statusCode: 400 });
   }
+
+  const allowedByPreferences = await shouldCreateNotification({
+    recipientId: safeRecipientId,
+    notificationType: safeType,
+    priority: safePriority
+  });
+  if (!allowedByPreferences) return null;
 
   const rows = await sql`
     INSERT INTO ifs_notifications (
