@@ -62,7 +62,7 @@ const MAX_SUGGESTION_NAME_LENGTH = 100;
 const MAX_SUGGESTION_DESCRIPTION_LENGTH = 500;
 const MAP_MODES = new Set(['explore', 'protectors', 'exiles', 'relationships', 'self_energy']);
 const PART_TYPES = new Set(['protector', 'manager', 'firefighter', 'exile', 'self', 'unknown', '']);
-const RELATIONSHIP_TYPES = new Set(['close_to', 'protects', 'concerned_about', 'polarized_with', 'supports', 'unknown']);
+const RELATIONSHIP_TYPES = new Set(['close_to', 'protects', 'concerned_about', 'polarized_with', 'supports', 'needs_space_from', 'unknown']);
 
 function sendError(res, status, message, code = 'live_session_error') {
   return res.status(status).json({ error: { code, message } });
@@ -821,6 +821,24 @@ async function saveConfirmedMap(user, body) {
     savedPartIds.push(partId);
   }
 
+
+  const savedRelationshipIds = [];
+  for (const relationship of layoutDraft.relationships.filter((item) => item.status === 'accepted' || !item.status)) {
+    await assertPartBelongsToClient(session.client_id, relationship.fromPartId);
+    await assertPartBelongsToClient(session.client_id, relationship.toPartId);
+    await sql`
+      INSERT INTO ifs_part_relationships (client_id, from_part_id, to_part_id, relationship_type, label, description, created_by, confirmed_by_client, created_at, updated_at)
+      VALUES (${session.client_id}, ${relationship.fromPartId}, ${relationship.toPartId}, ${relationship.relationshipType || 'unknown'}, ${relationship.label || null}, NULL, ${session.client_id}, true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+      ON CONFLICT (client_id, from_part_id, to_part_id, relationship_type)
+      DO UPDATE SET label = EXCLUDED.label,
+                    confirmed_by_client = true,
+                    updated_at = CURRENT_TIMESTAMP
+      RETURNING id
+    `.then((rows) => {
+      if (rows[0]?.id) savedRelationshipIds.push(rows[0].id);
+    });
+  }
+
   const nextSuggestions = suggestions.map((item) => item.status === 'accepted' ? { ...item, savedAt: new Date().toISOString() } : item).filter((item) => item.status === 'pending');
   const nextState = { ...state, pendingSuggestions: nextSuggestions, layoutDraft: { nodes: {}, relationships: layoutDraft.relationships }, hasUnsavedConfirmedChanges: false, lastSavedAt: new Date().toISOString() };
   const rows = await sql`
@@ -830,7 +848,7 @@ async function saveConfirmedMap(user, body) {
     WHERE id = ${session.id}
     RETURNING *
   `;
-  await recordEvent(rows[0], 'prompt_sent', { eventName: 'map_saved', savedPartCount: Array.from(new Set(savedPartIds)).length });
+  await recordEvent(rows[0], 'prompt_sent', { eventName: 'map_saved', savedPartCount: Array.from(new Set(savedPartIds)).length, savedRelationshipCount: Array.from(new Set(savedRelationshipIds)).length });
   return publicSession(rows[0]);
 }
 
