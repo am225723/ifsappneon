@@ -2632,6 +2632,7 @@ const TherapistDashboard = () => {
   const advisorToolTiles = [
     { label: 'Advisor Session Prep', desc: 'Review submitted pre-session check-ins and prepare for client support.', icon: ClipboardCheck, onClick: () => setActiveTab('session-prep') },
     { label: 'Assigned IFS Practices', desc: 'Create, assign, and review Advisor-guided practices.', icon: BookOpen, onClick: () => navigate('/advisor-homework') },
+    { label: 'Shared Life Reflections', desc: 'Review reflections clients intentionally shared from their IFS in Daily Life practices.', icon: Heart, onClick: () => navigate('/advisor/shared-reflections') },
     { label: 'Growth Goals', desc: 'Review IFS path goals and support plans.', icon: Target, onClick: () => setActiveTab('treatment-plans') },
     { label: 'Advisor Notes', desc: 'Write Advisor-only notes with tagged parts and goals.', icon: FileText, onClick: () => setActiveTab('clinical-notes') },
     { label: 'Draft Session Note', desc: 'AI-assisted draft for Advisor review; never auto-saved.', icon: Sparkles, onClick: () => setActiveTab('clinical-notes') },
@@ -3811,6 +3812,7 @@ const TherapistDashboard = () => {
                 { id: 'link:/caseload', label: 'Caseload Manager', icon: Users, color: 'from-emerald-500 to-teal-600', desc: 'Assign, discharge, and reactivate clients' },
                 { id: 'link:/advisor-messages', label: 'Client Messages', icon: MessageCircle, color: 'from-brand-stone-500 to-brand-stone-600', desc: 'Send and receive secure messages with clients' },
                 { id: 'link:/advisor-homework', label: 'Assigned Practices', icon: Target, color: 'from-brand-gold-600 to-brand-emerald-700', desc: 'Create, assign, and review assigned IFS practices' },
+                { id: 'link:/advisor/shared-reflections', label: 'Shared Life Reflections', icon: Heart, color: 'from-brand-emerald-600 to-brand-gold-600', desc: 'Review reflections clients intentionally shared from their IFS in Daily Life practices' },
                 { id: 'link:/advisor-reports', label: 'Advisor Reports', icon: Download, color: 'from-emerald-500 to-teal-600', desc: 'Generate and export client progress reports' },
                 { id: 'link:/analytics', label: 'Longitudinal Insights', icon: TrendingUp, color: 'from-blue-500 to-indigo-600', desc: 'Review secure trends for one assigned client at a time' },
                 { id: 'link:/assessment-builder', label: 'Assessment Builder', icon: FileText, color: 'from-brand-gold-600 to-brand-emerald-700', desc: 'Create custom assessments for clients' },
