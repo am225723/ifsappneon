@@ -20,10 +20,12 @@ const THERAPIST_ACTIONS = new Set([
   'end_session',
   'set_selected_part',
   'update_map_draft',
-  'suggest_part'
+  'suggest_part',
+  'update_map_node_position',
+  'suggest_relationship'
 ]);
 const READ_ACTIONS = new Set(['get_state', 'get_active_for_client', 'get_map_parts']);
-const CLIENT_CONFIRMATION_ACTIONS = new Set(['accept_suggestion', 'dismiss_suggestion', 'save_confirmed_map']);
+const CLIENT_CONFIRMATION_ACTIONS = new Set(['update_map_node_position', 'accept_suggestion', 'dismiss_suggestion', 'accept_relationship', 'dismiss_relationship', 'save_confirmed_map']);
 const EVENT_TYPES = new Set([
   'session_started',
   'client_joined',
@@ -60,6 +62,7 @@ const MAX_SUGGESTION_NAME_LENGTH = 100;
 const MAX_SUGGESTION_DESCRIPTION_LENGTH = 500;
 const MAP_MODES = new Set(['explore', 'protectors', 'exiles', 'relationships', 'self_energy']);
 const PART_TYPES = new Set(['protector', 'manager', 'firefighter', 'exile', 'self', 'unknown', '']);
+const RELATIONSHIP_TYPES = new Set(['close_to', 'protects', 'concerned_about', 'polarized_with', 'supports', 'unknown']);
 
 function sendError(res, status, message, code = 'live_session_error') {
   return res.status(status).json({ error: { code, message } });
@@ -173,9 +176,34 @@ function sanitizeColor(value) {
   return /^#[0-9a-f]{6}$/i.test(text) || /^[a-z-]{3,30}$/i.test(text) ? text.slice(0, 50) : null;
 }
 
+function sanitizeRelationshipType(value) {
+  const text = String(value || '').toLowerCase().trim();
+  return RELATIONSHIP_TYPES.has(text) ? text : 'unknown';
+}
+
+function sanitizeRelationship(raw = {}) {
+  const fromPartId = sanitizePartId(raw.fromPartId || raw.from || raw.sourcePartId, 'fromPartId');
+  const toPartId = sanitizePartId(raw.toPartId || raw.to || raw.targetPartId, 'toPartId');
+  if (fromPartId === toPartId) {
+    throw Object.assign(new Error('Relationship must connect two different parts'), { statusCode: 400, code: 'invalid_relationship' });
+  }
+  return {
+    id: sanitizeText(raw.id || `relationship_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`, 100),
+    fromPartId,
+    toPartId,
+    relationshipType: sanitizeRelationshipType(raw.relationshipType || raw.type),
+    label: sanitizeText(raw.label || raw.description || '', 80),
+    status: raw.status === 'accepted' ? 'accepted' : 'pending',
+    createdAt: raw.createdAt || new Date().toISOString()
+  };
+}
+
 function sanitizeLayoutDraft(value = {}) {
   const draft = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
-  return Object.entries(draft).slice(0, 100).reduce((acc, [partId, layout]) => {
+  const nodeEntries = draft.nodes && typeof draft.nodes === 'object' && !Array.isArray(draft.nodes)
+    ? Object.entries(draft.nodes)
+    : Object.entries(draft).filter(([key]) => key !== 'relationships');
+  const nodes = nodeEntries.slice(0, 100).reduce((acc, [partId, layout]) => {
     if (!layout || typeof layout !== 'object') return acc;
     const safePartId = sanitizePartId(partId);
     const next = {};
@@ -185,10 +213,29 @@ function sanitizeLayoutDraft(value = {}) {
     if (Object.keys(next).length) acc[safePartId] = next;
     return acc;
   }, {});
+  const relationships = Array.isArray(draft.relationships)
+    ? draft.relationships.slice(0, 50).map((relationship) => sanitizeRelationship(relationship))
+    : [];
+  return { nodes, relationships };
+}
+
+function mergeLayoutDraft(current = {}, incoming = {}) {
+  const safeCurrent = sanitizeLayoutDraft(current);
+  const safeIncoming = sanitizeLayoutDraft(incoming);
+  const relationships = [...safeCurrent.relationships];
+  safeIncoming.relationships.forEach((relationship) => {
+    const existingIndex = relationships.findIndex((item) => String(item.id) === String(relationship.id));
+    if (existingIndex >= 0) relationships[existingIndex] = relationship;
+    else relationships.push(relationship);
+  });
+  return {
+    nodes: { ...safeCurrent.nodes, ...safeIncoming.nodes },
+    relationships: relationships.slice(-50)
+  };
 }
 
 function sanitizeSuggestion(raw = {}) {
-  const suggestionType = ['new_part', 'part_type', 'descriptor', 'layout'].includes(raw.suggestionType) ? raw.suggestionType : 'new_part';
+  const suggestionType = ['new_part', 'part_type', 'descriptor', 'layout', 'relationship'].includes(raw.suggestionType) ? raw.suggestionType : 'new_part';
   const suggestion = {
     id: raw.id || `suggestion_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
     suggestionType,
@@ -202,10 +249,17 @@ function sanitizeSuggestion(raw = {}) {
   if (raw.x !== undefined) suggestion.x = sanitizeNumber(raw.x, 'x');
   if (raw.y !== undefined) suggestion.y = sanitizeNumber(raw.y, 'y');
   if (raw.color !== undefined) suggestion.color = sanitizeColor(raw.color);
+  if (suggestionType === 'relationship') {
+    const relationship = sanitizeRelationship(raw);
+    suggestion.fromPartId = relationship.fromPartId;
+    suggestion.toPartId = relationship.toPartId;
+    suggestion.relationshipType = relationship.relationshipType;
+    suggestion.label = relationship.label;
+  }
   if (suggestionType === 'new_part' && !suggestion.name) {
     throw Object.assign(new Error('Suggested part name is required'), { statusCode: 400, code: 'suggestion_name_required' });
   }
-  if (suggestionType !== 'new_part' && !suggestion.partId) {
+  if (!['new_part', 'relationship'].includes(suggestionType) && !suggestion.partId) {
     throw Object.assign(new Error('Existing part suggestions require a partId'), { statusCode: 400, code: 'suggestion_part_required' });
   }
   return suggestion;
@@ -579,12 +633,16 @@ async function updateMapDraft(user, body) {
   await assertTherapistControl(user, session);
   ensureSharedMapActivity(session);
   const layoutDraft = sanitizeLayoutDraft(body.layoutDraft || {});
-  for (const partId of Object.keys(layoutDraft)) await assertPartBelongsToClient(session.client_id, partId);
+  for (const partId of Object.keys(layoutDraft.nodes)) await assertPartBelongsToClient(session.client_id, partId);
+  for (const relationship of layoutDraft.relationships) {
+    await assertPartBelongsToClient(session.client_id, relationship.fromPartId);
+    await assertPartBelongsToClient(session.client_id, relationship.toPartId);
+  }
   const mapMode = MAP_MODES.has(body.mapMode) ? body.mapMode : session.activity_state?.mapMode || 'explore';
   const advisorPrompt = body.advisorPrompt !== undefined ? sanitizeText(body.advisorPrompt, MAX_PROMPT_LENGTH) : session.activity_state?.advisorPrompt || '';
   const nextState = {
     ...(session.activity_state || {}),
-    layoutDraft: { ...(session.activity_state?.layoutDraft || {}), ...layoutDraft },
+    layoutDraft: mergeLayoutDraft(session.activity_state?.layoutDraft || {}, layoutDraft),
     mapMode,
     advisorPrompt,
     clientConfirmationRequired: true,
@@ -598,7 +656,41 @@ async function updateMapDraft(user, body) {
     WHERE id = ${session.id}
     RETURNING *
   `;
-  await recordEvent(rows[0], 'prompt_sent', { eventName: 'map_draft_updated', mapMode, partCount: Object.keys(layoutDraft).length });
+  await recordEvent(rows[0], 'prompt_sent', { eventName: 'map_draft_updated', mapMode, partCount: Object.keys(layoutDraft.nodes).length, relationshipCount: layoutDraft.relationships.length });
+  return publicSession(rows[0]);
+}
+
+
+async function updateMapNodePosition(user, body) {
+  const session = await getSession(requireUuid(body.sessionId, 'sessionId'));
+  await assertCanAccessSession(user, session);
+  ensureSharedMapActivity(session);
+  if (user.user_role === 'client' && String(user.id) !== String(session.client_id)) {
+    throw Object.assign(new Error('Client access denied'), { statusCode: 403, code: 'client_access_denied' });
+  }
+  if (isTherapistUser(user) && !isAdminUser(user)) {
+    await requireTherapistAssignment(user.id, session.client_id);
+  }
+  const partId = sanitizePartId(body.partId);
+  await assertPartBelongsToClient(session.client_id, partId);
+  const layoutDraft = sanitizeLayoutDraft({ nodes: { [partId]: { x: body.x, y: body.y, color: body.color } } });
+  const nextState = {
+    ...(session.activity_state || {}),
+    layoutDraft: mergeLayoutDraft(session.activity_state?.layoutDraft || {}, layoutDraft),
+    clientConfirmationRequired: true,
+    hasUnsavedConfirmedChanges: true,
+    draftUpdatedAt: new Date().toISOString()
+  };
+  const rows = await sql`
+    UPDATE ifs_live_sessions
+    SET activity_state = ${JSON.stringify(nextState)}::jsonb,
+        updated_at = CURRENT_TIMESTAMP,
+        therapist_last_seen_at = CASE WHEN ${user.user_role === 'client'} THEN therapist_last_seen_at ELSE CURRENT_TIMESTAMP END,
+        client_last_seen_at = CASE WHEN ${user.user_role === 'client'} THEN CURRENT_TIMESTAMP ELSE client_last_seen_at END
+    WHERE id = ${session.id}
+    RETURNING *
+  `;
+  await recordEvent(rows[0], 'prompt_sent', { eventName: 'map_node_position_updated', partId, role: user.user_role === 'client' ? 'client' : 'advisor' });
   return publicSession(rows[0]);
 }
 
@@ -608,10 +700,14 @@ async function suggestPart(user, body) {
   ensureSharedMapActivity(session);
   const suggestion = sanitizeSuggestion(body.suggestion || body);
   if (suggestion.partId) await assertPartBelongsToClient(session.client_id, suggestion.partId);
+  if (suggestion.suggestionType === 'relationship') {
+    await assertPartBelongsToClient(session.client_id, suggestion.fromPartId);
+    await assertPartBelongsToClient(session.client_id, suggestion.toPartId);
+  }
   const pending = Array.isArray(session.activity_state?.pendingSuggestions) ? session.activity_state.pendingSuggestions : [];
   const nextState = {
     ...(session.activity_state || {}),
-    pendingSuggestions: [...pending.filter((item) => item.status === 'pending').slice(-19), suggestion],
+    pendingSuggestions: [...pending.filter((item) => item.status !== 'dismissed' && !item.savedAt).slice(-19), suggestion],
     clientConfirmationRequired: true,
     hasUnsavedConfirmedChanges: true
   };
@@ -636,13 +732,25 @@ async function updateSuggestionStatus(user, body, status) {
   const suggestionId = String(body.suggestionId || '').trim();
   const suggestions = Array.isArray(session.activity_state?.pendingSuggestions) ? session.activity_state.pendingSuggestions : [];
   let found = false;
+  const nextRelationships = sanitizeLayoutDraft(session.activity_state?.layoutDraft || {}).relationships;
+  let acceptedRelationship = null;
   const nextSuggestions = suggestions.map((item) => {
     if (String(item.id) !== suggestionId || item.status !== 'pending') return item;
     found = true;
+    if (status === 'accepted' && item.suggestionType === 'relationship') {
+      acceptedRelationship = sanitizeRelationship({ ...item, status: 'accepted' });
+    }
     return { ...item, status, decidedAt: new Date().toISOString() };
   });
   if (!found) throw Object.assign(new Error('Suggestion not found'), { statusCode: 404, code: 'suggestion_not_found' });
-  const nextState = { ...(session.activity_state || {}), pendingSuggestions: nextSuggestions, hasUnsavedConfirmedChanges: status === 'accepted' ? true : session.activity_state?.hasUnsavedConfirmedChanges };
+  const nextState = {
+    ...(session.activity_state || {}),
+    pendingSuggestions: nextSuggestions,
+    layoutDraft: acceptedRelationship
+      ? mergeLayoutDraft(session.activity_state?.layoutDraft || {}, { relationships: [...nextRelationships, acceptedRelationship] })
+      : session.activity_state?.layoutDraft || {},
+    hasUnsavedConfirmedChanges: status === 'accepted' ? true : session.activity_state?.hasUnsavedConfirmedChanges
+  };
   const rows = await sql`
     UPDATE ifs_live_sessions
     SET activity_state = ${JSON.stringify(nextState)}::jsonb,
@@ -703,7 +811,7 @@ async function saveConfirmedMap(user, body) {
   }
 
   const layoutDraft = sanitizeLayoutDraft(state.layoutDraft || {});
-  for (const [partId, layout] of Object.entries(layoutDraft)) {
+  for (const [partId, layout] of Object.entries(layoutDraft.nodes)) {
     await assertPartBelongsToClient(session.client_id, partId);
     await sql`
       UPDATE ifs_parts
@@ -714,7 +822,7 @@ async function saveConfirmedMap(user, body) {
   }
 
   const nextSuggestions = suggestions.map((item) => item.status === 'accepted' ? { ...item, savedAt: new Date().toISOString() } : item).filter((item) => item.status === 'pending');
-  const nextState = { ...state, pendingSuggestions: nextSuggestions, layoutDraft: {}, hasUnsavedConfirmedChanges: false, lastSavedAt: new Date().toISOString() };
+  const nextState = { ...state, pendingSuggestions: nextSuggestions, layoutDraft: { nodes: {}, relationships: layoutDraft.relationships }, hasUnsavedConfirmedChanges: false, lastSavedAt: new Date().toISOString() };
   const rows = await sql`
     UPDATE ifs_live_sessions
     SET activity_state = ${JSON.stringify(nextState)}::jsonb,
@@ -810,9 +918,13 @@ export default async function handler(req, res) {
       set_activity_step: () => setActivityStep(user, body),
       set_selected_part: () => setSelectedPart(user, body),
       update_map_draft: () => updateMapDraft(user, body),
+      update_map_node_position: () => updateMapNodePosition(user, body),
       suggest_part: () => suggestPart(user, body),
+      suggest_relationship: () => suggestPart(user, { ...body, suggestion: { ...(body.suggestion || body), suggestionType: 'relationship' } }),
       accept_suggestion: () => updateSuggestionStatus(user, body, 'accepted'),
       dismiss_suggestion: () => updateSuggestionStatus(user, body, 'dismissed'),
+      accept_relationship: () => updateSuggestionStatus(user, body, 'accepted'),
+      dismiss_relationship: () => updateSuggestionStatus(user, body, 'dismissed'),
       save_confirmed_map: () => saveConfirmedMap(user, body),
       end_session: () => endSession(user, body),
       heartbeat: () => heartbeat(user, body)
