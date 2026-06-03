@@ -45,6 +45,8 @@ import NotificationPreferences from './pages/NotificationPreferences';
 import PreSessionCheckin from './components/PreSessionCheckin';
 import PartsRelationshipMap from './pages/PartsRelationshipMap';
 import LifeIntegration from './pages/LifeIntegration';
+import LifeIntegrationReflectionDetail from './pages/LifeIntegrationReflectionDetail';
+import AdvisorSharedReflections from './pages/AdvisorSharedReflections';
 import NoticePartPractice from './components/life/NoticePartPractice';
 import ReturnToSelfPractice from './components/life/ReturnToSelfPractice';
 import TriggerReflectionPractice from './components/life/TriggerReflectionPractice';
@@ -551,6 +553,7 @@ function AppContent({ authChecked, clerkLoaded, clerkSignedIn, isAuthenticated, 
                 <Route path="/messages" element={therapistOnly(<TherapistMessages />)} />
                 <Route path="/advisor-homework" element={therapistOnly(<TherapistHomework />)} />
                 <Route path="/advisor-reports" element={therapistOnly(<TherapistReports />)} />
+                <Route path="/advisor/shared-reflections" element={therapistOnly(<AdvisorSharedReflections />)} />
                 <Route path="/reports" element={therapistOnly(<TherapistReports />)} />
                 <Route path="/analytics" element={therapistOnly(<LongitudinalAnalytics />)} />
                 <Route path="/longitudinal-analytics" element={therapistOnly(<LongitudinalAnalytics />)} />
@@ -567,6 +570,7 @@ function AppContent({ authChecked, clerkLoaded, clerkSignedIn, isAuthenticated, 
                 <Route path="/parts-dialogue" element={<FeatureGate feature="partsDialogue"><PartsDialogue /></FeatureGate>} />
                 <Route path="/parts-relationships" element={<PartsRelationshipMap />} />
                 <Route path="/life-integration" element={clientOnly(<LifeIntegration />)} />
+                <Route path="/life-integration/reflections/:reflectionId" element={clientOnly(<LifeIntegrationReflectionDetail />)} />
                 <Route path="/life-integration/notice-part" element={clientOnly(<NoticePartPractice />)} />
                 <Route path="/life-integration/return-to-self" element={clientOnly(<ReturnToSelfPractice />)} />
                 <Route path="/life-integration/trigger-reflection" element={clientOnly(<TriggerReflectionPractice />)} />

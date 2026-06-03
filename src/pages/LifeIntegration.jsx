@@ -9,21 +9,21 @@ function ReflectionCard({ reflection }) {
   const linkedPart = reflection.linked_part_name || reflection.linked_part_alias;
 
   return (
-    <article className="rounded-3xl border border-brand-stone-100 bg-white/80 p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md dark:border-slate-800 dark:bg-slate-900/50">
+    <Link to={`/life-integration/reflections/${reflection.id}`} className="block rounded-3xl border border-brand-stone-100 bg-white/80 p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md dark:border-slate-800 dark:bg-slate-900/50">
       <div className="mb-3 flex items-start justify-between gap-3">
         <div>
           <p className="text-xs font-bold uppercase tracking-[0.18em] text-brand-gold-700 dark:text-brand-gold-500">{title}</p>
           <h3 className="mt-2 line-clamp-2 text-lg font-semibold text-brand-stone-900 dark:text-slate-100">{reflection.situation || reflection.part_noticed || reflection.next_step || 'A gentle IFS reflection'}</h3>
         </div>
-        <span className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide ${reflection.shared_with_advisor ? 'bg-brand-emerald-50 text-brand-emerald-700 dark:bg-brand-emerald-950/30 dark:text-brand-emerald-100' : 'bg-brand-stone-100 text-brand-stone-600 dark:bg-slate-800 dark:text-slate-300'}`}>
-          {reflection.shared_with_advisor ? 'Shared' : 'Private'}
+        <span className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide ${reflection.archived_at ? 'bg-brand-stone-100 text-brand-stone-600 dark:bg-slate-800 dark:text-slate-300' : reflection.shared_with_advisor ? 'bg-brand-emerald-50 text-brand-emerald-700 dark:bg-brand-emerald-950/30 dark:text-brand-emerald-100' : 'bg-brand-stone-100 text-brand-stone-600 dark:bg-slate-800 dark:text-slate-300'}`}>
+          {reflection.archived_at ? 'Archived' : reflection.shared_with_advisor ? 'Shared with Advisor' : 'Private'}
         </span>
       </div>
       <div className="flex flex-wrap gap-2 text-xs text-brand-stone-500 dark:text-slate-500">
         <span className="inline-flex items-center gap-1"><CalendarDays className="h-3.5 w-3.5" /> {new Date(reflection.created_at).toLocaleDateString()}</span>
         {linkedPart && <span>Linked part: {linkedPart}</span>}
       </div>
-    </article>
+    </Link>
   );
 }
 
@@ -110,12 +110,12 @@ export default function LifeIntegration() {
             <div className="soft-card bg-white/85 p-6 dark:bg-brand-cardDark/90">
               <Lock className="mb-3 h-6 w-6 text-brand-emerald-700 dark:text-brand-emerald-100" />
               <h3 className="text-xl font-semibold text-brand-stone-900 dark:text-slate-100">Private by default</h3>
-              <p className="mt-2 text-sm leading-relaxed text-brand-stone-600 dark:text-slate-400">Your reflections are private unless you choose to share them with your Advisor. Sharing is optional and explicit.</p>
+              <p className="mt-2 text-sm leading-relaxed text-brand-stone-600 dark:text-slate-400">Your Life Integration reflections are private by default. You can choose to share specific reflections with your Advisor when you want support connecting daily-life moments to your IFS work. You can unshare later.</p>
             </div>
             <div className="soft-card bg-white/85 p-6 dark:bg-brand-cardDark/90">
               <ShieldCheck className="mb-3 h-6 w-6 text-brand-gold-700 dark:text-brand-gold-500" />
               <h3 className="text-xl font-semibold text-brand-stone-900 dark:text-slate-100">Gentle boundary</h3>
-              <p className="mt-2 text-sm leading-relaxed text-brand-stone-600 dark:text-slate-400">These practices support reflection and IFS self-guidance. They are not monitored for emergencies.</p>
+              <p className="mt-2 text-sm leading-relaxed text-brand-stone-600 dark:text-slate-400">This space supports reflection and IFS practice between sessions. It is not monitored for emergencies.</p>
               <p className="mt-3 text-xs leading-relaxed text-brand-stone-500 dark:text-slate-500">If you are in immediate danger or may harm yourself or someone else, call 911 or your local crisis line now.</p>
             </div>
             <div className="soft-card bg-brand-emerald-50/70 p-6 dark:bg-brand-emerald-950/20">

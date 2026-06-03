@@ -113,6 +113,31 @@ async function loadReflectionForClient(id, clientId) {
   return rows[0] || null;
 }
 
+
+function getReflectionId(body = {}) {
+  return body.reflectionId || body.id;
+}
+
+function getClientId(body = {}) {
+  return body.clientId || body.client_id;
+}
+
+async function loadSharedReflectionForAdvisor(id, advisorId) {
+  const rows = await sql`
+    SELECT r.*, p.part_name AS linked_part_name, p.name AS linked_part_alias, p.part_type AS linked_part_type
+    FROM ifs_life_integration_reflections r
+    LEFT JOIN ifs_parts p ON p.id = r.part_id
+    WHERE r.id = ${id}
+      AND r.shared_with_advisor IS TRUE
+      AND r.archived_at IS NULL
+    LIMIT 1
+  `;
+  const row = rows[0] || null;
+  if (!row) return null;
+  await assertAdvisorAssignment(advisorId, row.client_id);
+  return row;
+}
+
 async function handleList(appUser, body) {
   const type = body.type;
   const includeArchived = body.includeArchived === true;
@@ -144,37 +169,29 @@ async function handleList(appUser, body) {
       LEFT JOIN ifs_parts p ON p.id = r.part_id
       WHERE r.client_id = $1
         AND r.shared_with_advisor IS TRUE
+        AND r.archived_at IS NULL
         AND ($2::text IS NULL OR r.reflection_type = $2)
-        AND ($3::boolean IS TRUE OR r.archived_at IS NULL)
       ORDER BY r.created_at DESC
       LIMIT 50
-    `, [clientId, type || null, includeArchived]);
+    `, [clientId, type || null]);
   }
 
   return [];
 }
 
 async function handleGet(appUser, body) {
-  if (!body.id) throw Object.assign(new Error('Reflection id is required'), { statusCode: 400 });
+  const reflectionId = getReflectionId(body);
+  if (!reflectionId) throw Object.assign(new Error('Reflection id is required'), { statusCode: 400 });
 
   if (appUser.user_role === 'client') {
-    const row = await loadReflectionForClient(body.id, appUser.id);
+    const row = await loadReflectionForClient(reflectionId, appUser.id);
     if (!row) throw Object.assign(new Error('Reflection not found'), { statusCode: 404 });
     return row;
   }
 
   if (isTherapistUser(appUser)) {
-    const rows = await sql`
-      SELECT r.*, p.part_name AS linked_part_name, p.name AS linked_part_alias, p.part_type AS linked_part_type
-      FROM ifs_life_integration_reflections r
-      LEFT JOIN ifs_parts p ON p.id = r.part_id
-      WHERE r.id = ${body.id}
-        AND r.shared_with_advisor IS TRUE
-      LIMIT 1
-    `;
-    const row = rows[0] || null;
+    const row = await loadSharedReflectionForAdvisor(reflectionId, appUser.id);
     if (!row) throw Object.assign(new Error('Reflection not found'), { statusCode: 404 });
-    await assertAdvisorAssignment(appUser.id, row.client_id);
     return row;
   }
 
@@ -208,12 +225,13 @@ async function handleUpdate(appUser, body) {
   if (appUser.user_role !== 'client') {
     throw Object.assign(new Error('Only clients can update Life Integration reflections'), { statusCode: 403 });
   }
-  if (!body.id) throw Object.assign(new Error('Reflection id is required'), { statusCode: 400 });
+  const reflectionId = getReflectionId(body);
+  if (!reflectionId) throw Object.assign(new Error('Reflection id is required'), { statusCode: 400 });
   const updates = pickUpdates(body.updates || {});
   if (!Object.keys(updates).length) throw Object.assign(new Error('No updates provided'), { statusCode: 400 });
   await assertPartBelongsToClient(updates.part_id, appUser.id);
 
-  const existing = await loadReflectionForClient(body.id, appUser.id);
+  const existing = await loadReflectionForClient(reflectionId, appUser.id);
   if (!existing) throw Object.assign(new Error('Reflection not found'), { statusCode: 404 });
 
   const merged = { ...existing, ...updates };
@@ -230,7 +248,7 @@ async function handleUpdate(appUser, body) {
         next_step = ${merged.next_step},
         shared_with_advisor = ${merged.shared_with_advisor === true},
         updated_at = CURRENT_TIMESTAMP
-    WHERE id = ${body.id}
+    WHERE id = ${reflectionId}
       AND client_id = ${appUser.id}
     RETURNING *
   `;
@@ -241,12 +259,13 @@ async function handleDelete(appUser, body) {
   if (appUser.user_role !== 'client') {
     throw Object.assign(new Error('Only clients can archive Life Integration reflections'), { statusCode: 403 });
   }
-  if (!body.id) throw Object.assign(new Error('Reflection id is required'), { statusCode: 400 });
+  const reflectionId = getReflectionId(body);
+  if (!reflectionId) throw Object.assign(new Error('Reflection id is required'), { statusCode: 400 });
   const rows = await sql`
     UPDATE ifs_life_integration_reflections
     SET archived_at = CURRENT_TIMESTAMP,
         updated_at = CURRENT_TIMESTAMP
-    WHERE id = ${body.id}
+    WHERE id = ${reflectionId}
       AND client_id = ${appUser.id}
     RETURNING *
   `;
@@ -258,17 +277,48 @@ async function handleShare(appUser, body, shared) {
   if (appUser.user_role !== 'client') {
     throw Object.assign(new Error('Only clients can change Advisor sharing'), { statusCode: 403 });
   }
-  if (!body.id) throw Object.assign(new Error('Reflection id is required'), { statusCode: 400 });
+  const reflectionId = getReflectionId(body);
+  if (!reflectionId) throw Object.assign(new Error('Reflection id is required'), { statusCode: 400 });
   const rows = await sql`
     UPDATE ifs_life_integration_reflections
     SET shared_with_advisor = ${shared},
         updated_at = CURRENT_TIMESTAMP
-    WHERE id = ${body.id}
+    WHERE id = ${reflectionId}
       AND client_id = ${appUser.id}
     RETURNING *
   `;
   if (!rows.length) throw Object.assign(new Error('Reflection not found'), { statusCode: 404 });
   return rows[0];
+}
+
+async function handleListSharedForAdvisor(appUser, body) {
+  if (!isTherapistUser(appUser)) {
+    throw Object.assign(new Error('Only Advisors can list shared Life Integration reflections'), { statusCode: 403 });
+  }
+  const clientId = getClientId(body);
+  if (!clientId) throw Object.assign(new Error('clientId is required for Advisor access'), { statusCode: 400 });
+  await assertAdvisorAssignment(appUser.id, clientId);
+  return sql.query(`
+    SELECT r.*, p.part_name AS linked_part_name, p.name AS linked_part_alias, p.part_type AS linked_part_type
+    FROM ifs_life_integration_reflections r
+    LEFT JOIN ifs_parts p ON p.id = r.part_id
+    WHERE r.client_id = $1
+      AND r.shared_with_advisor IS TRUE
+      AND r.archived_at IS NULL
+    ORDER BY r.created_at DESC
+    LIMIT 50
+  `, [clientId]);
+}
+
+async function handleGetSharedForAdvisor(appUser, body) {
+  if (!isTherapistUser(appUser)) {
+    throw Object.assign(new Error('Only Advisors can view shared Life Integration reflections'), { statusCode: 403 });
+  }
+  const reflectionId = getReflectionId(body);
+  if (!reflectionId) throw Object.assign(new Error('Reflection id is required'), { statusCode: 400 });
+  const row = await loadSharedReflectionForAdvisor(reflectionId, appUser.id);
+  if (!row) throw Object.assign(new Error('Reflection not found'), { statusCode: 404 });
+  return row;
 }
 
 export default async function handler(req, res) {
@@ -283,12 +333,14 @@ export default async function handler(req, res) {
     let data;
 
     if (body.action === 'list') data = await handleList(appUser, body);
-    else if (body.action === 'get') data = await handleGet(appUser, body);
+    else if (body.action === 'get' || body.action === 'get_reflection') data = await handleGet(appUser, body);
     else if (body.action === 'create') data = await handleCreate(appUser, body);
-    else if (body.action === 'update') data = await handleUpdate(appUser, body);
-    else if (body.action === 'archive' || body.action === 'delete') data = await handleDelete(appUser, body);
-    else if (body.action === 'share_with_advisor') data = await handleShare(appUser, body, true);
-    else if (body.action === 'unshare_with_advisor') data = await handleShare(appUser, body, false);
+    else if (body.action === 'update' || body.action === 'update_reflection') data = await handleUpdate(appUser, body);
+    else if (body.action === 'archive' || body.action === 'delete' || body.action === 'archive_reflection') data = await handleDelete(appUser, body);
+    else if (body.action === 'share_with_advisor' || body.action === 'share_reflection') data = await handleShare(appUser, body, true);
+    else if (body.action === 'unshare_with_advisor' || body.action === 'unshare_reflection') data = await handleShare(appUser, body, false);
+    else if (body.action === 'list_shared_for_advisor') data = await handleListSharedForAdvisor(appUser, body);
+    else if (body.action === 'get_shared_for_advisor') data = await handleGetSharedForAdvisor(appUser, body);
     else throw Object.assign(new Error('Unsupported Life Integration action'), { statusCode: 400 });
 
     return res.status(200).json({ data });

@@ -42,14 +42,30 @@ export function saveLifeIntegrationReflection(payload) {
   return lifeIntegrationRequest({ action: 'create', payload });
 }
 
-export function updateLifeIntegrationReflection(id, updates) {
-  return lifeIntegrationRequest({ action: 'update', id, updates });
+export function getLifeIntegrationReflection(reflectionId) {
+  return lifeIntegrationRequest({ action: 'get_reflection', reflectionId });
+}
+
+export function updateLifeIntegrationReflection(reflectionId, updates) {
+  return lifeIntegrationRequest({ action: 'update_reflection', reflectionId, updates });
+}
+
+export function archiveLifeIntegrationReflection(reflectionId) {
+  return lifeIntegrationRequest({ action: 'archive_reflection', reflectionId });
 }
 
 export function deleteLifeIntegrationReflection(id) {
-  return lifeIntegrationRequest({ action: 'archive', id });
+  return archiveLifeIntegrationReflection(id);
 }
 
-export function shareReflectionWithAdvisor(id, shared) {
-  return lifeIntegrationRequest({ action: shared ? 'share_with_advisor' : 'unshare_with_advisor', id });
+export function shareReflectionWithAdvisor(reflectionId, shared = true) {
+  return lifeIntegrationRequest({ action: shared ? 'share_reflection' : 'unshare_reflection', reflectionId });
+}
+
+export function loadSharedLifeIntegrationReflectionsForAdvisor(clientId) {
+  return lifeIntegrationRequest({ action: 'list_shared_for_advisor', clientId });
+}
+
+export function getSharedLifeIntegrationReflectionForAdvisor(reflectionId) {
+  return lifeIntegrationRequest({ action: 'get_shared_for_advisor', reflectionId });
 }
