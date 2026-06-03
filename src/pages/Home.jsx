@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, createElement } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   Heart,
@@ -43,12 +43,12 @@ const SectionHeader = ({ eyebrow, title, subtitle }) => (
   </div>
 );
 
-const ClientHomeTile = ({ icon: Icon, title, description, buttonLabel, to, badge, tone = 'emerald', progress }) => (
+const ClientHomeTile = ({ icon, title, description, buttonLabel, to, badge, tone = 'emerald', progress }) => (
   <Link to={to} className="soft-card-interactive group flex h-full flex-col justify-between gap-5 p-6">
     <div>
       <div className="mb-4 flex items-start justify-between gap-3">
         <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ${iconTones[tone] || iconTones.emerald}`}>
-          <Icon className="h-6 w-6" />
+          {createElement(icon, { className: 'h-6 w-6' })}
         </div>
         {badge && <span className="rounded-full bg-white px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-brand-gold-700 shadow-sm dark:bg-slate-900/70">{badge}</span>}
       </div>
@@ -131,10 +131,12 @@ const Home = ({ clientId, client }) => {
   ];
 
   const dailyLifeTiles = [
-    { to: '/daily-checkin', icon: Smile, title: 'Notice a Part in the Moment', description: 'Pause and identify which part is showing up right now.', buttonLabel: 'Notice a Part', tone: 'emerald' },
-    { to: '/exercises', icon: ShieldCheck, title: 'Return to Self-Energy', description: 'Use a short grounding practice to reconnect with Self.', buttonLabel: 'Return to Self', tone: 'gold' },
-    { to: '/journal', icon: BookOpen, title: 'Reflect on a Trigger', description: 'Explore what happened, which parts reacted, and what they may need.', buttonLabel: 'Reflect', tone: 'stone' },
-    { to: '/weekly-reflection', icon: Heart, title: 'Repair After a Conflict', description: 'Use IFS to understand your reaction and move toward repair.', buttonLabel: 'Start Repair Reflection', tone: 'emerald' }
+    { to: '/life-integration/notice-part', icon: Smile, title: 'Notice a Part in the Moment', description: 'Pause and identify which part is showing up right now.', buttonLabel: 'Notice a Part', tone: 'emerald' },
+    { to: '/life-integration/return-to-self', icon: ShieldCheck, title: 'Return to Self-Energy', description: 'Use a short unblending practice to reconnect with Self.', buttonLabel: 'Return to Self', tone: 'gold' },
+    { to: '/life-integration/trigger-reflection', icon: BookOpen, title: 'Reflect on a Trigger', description: 'Explore what happened, which parts reacted, and what they may need.', buttonLabel: 'Reflect', tone: 'stone' },
+    { to: '/life-integration/repair-after-conflict', icon: Heart, title: 'Repair After Conflict', description: 'Use IFS to understand your reaction and move toward repair.', buttonLabel: 'Start Repair Reflection', tone: 'emerald' },
+    { to: '/life-integration/protector-check-in', icon: ShieldCheck, title: 'Protector Check-In', description: 'Appreciate a protector and ask what it needs from you today.', buttonLabel: 'Check In', tone: 'gold' },
+    { to: '/life-integration/needs-boundaries', icon: Sparkles, title: 'Needs & Boundaries Reflection', description: 'Listen for the need beneath tension and choose a clear next step.', buttonLabel: 'Reflect', tone: 'stone' }
   ];
 
   const toolCategories = {
@@ -159,7 +161,7 @@ const Home = ({ clientId, client }) => {
   };
 
   const advisorTiles = [
-    { to: '/homework', icon: BookOpen, title: 'Assigned by My Advisor', description: 'IFS practices and reflections your Advisor has shared with you.', buttonLabel: 'View Assigned Practices', tone: 'gold' },
+    { to: '/assigned-practices', icon: BookOpen, title: 'Assigned by My Advisor', description: 'IFS practices and reflections your Advisor has shared with you.', buttonLabel: 'View Assigned Practices', tone: 'gold' },
     { to: '/pre-session-checkin', icon: CalendarCheck, title: 'Advisor Session Check-In', description: 'Share what feels important before your next Advisor session.', buttonLabel: agendaSummary.hasDraft ? 'Continue Check-In' : 'Start Check-In', badge: agendaSummary.lastSubmitted ? `Last ${new Date(agendaSummary.lastSubmitted).toLocaleDateString()}` : null, tone: 'emerald' },
     { to: '/live-session', icon: HeartPulse, title: 'Live Advisor-Guided Practice', description: activeLiveSession ? 'Your Advisor has started a live guided practice.' : 'Join a guided IFS practice when your Advisor starts one.', buttonLabel: activeLiveSession ? 'Join Practice' : 'Check for Guided Practice', badge: activeLiveSession ? 'Active now' : null, tone: activeLiveSession ? 'emerald' : 'stone' },
     { to: '/inbox', icon: MessageSquare, title: 'Messages', description: 'View supportive messages and updates from your Advisor.', buttonLabel: 'Open Messages', tone: 'gold' }
@@ -245,7 +247,7 @@ const Home = ({ clientId, client }) => {
 
       <section className="mb-14">
         <SectionHeader title="IFS in Daily Life" subtitle="Practice noticing parts, unblending, and returning to Self-energy in real moments." />
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
           {dailyLifeTiles.map((tile) => <ClientHomeTile key={tile.title} {...tile} />)}
         </div>
       </section>

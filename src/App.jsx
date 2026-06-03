@@ -1,7 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Link, useLocation, Navigate } from 'react-router-dom';
 import { useState, useEffect, useCallback } from 'react';
 import { SignIn, SignUp, useAuth, UserButton } from '@clerk/clerk-react';
-import { Settings as SettingsIcon, Home as HomeIcon, BookOpen, ClipboardList, BookHeart, Handshake, LogOut, MessageSquare, Compass as CompassIcon } from 'lucide-react';
+import { Settings as SettingsIcon, Home as HomeIcon, BookOpen, ClipboardList, BookHeart, Handshake, LogOut, MessageSquare, Compass as CompassIcon, Sparkles as SparklesIcon } from 'lucide-react';
 import { useTheme } from './contexts/ThemeContext';
 import { supabase } from './lib/supabase';
 import SSOCallback from './components/SSOCallback';
@@ -44,6 +44,13 @@ import Notifications from './pages/Notifications';
 import NotificationPreferences from './pages/NotificationPreferences';
 import PreSessionCheckin from './components/PreSessionCheckin';
 import PartsRelationshipMap from './pages/PartsRelationshipMap';
+import LifeIntegration from './pages/LifeIntegration';
+import NoticePartPractice from './components/life/NoticePartPractice';
+import ReturnToSelfPractice from './components/life/ReturnToSelfPractice';
+import TriggerReflectionPractice from './components/life/TriggerReflectionPractice';
+import RepairAfterConflictPractice from './components/life/RepairAfterConflictPractice';
+import ProtectorCheckInPractice from './components/life/ProtectorCheckInPractice';
+import NeedsBoundariesPractice from './components/life/NeedsBoundariesPractice';
 import UnburdeningProtocol from './pages/UnburdeningProtocol';
 import AssessmentBuilder from './pages/AssessmentBuilder';
 import CustomAssessment from './pages/CustomAssessment';
@@ -212,6 +219,7 @@ function BottomNav() {
     { path: '/', icon: HomeIcon, label: 'Home' },
     { path: '/exercises', icon: BookOpen, label: 'Practice' },
     { path: '/journal', icon: BookHeart, label: 'Journal' },
+    { path: '/life-integration', icon: SparklesIcon, label: 'Daily Life' },
     { path: '/parts-mapping', icon: CompassIcon, label: 'Parts' },
     { path: '/inbox', icon: MessageSquare, label: 'Advisor' },
     { path: '/profile', icon: Handshake, label: 'Profile' },
@@ -547,6 +555,7 @@ function AppContent({ authChecked, clerkLoaded, clerkSignedIn, isAuthenticated, 
                 <Route path="/analytics" element={therapistOnly(<LongitudinalAnalytics />)} />
                 <Route path="/longitudinal-analytics" element={therapistOnly(<LongitudinalAnalytics />)} />
                 <Route path="/inbox" element={clientOnly(<ClientInbox />)} />
+                <Route path="/assigned-practices" element={clientOnly(<ClientHomework />)} />
                 <Route path="/my-homework" element={clientOnly(<ClientHomework />)} />
                 <Route path="/homework" element={clientOnly(<ClientHomework />)} />
                 <Route path="/pre-session-checkin" element={clientOnly(<PreSessionCheckin />)} />
@@ -557,6 +566,13 @@ function AppContent({ authChecked, clerkLoaded, clerkSignedIn, isAuthenticated, 
                 <Route path="/gamification" element={<GamificationHub />} />
                 <Route path="/parts-dialogue" element={<FeatureGate feature="partsDialogue"><PartsDialogue /></FeatureGate>} />
                 <Route path="/parts-relationships" element={<PartsRelationshipMap />} />
+                <Route path="/life-integration" element={clientOnly(<LifeIntegration />)} />
+                <Route path="/life-integration/notice-part" element={clientOnly(<NoticePartPractice />)} />
+                <Route path="/life-integration/return-to-self" element={clientOnly(<ReturnToSelfPractice />)} />
+                <Route path="/life-integration/trigger-reflection" element={clientOnly(<TriggerReflectionPractice />)} />
+                <Route path="/life-integration/repair-after-conflict" element={clientOnly(<RepairAfterConflictPractice />)} />
+                <Route path="/life-integration/protector-check-in" element={clientOnly(<ProtectorCheckInPractice />)} />
+                <Route path="/life-integration/needs-boundaries" element={clientOnly(<NeedsBoundariesPractice />)} />
                 <Route path="/unburdening" element={<FeatureGate feature="unburdening"><UnburdeningProtocol /></FeatureGate>} />
                 <Route path="/assessment-builder" element={<AssessmentBuilder />} />
                 <Route path="/custom-assessment/:assessmentId" element={<CustomAssessment />} />

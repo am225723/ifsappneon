@@ -1,0 +1,225 @@
+import { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { ArrowLeft, ArrowRight, Check, Heart, Lock, Share2 } from 'lucide-react';
+import { supabase } from '../../lib/supabase';
+import { saveLifeIntegrationReflection } from '../../lib/lifeIntegration';
+
+const emptyForm = {
+  situation: '',
+  part_noticed: '',
+  part_id: '',
+  body_sensation: '',
+  emotion_words: '',
+  need_words: '',
+  self_energy_quality: '',
+  next_step: '',
+  shared_with_advisor: false
+};
+
+function getClientId() {
+  return localStorage.getItem('client_id');
+}
+
+function normalizeTags(value) {
+  return value.split(',').map((item) => item.trim()).filter(Boolean);
+}
+
+function Field({ field, value, onChange }) {
+  if (field.type === 'select') {
+    return (
+      <label className="block">
+        <span className="text-sm font-semibold text-brand-stone-800 dark:text-slate-200">{field.label}</span>
+        <select
+          value={value}
+          onChange={(event) => onChange(field.name, event.target.value)}
+          className="mt-2 w-full rounded-2xl border border-brand-stone-200 bg-white/80 px-4 py-3 text-sm text-brand-stone-800 outline-none transition focus:border-brand-gold-400 focus:ring-2 focus:ring-brand-gold-100 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100"
+        >
+          <option value="">Choose if one fits</option>
+          {field.options.map((option) => <option key={option} value={option}>{option}</option>)}
+        </select>
+      </label>
+    );
+  }
+
+  return (
+    <label className="block">
+      <span className="text-sm font-semibold text-brand-stone-800 dark:text-slate-200">{field.label}</span>
+      <textarea
+        value={value}
+        onChange={(event) => onChange(field.name, event.target.value)}
+        placeholder={field.placeholder}
+        rows={field.type === 'tags' ? 2 : 3}
+        className="mt-2 w-full resize-none rounded-2xl border border-brand-stone-200 bg-white/80 px-4 py-3 text-sm leading-relaxed text-brand-stone-800 outline-none transition placeholder:text-brand-stone-400 focus:border-brand-gold-400 focus:ring-2 focus:ring-brand-gold-100 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100 dark:placeholder:text-slate-500"
+      />
+      {field.type === 'tags' && <span className="mt-1 block text-xs text-brand-stone-500 dark:text-slate-500">Separate words with commas.</span>}
+    </label>
+  );
+}
+
+export default function LifePracticeShell({ type, config }) {
+  const [stepIndex, setStepIndex] = useState(0);
+  const [form, setForm] = useState(emptyForm);
+  const [parts, setParts] = useState([]);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(null);
+  const [error, setError] = useState('');
+
+  const progress = useMemo(() => Math.round(((stepIndex + 1) / config.steps.length) * 100), [config.steps.length, stepIndex]);
+
+  useEffect(() => {
+    const loadParts = async () => {
+      const clientId = getClientId();
+      if (!clientId) return;
+      const { data, error: partsError } = await supabase
+        .from('ifs_parts')
+        .select('id, part_name, name, part_type, type')
+        .eq('client_id', clientId)
+        .order('updated_at', { ascending: false })
+        .limit(30);
+      if (!partsError) setParts(data || []);
+    };
+    loadParts();
+  }, []);
+
+  const updateField = (name, value) => setForm((current) => ({ ...current, [name]: value }));
+
+  const handleSave = async () => {
+    setSaving(true);
+    setError('');
+    setSaved(null);
+
+    const payload = {
+      reflection_type: type,
+      title: config.title,
+      situation: form.situation,
+      part_noticed: form.part_noticed,
+      part_id: form.part_id || null,
+      body_sensation: form.body_sensation,
+      emotion_words: normalizeTags(form.emotion_words),
+      need_words: normalizeTags(form.need_words),
+      self_energy_quality: form.self_energy_quality,
+      next_step: form.next_step,
+      shared_with_advisor: form.shared_with_advisor
+    };
+
+    const result = await saveLifeIntegrationReflection(payload);
+    setSaving(false);
+    if (result.error) {
+      setError(result.error.message || 'Unable to save this reflection.');
+      return;
+    }
+    setSaved(result.data);
+  };
+
+  return (
+    <main className="min-h-screen bg-brand-sanctuary px-4 py-8 dark:bg-brand-midnight sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-4xl">
+        <Link to="/life-integration" className="mb-6 inline-flex items-center gap-2 text-sm font-semibold text-brand-stone-600 transition hover:text-brand-gold-700 dark:text-slate-400 dark:hover:text-brand-gold-500">
+          <ArrowLeft className="h-4 w-4" /> Back to IFS in Daily Life
+        </Link>
+
+        <section className="overflow-hidden rounded-[2rem] border border-brand-gold-100 bg-white/85 shadow-xl shadow-brand-gold-500/10 dark:border-slate-800 dark:bg-brand-cardDark/90">
+          <div className="bg-gradient-to-br from-brand-gold-50 via-white to-brand-emerald-50 px-6 py-8 dark:from-brand-gold-950/20 dark:via-brand-cardDark dark:to-brand-emerald-950/20 sm:px-8">
+            <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.26em] text-brand-gold-700 dark:text-brand-gold-500">{config.eyebrow}</p>
+                <h1 className="mt-3 text-4xl font-serif font-normal text-brand-stone-900 dark:text-slate-100">{config.title}</h1>
+                <p className="mt-3 max-w-2xl text-base leading-relaxed text-brand-stone-600 dark:text-slate-400">{config.description}</p>
+              </div>
+              <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-3xl bg-white text-3xl shadow-sm dark:bg-slate-900/70">{config.icon}</div>
+            </div>
+            <div className="mt-8 h-2 rounded-full bg-white/80 dark:bg-slate-900/60">
+              <div className="h-full rounded-full bg-brand-gold-600 transition-all" style={{ width: `${progress}%` }} />
+            </div>
+          </div>
+
+          <div className="grid gap-0 lg:grid-cols-[1fr_0.9fr]">
+            <div className="border-b border-brand-stone-100 p-6 dark:border-slate-800 sm:p-8 lg:border-b-0 lg:border-r">
+              <p className="mb-3 text-xs font-bold uppercase tracking-[0.22em] text-brand-emerald-700 dark:text-brand-emerald-100">Step {stepIndex + 1} of {config.steps.length}</p>
+              <div className="rounded-3xl bg-brand-stone-50 p-6 dark:bg-slate-900/50">
+                <p className="text-2xl font-serif leading-relaxed text-brand-stone-900 dark:text-slate-100">{config.steps[stepIndex]}</p>
+                <p className="mt-4 text-sm leading-relaxed text-brand-stone-600 dark:text-slate-400">There is no right way to do this. Go gently. You can stop at any time.</p>
+              </div>
+              <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
+                <button
+                  type="button"
+                  onClick={() => setStepIndex((index) => Math.max(0, index - 1))}
+                  disabled={stepIndex === 0}
+                  className="btn-sanctuary-secondary disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <ArrowLeft className="h-4 w-4" /> Previous
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setStepIndex((index) => Math.min(config.steps.length - 1, index + 1))}
+                  disabled={stepIndex === config.steps.length - 1}
+                  className="btn-sanctuary-primary disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  Next <ArrowRight className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+
+            <div className="p-6 sm:p-8">
+              <div className="mb-5">
+                <h2 className="text-xl font-semibold text-brand-stone-900 dark:text-slate-100">Optional reflection</h2>
+                <p className="mt-2 text-sm leading-relaxed text-brand-stone-600 dark:text-slate-400">Write only what helps. You can save this as a private Life Integration reflection.</p>
+              </div>
+
+              <div className="space-y-4">
+                {config.fields.map((field) => (
+                  <Field key={field.name} field={field} value={form[field.name] || ''} onChange={updateField} />
+                ))}
+
+                <label className="block">
+                  <span className="text-sm font-semibold text-brand-stone-800 dark:text-slate-200">Connect to an existing part (optional)</span>
+                  <select
+                    value={form.part_id}
+                    onChange={(event) => updateField('part_id', event.target.value)}
+                    className="mt-2 w-full rounded-2xl border border-brand-stone-200 bg-white/80 px-4 py-3 text-sm text-brand-stone-800 outline-none transition focus:border-brand-gold-400 focus:ring-2 focus:ring-brand-gold-100 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100"
+                  >
+                    <option value="">No linked part</option>
+                    {parts.map((part) => (
+                      <option key={part.id} value={part.id}>{part.part_name || part.name || 'Unnamed part'}{part.part_type || part.type ? ` · ${part.part_type || part.type}` : ''}</option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className="flex items-start gap-3 rounded-2xl border border-brand-gold-100 bg-brand-gold-50/70 p-4 dark:border-brand-gold-900/40 dark:bg-brand-gold-950/20">
+                  <input
+                    type="checkbox"
+                    checked={form.shared_with_advisor}
+                    onChange={(event) => updateField('shared_with_advisor', event.target.checked)}
+                    className="mt-1 h-4 w-4 rounded border-brand-gold-300 text-brand-gold-700 focus:ring-brand-gold-500"
+                  />
+                  <span>
+                    <span className="flex items-center gap-2 text-sm font-semibold text-brand-stone-900 dark:text-slate-100"><Share2 className="h-4 w-4" /> Share with my Advisor</span>
+                    <span className="mt-1 block text-xs leading-relaxed text-brand-stone-600 dark:text-slate-400">Private by default. Choose this only when it feels useful for Advisor-supported reflection.</span>
+                  </span>
+                </label>
+
+                {error && <p className="rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-700 dark:bg-red-950/20 dark:text-red-300">{error}</p>}
+                {saved && <p className="rounded-2xl bg-brand-emerald-50 px-4 py-3 text-sm font-semibold text-brand-emerald-700 dark:bg-brand-emerald-950/30 dark:text-brand-emerald-100"><Check className="mr-2 inline h-4 w-4" />Reflection saved.</p>}
+
+                <button type="button" onClick={handleSave} disabled={saving} className="btn-sanctuary-primary w-full justify-center disabled:opacity-60">
+                  {saving ? 'Saving…' : 'Save reflection'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="mt-6 grid gap-4 md:grid-cols-2">
+          <div className="rounded-3xl bg-white/70 p-5 text-sm leading-relaxed text-brand-stone-600 shadow-sm dark:bg-slate-900/40 dark:text-slate-400">
+            <Lock className="mb-2 h-5 w-5 text-brand-emerald-700 dark:text-brand-emerald-100" />
+            Your reflections are private unless you choose to share them with your Advisor.
+          </div>
+          <div className="rounded-3xl bg-white/70 p-5 text-sm leading-relaxed text-brand-stone-600 shadow-sm dark:bg-slate-900/40 dark:text-slate-400">
+            <Heart className="mb-2 h-5 w-5 text-brand-gold-700 dark:text-brand-gold-500" />
+            These practices support reflection and IFS self-guidance. They are not monitored for emergencies. If you are in immediate danger or may harm yourself or someone else, call 911 or your local crisis line now.
+          </div>
+        </section>
+      </div>
+    </main>
+  );
+}
