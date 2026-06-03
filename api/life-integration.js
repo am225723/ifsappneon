@@ -11,23 +11,16 @@ const REFLECTION_TYPES = new Set([
 
 const WRITABLE_FIELDS = new Set([
   'reflection_type',
-  'title',
   'situation',
   'part_noticed',
   'part_id',
   'body_sensation',
-  'emotion_words',
-  'need_words',
-  'self_energy_quality',
+  'emotion',
+  'need_or_message',
+  'self_energy_response',
   'next_step',
   'shared_with_advisor'
 ]);
-
-function toArray(value) {
-  if (Array.isArray(value)) return value.map((item) => String(item).trim()).filter(Boolean);
-  if (typeof value === 'string') return value.split(',').map((item) => item.trim()).filter(Boolean);
-  return [];
-}
 
 function cleanString(value) {
   if (typeof value !== 'string') return value ?? null;
@@ -49,14 +42,13 @@ function pickPayload(payload = {}, appUser) {
   return {
     client_id: appUser.id,
     reflection_type: reflectionType,
-    title: cleanString(payload.title),
     situation: cleanString(payload.situation),
     part_noticed: cleanString(payload.part_noticed),
     part_id: cleanString(payload.part_id),
     body_sensation: cleanString(payload.body_sensation),
-    emotion_words: toArray(payload.emotion_words),
-    need_words: toArray(payload.need_words),
-    self_energy_quality: cleanString(payload.self_energy_quality),
+    emotion: cleanString(payload.emotion),
+    need_or_message: cleanString(payload.need_or_message),
+    self_energy_response: cleanString(payload.self_energy_response),
     next_step: cleanString(payload.next_step),
     is_private: true,
     shared_with_advisor: payload.shared_with_advisor === true
@@ -72,9 +64,7 @@ function pickUpdates(updates = {}) {
 
   const normalized = {};
   for (const [key, value] of Object.entries(updates)) {
-    if (key === 'emotion_words' || key === 'need_words') {
-      normalized[key] = toArray(value);
-    } else if (key === 'shared_with_advisor') {
+    if (key === 'shared_with_advisor') {
       normalized.shared_with_advisor = value === true;
     } else {
       normalized[key] = cleanString(value);
@@ -200,13 +190,13 @@ async function handleCreate(appUser, body) {
 
   const rows = await sql`
     INSERT INTO ifs_life_integration_reflections (
-      client_id, reflection_type, title, situation, part_noticed, part_id,
-      body_sensation, emotion_words, need_words, self_energy_quality,
+      client_id, reflection_type, situation, part_noticed, part_id,
+      body_sensation, emotion, need_or_message, self_energy_response,
       next_step, is_private, shared_with_advisor
     ) VALUES (
-      ${payload.client_id}, ${payload.reflection_type}, ${payload.title}, ${payload.situation},
-      ${payload.part_noticed}, ${payload.part_id}, ${payload.body_sensation}, ${JSON.stringify(payload.emotion_words)}::jsonb,
-      ${JSON.stringify(payload.need_words)}::jsonb, ${payload.self_energy_quality}, ${payload.next_step},
+      ${payload.client_id}, ${payload.reflection_type}, ${payload.situation},
+      ${payload.part_noticed}, ${payload.part_id}, ${payload.body_sensation}, ${payload.emotion},
+      ${payload.need_or_message}, ${payload.self_energy_response}, ${payload.next_step},
       ${payload.is_private}, ${payload.shared_with_advisor}
     )
     RETURNING *
@@ -230,14 +220,13 @@ async function handleUpdate(appUser, body) {
   const rows = await sql`
     UPDATE ifs_life_integration_reflections
     SET reflection_type = ${merged.reflection_type},
-        title = ${merged.title},
         situation = ${merged.situation},
         part_noticed = ${merged.part_noticed},
         part_id = ${merged.part_id},
         body_sensation = ${merged.body_sensation},
-        emotion_words = ${JSON.stringify(merged.emotion_words || [])}::jsonb,
-        need_words = ${JSON.stringify(merged.need_words || [])}::jsonb,
-        self_energy_quality = ${merged.self_energy_quality},
+        emotion = ${merged.emotion},
+        need_or_message = ${merged.need_or_message},
+        self_energy_response = ${merged.self_energy_response},
         next_step = ${merged.next_step},
         shared_with_advisor = ${merged.shared_with_advisor === true},
         updated_at = CURRENT_TIMESTAMP

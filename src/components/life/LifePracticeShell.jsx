@@ -9,19 +9,15 @@ const emptyForm = {
   part_noticed: '',
   part_id: '',
   body_sensation: '',
-  emotion_words: '',
-  need_words: '',
-  self_energy_quality: '',
+  emotion: '',
+  need_or_message: '',
+  self_energy_response: '',
   next_step: '',
   shared_with_advisor: false
 };
 
 function getClientId() {
   return localStorage.getItem('client_id');
-}
-
-function normalizeTags(value) {
-  return value.split(',').map((item) => item.trim()).filter(Boolean);
 }
 
 function Field({ field, value, onChange }) {
@@ -51,7 +47,6 @@ function Field({ field, value, onChange }) {
         rows={field.type === 'tags' ? 2 : 3}
         className="mt-2 w-full resize-none rounded-2xl border border-brand-stone-200 bg-white/80 px-4 py-3 text-sm leading-relaxed text-brand-stone-800 outline-none transition placeholder:text-brand-stone-400 focus:border-brand-gold-400 focus:ring-2 focus:ring-brand-gold-100 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100 dark:placeholder:text-slate-500"
       />
-      {field.type === 'tags' && <span className="mt-1 block text-xs text-brand-stone-500 dark:text-slate-500">Separate words with commas.</span>}
     </label>
   );
 }
@@ -90,14 +85,13 @@ export default function LifePracticeShell({ type, config }) {
 
     const payload = {
       reflection_type: type,
-      title: config.title,
       situation: form.situation,
       part_noticed: form.part_noticed,
       part_id: form.part_id || null,
       body_sensation: form.body_sensation,
-      emotion_words: normalizeTags(form.emotion_words),
-      need_words: normalizeTags(form.need_words),
-      self_energy_quality: form.self_energy_quality,
+      emotion: form.emotion,
+      need_or_message: form.need_or_message,
+      self_energy_response: form.self_energy_response,
       next_step: form.next_step,
       shared_with_advisor: form.shared_with_advisor
     };

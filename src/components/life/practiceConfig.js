@@ -20,7 +20,7 @@ export const lifePracticeConfigs = {
       { name: 'situation', label: 'What is happening around you?', placeholder: 'A few words about the moment, if helpful.' },
       { name: 'part_noticed', label: 'Which part feels most present?', placeholder: 'Example: the worried planner, a young scared part…' },
       { name: 'body_sensation', label: 'Where do you sense this part?', placeholder: 'Chest, throat, shoulders, around you…' },
-      { name: 'emotion_words', label: 'Emotion words', placeholder: 'worried, tender, angry', type: 'tags' },
+      { name: 'emotion', label: 'Emotion', placeholder: 'Worried, tender, angry…' },
       { name: 'next_step', label: 'One gentle next step', placeholder: 'Pause before replying, drink water, step outside…' }
     ]
   },
@@ -40,7 +40,7 @@ export const lifePracticeConfigs = {
     ],
     fields: [
       { name: 'part_noticed', label: 'What blended part did you notice?', placeholder: 'Example: a rushing part, a judging part…' },
-      { name: 'self_energy_quality', label: 'Self-energy quality to practice', type: 'select', options: selfEnergyQualities },
+      { name: 'self_energy_response', label: 'Self-energy response to practice', type: 'select', options: selfEnergyQualities },
       { name: 'body_sensation', label: 'What shifted, even a little?', placeholder: 'Breath, posture, warmth, more room inside…' },
       { name: 'next_step', label: 'One kind next step', placeholder: 'Move slowly, listen, wait, ask for space…' }
     ]
@@ -62,8 +62,8 @@ export const lifePracticeConfigs = {
     fields: [
       { name: 'situation', label: 'Name the trigger lightly', placeholder: 'Just enough detail to orient yourself.' },
       { name: 'part_noticed', label: 'Which part reacted first?', placeholder: 'A protector, exile, firefighter, manager…' },
-      { name: 'emotion_words', label: 'Emotion words', placeholder: 'hurt, guarded, afraid', type: 'tags' },
-      { name: 'need_words', label: 'Needs this part may have', placeholder: 'space, reassurance, clarity', type: 'tags' },
+      { name: 'emotion', label: 'Emotion', placeholder: 'Hurt, guarded, afraid…' },
+      { name: 'need_or_message', label: 'Need or message this part may have', placeholder: 'Space, reassurance, clarity…' },
       { name: 'next_step', label: 'Grounded response for next time', placeholder: 'Take a breath, name a boundary, ask a clarifying question…' }
     ]
   },
@@ -84,8 +84,8 @@ export const lifePracticeConfigs = {
     fields: [
       { name: 'situation', label: 'What conflict are you reflecting on?', placeholder: 'A light description is enough.' },
       { name: 'part_noticed', label: 'Which parts were activated?', placeholder: 'Example: a defending protector and a hurt younger part…' },
-      { name: 'self_energy_quality', label: 'What Self-energy might help now?', type: 'select', options: selfEnergyQualities },
-      { name: 'need_words', label: 'Repair, need, or boundary words', placeholder: 'repair, apology, space, honesty', type: 'tags' },
+      { name: 'self_energy_response', label: 'What Self-energy might help now?', type: 'select', options: selfEnergyQualities },
+      { name: 'need_or_message', label: 'Repair, need, or boundary', placeholder: 'Repair, apology, space, honesty…' },
       { name: 'next_step', label: 'Grounded next step', placeholder: 'Send a repair message, wait until calmer, name a boundary…' }
     ]
   },
@@ -107,7 +107,7 @@ export const lifePracticeConfigs = {
       { name: 'part_noticed', label: 'Protector name or description', placeholder: 'The fixer, the guard, the planner…' },
       { name: 'situation', label: 'How does it try to help?', placeholder: 'Planning, scanning, pleasing, shutting down…' },
       { name: 'body_sensation', label: 'What fear or concern does it carry?', placeholder: 'What it worries would happen if it relaxed.' },
-      { name: 'need_words', label: 'What does it need today?', placeholder: 'respect, rest, reassurance', type: 'tags' },
+      { name: 'need_or_message', label: 'What does it need today?', placeholder: 'Respect, rest, reassurance…' },
       { name: 'next_step', label: 'One small act of respect', placeholder: 'Thank it, set a timer, make a plan, slow down…' }
     ]
   },
@@ -128,7 +128,7 @@ export const lifePracticeConfigs = {
     fields: [
       { name: 'situation', label: 'What moment felt tense or unclear?', placeholder: 'A light description is enough.' },
       { name: 'part_noticed', label: 'Which part had a need?', placeholder: 'A tired part, a younger part, a protector…' },
-      { name: 'need_words', label: 'Need words', placeholder: 'rest, honesty, space, support', type: 'tags' },
+      { name: 'need_or_message', label: 'Need or message', placeholder: 'Rest, honesty, space, support…' },
       { name: 'body_sensation', label: 'Boundary, request, or rest?', placeholder: 'What might help this need be honored?' },
       { name: 'next_step', label: 'Kind and clear next step', placeholder: 'Ask for support, pause, say no, make room for rest…' }
     ]
