@@ -10,6 +10,7 @@ const TABLES = new Set([
   'ifs_module_answers',
   'ifs_journal_entries',
   'ifs_parts',
+  'ifs_part_relationships',
   'ifs_interactive_data',
   'ifs_exercise_progress',
   'ifs_therapist_notes',
@@ -163,6 +164,7 @@ const CLIENT_SCOPED_TABLES = new Set([
   'ifs_module_answers',
   'ifs_journal_entries',
   'ifs_parts',
+  'ifs_part_relationships',
   'ifs_interactive_data',
   'ifs_exercise_progress',
   'ifs_therapist_notes',
@@ -187,6 +189,11 @@ const CLIENT_SCOPED_TABLES = new Set([
 const GENERATED_REPORT_INSERT_COLUMNS = new Set(['therapist_id', 'client_id', 'generated_by', 'report_type', 'title', 'sections_included', 'date_range_start', 'date_range_end', 'format', 'status', 'storage_url', 'file_name', 'generated_at', 'created_at', 'updated_at']);
 const GENERATED_REPORT_UPDATE_COLUMNS = new Set(['status', 'updated_at']);
 const GENERATED_REPORT_STATUSES = new Set(['generated', 'downloaded', 'archived', 'failed']);
+
+const PART_RELATIONSHIP_INSERT_COLUMNS = new Set(['client_id', 'from_part_id', 'to_part_id', 'relationship_type', 'label', 'description', 'created_by', 'confirmed_by_client', 'created_at', 'updated_at']);
+const PART_RELATIONSHIP_UPDATE_COLUMNS = new Set(['from_part_id', 'to_part_id', 'relationship_type', 'label', 'description', 'confirmed_by_client', 'updated_at']);
+const PART_RELATIONSHIP_TYPES = new Set(['close_to', 'protects', 'concerned_about', 'polarized_with', 'supports', 'needs_space_from', 'unknown']);
+
 const ASSIGNED_HOMEWORK_CLIENT_UPDATE_COLUMNS = new Set(['status', 'started_at', 'completed_at', 'updated_at']);
 const TREATMENT_PLAN_THERAPIST_INSERT_COLUMNS = new Set(['therapist_id', 'client_id', 'goal_title', 'goal_description', 'target_wounds', 'target_parts', 'objectives', 'interventions', 'status', 'review_date', 'completed_at', 'created_at', 'updated_at']);
 const TREATMENT_PLAN_THERAPIST_UPDATE_COLUMNS = new Set(['goal_title', 'goal_description', 'target_wounds', 'target_parts', 'objectives', 'interventions', 'status', 'review_date', 'completed_at', 'updated_at']);
@@ -281,6 +288,54 @@ async function assertTagsBelongToClients(clientIds, rows) {
   }
 }
 
+
+async function assertRelationshipPartsBelongToClient(rows) {
+  for (const row of getValueRows(rows)) {
+    const clientId = row.client_id;
+    const fromPartId = row.from_part_id;
+    const toPartId = row.to_part_id;
+    if (!clientId || !fromPartId || !toPartId) {
+      throw Object.assign(new Error('client_id, from_part_id, and to_part_id are required'), { statusCode: 403 });
+    }
+    if (String(fromPartId) === String(toPartId)) {
+      throw Object.assign(new Error('Relationship must connect two different parts'), { statusCode: 400 });
+    }
+    const partRows = await sql.query('SELECT id, client_id FROM ifs_parts WHERE id = ANY($1::uuid[])', [[fromPartId, toPartId]]);
+    if (partRows.length !== 2 || partRows.some((part) => String(part.client_id) !== String(clientId))) {
+      throw Object.assign(new Error('Relationship parts must belong to the selected client'), { statusCode: 403 });
+    }
+    const type = row.relationship_type || 'unknown';
+    if (!PART_RELATIONSHIP_TYPES.has(type)) {
+      throw Object.assign(new Error('Unsupported relationship_type'), { statusCode: 400 });
+    }
+    if (row.description && String(row.description).length > 500) {
+      throw Object.assign(new Error('Relationship description must be 500 characters or fewer'), { statusCode: 400 });
+    }
+  }
+}
+
+async function assertRelationshipUpdatesBelongToExistingClient(filters, values) {
+  const ids = getFilterValues(filters, 'id');
+  if (!ids.length) throw Object.assign(new Error('Relationship id filter is required'), { statusCode: 403 });
+  const existing = await sql.query('SELECT id, client_id, from_part_id, to_part_id FROM ifs_part_relationships WHERE id = ANY($1::uuid[])', [ids]);
+  if (existing.length !== ids.length) throw Object.assign(new Error('Relationship not found'), { statusCode: 404 });
+  const rows = getValueRows(values);
+  for (const row of rows) {
+    if (row.relationship_type && !PART_RELATIONSHIP_TYPES.has(row.relationship_type)) {
+      throw Object.assign(new Error('Unsupported relationship_type'), { statusCode: 400 });
+    }
+    if (row.description && String(row.description).length > 500) {
+      throw Object.assign(new Error('Relationship description must be 500 characters or fewer'), { statusCode: 400 });
+    }
+  }
+  const checks = existing.map((relationship) => ({
+    client_id: relationship.client_id,
+    from_part_id: rows[0]?.from_part_id || relationship.from_part_id,
+    to_part_id: rows[0]?.to_part_id || relationship.to_part_id
+  }));
+  await assertRelationshipPartsBelongToClient(checks);
+}
+
 async function assertAssignedClients(appUser, clientIds) {
   const ids = [...new Set((clientIds || []).filter(Boolean).map(String))];
   if (!ids.length) throw Object.assign(new Error('A client_id filter or value is required for this operation'), { statusCode: 403 });
@@ -312,6 +367,34 @@ async function authorizePayload({ appUser, table, action, filters, values }) {
       throw Object.assign(new Error('Therapists may only manage their own assignments'), { statusCode: 403 });
     }
     return;
+  }
+
+  if (table === 'ifs_part_relationships') {
+    const rows = getValueRows(values);
+    const valueClientIds = rows.map((row) => row.client_id).filter(Boolean);
+    const filterClientIds = getFilterValues(filters, 'client_id');
+    const relationshipClientIds = action === 'update' || action === 'delete' ? await loadClientIdsFromRows(table, filters) : [];
+    const clientIds = valueClientIds.length ? valueClientIds : relationshipClientIds.length ? relationshipClientIds : filterClientIds;
+
+    if (appUser.user_role === 'client') {
+      if (action === 'select') return;
+      if ((action === 'insert' || action === 'upsert') && !clientIds.length) throw Object.assign(new Error('client_id is required'), { statusCode: 403 });
+      if (clientIds.some((id) => String(id) !== String(appUser.id))) throw Object.assign(new Error('Clients may only manage their own part relationships'), { statusCode: 403 });
+      if (action === 'insert' || action === 'upsert') {
+        assertOnlyColumns(values, PART_RELATIONSHIP_INSERT_COLUMNS, 'Clients cannot set relationship fields');
+        await assertRelationshipPartsBelongToClient(rows);
+      }
+      if (action === 'update') {
+        assertOnlyColumns(values, PART_RELATIONSHIP_UPDATE_COLUMNS, 'Clients cannot update relationship fields');
+        await assertRelationshipUpdatesBelongToExistingClient(filters, values);
+      }
+      return;
+    }
+    if (isTherapistUser(appUser)) {
+      if (action !== 'select') throw Object.assign(new Error('Advisors can read assigned clients’ relationships; relationship changes require client confirmation'), { statusCode: 403 });
+      if (clientIds.length) await assertAssignedClients(appUser, clientIds);
+      return;
+    }
   }
 
   if (table === 'ifs_session_agendas') {

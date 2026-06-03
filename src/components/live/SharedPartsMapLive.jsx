@@ -34,6 +34,7 @@ const RELATIONSHIP_OPTIONS = [
   { id: 'concerned_about', label: 'concerned about' },
   { id: 'polarized_with', label: 'polarized with' },
   { id: 'supports', label: 'supports' },
+  { id: 'needs_space_from', label: 'needs space from' },
   { id: 'unknown', label: 'not sure yet' }
 ];
 
@@ -300,7 +301,7 @@ export default function SharedPartsMapLive({ sessionId, activityState = {}, role
           )}
           <div className="mt-3 grid md:grid-cols-2 gap-3 text-xs text-brand-stone-600 dark:text-slate-400">
             <p><Move className="inline w-3.5 h-3.5 mr-1" /> Drag nodes or use the move buttons. Changes stay in the live draft until the client confirms and saves.</p>
-            <p>Relationship lines are session-only for now and are stored in the live activity state, not in a separate database table.</p>
+            <p>Accepted relationship lines stay in the live draft until the client confirms Save confirmed map, then they are saved to the client-owned Parts Map.</p>
           </div>
         </div>
 
