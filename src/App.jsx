@@ -1,7 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Link, useLocation, Navigate } from 'react-router-dom';
 import { useState, useEffect, useCallback } from 'react';
 import { SignIn, SignUp, useAuth, UserButton } from '@clerk/clerk-react';
-import { Settings as SettingsIcon, Home as HomeIcon, BookOpen, ClipboardList, BookHeart, Handshake, LogOut, MessageSquare, Compass as CompassIcon, Sparkles as SparklesIcon } from 'lucide-react';
+import { Settings as SettingsIcon, Home as HomeIcon, BookOpen, ClipboardList, BookHeart, Handshake, LogOut, MessageSquare, Compass as CompassIcon, Sparkles as SparklesIcon, Trophy } from 'lucide-react';
 import { useTheme } from './contexts/ThemeContext';
 import { supabase } from './lib/supabase';
 import SSOCallback from './components/SSOCallback';
@@ -220,16 +220,17 @@ function BottomNav() {
   const navItems = [
     { path: '/', icon: HomeIcon, label: 'Home' },
     { path: '/exercises', icon: BookOpen, label: 'Practice' },
-    { path: '/journal', icon: BookHeart, label: 'Journal' },
     { path: '/life-integration', icon: SparklesIcon, label: 'Daily Life' },
+    { path: '/journal', icon: BookHeart, label: 'Journal' },
     { path: '/parts-mapping', icon: CompassIcon, label: 'Parts' },
+    { path: '/healing-timeline', icon: Trophy, label: 'Timeline' },
     { path: '/inbox', icon: MessageSquare, label: 'Advisor' },
     { path: '/profile', icon: Handshake, label: 'Profile' },
   ];
 
   return (
     <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 backdrop-blur-lg border-t shadow-[0_-2px_10px_rgba(120,80,40,0.06)] bg-white/90 dark:bg-brand-midnight/90 border-brand-stone-200/50 dark:border-slate-800/60">
-      <div className="max-w-lg mx-auto flex justify-around items-center h-16 px-2">
+      <div className="max-w-lg mx-auto flex items-center h-16 gap-1 overflow-x-auto px-2">
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive = item.path === '/' ? location.pathname === '/' : location.pathname.startsWith(item.path);
@@ -237,7 +238,7 @@ function BottomNav() {
             <Link
               key={item.path}
               to={item.path}
-              className={`flex flex-col items-center justify-center gap-0.5 px-3 py-1.5 rounded-xl transition-all duration-200 min-w-[60px] ${
+              className={`flex flex-col items-center justify-center gap-0.5 px-2.5 py-1.5 rounded-xl transition-all duration-200 min-w-[58px] shrink-0 ${
                 isActive
                   ? 'text-brand-gold-700 dark:text-brand-gold-500'
                   : 'text-brand-stone-400 dark:text-slate-500 hover:text-brand-stone-600 dark:hover:text-slate-300'
