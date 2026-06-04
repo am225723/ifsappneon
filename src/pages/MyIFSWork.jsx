@@ -67,5 +67,21 @@ export default function MyIFSWork({ currentClient }) {
     );
   }
 
-  return <Home clientId={profile.id} client={profile} mode="my-ifs" selfProfileResult={result} />;
+  if (import.meta.env.DEV) {
+    console.info('[MyIFSWork] resolved self profile', {
+      mode: 'my-ifs',
+      resolvedSelfProfileId: profile.id,
+      effectiveClientId: profile.id,
+      formalWoundCount: result?.counts?.formalWoundCount || 0,
+      interactiveDataCount: result?.counts?.interactiveDataCount || 0,
+      interactiveAssessmentCount: result?.counts?.interactiveAssessmentCount || 0,
+      interactiveModuleCount: result?.counts?.interactiveModuleCount || 0,
+      curriculumProgressCount: result?.counts?.curriculumProgressCount || 0,
+      legacyPartsMapFound: Boolean(result?.counts?.legacyPartsMapFound),
+      legacyPartsCount: result?.counts?.legacyPartsCount || 0,
+      persistentPartsCount: result?.counts?.persistentPartsCount || 0
+    });
+  }
+
+  return <Home clientId={profile.id} client={profile} mode="my-ifs" selfProfile={profile} selfProfileResult={result} />;
 }

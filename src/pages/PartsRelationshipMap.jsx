@@ -7,6 +7,7 @@ import { normalizeMapPart, relationshipLabel, RELATIONSHIP_OPTIONS } from '../co
 import { clientAuth } from '../lib/supabasePersonalization';
 import { supabase } from '../lib/supabase';
 import { getPartsMapParts } from '../lib/interactiveResults';
+import { loadMyIFSProfile } from '../lib/myIFSProfile';
 import { importLegacyPartsMap, previewLegacyPartsImport } from '../lib/legacyPartsImport';
 import {
   createPartRelationship,
@@ -30,6 +31,7 @@ function displayPartName(part) {
 
 export default function PartsRelationshipMap() {
   const [client, setClient] = useState(null);
+  const [resolvedSelfProfile, setResolvedSelfProfile] = useState(null);
   const [parts, setParts] = useState([]);
   const [relationships, setRelationships] = useState([]);
   const [legacyPartsMap, setLegacyPartsMap] = useState(null);
@@ -59,14 +61,29 @@ export default function PartsRelationshipMap() {
   const loadMap = useCallback(async () => {
     const currentClient = clientAuth.getCurrentClientValidated();
     setClient(currentClient);
-    if (!currentClient?.id) {
-      setLoading(false);
-      setError('Please sign in to view your Inner System Map.');
-      return;
-    }
 
     setLoading(true);
     setError('');
+
+    let profileResult = null;
+    try {
+      profileResult = await loadMyIFSProfile(currentClient);
+    } catch (profileError) {
+      console.error('Error resolving Parts Map self profile:', profileError);
+    }
+
+    const clerkLinkedSelfProfile = String(profileResult?.source || '').startsWith('clerk_user_id') ? profileResult?.profile : null;
+    const isClientUser = currentClient?.user_role === 'client';
+    const effectiveClientId = clerkLinkedSelfProfile?.id || (isClientUser ? currentClient?.id : null);
+    const effectiveClient = clerkLinkedSelfProfile || (isClientUser ? currentClient : null);
+    setResolvedSelfProfile(clerkLinkedSelfProfile || null);
+    setClient(effectiveClient);
+
+    if (!effectiveClientId) {
+      setLoading(false);
+      setError('Please sign in with a Clerk-linked self profile to view your Inner System Map.');
+      return;
+    }
     const [
       { data: partRows, error: partsError },
       { data: relationshipRows, error: relationshipsError },
@@ -75,13 +92,13 @@ export default function PartsRelationshipMap() {
       supabase
         .from('ifs_parts')
         .select('id, client_id, name, part_name, type, part_type, role, description, x, y, size, color, notes, updated_at')
-        .eq('client_id', currentClient.id)
+        .eq('client_id', effectiveClientId)
         .order('updated_at', { ascending: false }),
-      loadPartRelationships({ clientId: currentClient.id }),
+      loadPartRelationships({ clientId: effectiveClientId }),
       supabase
         .from('ifs_interactive_data')
         .select('id, data, updated_at')
-        .eq('client_id', currentClient.id)
+        .eq('client_id', effectiveClientId)
         .eq('module_id', 'parts_map')
         .maybeSingle()
     ]);
@@ -91,6 +108,7 @@ export default function PartsRelationshipMap() {
     setParts(partRows || []);
     setRelationships(relationshipRows || []);
     setLegacyPartsMap(partsMapRow || null);
+    setLegacyImportPreview(null);
     setLoading(false);
   }, []);
 
@@ -99,13 +117,13 @@ export default function PartsRelationshipMap() {
   }, [loadMap]);
 
   const savePartPosition = async (partId, position) => {
-    if (!client?.id) return;
+    if (!effectiveClientId) return;
     setSaving(true);
     const { data, error: saveError } = await supabase
       .from('ifs_parts')
       .update({ x: Math.round(position.x), y: Math.round(position.y), updated_at: new Date().toISOString() })
       .eq('id', partId)
-      .eq('client_id', client.id)
+      .eq('client_id', effectiveClientId)
       .select()
       .single();
     if (saveError) setError(saveError.message || 'Unable to save part placement.');
@@ -148,16 +166,41 @@ export default function PartsRelationshipMap() {
 
 
 
+  const effectiveClientId = resolvedSelfProfile?.id || client?.id || null;
   const legacyPartsCount = getPartsMapParts(legacyPartsMap).length;
-  const importAvailable = !loading && !legacyImportDismissed && legacyPartsCount > 0;
+  const importPreviewAvailable = Boolean(legacyImportPreview && ((legacyImportPreview.importable || []).length > 0 || (legacyImportPreview.skipped || []).length > 0));
+  const shouldShowImportCard = Boolean(
+    !loading &&
+    !legacyImportDismissed &&
+    effectiveClientId &&
+    legacyPartsMap &&
+    legacyPartsCount > 0 &&
+    (!legacyImportPreview || importPreviewAvailable)
+  );
+  const importAvailable = shouldShowImportCard;
+
+  useEffect(() => {
+    if (import.meta.env.DEV) {
+      console.info('[PartsRelationshipMap] self import signals', {
+        currentUserRole: clientAuth.getCurrentClientValidated()?.user_role || null,
+        resolvedSelfProfileId: resolvedSelfProfile?.id || null,
+        effectiveClientId,
+        legacyPartsMapFound: Boolean(legacyPartsMap),
+        legacyPartsCount,
+        persistentPartsCount: parts.length,
+        shouldShowImportCard,
+        importPreviewAvailable
+      });
+    }
+  }, [resolvedSelfProfile?.id, effectiveClientId, legacyPartsMap, legacyPartsCount, parts.length, shouldShowImportCard, importPreviewAvailable]);
 
   const handlePreviewLegacyImport = async () => {
-    if (!client?.id) return;
+    if (!effectiveClientId) return;
     setLegacyImportLoading(true);
     setLegacyImportResult(null);
     setLegacyImportConfirmed(false);
     setError('');
-    const { data, error: previewError } = await previewLegacyPartsImport({ clientId: client.id });
+    const { data, error: previewError } = await previewLegacyPartsImport({ clientId: effectiveClientId });
     if (previewError) {
       setLegacyImportPreview(null);
       setError(previewError.message || 'We could not preview the import. Your older map is still safe and unchanged.');
@@ -175,12 +218,12 @@ export default function PartsRelationshipMap() {
   };
 
   const handleImportLegacyParts = async () => {
-    if (!client?.id || !legacyImportConfirmed || selectedLegacyPartIds.length === 0) return;
+    if (!effectiveClientId || !legacyImportConfirmed || selectedLegacyPartIds.length === 0) return;
     setLegacyImportLoading(true);
     setLegacyImportResult(null);
     setError('');
     const { data, error: importError } = await importLegacyPartsMap({
-      clientId: client.id,
+      clientId: effectiveClientId,
       selectedPartIds: selectedLegacyPartIds,
       overwrite: false
     });
@@ -198,7 +241,7 @@ export default function PartsRelationshipMap() {
 
   const handleRelationshipSubmit = async (event) => {
     event.preventDefault();
-    if (!client?.id || !relationshipForm.from_part_id || !relationshipForm.to_part_id) return;
+    if (!effectiveClientId || !relationshipForm.from_part_id || !relationshipForm.to_part_id) return;
     if (relationshipForm.from_part_id === relationshipForm.to_part_id) {
       setError('Choose two different parts for a relationship.');
       return;
@@ -206,7 +249,7 @@ export default function PartsRelationshipMap() {
 
     setSaving(true);
     setError('');
-    const payload = { ...relationshipForm, client_id: client.id, description: relationshipForm.description.slice(0, 500) };
+    const payload = { ...relationshipForm, client_id: effectiveClientId, description: relationshipForm.description.slice(0, 500) };
     const { data, error: saveError } = relationshipForm.id
       ? await updatePartRelationship(relationshipForm.id, payload)
       : await createPartRelationship(payload);
@@ -293,7 +336,7 @@ export default function PartsRelationshipMap() {
                 )}
                 {legacyImportPreview.persistentPartCount > 0 && (
                   <p className="mt-2 rounded-2xl bg-brand-stone-50 px-3 py-2 text-brand-stone-700 dark:bg-slate-900 dark:text-slate-300">
-                    You already have parts in your current Inner System Map. The import will skip duplicates unless you choose a future merge option.
+                    You already have parts in your current Inner System Map. The import will skip duplicates.
                   </p>
                 )}
                 <div className="mt-4 grid gap-3 lg:grid-cols-2">

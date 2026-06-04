@@ -69,9 +69,18 @@ function summarizeRanked(ranked) {
   return `Top themes: ${labels.join(', ')}`;
 }
 
+export function normalizeJson(value) {
+  if (!value) return null;
+  if (typeof value === 'object') return value;
+  if (typeof value === 'string') {
+    try { return JSON.parse(value); } catch { return null; }
+  }
+  return null;
+}
+
 export function normalizeInteractiveResult(row) {
   const moduleId = row?.module_id || row?.moduleId || '';
-  const data = row?.data || {};
+  const data = normalizeJson(row?.data) || {};
   const category = getInteractiveResultCategory(moduleId);
   const primary = displayInteractiveValue(data.primary);
   const secondary = displayInteractiveValue(data.secondary);
@@ -110,6 +119,7 @@ export function summarizeInteractiveInsights(results = []) {
 }
 
 export function getPartsMapParts(partsMapRow) {
-  const parts = partsMapRow?.data?.parts;
+  const data = normalizeJson(partsMapRow?.data);
+  const parts = data?.parts;
   return Array.isArray(parts) ? parts : [];
 }

@@ -43,9 +43,18 @@ function isSafeLegacyId(value) {
   return typeof value === 'string' && SAFE_ID_PATTERN.test(value.trim());
 }
 
+function normalizeJson(value) {
+  if (!value) return null;
+  if (typeof value === 'object') return value;
+  if (typeof value === 'string') {
+    try { return JSON.parse(value); } catch { return null; }
+  }
+  return null;
+}
+
 function getLegacyParts(row) {
-  const data = row?.data || {};
-  return Array.isArray(data.parts) ? data.parts : [];
+  const data = normalizeJson(row?.data);
+  return Array.isArray(data?.parts) ? data.parts : [];
 }
 
 function normalizeExistingName(value) {

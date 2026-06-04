@@ -83,7 +83,18 @@ const ClientHomeTile = ({ icon, title, description, buttonLabel, to, badge, tone
   </Link>
 );
 
-const Home = ({ clientId, client, mode = 'home', selfProfileResult = null }) => {
+function getSafeCount(result) {
+  if (typeof result?.count === 'number') return result.count;
+  if (Array.isArray(result?.data)) return result.data.length;
+  return 0;
+}
+
+function getEffectiveClientId({ mode, currentClientId, selfProfile }) {
+  if (mode === 'my-ifs' && selfProfile?.id) return selfProfile.id;
+  return currentClientId || null;
+}
+
+const Home = ({ clientId, client, mode = 'home', selfProfile = null, selfProfileResult = null }) => {
   const navigate = useNavigate();
   const [savedAssessment, setSavedAssessment] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -95,18 +106,24 @@ const Home = ({ clientId, client, mode = 'home', selfProfileResult = null }) => 
   const [latestMilestone, setLatestMilestone] = useState(null);
   const [curriculumSummary, setCurriculumSummary] = useState(null);
   const [assignedPracticeCount, setAssignedPracticeCount] = useState(0);
+  const effectiveClientId = getEffectiveClientId({ mode, currentClientId: clientId, selfProfile: selfProfile || selfProfileResult?.profile });
+  const effectiveClient = mode === 'my-ifs' ? (selfProfile || selfProfileResult?.profile || client) : client;
   const [assessmentSummary, setAssessmentSummary] = useState({
     latestFormalWound: null,
     interactiveAssessments: [],
     curriculumModuleRows: [],
     partsMapRow: null,
     partsCount: 0,
-    relationshipsCount: 0
+    relationshipsCount: 0,
+    journalCount: 0,
+    formalWoundCount: 0,
+    progressCount: 0,
+    interactiveDataCount: 0
   });
 
   useEffect(() => {
     const loadData = async () => {
-      if (clientId) {
+      if (effectiveClientId) {
         try {
           const [
             interactiveResult,
@@ -118,34 +135,39 @@ const Home = ({ clientId, client, mode = 'home', selfProfileResult = null }) => 
             assignedResult,
             reflectionsResult,
             timelineResult,
+            journalResult,
             progressResult
           ] = await Promise.all([
             supabase
               .from('ifs_interactive_data')
               .select('id, client_id, module_id, data, created_at, updated_at')
-              .eq('client_id', clientId),
+              .eq('client_id', effectiveClientId),
             supabase
               .from('ifs_assessment_results')
               .select('id, primary_wound, secondary_wound, tertiary_wounds, assessment_date, created_at')
-              .eq('client_id', clientId)
+              .eq('client_id', effectiveClientId)
               .order('created_at', { ascending: false }),
             supabase
               .from('ifs_parts')
-              .select('id', { count: 'exact', head: true })
-              .eq('client_id', clientId),
+              .select('id', { count: 'exact' })
+              .eq('client_id', effectiveClientId),
             supabase
               .from('ifs_part_relationships')
-              .select('id', { count: 'exact', head: true })
-              .eq('client_id', clientId),
-            loadClientSessionAgendas(clientId),
-            loadActiveTreatmentPlansForClient(clientId),
-            loadAssignedHomeworkForClient(clientId),
-            loadLifeIntegrationReflections({ clientId, self: mode === 'my-ifs' }),
-            loadHealingTimeline({ clientId, range: 'ALL' }),
+              .select('id', { count: 'exact' })
+              .eq('client_id', effectiveClientId),
+            loadClientSessionAgendas(effectiveClientId),
+            loadActiveTreatmentPlansForClient(effectiveClientId),
+            loadAssignedHomeworkForClient(effectiveClientId),
+            loadLifeIntegrationReflections({ clientId: effectiveClientId, self: mode === 'my-ifs' }),
+            loadHealingTimeline({ clientId: effectiveClientId, range: 'ALL' }),
+            supabase
+              .from('ifs_journal_entries')
+              .select('id', { count: 'exact' })
+              .eq('client_id', effectiveClientId),
             supabase
               .from('ifs_client_progress')
               .select('module_id, completed, current_step, updated_at')
-              .eq('client_id', clientId)
+              .eq('client_id', effectiveClientId)
           ]);
 
           const interactiveRows = interactiveResult.data || [];
@@ -162,8 +184,12 @@ const Home = ({ clientId, client, mode = 'home', selfProfileResult = null }) => 
             interactiveAssessments,
             curriculumModuleRows,
             partsMapRow,
-            partsCount: partsCountResult.count || (partsCountResult.data || []).length || 0,
-            relationshipsCount: relationshipsCountResult.count || (relationshipsCountResult.data || []).length || 0
+            partsCount: getSafeCount(partsCountResult),
+            relationshipsCount: getSafeCount(relationshipsCountResult),
+            journalCount: getSafeCount(journalResult),
+            formalWoundCount: getSafeCount(formalAssessmentResult),
+            progressCount: getSafeCount(progressResult),
+            interactiveDataCount: getSafeCount(interactiveResult)
           });
 
           const agendas = agendasResult.data || [];
@@ -211,9 +237,9 @@ const Home = ({ clientId, client, mode = 'home', selfProfileResult = null }) => 
     };
 
     loadData();
-  }, [clientId]);
+  }, [effectiveClientId, mode]);
 
-  const clientFirstName = (client?.name || client?.full_name || '').split(' ').filter(Boolean)[0];
+  const clientFirstName = (effectiveClient?.name || effectiveClient?.full_name || '').split(' ').filter(Boolean)[0];
   const assessmentPrimary = savedAssessment?.primaryWound?.name || savedAssessment?.primaryWound?.id || savedAssessment?.topWound?.name || savedAssessment?.topWound?.id || savedAssessment?.primary_wound || savedAssessment?.primary || null;
   const formalWoundPrimary = assessmentSummary.latestFormalWound?.primary_wound || null;
   const formalWoundSecondary = assessmentSummary.latestFormalWound?.secondary_wound || null;
@@ -229,6 +255,24 @@ const Home = ({ clientId, client, mode = 'home', selfProfileResult = null }) => 
   const isMyIFSMode = mode === 'my-ifs';
   const hasSelfData = selfProfileResult?.hasPersonalData !== false;
   const selfDataSignals = selfProfileResult?.dataSignals || [];
+
+  useEffect(() => {
+    if (import.meta.env.DEV && mode === 'my-ifs') {
+      console.info('[MyIFSWork/Home] self progress signals', {
+        mode,
+        resolvedSelfProfileId: selfProfileResult?.profile?.id || selfProfile?.id || null,
+        effectiveClientId,
+        formalWoundCount: assessmentSummary.formalWoundCount,
+        interactiveDataCount: assessmentSummary.interactiveDataCount,
+        interactiveAssessmentCount: assessmentSummary.interactiveAssessments.length,
+        interactiveModuleCount: assessmentSummary.curriculumModuleRows.length,
+        curriculumProgressCount: assessmentSummary.progressCount,
+        legacyPartsMapFound: Boolean(assessmentSummary.partsMapRow),
+        legacyPartsCount: partsMapPartsCount,
+        persistentPartsCount: assessmentSummary.partsCount
+      });
+    }
+  }, [mode, selfProfileResult?.profile?.id, selfProfile?.id, effectiveClientId, assessmentSummary, partsMapPartsCount]);
 
   const gentleFocus = activeLiveSession
     ? {
