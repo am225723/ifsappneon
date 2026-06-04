@@ -1,0 +1,208 @@
+import { Link } from 'react-router-dom';
+import {
+  BarChart3,
+  Bell,
+  BookOpen,
+  Brain,
+  CalendarCheck,
+  ClipboardCheck,
+  Compass,
+  FileText,
+  HeartPulse,
+  Library,
+  Lock,
+  Mail,
+  Map,
+  MessageSquare,
+  PenLine,
+  ScrollText,
+  Shield,
+  Sparkles,
+  Trophy,
+  Users,
+  Video,
+  Wand2,
+} from 'lucide-react';
+import { canAccessFeature } from '../lib/accessControl';
+import { clientAuth } from '../lib/supabasePersonalization';
+
+const clientRoles = ['client'];
+const advisorRoles = ['therapist', 'advisor', 'admin', 'supervisor'];
+const adminRoles = ['admin', 'supervisor'];
+
+const sections = [
+  {
+    title: 'Core IFS Path',
+    description: 'Start with curriculum, assessments, and your overall IFS progress.',
+    items: [
+      { label: 'Curriculum / IFS Path', to: '/curriculum', icon: BookOpen, roles: ['client', 'therapist', 'advisor', 'admin', 'supervisor'] },
+      { label: 'Wound Assessment / Assessments', to: '/assessments', icon: Brain, roles: ['client', 'therapist', 'advisor', 'admin', 'supervisor'] },
+      { label: 'My IFS Work', to: '/my-ifs', icon: Sparkles, roles: ['client', 'therapist', 'advisor', 'admin', 'supervisor'] },
+      { label: 'My Assessments & Progress', to: '/profile', icon: ClipboardCheck, roles: ['client', 'therapist', 'advisor', 'admin', 'supervisor'] },
+      { label: 'Progress Timeline', to: '/progress-timeline', icon: Trophy, roles: ['client', 'therapist', 'advisor', 'admin', 'supervisor'] },
+    ],
+  },
+  {
+    title: 'Daily Practice',
+    description: 'Short IFS practices for grounding, noticing, and daily self-guidance.',
+    items: [
+      { label: 'Daily Check-In', to: '/daily-checkin', icon: CalendarCheck, roles: clientRoles, feature: 'dailyCheckin' },
+      { label: 'Daily Life Practice', to: '/life-integration', icon: Sparkles, roles: clientRoles },
+      { label: 'Guided Meditation', to: '/meditation', icon: HeartPulse, roles: clientRoles, feature: 'meditations' },
+      { label: 'Self-Energy Practice', to: '/qualities', icon: Wand2, roles: clientRoles },
+      { label: 'Affirmations', to: '/affirmations', icon: Sparkles, roles: clientRoles },
+      { label: 'Micro-Learning', to: '/micro-learning', icon: BookOpen, roles: clientRoles },
+      { label: 'Mood Tracker', to: '/mood-tracker', icon: HeartPulse, roles: clientRoles },
+    ],
+  },
+  {
+    title: 'Parts Work',
+    description: 'Map, listen to, and build relationship with parts of your inner system.',
+    items: [
+      { label: 'Parts Map', to: '/parts-mapping', icon: Compass, roles: clientRoles },
+      { label: 'Inner System Map', to: '/parts-relationships', icon: Map, roles: clientRoles },
+      { label: 'Parts Dialogue', to: '/parts-dialogue', icon: MessageSquare, roles: clientRoles, feature: 'partsDialogue' },
+      { label: 'Parts Cards', to: '/parts-cards', icon: ScrollText, roles: clientRoles, feature: 'partsCards' },
+      { label: 'Parts Studio', to: '/parts-studio', icon: Sparkles, roles: clientRoles, feature: 'partsStudio' },
+      { label: 'Unburdening Practice', to: '/unburdening', icon: HeartPulse, roles: clientRoles, feature: 'unburdening' },
+    ],
+  },
+  {
+    title: 'Reflection & Journaling',
+    description: 'Private places to write, notice patterns, and honor milestones.',
+    items: [
+      { label: 'Journal', to: '/journal', icon: PenLine, roles: clientRoles, feature: 'journal' },
+      { label: 'Letters', to: '/letters', icon: Mail, roles: clientRoles, feature: 'letters' },
+      { label: 'Weekly Reflection', to: '/weekly-reflection', icon: CalendarCheck, roles: clientRoles, feature: 'weeklyReflection' },
+      { label: 'Healing Tracker', to: '/healing-tracker', icon: HeartPulse, roles: clientRoles, feature: 'healingTracker' },
+      { label: 'Milestones', to: '/milestones', icon: Trophy, roles: clientRoles, feature: 'milestones' },
+    ],
+  },
+  {
+    title: 'Advisor Support',
+    description: 'Advisor-guided practices, session preparation, messages, and live support.',
+    items: [
+      { label: 'Assigned IFS Practices', to: '/assigned-practices', icon: BookOpen, roles: clientRoles },
+      { label: 'Advisor Session Check-In', to: '/pre-session-checkin', icon: CalendarCheck, roles: clientRoles },
+      { label: 'Inbox / Messages', to: '/inbox', icon: MessageSquare, roles: clientRoles },
+      { label: 'Live Guided Practice', to: '/live-session', icon: Video, roles: clientRoles },
+      { label: 'Notifications', to: '/notifications', icon: Bell, roles: clientRoles },
+    ],
+  },
+  {
+    title: 'Progress & Analytics',
+    description: 'Review healing milestones, mood patterns, and achievements.',
+    items: [
+      { label: 'Healing Timeline', to: '/healing-timeline', icon: Trophy, roles: clientRoles },
+      { label: 'Progress Timeline', to: '/progress-timeline', icon: BarChart3, roles: clientRoles },
+      { label: 'Mood Analytics', to: '/mood-analytics', icon: HeartPulse, roles: clientRoles, feature: 'moodAnalytics' },
+      { label: 'Gamification / Achievements', to: '/gamification', icon: Trophy, roles: clientRoles },
+      { label: 'Milestones', to: '/milestones', icon: CalendarCheck, roles: clientRoles, feature: 'milestones' },
+    ],
+  },
+  {
+    title: 'Advanced / Optional Tools',
+    description: 'Helpful reference and optional practice spaces that support the main IFS Path.',
+    items: [
+      { label: 'Resource Library', to: '/resource-library', icon: Library, roles: clientRoles, feature: 'resourceLibrary' },
+      { label: 'Resources', to: '/resources', icon: Library, roles: clientRoles },
+      { label: 'IFS Cheat Sheet', to: '/cheat-sheet', icon: FileText, roles: clientRoles },
+      { label: 'Micro-Learning', to: '/micro-learning', icon: BookOpen, roles: clientRoles },
+      { label: 'Healing Tracker', to: '/healing-tracker', icon: HeartPulse, roles: clientRoles, feature: 'healingTracker' },
+      { label: 'Letters', to: '/letters', icon: Mail, roles: clientRoles, feature: 'letters' },
+    ],
+  },
+  {
+    title: 'Admin / Advisor Tools',
+    description: 'Workflow-based Advisor and Admin access for clients, curriculum, review, and reporting.',
+    items: [
+      { label: 'Advisor Dashboard', to: '/therapist-dashboard', icon: ClipboardCheck, roles: advisorRoles },
+      { label: 'Admin Hub', to: '/admin-hub', icon: Shield, roles: adminRoles },
+      { label: 'Clients', to: '/therapist-dashboard', icon: Users, roles: advisorRoles },
+      { label: 'Caseload', to: '/caseload', icon: Users, roles: advisorRoles },
+      { label: 'Curriculum & Assessments', to: '/curriculum', icon: BookOpen, roles: advisorRoles },
+      { label: 'Assessment Generator', to: '/assessment-builder', icon: ClipboardCheck, roles: advisorRoles },
+      { label: 'Practice Generator', to: '/advisor-homework', icon: Sparkles, roles: advisorRoles },
+      { label: 'Review Queue', to: '/advisor-homework', icon: CalendarCheck, roles: advisorRoles },
+      { label: 'Growth Goals', to: '/treatment-plans', icon: Trophy, roles: advisorRoles },
+      { label: 'Advisor Notes', to: '/therapist-dashboard', icon: PenLine, roles: advisorRoles },
+      { label: 'Shared Reflections', to: '/advisor/shared-reflections', icon: ScrollText, roles: advisorRoles },
+      { label: 'Messages', to: '/messages', icon: MessageSquare, roles: advisorRoles },
+      { label: 'Reports', to: '/reports', icon: FileText, roles: advisorRoles },
+      { label: 'Analytics', to: '/analytics', icon: BarChart3, roles: advisorRoles },
+      { label: 'Longitudinal Insights', to: '/longitudinal-analytics', icon: BarChart3, roles: advisorRoles },
+      { label: 'Live Practice', to: '/live-co-therapy', icon: Video, roles: advisorRoles },
+    ],
+  },
+];
+
+function isAllowedForRole(item, role) {
+  return item.roles.includes(role);
+}
+
+function ToolCard({ item }) {
+  const Icon = item.icon;
+  const available = !item.feature || canAccessFeature(item.feature);
+  const content = (
+    <>
+      <div className={`mb-4 flex h-11 w-11 items-center justify-center rounded-2xl ${available ? 'bg-brand-gold-50 text-brand-gold-700 dark:bg-brand-gold-950/30 dark:text-brand-gold-500' : 'bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500'}`}>
+        {available ? <Icon className="h-5 w-5" /> : <Lock className="h-5 w-5" />}
+      </div>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h3 className={`font-semibold ${available ? 'text-brand-stone-900 dark:text-slate-100' : 'text-brand-stone-500 dark:text-slate-500'}`}>{item.label}</h3>
+          {item.feature && !available && <p className="mt-1 text-xs text-brand-stone-500 dark:text-slate-500">Not available for your account.</p>}
+        </div>
+      </div>
+    </>
+  );
+
+  if (!available) {
+    return (
+      <div className="rounded-3xl border border-dashed border-slate-200 bg-white/60 p-5 dark:border-slate-700 dark:bg-slate-900/40" aria-disabled="true">
+        {content}
+      </div>
+    );
+  }
+
+  return (
+    <Link to={item.to} className="rounded-3xl border border-brand-stone-200/70 bg-white/85 p-5 transition hover:-translate-y-0.5 hover:border-brand-gold-200 hover:shadow-lg dark:border-slate-800 dark:bg-brand-cardDark/90 dark:hover:border-brand-gold-900/50">
+      {content}
+    </Link>
+  );
+}
+
+export default function ToolsDirectory({ currentClient }) {
+  const currentUser = currentClient || clientAuth.getCurrentClient();
+  const role = currentUser?.user_role || 'client';
+  const visibleSections = sections
+    .map((section) => ({
+      ...section,
+      items: section.items.filter((item) => isAllowedForRole(item, role)),
+    }))
+    .filter((section) => section.items.length > 0);
+
+  return (
+    <main className="mx-auto max-w-6xl px-6 py-10 lg:py-14">
+      <header className="mb-8 rounded-[2rem] border border-brand-gold-100 bg-gradient-to-br from-white via-brand-sanctuary to-brand-gold-50/60 p-6 shadow-sm dark:border-brand-gold-900/40 dark:from-brand-cardDark dark:via-brand-midnight dark:to-brand-gold-950/20 md:p-8">
+        <p className="text-xs font-semibold uppercase tracking-[0.3em] text-brand-gold-700 dark:text-brand-gold-500">Tools</p>
+        <h1 className="mt-3 text-3xl font-serif font-semibold text-brand-stone-900 dark:text-slate-100 md:text-4xl">Tools & Practices</h1>
+        <p className="mt-3 max-w-3xl text-brand-stone-600 dark:text-slate-300">Find the IFS tools, reflections, assessments, and support areas available to your account.</p>
+      </header>
+
+      <div className="space-y-8">
+        {visibleSections.map((section) => (
+          <section key={section.title} aria-labelledby={`${section.title.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}-heading`}>
+            <div className="mb-4">
+              <h2 id={`${section.title.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}-heading`} className="text-2xl font-serif font-semibold text-brand-stone-900 dark:text-slate-100">{section.title}</h2>
+              <p className="mt-1 text-sm text-brand-stone-600 dark:text-slate-400">{section.description}</p>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {section.items.map((item) => <ToolCard key={`${section.title}-${item.label}-${item.to}`} item={item} />)}
+            </div>
+          </section>
+        ))}
+      </div>
+    </main>
+  );
+}

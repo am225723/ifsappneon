@@ -1,17 +1,24 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Home, Play, User, MessageSquare, Heart, Menu, X, Compass } from 'lucide-react';
+import { Home, BookOpen, Sparkles, User, MessageSquare, Heart, Menu, X, Compass, Grid3X3 } from 'lucide-react';
 import { useState } from 'react';
 
 const Navbar = ({ unreadCount = 0, messagePath = '/inbox', rightSlot = null, workspaceLinks = [] }) => {
   const location = useLocation();
   const [isOpen, setIsOpen] = useState(false);
 
-  const navItems = [
-    { path: '/', icon: Home, label: workspaceLinks.length ? 'Home' : 'Home' },
-    { path: '/exercises', icon: Play, label: 'Practice' },
+  const navItems = workspaceLinks.length ? [
+    { path: '/', icon: Home, label: 'Home' },
+    { path: '/tools', icon: Grid3X3, label: 'Tools' },
+    { path: messagePath, icon: MessageSquare, label: 'Messages', badge: unreadCount },
+    { path: '/profile', icon: Heart, label: 'Profile' },
+  ] : [
+    { path: '/', icon: Home, label: 'Home' },
+    { path: '/curriculum', icon: BookOpen, label: 'Curriculum' },
+    { path: '/life-integration', icon: Sparkles, label: 'Daily Life' },
     { path: '/journal', icon: User, label: 'Journal' },
     { path: '/parts-mapping', icon: Compass, label: 'Parts' },
     { path: messagePath, icon: MessageSquare, label: 'Advisor Support', badge: unreadCount },
+    { path: '/tools', icon: Grid3X3, label: 'Tools' },
     { path: '/profile', icon: Heart, label: 'Profile' },
   ];
 
