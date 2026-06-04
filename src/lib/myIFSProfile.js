@@ -27,14 +27,24 @@ async function hasRows(table, columns, clientId, queryBuilder = null) {
   }
 }
 
-async function countRows(table, clientId) {
+function safeRowCount(result) {
+  if (typeof result?.count === 'number') return result.count;
+  if (Array.isArray(result?.data)) return result.data.length;
+  return 0;
+}
+
+async function countRows(table, clientId, queryBuilder = null) {
   try {
-    const { data, count, error } = await supabase
+    let query = supabase
       .from(table)
-      .select('id', { count: 'exact', head: true })
+      .select('id', { count: 'exact' })
       .eq('client_id', clientId);
-    if (error) return 0;
-    return count || (data || []).length || 0;
+
+    if (queryBuilder) query = queryBuilder(query);
+
+    const result = await query;
+    if (result.error) return 0;
+    return safeRowCount(result);
   } catch {
     return 0;
   }
@@ -104,36 +114,36 @@ export async function loadMyIFSProfile(currentAppUser = null) {
   }
 
   const [
-    formalWoundResults,
+    formalWoundCount,
     interactiveSignals,
-    clientProgress,
+    curriculumProgressCount,
     persistentPartsCount,
     persistentRelationshipsCount,
     assignedPractices,
     healingTimeline,
-    journalRows
+    journalCount
   ] = await Promise.all([
-    hasRows('ifs_assessment_results', 'id', profile.id),
+    countRows('ifs_assessment_results', profile.id),
     loadInteractiveSignals(profile.id),
-    hasRows('ifs_client_progress', 'id', profile.id),
+    countRows('ifs_client_progress', profile.id),
     countRows('ifs_parts', profile.id),
     countRows('ifs_part_relationships', profile.id),
     hasRows('ifs_assigned_homework', 'id', profile.id),
     hasRows('ifs_healing_timeline_events', 'id', profile.id),
-    hasRows('ifs_journal_entries', 'id', profile.id)
+    countRows('ifs_journal_entries', profile.id)
   ]);
 
   const connectedData = {
-    formalWoundResults,
+    formalWoundResults: formalWoundCount > 0,
     interactiveAssessments: interactiveSignals.assessments.length > 0,
-    curriculumProgress: clientProgress || interactiveSignals.curriculumModules.length > 0,
+    curriculumProgress: curriculumProgressCount > 0 || interactiveSignals.curriculumModules.length > 0,
     innerSystemMap: persistentPartsCount > 0 || interactiveSignals.hasPartsMap,
     persistentParts: persistentPartsCount > 0,
     persistentRelationships: persistentRelationshipsCount > 0,
     partsMap: interactiveSignals.hasPartsMap,
     assignedPractices,
     healingTimeline,
-    journal: journalRows
+    journal: journalCount > 0
   };
 
   const dataSignals = [
@@ -154,6 +164,18 @@ export async function loadMyIFSProfile(currentAppUser = null) {
     dataSignals,
     connectedData,
     interactiveSignals,
+    counts: {
+      formalWoundCount,
+      interactiveDataCount: interactiveSignals.rows.length,
+      interactiveAssessmentCount: interactiveSignals.assessments.length,
+      interactiveModuleCount: interactiveSignals.curriculumModules.length,
+      curriculumProgressCount,
+      legacyPartsMapFound: interactiveSignals.hasPartsMap,
+      legacyPartsCount: interactiveSignals.partsMapCount,
+      persistentPartsCount,
+      persistentRelationshipsCount,
+      journalCount
+    },
     needsManualLink: false,
     message: null
   };
