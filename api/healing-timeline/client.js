@@ -7,6 +7,24 @@ const COMPLETION_STATUSES = new Set(['completed', 'reviewed']);
 const COMPLETED_GOAL_STATUSES = new Set(['completed']);
 const CLIENT_SAFE_TONES = new Set(['growth', 'reflection', 'consistency', 'completion', 'connection', 'care']);
 
+const LIFE_REFLECTION_TIMELINE_TITLES = {
+  notice_part: 'Noticed a Part in Daily Life',
+  return_to_self: 'Returned to Self-Energy',
+  trigger_reflection: 'Reflected on a Trigger',
+  repair_after_conflict: 'Explored Repair After Conflict',
+  protector_check_in: 'Checked in with a Protector',
+  needs_boundaries: 'Named Needs or Boundaries'
+};
+
+const LIFE_REFLECTION_TIMELINE_DESCRIPTIONS = {
+  notice_part: 'You paused to notice a part in a real-life moment.',
+  return_to_self: 'You practiced reconnecting with Self-energy in daily life.',
+  trigger_reflection: 'You reflected on a trigger and what parts may need.',
+  repair_after_conflict: 'You explored repair, boundaries, or honest communication.',
+  protector_check_in: 'You checked in with a protector and what it may need.',
+  needs_boundaries: 'You named a need, boundary, request, or next step.'
+};
+
 function normalizeRange(range) {
   const value = String(range || 'ALL').toUpperCase();
   return SUPPORTED_RANGES.has(value) ? value : 'ALL';
@@ -130,9 +148,9 @@ function buildHomeworkItems(homeworkRows, since) {
         id: `homework-assigned-${homework.id}-${assignedDate}`,
         date: assignedDate,
         type: 'homework_assigned',
-        title: 'Your therapist assigned a new module for support between sessions.',
+        title: 'Your Advisor shared a new IFS practice.',
         description: 'This gave you another resource to return to at your own pace.',
-        source: 'Homework',
+        source: 'Assigned Practice',
         icon: 'book-open',
         tone: 'care',
         metadata: { homeworkId: homework.id, moduleId: homework.module_id }
@@ -146,7 +164,7 @@ function buildHomeworkItems(homeworkRows, since) {
         type: 'homework_started',
         title: 'You started an assigned module.',
         description: 'Beginning is a meaningful step toward bringing support into everyday life.',
-        source: 'Homework',
+        source: 'Assigned Practice',
         icon: 'play-circle',
         tone: 'connection',
         metadata: { homeworkId: homework.id, moduleId: homework.module_id }
@@ -160,7 +178,7 @@ function buildHomeworkItems(homeworkRows, since) {
         type: 'homework_completed',
         title: 'You completed an assigned module.',
         description: 'You followed through with practice and reflection between sessions.',
-        source: 'Homework',
+        source: 'Assigned Practice',
         icon: 'check-circle',
         tone: 'completion',
         metadata: { homeworkId: homework.id, moduleId: homework.module_id }
@@ -172,9 +190,9 @@ function buildHomeworkItems(homeworkRows, since) {
         id: `homework-reviewed-${homework.id}-${homework.reviewed_at}`,
         date: homework.reviewed_at,
         type: 'homework_reviewed',
-        title: 'Your therapist reviewed your completed module.',
-        description: 'Your between-session work became part of the shared care process.',
-        source: 'Homework',
+        title: 'Your Advisor reviewed your completed practice.',
+        description: 'What you chose to share became part of your Advisor-guided support.',
+        source: 'Assigned Practice',
         icon: 'clipboard-check',
         tone: 'connection',
         metadata: { homeworkId: homework.id, moduleId: homework.module_id }
@@ -206,8 +224,8 @@ function buildAgendaItems(agendaRows, since) {
         id: `agenda-reviewed-${agenda.id}-${agenda.reviewed_at}`,
         date: agenda.reviewed_at,
         type: 'agenda_reviewed',
-        title: 'Your therapist reviewed your pre-session check-in.',
-        description: 'What you shared was brought into the circle of care for your session.',
+        title: 'Your Advisor reviewed your pre-session check-in.',
+        description: 'What you shared helped shape your Advisor-guided support.',
         source: 'Check-In',
         icon: 'message-circle-heart',
         tone: 'connection',
@@ -227,8 +245,8 @@ function buildTreatmentPlanItems(treatmentRows, since) {
         id: `goal-created-${goal.id}-${goal.created_at}`,
         date: goal.created_at,
         type: 'goal_created',
-        title: 'A new therapy goal was added to your care plan.',
-        description: 'Your care plan captured a direction for support and growth.',
+        title: 'A new support goal was added.',
+        description: 'This captured a direction for support and growth.',
         source: 'Goal',
         icon: 'target',
         tone: 'care',
@@ -241,8 +259,8 @@ function buildTreatmentPlanItems(treatmentRows, since) {
         id: `goal-completed-${goal.id}-${goal.completed_at}`,
         date: goal.completed_at,
         type: 'goal_completed',
-        title: 'You completed a therapy goal.',
-        description: 'This is a meaningful marker of progress in your care plan.',
+        title: 'You completed a support goal.',
+        description: 'This is a meaningful marker of progress on your IFS path.',
         source: 'Goal',
         icon: 'badge-check',
         tone: 'completion',
@@ -328,6 +346,22 @@ function buildMoodItems(moodRows, since) {
   });
 }
 
+function buildLifeIntegrationItems(reflectionRows, since) {
+  return reflectionRows
+    .filter((row) => row.created_at && eventInRange(row.created_at, since))
+    .map((reflection) => makeItem({
+      id: `life-integration-${reflection.id}-${reflection.created_at}`,
+      date: reflection.created_at,
+      type: `life_integration_${reflection.reflection_type}`,
+      title: LIFE_REFLECTION_TIMELINE_TITLES[reflection.reflection_type] || 'Life Integration milestone',
+      description: LIFE_REFLECTION_TIMELINE_DESCRIPTIONS[reflection.reflection_type] || 'You practiced IFS outside the app.',
+      source: 'Life Integration',
+      icon: 'sparkles',
+      tone: 'reflection',
+      metadata: { reflectionId: reflection.id, reflectionType: reflection.reflection_type }
+    }));
+}
+
 function buildProgressItems(progressRows, since) {
   const orderedCompleted = [...progressRows]
     .filter((row) => (row.completed || row.is_completed || row.completed_at) && (row.completed_at || row.updated_at || row.created_at))
@@ -368,7 +402,7 @@ export default async function handler(req, res) {
 
     await requireClientAccess(req, clientId);
 
-    const [partsRows, homeworkRows, agendaRows, treatmentRows, journalRows, moodRows, progressRows] = await Promise.all([
+    const [partsRows, homeworkRows, agendaRows, treatmentRows, journalRows, moodRows, progressRows, lifeReflectionRows] = await Promise.all([
       safeQuery('parts', () => sql`
         SELECT id, name, part_name, unburdening_status, created_at, updated_at
         FROM ifs_parts
@@ -410,6 +444,13 @@ export default async function handler(req, res) {
         FROM ifs_client_progress
         WHERE client_id = ${clientId}
         ORDER BY COALESCE(completed_at, updated_at, created_at) ASC
+      `),
+      safeQuery('life integration reflections', () => sql`
+        SELECT id, reflection_type, created_at
+        FROM ifs_life_integration_reflections
+        WHERE client_id = ${clientId}
+          AND archived_at IS NULL
+        ORDER BY created_at ASC
       `)
     ]);
 
@@ -420,7 +461,8 @@ export default async function handler(req, res) {
       ...buildTreatmentPlanItems(treatmentRows, since),
       ...buildJournalItems(journalRows, since),
       ...buildMoodItems(moodRows, since),
-      ...buildProgressItems(progressRows, since)
+      ...buildProgressItems(progressRows, since),
+      ...buildLifeIntegrationItems(lifeReflectionRows, since)
     ]
       .filter(Boolean)
       .sort((a, b) => String(b.date).localeCompare(String(a.date)))
@@ -434,6 +476,7 @@ export default async function handler(req, res) {
     const partsCreated = partsRows.filter((row) => eventInRange(row.created_at, since));
     const journalEntries = journalRows.filter((row) => eventInRange(row.created_at, since));
     const moodCheckIns = moodRows.filter((row) => eventInRange(row.date || row.created_at, since));
+    const lifeIntegrationReflections = lifeReflectionRows.filter((row) => eventInRange(row.created_at, since));
 
     const data = {
       timeline,
@@ -444,6 +487,7 @@ export default async function handler(req, res) {
         goalsCompleted: completedGoals.length,
         partsCreated: partsCreated.length,
         journalEntries: journalEntries.length,
+        lifeIntegrationReflections: lifeIntegrationReflections.length,
         moodCheckIns: moodCheckIns.length
       },
       dataAvailability: {
@@ -452,6 +496,7 @@ export default async function handler(req, res) {
         agendas: sourceAvailability(agendaRows),
         treatmentPlans: sourceAvailability(treatmentRows),
         journals: sourceAvailability(journalRows),
+        lifeIntegration: sourceAvailability(lifeReflectionRows),
         moods: sourceAvailability(moodRows),
         progress: sourceAvailability(progressRows)
       },

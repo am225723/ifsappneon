@@ -1,13 +1,8 @@
+import { LIFE_REFLECTION_LABELS } from './lifeIntegrationDisplay';
+
 const API_PATH = '/api/life-integration';
 
-export const LIFE_REFLECTION_TYPES = {
-  notice_part: 'Notice a Part in the Moment',
-  return_to_self: 'Return to Self-Energy',
-  trigger_reflection: 'Reflect on a Trigger',
-  repair_after_conflict: 'Repair After Conflict',
-  protector_check_in: 'Protector Check-In',
-  needs_boundaries: 'Needs & Boundaries Reflection'
-};
+export const LIFE_REFLECTION_TYPES = LIFE_REFLECTION_LABELS;
 
 async function getAuthToken() {
   const clerk = window.Clerk;

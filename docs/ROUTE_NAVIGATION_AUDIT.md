@@ -267,3 +267,14 @@ Tools Directory
 - No SQL or migrations were added for Phase 16A because the existing Life Integration reflection table and check constraint already support the six reflection types.
 - Existing `clientOnly`/self-work access wrappers, Advisor/Admin route separation, `FeatureGate` wrappers, and assignment-based shared-reflection authorization are preserved.
 - The Tools Directory surfaces Life Integration under Daily Practice while keeping Core IFS Path first, and Home places Life Integration below Curriculum, Assessments & Progress, and the core support tools.
+
+## Phase 16B Life Integration Reflection Integration Notes
+
+- Saved Life Integration reflections now appear on `/life-integration` as recent Daily Life Reflection cards with normalized labels, dates, short non-raw summaries, linked-part names when already available, and Private / Shared with Advisor badges.
+- `/home` and `/my-ifs` summarize Daily-life reflections as a secondary self-work signal while preserving the curriculum-first hierarchy.
+- `/journal` includes a gentle **Life Integration Reflections** section that references self-owned Life Integration reflections without duplicating them into journal storage.
+- `/healing-timeline` includes Life Integration milestones through the healing timeline API using source label `Life Integration` and type-specific milestone titles without exposing raw reflection text.
+- `/progress-timeline` includes a **Daily Life Practice** summary with total saved reflections, practiced reflection types, latest reflection date, and timeline entries that use short summaries only.
+- Advisor shared-reflection surfaces continue to require explicit `shared_with_advisor = true` and active Advisor assignment; private reflections are not listed for Advisors/Admins.
+- Dashboard, journal summary, progress, and timeline cards avoid raw reflection text and show only display labels, dates, short summaries, linked part names when safe, and sharing badges.
+- No SQL, migrations, broad backend refactors, or automatic migrations were added for Phase 16B.
