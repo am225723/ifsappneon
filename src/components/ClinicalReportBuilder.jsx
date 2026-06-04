@@ -12,10 +12,10 @@ const SECTION_OPTIONS = [
   ['includeParts', 'Parts Summary', 'Part names plus lightweight roles, burdens, and status.'],
   ['includeMoodEntries', 'Mood Summary', 'Recent mood and energy values in a simple table.'],
   ['includeJournals', 'Journal Excerpts', 'Default-off client journal titles and truncated excerpts.'],
-  ['includeHealingTimeline', 'Healing Timeline Summary', 'Optional client-safe milestones from goals, assigned IFS practices, and parts status; excludes therapist notes.'],
-  ['includeAnalyticsSummary', 'Analytics Summary', 'Optional compact therapist analytics summary without chart libraries.'],
+  ['includeHealingTimeline', 'Healing Timeline Summary', 'Optional client-safe milestones from goals, assigned IFS practices, and parts status; excludes Advisor notes.'],
+  ['includeAnalyticsSummary', 'Insights Summary', 'Optional compact Advisor insights summary without chart libraries.'],
   ['includeAiSessionSummary', 'AI Session Prep Summary', 'Default-off placeholder for existing on-demand AI prep summaries; does not auto-generate AI content.'],
-  ['includeFullNoteText', 'Full Clinical Note Text', 'Default-off full note body excerpts. Use only when clinically appropriate.']
+  ['includeFullNoteText', 'Full Advisor Note Text', 'Default-off full note body excerpts. Use only when appropriate for Advisor documentation.']
 ];
 
 const DEFAULT_SECTIONS = {
@@ -164,8 +164,8 @@ export default function ClinicalReportBuilder() {
             <ShieldCheck className="h-4 w-4" />
             Assignment-secured reporting
           </div>
-          <h1 className="mt-3 text-3xl font-serif font-semibold text-brand-stone-950 dark:text-white">Clinical Report Builder</h1>
-          <p className="mt-2 max-w-3xl text-sm text-brand-stone-700 dark:text-slate-300">Build a modular therapist-facing report from assigned-client data, save audit metadata, and export with the browser print dialog. Raw report HTML is returned for preview and is not stored in the audit table.</p>
+          <h1 className="mt-3 text-3xl font-serif font-semibold text-brand-stone-950 dark:text-white">Advisor Report Builder</h1>
+          <p className="mt-2 max-w-3xl text-sm text-brand-stone-700 dark:text-slate-300">Build a modular Advisor report from assigned-client data, save audit metadata, and export with the browser print dialog. Raw report HTML is returned for preview and is not stored in the audit table.</p>
         </div>
         <button
           type="button"
@@ -208,7 +208,7 @@ export default function ClinicalReportBuilder() {
                 onChange={(event) => setReportType(event.target.value)}
                 className="w-full rounded-2xl border border-brand-stone-300 bg-white px-4 py-3 text-brand-stone-900 focus:border-brand-gold-600 focus:outline-none focus:ring-2 focus:ring-brand-gold-200 dark:border-slate-600 dark:bg-slate-800 dark:text-white"
               >
-                <option value="clinical_summary">Clinical Summary</option>
+                <option value="clinical_summary">Advisor Summary</option>
                 <option value="client_progress_summary">Client-Safe Progress Summary</option>
               </select>
             </label>

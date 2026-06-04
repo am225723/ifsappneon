@@ -26,7 +26,6 @@ import TreatmentPlanBuilder from '../components/TreatmentPlanBuilder';
 import TreatmentPlanManager from '../components/TreatmentPlanManager';
 import TherapistNoteEditor from '../components/TherapistNoteEditor';
 import AdvisorSessionNoteDraft from '../components/AdvisorSessionNoteDraft';
-import RiskAlertWidget from '../components/RiskAlertWidget';
 import RecentActivityFeed from '../components/RecentActivityFeed';
 
 const woundColorMap = {
@@ -37,10 +36,10 @@ const woundColorMap = {
   helplessness: { bg: 'bg-rose-100', text: 'text-rose-700', dot: 'bg-rose-500' }
 };
 
-const riskColors = {
-  low: { bg: 'bg-green-100', text: 'text-green-700', dot: 'bg-green-500', label: 'Low Risk' },
-  medium: { bg: 'bg-yellow-100', text: 'text-yellow-700', dot: 'bg-yellow-500', label: 'Medium Risk' },
-  high: { bg: 'bg-red-100', text: 'text-red-700', dot: 'bg-red-500', label: 'High Risk' }
+const supportColors = {
+  low: { bg: 'bg-green-100', text: 'text-green-700', dot: 'bg-green-500', label: 'Low Support' },
+  medium: { bg: 'bg-yellow-100', text: 'text-yellow-700', dot: 'bg-yellow-500', label: 'Medium Support' },
+  high: { bg: 'bg-red-100', text: 'text-red-700', dot: 'bg-red-500', label: 'High Priority' }
 };
 
 const sessionPrepByWound = {
@@ -52,7 +51,7 @@ const sessionPrepByWound = {
     'Assess progress on recognizing abandonment triggers'
   ],
   shame: [
-    'Approach shame work very gently — high activation risk',
+    'Approach shame work very gently — high activation support',
     'Check in on inner critic patterns and frequency',
     'Explore the shame part\'s origins with compassion',
     'Focus on building Self-compassion practices',
@@ -306,7 +305,7 @@ function generateSmartRecommendations(client, insights, gamData) {
   return recommendations;
 }
 
-function calculateRiskLevel(lastActive) {
+function calculateSupportLevel(lastActive) {
   if (!lastActive) return 'high';
   const diffMs = Date.now() - new Date(lastActive).getTime();
   const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
@@ -315,7 +314,7 @@ function calculateRiskLevel(lastActive) {
   return 'low';
 }
 
-function computeRiskScore(client, recentMoods, recentJournals, checkinDates) {
+function computeSupportScore(client, recentMoods, recentJournals, checkinDates) {
   let score = 0;
   const reasons = [];
 
@@ -485,7 +484,7 @@ const TherapistDashboard = () => {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
   const [filterWound, setFilterWound] = useState('all');
-  const [filterRisk, setFilterRisk] = useState('all');
+  const [filterSupport, setFilterSupport] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
   const [editingClient, setEditingClient] = useState(null);
   const [editClientForm, setEditClientForm] = useState({ name: '', email: '', phone: '' });
@@ -535,7 +534,7 @@ const TherapistDashboard = () => {
   const [reminderForm, setReminderForm] = useState({ clientId: '', type: 'session', message: '' });
   const [reminderSaved, setReminderSaved] = useState(false);
   const [exportLoading, setExportLoading] = useState(false);
-  const [riskScoreData, setRiskScoreData] = useState({});
+  const [supportScoreData, setSupportScoreData] = useState({});
   const [expandedJournals, setExpandedJournals] = useState({});
   const [timelineFilter, setTimelineFilter] = useState('all');
   const [selectedLessonClient, setSelectedLessonClient] = useState('');
@@ -580,7 +579,7 @@ const TherapistDashboard = () => {
         { heading: 'Background & History', placeholder: 'Relevant personal, family, and mental health history...' },
         { heading: 'Parts Identified', placeholder: 'Any parts that emerged during intake (managers, firefighters, exiles)...' },
         { heading: 'Initial Impressions', placeholder: 'Clinical observations, rapport quality, readiness for IFS work...' },
-        { heading: 'Growth Goals', placeholder: 'Agreed-upon goals for therapy...' },
+        { heading: 'Growth Goals', placeholder: 'Agreed-upon Growth Goals for the IFS Path...' },
         { heading: 'Assigned IFS Practice', placeholder: 'Any initial tasks or exercises given to the client...' },
         { heading: 'Next Session Focus', placeholder: 'Planned focus areas for the next session...' }
       ]
@@ -618,7 +617,7 @@ const TherapistDashboard = () => {
       sessionType: 'Emergency',
       sections: [
         { heading: 'Presenting Crisis', placeholder: 'Nature and severity of the crisis situation...' },
-        { heading: 'Safety Assessment', placeholder: 'Risk level, suicidal/homicidal ideation, self-harm assessment...' },
+        { heading: 'Safety Assessment', placeholder: 'Support level, suicidal/homicidal ideation, self-harm assessment...' },
         { heading: 'Parts Activated', placeholder: 'Which parts are driving the crisis response (firefighters, overwhelmed exiles)...' },
         { heading: 'Interventions Used', placeholder: 'De-escalation techniques, grounding exercises, safety planning...' },
         { heading: 'Safety Plan', placeholder: 'Agreed-upon safety steps, emergency contacts, coping strategies...' },
@@ -938,7 +937,7 @@ const TherapistDashboard = () => {
           secondaryWound: secondaryWound || null,
           progress,
           lastActive: c.last_active,
-          riskLevel: calculateRiskLevel(c.last_active),
+          supportLevel: calculateSupportLevel(c.last_active),
           modulesCompleted,
           assessmentsTaken: clientAssessments.length,
           journalEntries: clientJournals.length,
@@ -969,14 +968,14 @@ const TherapistDashboard = () => {
       setClients(enrichedClients);
       setSelectedWorkspaceClientId((current) => current && enrichedClients.some((client) => client.id === current) ? current : (enrichedClients[0]?.id || ''));
 
-      const riskScores = {};
+      const supportScores = {};
       enrichedClients.forEach(client => {
         const clientMoods = moodsByClient[client.id] || [];
         const clientJournalContent = (journalsByClient[client.id] || []).slice(0, 10);
         const clientCheckins = checkinsByClient[client.id] || [];
-        riskScores[client.id] = computeRiskScore(client, clientMoods, clientJournalContent, clientCheckins);
+        supportScores[client.id] = computeSupportScore(client, clientMoods, clientJournalContent, clientCheckins);
       });
-      setRiskScoreData(riskScores);
+      setSupportScoreData(supportScores);
 
       const recentAssessments = (assessments || [])
         .filter(a => {
@@ -997,7 +996,7 @@ const TherapistDashboard = () => {
 
     } catch (e) {
       console.error('Failed to load dashboard data:', e);
-      setWorkspaceError('Advisor Workspace could not load right now. Please try again.');
+      setWorkspaceError('Advisor dashboard could not load right now. Please try again.');
     }
     setLoading(false);
   }, []);
@@ -1339,14 +1338,14 @@ const TherapistDashboard = () => {
     const matchesSearch = client.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          (client.email && client.email.toLowerCase().includes(searchQuery.toLowerCase()));
     const matchesWound = filterWound === 'all' || client.primaryWound === filterWound;
-    const matchesRisk = filterRisk === 'all' || client.riskLevel === filterRisk;
+    const matchesSupport = filterSupport === 'all' || client.supportLevel === filterSupport;
     const matchesStatus = filterStatus === 'all' || client.status === filterStatus;
-    return matchesSearch && matchesWound && matchesRisk && matchesStatus;
+    return matchesSearch && matchesWound && matchesSupport && matchesStatus;
   });
 
   const stats = {
     totalClients: clients.length,
-    activeSessions: clients.filter(c => c.riskLevel === 'low').length,
+    activeSessions: clients.filter(c => c.supportLevel === 'low').length,
     assessmentsCompleted: clients.reduce((sum, c) => sum + c.assessmentsTaken, 0),
     avgProgress: clients.length > 0 ? Math.round(clients.reduce((sum, c) => sum + c.progress, 0) / clients.length) : 0
   };
@@ -1956,7 +1955,7 @@ const TherapistDashboard = () => {
         supabase.from('ifs_therapy_activity_progress').select('client_id, activity_id, completed').in('client_id', clientIds)
       ]);
 
-      let csv = 'Client Name,Primary Wound,Secondary Wound,Modules Completed,Progress %,Journal Entries,Avg Mood,Activities Completed,Risk Level,Join Date,Last Active\n';
+      let csv = 'Client Name,Primary Wound,Secondary Wound,Modules Completed,Progress %,Journal Entries,Avg Mood,Activities Completed,Support Level,Join Date,Last Active\n';
       clients.forEach(c => {
         const clientAssess = (assessments || []).filter(a => a.client_id === c.id);
         const latestA = clientAssess.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))[0];
@@ -1967,7 +1966,7 @@ const TherapistDashboard = () => {
         const completedActs = activities.filter(a => a.completed).length;
         const exportPrimary = latestA?.primary_wound || c.primaryWound || 'N/A';
         const exportSecondary = latestA?.secondary_wound || c.secondaryWound || 'N/A';
-        csv += `"${c.name}",${exportPrimary},${exportSecondary},${c.modulesCompleted},${c.progress}%,${journals.length},${avgMood},${completedActs}/${activities.length},${c.riskLevel},${formatDate(c.joinDate)},${formatDate(c.lastActive)}\n`;
+        csv += `"${c.name}",${exportPrimary},${exportSecondary},${c.modulesCompleted},${c.progress}%,${journals.length},${avgMood},${completedActs}/${activities.length},${c.supportLevel},${formatDate(c.joinDate)},${formatDate(c.lastActive)}\n`;
       });
 
       const blob = new Blob([csv], { type: 'text/csv' });
@@ -2269,7 +2268,7 @@ const TherapistDashboard = () => {
         <span><strong>Joined:</strong> ${client.joinDate ? new Date(client.joinDate).toLocaleDateString() : 'N/A'}</span>
         <span><strong>Last Active:</strong> ${client.lastActive ? new Date(client.lastActive).toLocaleDateString() : 'Never'}</span>
         <span><strong>Status:</strong> ${client.status}</span>
-        <span><strong>Risk Level:</strong> ${client.riskLevel}</span>
+        <span><strong>Support Level:</strong> ${client.supportLevel}</span>
       </div>
     </div>
 
@@ -2331,7 +2330,7 @@ const TherapistDashboard = () => {
   const getGroupAnalytics = () => {
     if (clients.length === 0) return null;
     const woundCounts = { abandonment: 0, shame: 0, neglect: 0, betrayal: 0, helplessness: 0, unknown: 0 };
-    const riskCounts = { low: 0, medium: 0, high: 0 };
+    const supportCounts = { low: 0, medium: 0, high: 0 };
     let totalProgress = 0;
     let totalModules = 0;
     let totalJournals = 0;
@@ -2341,7 +2340,7 @@ const TherapistDashboard = () => {
 
     clients.forEach(c => {
       woundCounts[c.primaryWound] = (woundCounts[c.primaryWound] || 0) + 1;
-      riskCounts[c.riskLevel] = (riskCounts[c.riskLevel] || 0) + 1;
+      supportCounts[c.supportLevel] = (supportCounts[c.supportLevel] || 0) + 1;
       totalProgress += c.progress;
       totalModules += c.modulesCompleted;
       totalJournals += c.journalEntries;
@@ -2352,11 +2351,11 @@ const TherapistDashboard = () => {
 
     const avgProgress = Math.round(totalProgress / clients.length);
     const avgModules = (totalModules / clients.length).toFixed(1);
-    const activeRate = Math.round((riskCounts.low / clients.length) * 100);
+    const activeRate = Math.round((supportCounts.low / clients.length) * 100);
     const activityCompletionRate = totalActivities > 0 ? Math.round((completedActivities / totalActivities) * 100) : 0;
 
     return {
-      woundCounts, riskCounts, avgProgress, avgModules,
+      woundCounts, supportCounts, avgProgress, avgModules,
       totalJournals, totalAssessments, activeRate,
       totalActivities, completedActivities, activityCompletionRate
     };
@@ -2573,12 +2572,12 @@ const TherapistDashboard = () => {
     : null;
 
   const workspaceOverviewCards = [
-    { label: 'Active Clients', value: clients.length, icon: Users, helper: 'Assigned active clients only', glow: 'emerald' },
-    { label: 'New Check-Ins', value: submittedCheckIns.length, icon: ClipboardCheck, helper: 'Pre-session check-ins awaiting review', glow: 'blue' },
-    { label: 'Completed Assigned Practices', value: completedAssignedPractices.length, icon: CheckCircle, helper: 'Assigned IFS practices completed', glow: 'amber' },
+    { label: 'Clients', value: clients.length, icon: Users, helper: 'Assigned active clients only', glow: 'emerald' },
+    { label: 'Check-Ins', value: submittedCheckIns.length, icon: ClipboardCheck, helper: 'Pre-session check-ins awaiting review', glow: 'blue' },
+    { label: 'Assigned Practices', value: completedAssignedPractices.length, icon: CheckCircle, helper: 'Assigned IFS practices completed', glow: 'amber' },
     { label: 'Growth Goals Due', value: growthGoalsDue.length, icon: Target, helper: 'Due now or within 14 days', glow: 'amber' },
     { label: 'Unread Updates', value: unreadUpdates.length, icon: Mail, helper: 'Advisor notifications and updates', glow: 'blue' },
-    { label: 'Live Guided Practice Active', value: activeLiveSessions.length, icon: Heart, helper: 'Active or paused guided sessions', glow: 'emerald' }
+    { label: 'Live Practice Active', value: activeLiveSessions.length, icon: Heart, helper: 'Active or paused guided sessions', glow: 'emerald' }
   ];
 
   const attentionItems = [
@@ -2621,16 +2620,16 @@ const TherapistDashboard = () => {
     ...activeLiveSessions.slice(0, 3).map((session) => ({
       id: `live-${session.id}`,
       icon: Heart,
-      title: 'Live guided practice is active',
+      title: 'Live practice is active',
       detail: latestClientById[session.client_id]?.name || 'Assigned client',
       meta: session.updated_at ? getRelativeTime(session.updated_at) : 'Active now',
-      action: 'Join Live Guided Practice',
+      action: 'Join Live Practice',
       onClick: () => navigate('/live-co-therapy')
     }))
   ].slice(0, 10);
 
   const advisorToolTiles = [
-    { label: 'Advisor Session Prep', desc: 'Review submitted pre-session check-ins and prepare for client support.', icon: ClipboardCheck, onClick: () => setActiveTab('session-prep') },
+    { label: 'Session Prep', desc: 'Review submitted pre-session check-ins and prepare for client support.', icon: ClipboardCheck, onClick: () => setActiveTab('session-prep') },
     { label: 'Assigned IFS Practice Generator', desc: 'Generate, edit, assign, and review Advisor-guided practices.', icon: BookOpen, onClick: () => navigate('/advisor-homework') },
     { label: 'Assessment Generator', desc: 'Create custom assessment experiences that connect back to the IFS Path.', icon: ClipboardCheck, onClick: () => navigate('/assessment-builder') },
     { label: 'View Curriculum', desc: 'Open the client curriculum and IFS learning modules.', icon: BookOpen, onClick: () => navigate('/curriculum') },
@@ -2675,7 +2674,7 @@ const TherapistDashboard = () => {
         <div className="flex items-center justify-center py-20">
           <div className="text-center">
             <div className="w-12 h-12 border-4 border-amber-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-            <p className={`${textSecondary}`}>Loading Advisor Workspace...</p>
+            <p className={`${textSecondary}`}>Loading Advisor dashboard...</p>
           </div>
         </div>
       </div>
@@ -2687,8 +2686,8 @@ const TherapistDashboard = () => {
       <div className="mb-8">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className={`text-3xl sm:text-4xl font-extrabold ${textPrimary} tracking-tight`}>Advisor Workspace</h1>
-            <p className={`mt-1.5 text-sm ${textSecondary}`}>A calm support space for reviewing client progress, preparing sessions, and guiding IFS practice.</p>
+            <h1 className={`text-3xl sm:text-4xl font-extrabold ${textPrimary} tracking-tight`}>Advisor Dashboard</h1>
+            <p className={`mt-1.5 text-sm ${textSecondary}`}>A calm view of clients, curriculum progress, and IFS support needs.</p>
           </div>
           <div className="flex items-center gap-3">
             <button
@@ -2703,22 +2702,16 @@ const TherapistDashboard = () => {
         </div>
       </div>
 
-      <RiskAlertWidget
-        therapistId={therapist?.id}
-        clients={clients}
-        onSelectClient={(clientId) => { setSelectedInsightClient(clientId); setActiveTab('insights'); }}
-      />
-
       <RecentActivityFeed limit={5} title="Recent Activity" className="mb-8" />
 
       <div className="grid grid-cols-2 lg:grid-cols-6 gap-4 mb-8">
         {[
-          { label: 'Assigned Clients', value: stats.totalClients, icon: Users, color: 'from-brand-stone-500 to-brand-stone-600', glow: 'blue' },
+          { label: 'Clients', value: stats.totalClients, icon: Users, color: 'from-brand-stone-500 to-brand-stone-600', glow: 'blue' },
           { label: 'Steady IFS Paths', value: stats.activeSessions, icon: Activity, color: 'from-brand-emerald-600 to-brand-emerald-700', glow: 'emerald' },
           { label: 'Assessments Completed', value: stats.assessmentsCompleted, icon: Target, color: 'from-brand-gold-600 to-brand-emerald-700', glow: 'amber' },
           { label: 'Average Progress', value: `${stats.avgProgress}%`, icon: TrendingUp, color: 'from-brand-gold-600 to-brand-emerald-700', glow: 'amber' },
-          { label: 'Active Growth Goals', value: treatmentPlanSummary.active, icon: Target, color: 'from-amber-500 to-orange-600', glow: 'amber' },
-          { label: 'Growth Goal Reviews', value: treatmentPlanSummary.reviewSoon, icon: Calendar, color: 'from-blue-500 to-cyan-600', glow: 'blue' }
+          { label: 'Growth Goals', value: treatmentPlanSummary.active, icon: Target, color: 'from-amber-500 to-orange-600', glow: 'amber' },
+          { label: 'Goal Reviews', value: treatmentPlanSummary.reviewSoon, icon: Calendar, color: 'from-blue-500 to-cyan-600', glow: 'blue' }
         ].map((stat) => {
           const Icon = stat.icon;
           return (
@@ -2737,49 +2730,41 @@ const TherapistDashboard = () => {
         })}
       </div>
 
-      <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
-        {[
-          { id: 'workspace', label: 'Advisor Workspace', icon: HomeIcon },
-          { id: 'clients', label: 'Assigned Clients', icon: Users },
-          { id: 'treatment-plans', label: 'Growth Goals', icon: Target },
-          { id: 'clinical-notes', label: 'Advisor Notes', icon: FileText },
-          { id: 'notes', label: 'Advisor Notes', icon: FileText },
-          { id: 'session-prep', label: 'Advisor Session Prep', icon: ClipboardCheck },
-          { id: 'progress', label: 'Client Progress', icon: BarChart3 },
-          { id: 'analytics', label: 'Longitudinal Insights', icon: TrendingUp },
-          { id: 'alerts', label: 'Review & Follow-Up', icon: AlertTriangle },
-          { id: 'actions', label: 'Curriculum Studio', icon: Sparkles },
-          { id: 'lessons', label: 'Curriculum & Content Studio', icon: BookOpen },
-          { id: 'insights', label: 'Client Support Workspace', icon: Eye },
-          { id: 'co-therapy', label: 'Live Guided Practice', icon: Heart },
-          { id: 'roadmap', label: 'Future Features', icon: Gem }
-        ].map(tab => {
-          const Icon = tab.icon;
-          return (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all ${
-                activeTab === tab.id
-                  ? 'bg-amber-600 text-white shadow-md'
-                  : `${cardBg} ${textSecondary} border ${cardBorder} ${hoverBg}`
-              }`}
-            >
-              <Icon className="w-4 h-4" />
-              {tab.label}
-              {tab.id === 'session-prep' && sessionPrepRows.filter(a => a.status === 'submitted').length > 0 && (
-                <span className="w-5 h-5 rounded-full bg-blue-500 text-white text-xs flex items-center justify-center">
-                  {sessionPrepRows.filter(a => a.status === 'submitted').length}
-                </span>
-              )}
-              {tab.id === 'alerts' && alerts.filter(a => a.type === 'warning' || a.type === 'danger').length > 0 && (
-                <span className="w-5 h-5 rounded-full bg-red-500 text-white text-xs flex items-center justify-center">
-                  {alerts.filter(a => a.type === 'warning' || a.type === 'danger').length}
-                </span>
-              )}
-            </button>
-          );
-        })}
+      <div className={`${cardBg} mb-6 rounded-3xl border ${cardBorder} p-2 shadow-sm`}>
+        <div className="flex gap-2 overflow-x-auto pb-1">
+          {[
+            { id: 'workspace', label: 'Overview', icon: HomeIcon },
+            { id: 'clients', label: 'Clients', icon: Users },
+            { id: 'actions', label: 'Curriculum & Assessments', icon: BookOpen },
+            { id: 'practice-generator', label: 'Practice Generator', icon: Sparkles },
+            { id: 'alerts', label: 'Review Queue', icon: ClipboardCheck },
+            { id: 'insights-reports', label: 'Insights & Reports', icon: BarChart3 },
+            { id: 'co-therapy', label: 'Live Practice', icon: Heart },
+            { id: 'settings', label: 'Settings', icon: Shield }
+          ].map(tab => {
+            const Icon = tab.icon;
+            const reviewCount = submittedCheckIns.length + practicesAwaitingReview.length + growthGoalsDue.length;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex items-center gap-2 rounded-2xl px-4 py-3 text-sm font-semibold whitespace-nowrap transition-all ${
+                  activeTab === tab.id
+                    ? 'bg-gradient-to-r from-brand-emerald-700 to-brand-gold-600 text-white shadow-md'
+                    : `${textSecondary} hover:bg-brand-cream-100 dark:hover:bg-slate-700/70`
+                }`}
+              >
+                <Icon className="w-4 h-4" />
+                {tab.label}
+                {tab.id === 'alerts' && reviewCount > 0 && (
+                  <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-white/20 px-1.5 text-xs">
+                    {reviewCount}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {workspaceError && (
@@ -2798,7 +2783,7 @@ const TherapistDashboard = () => {
           <section>
             <div className="mb-4">
               <p className={`text-xs uppercase tracking-[0.25em] ${textMuted}`}>Overview</p>
-              <h2 className={`text-2xl font-serif ${textPrimary}`}>Overview</h2>
+              <h2 className={`text-2xl font-serif ${textPrimary}`}>Advisor Overview</h2>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-6 gap-4">
               {workspaceOverviewCards.map((card) => {
@@ -2826,14 +2811,14 @@ const TherapistDashboard = () => {
               <div className="mb-4 flex items-start justify-between gap-3">
                 <div>
                   <p className={`text-xs uppercase tracking-[0.25em] ${textMuted}`}>Needs Attention</p>
-                  <h2 className={`text-xl font-bold ${textPrimary}`}>Review & Follow-Up</h2>
+                  <h2 className={`text-xl font-bold ${textPrimary}`}>Review Queue</h2>
                 </div>
                 <span className="rounded-full bg-brand-gold-100 px-3 py-1 text-xs font-semibold text-brand-gold-700 dark:bg-brand-gold-900/30 dark:text-brand-gold-200">{attentionItems.length} items</span>
               </div>
               {attentionItems.length === 0 ? (
                 <div className={`rounded-2xl border ${cardBorder} p-8 text-center ${textSecondary}`}>
                   <CheckCircle className="mx-auto mb-3 h-8 w-8 text-brand-emerald-600" />
-                  No check-ins, assigned practices, Growth Goals, unread updates, or live guided practices need attention right now.
+                  No check-ins, assigned practices, Growth Goals, unread updates, or live practice items need attention right now.
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -2909,8 +2894,8 @@ const TherapistDashboard = () => {
 
           <section>
             <div className="mb-4">
-              <p className={`text-xs uppercase tracking-[0.25em] ${textMuted}`}>Assigned Clients</p>
-              <h2 className={`text-2xl font-serif ${textPrimary}`}>Assigned active clients</h2>
+              <p className={`text-xs uppercase tracking-[0.25em] ${textMuted}`}>Clients</p>
+              <h2 className={`text-2xl font-serif ${textPrimary}`}>Assigned clients</h2>
             </div>
             {clients.length === 0 ? (
               <div className={`${cardBg} rounded-3xl border ${cardBorder} p-10 text-center ${textSecondary}`}>No assigned clients yet.</div>
@@ -2934,7 +2919,7 @@ const TherapistDashboard = () => {
                         ['Growth Goals', () => setActiveTab('treatment-plans')],
                         ['Advisor Notes', () => setActiveTab('clinical-notes')],
                         ['Draft Session Note', () => { setDraftNotePrefill({ clientId: client.id, sessionDate: new Date().toISOString().split('T')[0] }); setActiveTab('clinical-notes'); }],
-                        ['Live Guided Practice', () => navigate('/live-co-therapy')],
+                        ['Live Practice', () => navigate('/live-co-therapy')],
                         ['Analytics', () => navigate('/longitudinal-analytics')],
                         ['Report', () => navigate('/advisor-reports')]
                       ].map(([label, onClick]) => <button key={label} onClick={onClick} className={`rounded-full border ${cardBorder} px-3 py-1.5 text-xs font-semibold ${textSecondary} ${hoverBg}`}>{label}</button>)}
@@ -2947,8 +2932,8 @@ const TherapistDashboard = () => {
 
           <div className="grid grid-cols-1 xl:grid-cols-[1fr_0.8fr] gap-6">
             <section className={`${cardBg} rounded-3xl border ${cardBorder} p-5`}>
-              <p className={`text-xs uppercase tracking-[0.25em] ${textMuted}`}>Curriculum & Content Studio</p>
-              <h2 className={`mb-4 text-xl font-bold ${textPrimary}`}>Curriculum & Content Studio</h2>
+              <p className={`text-xs uppercase tracking-[0.25em] ${textMuted}`}>Curriculum & Assessments</p>
+              <h2 className={`mb-4 text-xl font-bold ${textPrimary}`}>Curriculum & Assessments</h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 {advisorToolTiles.map((tool) => {
                   const Icon = tool.icon;
@@ -2970,6 +2955,54 @@ const TherapistDashboard = () => {
                 </div>
               )}
             </section>
+          </div>
+        </div>
+      )}
+
+
+      {activeTab === 'practice-generator' && (
+        <div className="space-y-6">
+          <section className={`${cardBg} rounded-3xl border ${glowStyles.amber} p-6`}>
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+              <div>
+                <p className={`text-xs font-semibold uppercase tracking-[0.25em] ${textMuted}`}>Practice Generator</p>
+                <h2 className={`mt-2 text-2xl font-serif ${textPrimary}`}>Assigned IFS Practice Generator</h2>
+                <p className={`mt-2 max-w-3xl text-sm ${textSecondary}`}>
+                  Generate curriculum support practices for assigned clients, review the draft, edit the guidance, and assign only when you explicitly save it.
+                </p>
+              </div>
+              <button
+                onClick={() => navigate('/advisor-homework')}
+                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-brand-gold-600 to-brand-emerald-700 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:from-amber-600 hover:to-emerald-800"
+              >
+                Open full generator
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
+          </section>
+
+          <div className="grid gap-6 lg:grid-cols-[0.95fr_1.05fr]">
+            <section className={`${cardBg} rounded-3xl border ${cardBorder} p-5`}>
+              <h3 className={`text-lg font-bold ${textPrimary}`}>Generate with client context</h3>
+              <p className={`mt-1 text-sm ${textSecondary}`}>
+                The full generator can use the assigned client's wound profile, current curriculum module, and Advisor focus before saving an assigned IFS practice.
+              </p>
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                {[
+                  ['Select assigned client', clients.length ? `${clients.length} available` : 'No assigned clients yet'],
+                  ['Use assessment profile', 'When available'],
+                  ['Use curriculum module', 'IFS Path aligned'],
+                  ['Advisor edits before assigning', 'No auto-send']
+                ].map(([label, detail]) => (
+                  <div key={label} className={`rounded-2xl border ${cardBorder} ${isDark ? 'bg-slate-900/35' : 'bg-brand-cream-50'} p-4`}>
+                    <p className={`text-sm font-semibold ${textPrimary}`}>{label}</p>
+                    <p className={`mt-1 text-xs ${textMuted}`}>{detail}</p>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            <TherapistHomeworkBuilder clients={clients} onAssigned={loadDashboardData} />
           </div>
         </div>
       )}
@@ -3019,6 +3052,43 @@ const TherapistDashboard = () => {
 
       {activeTab === 'clients' && (
         <div>
+          <section className={`${cardBg} mb-6 rounded-3xl border ${cardBorder} p-6`}>
+            <p className={`text-xs font-semibold uppercase tracking-[0.25em] ${textMuted}`}>Clients</p>
+            <h2 className={`mt-2 text-2xl font-serif ${textPrimary}`}>Assigned Clients</h2>
+            <p className={`mt-2 max-w-3xl text-sm ${textSecondary}`}>Assignment-scoped client workspaces for curriculum progress, assessments, assigned IFS practices, Growth Goals, Advisor Notes, and live practice.</p>
+            {selectedWorkspaceClient && (
+              <div className={`mt-5 rounded-2xl border ${cardBorder} ${isDark ? 'bg-slate-900/35' : 'bg-brand-cream-50'} p-4`}>
+                <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                  <div>
+                    <p className={`text-sm font-semibold ${textPrimary}`}>{selectedWorkspaceClient.name}</p>
+                    <p className={`text-xs ${textMuted}`}>Latest activity: {selectedWorkspaceClient.lastActive ? getRelativeTime(selectedWorkspaceClient.lastActive) : 'No recent activity'} · Curriculum: {selectedWorkspaceClient.modulesCompleted}/{TOTAL_MODULES} modules · Growth Goals: {selectedClientGoals.length}</p>
+                  </div>
+                  <select value={selectedWorkspaceClient.id} onChange={(e) => setSelectedWorkspaceClientId(e.target.value)} className={`rounded-xl border px-3 py-2 text-sm ${inputBg}`}>
+                    {clients.map((client) => <option key={client.id} value={client.id}>{client.name}</option>)}
+                  </select>
+                </div>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {[
+                    ['Open Client Workspace', () => { setSelectedInsightClient(selectedWorkspaceClient.id); setActiveTab('insights'); }],
+                    ['View Curriculum Progress', () => setActiveTab('progress')],
+                    ['View Assessments', () => navigate('/assessment-builder')],
+                    ['Generate Assigned IFS Practice', () => setActiveTab('practice-generator')],
+                    ['Review Assigned Practices', () => navigate('/advisor-homework')],
+                    ['Open Growth Goals', () => setActiveTab('treatment-plans')],
+                    ['Open Advisor Notes', () => { setNoteForm((form) => ({ ...form, clientId: selectedWorkspaceClient.id })); setActiveTab('clinical-notes'); }],
+                    ['Draft Session Note', () => { setDraftNotePrefill({ clientId: selectedWorkspaceClient.id, sessionDate: new Date().toISOString().split('T')[0] }); setActiveTab('clinical-notes'); }],
+                    ['View Inner System Map', () => setActiveTab('insights')],
+                    ['View Healing Timeline', () => setActiveTab('insights')],
+                    ['Start Live Guided Practice', () => navigate('/live-co-therapy')],
+                    ['Generate Report', () => navigate('/advisor-reports')]
+                  ].map(([label, onClick]) => (
+                    <button key={label} onClick={onClick} className={`rounded-full border ${cardBorder} px-3 py-1.5 text-xs font-semibold ${textSecondary} ${hoverBg}`}>{label}</button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </section>
+
           <div className="flex flex-col sm:flex-row gap-3 mb-6">
             <div className="relative flex-1">
               <Search className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 ${textMuted}`} />
@@ -3044,14 +3114,14 @@ const TherapistDashboard = () => {
                 <option value="helplessness">Helplessness</option>
               </select>
               <select
-                value={filterRisk}
-                onChange={(e) => setFilterRisk(e.target.value)}
+                value={filterSupport}
+                onChange={(e) => setFilterSupport(e.target.value)}
                 className={`px-3 py-2.5 rounded-lg border ${inputBg} text-sm focus:ring-2 focus:ring-amber-500 outline-none`}
               >
-                <option value="all">All Risk Levels</option>
-                <option value="low">Low Risk</option>
-                <option value="medium">Medium Risk</option>
-                <option value="high">High Risk</option>
+                <option value="all">All Support Levels</option>
+                <option value="low">Low Support</option>
+                <option value="medium">Medium Support</option>
+                <option value="high">High Priority</option>
               </select>
               <select
                 value={filterStatus}
@@ -3077,7 +3147,7 @@ const TherapistDashboard = () => {
             {filteredClients.map(client => {
               const wound = woundColorMap[client.primaryWound] || woundColorMap.abandonment;
               const secondaryWoundColors = client.secondaryWound ? (woundColorMap[client.secondaryWound] || null) : null;
-              const risk = riskColors[client.riskLevel];
+              const support = supportColors[client.supportLevel];
               const earnedBadges = getBadgeCount(client.badges);
               const currentModuleName = getModuleName(client.currentModuleId);
               const moduleProgressPct = TOTAL_MODULES > 0 ? Math.round((client.modulesCompleted / TOTAL_MODULES) * 100) : 0;
@@ -3097,9 +3167,9 @@ const TherapistDashboard = () => {
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 flex-wrap">
                         <h3 className={`font-bold text-base ${textPrimary} tracking-tight truncate`}>{client.name}</h3>
-                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold ${risk.bg} ${risk.text}`}>
-                          <span className={`w-1.5 h-1.5 rounded-full ${risk.dot}`}></span>
-                          {risk.label}
+                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold ${support.bg} ${support.text}`}>
+                          <span className={`w-1.5 h-1.5 rounded-full ${support.dot}`}></span>
+                          {support.label}
                         </span>
                         {client.status === 'inactive' && (
                           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-400">
@@ -3580,6 +3650,40 @@ const TherapistDashboard = () => {
       )}
 
 
+      {activeTab === 'insights-reports' && (
+        <div className="space-y-6">
+          <section className={`${cardBg} rounded-3xl border ${glowStyles.blue} p-6`}>
+            <p className={`text-xs font-semibold uppercase tracking-[0.25em] ${textMuted}`}>Insights & Reports</p>
+            <h2 className={`mt-2 text-2xl font-serif ${textPrimary}`}>Insights & Reports</h2>
+            <p className={`mt-2 max-w-3xl text-sm ${textSecondary}`}>
+              Review progress patterns, generate Advisor reports, and understand the client's IFS journey over time.
+            </p>
+          </section>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {[
+              { label: 'Longitudinal Insights', desc: 'Open assigned-client trends for mood, parts, journals, practices, and Growth Goals.', icon: TrendingUp, onClick: () => navigate('/analytics') },
+              { label: 'Client Progress', desc: 'Review curriculum completion, latest activity, and IFS Path momentum.', icon: BarChart3, onClick: () => setActiveTab('progress') },
+              { label: 'Healing Timeline', desc: 'View client journey patterns and major IFS milestones.', icon: Heart, onClick: () => setActiveTab('insights') },
+              { label: 'Reports', desc: 'Open generated Advisor reports for assigned clients.', icon: FileText, onClick: () => navigate('/advisor-reports') },
+              { label: 'Generate Report', desc: 'Create a current Advisor report from assigned-client progress data.', icon: Download, onClick: () => navigate('/advisor-reports') },
+              { label: 'Curriculum progress summaries', desc: 'Summarize IFS Path progress without making analytics the main workspace.', icon: BookOpen, onClick: () => setActiveTab('progress') }
+            ].map((item) => {
+              const Icon = item.icon;
+              return (
+                <button key={item.label} onClick={item.onClick} className={`${cardBg} rounded-3xl border ${cardBorder} p-5 text-left transition-all hover:-translate-y-0.5 hover:border-brand-gold-300 hover:shadow-lg`}>
+                  <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-2xl bg-brand-emerald-100 text-brand-emerald-700 dark:bg-brand-emerald-900/30 dark:text-brand-gold-200">
+                    <Icon className="h-5 w-5" />
+                  </div>
+                  <h3 className={`font-semibold ${textPrimary}`}>{item.label}</h3>
+                  <p className={`mt-1 text-sm ${textSecondary}`}>{item.desc}</p>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+
       {activeTab === 'analytics' && (
         <div className={`${cardBg} rounded-2xl border ${glowStyles.blue} p-6`}>
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
@@ -3619,14 +3723,45 @@ const TherapistDashboard = () => {
 
       {activeTab === 'alerts' && (
         <div className="space-y-6">
-          {(() => {
-            const atRiskClients = clients
-              .map(c => ({ ...c, risk: riskScoreData[c.id] || { score: 0, level: 'low', reasons: [] } }))
-              .filter(c => c.risk.score > 0)
-              .sort((a, b) => b.risk.score - a.risk.score);
+          <section className={`${cardBg} rounded-3xl border ${cardBorder} p-6`}>
+            <p className={`text-xs font-semibold uppercase tracking-[0.25em] ${textMuted}`}>Review Queue</p>
+            <h2 className={`mt-2 text-2xl font-serif ${textPrimary}`}>Review Queue</h2>
+            <p className={`mt-2 max-w-3xl text-sm ${textSecondary}`}>Client updates and Advisor follow-up items that may need attention.</p>
+          </section>
 
-            const highCount = atRiskClients.filter(c => c.risk.level === 'high').length;
-            const mediumCount = atRiskClients.filter(c => c.risk.level === 'medium').length;
+          <div className="grid gap-4 lg:grid-cols-3">
+            {[
+              { label: 'Submitted pre-session check-ins', value: submittedCheckIns.length, action: 'Review Check-In', icon: ClipboardCheck, onClick: () => setActiveTab('session-prep') },
+              { label: 'Completed Assigned IFS Practices', value: practicesAwaitingReview.length, action: 'Review Practice', icon: CheckCircle, onClick: () => navigate('/advisor-homework') },
+              { label: 'Assessment results needing review', value: stats.assessmentsCompleted, action: 'Review Assessment', icon: FileText, onClick: () => navigate('/assessment-builder') },
+              { label: 'Growth Goals due soon', value: growthGoalsDue.length, action: 'Review Growth Goal', icon: Target, onClick: () => setActiveTab('treatment-plans') },
+              { label: 'Draft Advisor notes', value: recentTaggedNotes.length, action: 'Continue Draft Note', icon: PenTool, onClick: () => setActiveTab('clinical-notes') },
+              { label: 'Recent reports generated', value: generatedReportRows.length, action: 'Open Report', icon: Download, onClick: () => navigate('/advisor-reports') }
+            ].map((item) => {
+              const Icon = item.icon;
+              return (
+                <button key={item.label} onClick={item.onClick} className={`${cardBg} rounded-3xl border ${cardBorder} p-5 text-left transition hover:-translate-y-0.5 hover:shadow-lg`}>
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className={`text-sm font-semibold ${textPrimary}`}>{item.label}</p>
+                      <p className={`mt-1 text-xs ${textMuted}`}>{item.action}</p>
+                    </div>
+                    <div className="rounded-2xl bg-brand-cream-100 p-2 text-brand-emerald-700 dark:bg-slate-700 dark:text-brand-gold-200"><Icon className="h-5 w-5" /></div>
+                  </div>
+                  <p className={`mt-4 text-3xl font-bold ${textPrimary}`}>{item.value}</p>
+                </button>
+              );
+            })}
+          </div>
+
+          {(() => {
+            const atSupportClients = clients
+              .map(c => ({ ...c, support: supportScoreData[c.id] || { score: 0, level: 'low', reasons: [] } }))
+              .filter(c => c.support.score > 0)
+              .sort((a, b) => b.support.score - a.support.score);
+
+            const highCount = atSupportClients.filter(c => c.support.level === 'high').length;
+            const mediumCount = atSupportClients.filter(c => c.support.level === 'medium').length;
 
             return (
               <div className={`${cardBg} rounded-2xl border ${glowStyles.rose} p-6`}>
@@ -3636,14 +3771,14 @@ const TherapistDashboard = () => {
                       <Shield className="w-5 h-5 text-white" />
                     </div>
                     <div>
-                      <h2 className={`text-lg font-bold ${textPrimary}`}>Risk Dashboard</h2>
-                      <p className={`text-sm ${textSecondary}`}>Clients ranked by intervention priority</p>
+                      <h2 className={`text-lg font-bold ${textPrimary}`}>Review Queue Signals</h2>
+                      <p className={`text-sm ${textSecondary}`}>Client updates organized by support priority</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
                     {highCount > 0 && (
                       <span className="px-3 py-1 rounded-full text-xs font-bold bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300">
-                        {highCount} High Risk
+                        {highCount} High Priority
                       </span>
                     )}
                     {mediumCount > 0 && (
@@ -3654,29 +3789,29 @@ const TherapistDashboard = () => {
                   </div>
                 </div>
 
-                {atRiskClients.length === 0 ? (
+                {atSupportClients.length === 0 ? (
                   <div className="text-center py-8">
                     <CheckCircle className={`w-10 h-10 mx-auto mb-3 text-emerald-400`} />
                     <p className={`font-medium ${textPrimary}`}>All clients are on track</p>
-                    <p className={`text-sm mt-1 ${textMuted}`}>No at-risk clients detected based on current data signals</p>
+                    <p className={`text-sm mt-1 ${textMuted}`}>No priority support items detected from current data signals</p>
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    {atRiskClients.map(client => {
-                      const riskStyle = client.risk.level === 'high'
+                    {atSupportClients.map(client => {
+                      const supportStyle = client.support.level === 'high'
                         ? { bg: isDark ? 'bg-red-900/30 border-red-800' : 'bg-red-50 border-red-200', badge: 'bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300', barColor: 'bg-red-500', icon: 'text-red-500' }
-                        : client.risk.level === 'medium'
+                        : client.support.level === 'medium'
                         ? { bg: isDark ? 'bg-yellow-900/20 border-yellow-800' : 'bg-yellow-50 border-yellow-200', badge: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/50 dark:text-yellow-300', barColor: 'bg-yellow-500', icon: 'text-yellow-500' }
                         : { bg: isDark ? 'bg-blue-900/20 border-blue-800' : 'bg-blue-50 border-blue-200', badge: 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300', barColor: 'bg-blue-500', icon: 'text-blue-500' };
 
                       return (
-                        <div key={client.id} className={`p-4 rounded-xl border ${riskStyle.bg} transition-all hover:shadow-md`}>
+                        <div key={client.id} className={`p-4 rounded-xl border ${supportStyle.bg} transition-all hover:shadow-md`}>
                           <div className="flex items-start gap-3">
                             <div className="relative flex-shrink-0">
                               <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 to-emerald-500 flex items-center justify-center text-white font-bold text-sm shadow">
                                 {client.name.charAt(0)}
                               </div>
-                              {client.risk.level === 'high' && (
+                              {client.support.level === 'high' && (
                                 <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-red-500 flex items-center justify-center">
                                   <AlertTriangle className="w-2.5 h-2.5 text-white" />
                                 </div>
@@ -3685,20 +3820,20 @@ const TherapistDashboard = () => {
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 flex-wrap mb-1">
                                 <span className={`font-bold text-sm ${textPrimary}`}>{client.name}</span>
-                                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${riskStyle.badge}`}>
-                                  {client.risk.level} risk
+                                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${supportStyle.badge}`}>
+                                  {client.support.level} support
                                 </span>
-                                <span className={`text-xs font-semibold ${riskStyle.icon}`}>Score: {client.risk.score}</span>
+                                <span className={`text-xs font-semibold ${supportStyle.icon}`}>Score: {client.support.score}</span>
                               </div>
                               <div className="flex items-center gap-2 mb-2">
                                 <div className={`flex-1 h-2 rounded-full ${isDark ? 'bg-slate-700' : 'bg-gray-200'}`}>
-                                  <div className={`h-full rounded-full transition-all duration-500 ${riskStyle.barColor}`} style={{ width: `${client.risk.score}%` }} />
+                                  <div className={`h-full rounded-full transition-all duration-500 ${supportStyle.barColor}`} style={{ width: `${client.support.score}%` }} />
                                 </div>
                               </div>
                               <div className="flex flex-wrap gap-1.5 mb-3">
-                                {client.risk.reasons.map((reason, idx) => (
+                                {client.support.reasons.map((reason, idx) => (
                                   <span key={idx} className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-medium ${isDark ? 'bg-slate-700/60 text-slate-300' : 'bg-white text-gray-600'} border ${cardBorder}`}>
-                                    <AlertTriangle className={`w-2.5 h-2.5 ${riskStyle.icon}`} />
+                                    <AlertTriangle className={`w-2.5 h-2.5 ${supportStyle.icon}`} />
                                     {reason}
                                   </span>
                                 ))}
@@ -3810,18 +3945,14 @@ const TherapistDashboard = () => {
           {!activeAction && (
             <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
               {[
-                { id: 'create-client', label: 'Create New Client PIN', icon: Plus, color: 'from-brand-stone-500 to-brand-stone-600', desc: 'Generate a secure access PIN for a new client' },
-                { id: 'send-reminder', label: 'Send Reminder', icon: MessageSquare, color: 'from-brand-emerald-600 to-brand-emerald-700', desc: 'Send session or activity reminders to clients' },
-                { id: 'link:/caseload', label: 'Caseload Manager', icon: Users, color: 'from-emerald-500 to-teal-600', desc: 'Assign, discharge, and reactivate clients' },
-                { id: 'link:/advisor-messages', label: 'Client Messages', icon: MessageCircle, color: 'from-brand-stone-500 to-brand-stone-600', desc: 'Send and receive secure messages with clients' },
-                { id: 'link:/advisor-homework', label: 'Assigned IFS Practice Generator', icon: Target, color: 'from-brand-gold-600 to-brand-emerald-700', desc: 'Create, assign, and review assigned IFS practices' },
-                { id: 'link:/advisor/shared-reflections', label: 'Shared Life Reflections', icon: Heart, color: 'from-brand-emerald-600 to-brand-gold-600', desc: 'Review reflections clients intentionally shared from their IFS in Daily Life practices' },
-                { id: 'link:/advisor-reports', label: 'Advisor Reports', icon: Download, color: 'from-emerald-500 to-teal-600', desc: 'Generate and export client progress reports' },
-                { id: 'link:/analytics', label: 'Longitudinal Insights', icon: TrendingUp, color: 'from-blue-500 to-indigo-600', desc: 'Review secure trends for one assigned client at a time' },
-                { id: 'link:/assessment-builder', label: 'Assessment Generator', icon: FileText, color: 'from-brand-gold-600 to-brand-emerald-700', desc: 'Create custom assessments for clients' },
-                { id: 'link:/mood-analytics', label: 'Mood & Parts Analytics', icon: TrendingUp, color: 'from-brand-stone-500 to-brand-gold-600', desc: 'View mood trends, parts patterns, and self-energy over time' },
-                { id: 'export-reports', label: 'Export All Reports', icon: Download, color: 'from-brand-gold-600 to-brand-emerald-700', desc: 'Download comprehensive progress reports' },
-                { id: 'group-analytics', label: 'View Group Analytics', icon: BarChart3, color: 'from-brand-gold-600 to-brand-emerald-700', desc: 'Analyze trends across all clients' }
+                { id: 'link:/curriculum', label: 'View Curriculum', icon: BookOpen, color: 'from-brand-emerald-600 to-brand-emerald-700', desc: 'Review the IFS Path and learning modules' },
+                { id: 'progress', label: 'Curriculum Progress by Client', icon: BarChart3, color: 'from-blue-500 to-indigo-600', desc: 'See assigned-client module completion and IFS Path momentum' },
+                { id: 'link:/assessment-builder', label: 'Assessment Generator', icon: FileText, color: 'from-brand-gold-600 to-brand-emerald-700', desc: 'Create custom assessments that connect back to the IFS Path' },
+                { id: 'link:/assessment-builder', label: 'Review Assessment Results', icon: ClipboardCheck, color: 'from-emerald-500 to-teal-600', desc: 'Open submitted assessment results that may need Advisor review' },
+                { id: 'lessons', label: 'Wound Assessment Tools', icon: Target, color: 'from-amber-500 to-orange-600', desc: 'Use wound-informed supports and lesson planning tools' },
+                { id: 'link:/resource-library', label: 'Resource Library', icon: FileText, color: 'from-brand-stone-500 to-brand-gold-600', desc: 'Open client learning supports and Advisor references' },
+                { id: 'link:/resource-library', label: 'IFS Cheat Sheet / Learning Supports', icon: Lightbulb, color: 'from-brand-gold-600 to-brand-emerald-700', desc: 'Quickly access IFS concepts, language, and learning aids' },
+                { id: 'link:/advisor/shared-reflections', label: 'Shared Life Reflections', icon: Heart, color: 'from-brand-emerald-600 to-brand-gold-600', desc: 'Review reflections clients intentionally shared from IFS in Daily Life practices' }
               ].map((action) => {
                 const Icon = action.icon;
                 return (
@@ -3830,6 +3961,10 @@ const TherapistDashboard = () => {
                     onClick={() => {
                       if (action.id.startsWith('link:')) {
                         navigate(action.id.replace('link:', ''));
+                        return;
+                      }
+                      if (['progress', 'lessons'].includes(action.id)) {
+                        setActiveTab(action.id);
                         return;
                       }
                       setActiveAction(action.id);
@@ -3862,7 +3997,7 @@ const TherapistDashboard = () => {
                 className={`flex items-center gap-2 mb-4 text-sm ${textSecondary} hover:${textPrimary} transition-colors`}
               >
                 <ArrowLeft className="w-4 h-4" />
-                Back to Curriculum Studio
+                Back to Curriculum & Assessments
               </button>
 
               {activeAction === 'create-client' && (
@@ -4114,7 +4249,7 @@ const TherapistDashboard = () => {
                     <div className={`rounded-lg border ${cardBorder} p-4`}>
                       <h3 className={`text-sm font-medium ${textPrimary} mb-3`}>Report includes:</h3>
                       <ul className={`text-sm ${textSecondary} space-y-2`}>
-                        {['Client names and wound profiles', 'Module completion progress', 'Journal entry counts', 'Average mood scores', 'Activity completion rates', 'Risk levels and engagement status', 'Join dates and last activity'].map((item, i) => (
+                        {['Client names and wound profiles', 'Module completion progress', 'Journal entry counts', 'Average mood scores', 'Activity completion rates', 'Support levels and engagement status', 'Join dates and last activity'].map((item, i) => (
                           <li key={i} className="flex items-center gap-2">
                             <CheckCircle className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" />
                             {item}
@@ -4167,7 +4302,7 @@ const TherapistDashboard = () => {
                     <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
                       {[
                         { label: 'Avg Progress', value: `${analytics.avgProgress}%`, sub: `${analytics.avgModules} modules avg`, color: 'from-brand-stone-500 to-brand-stone-600' },
-                        { label: 'Active Rate', value: `${analytics.activeRate}%`, sub: `${analytics.riskCounts.low} of ${clients.length} active`, color: 'from-brand-emerald-600 to-brand-emerald-700' },
+                        { label: 'Active Rate', value: `${analytics.activeRate}%`, sub: `${analytics.supportCounts.low} of ${clients.length} active`, color: 'from-brand-emerald-600 to-brand-emerald-700' },
                         { label: 'Total Journals', value: analytics.totalJournals, sub: `${(analytics.totalJournals / clients.length).toFixed(1)} per client`, color: 'from-brand-gold-600 to-brand-emerald-700' },
                         { label: 'Activity Rate', value: `${analytics.activityCompletionRate}%`, sub: `${analytics.completedActivities}/${analytics.totalActivities} done`, color: 'from-brand-gold-600 to-brand-emerald-700' }
                       ].map(stat => (
@@ -4211,10 +4346,10 @@ const TherapistDashboard = () => {
                         <div className="space-y-3">
                           {[
                             { key: 'low', label: 'Active (< 7 days)', color: '#10b981' },
-                            { key: 'medium', label: 'At Risk (7-14 days)', color: '#f59e0b' },
+                            { key: 'medium', label: 'At Support (7-14 days)', color: '#f59e0b' },
                             { key: 'high', label: 'Inactive (> 14 days)', color: '#ef4444' }
                           ].map(status => {
-                            const count = analytics.riskCounts[status.key];
+                            const count = analytics.supportCounts[status.key];
                             const pct = Math.round((count / clients.length) * 100);
                             return (
                               <div key={status.key}>
@@ -4944,7 +5079,7 @@ const TherapistDashboard = () => {
                               { name: 'The Inner Critic', trigger: [3], threshold: 4, role: 'Drives perfectionism through self-criticism', need: 'Needs to know you are already worthy without being perfect' },
                               { name: 'The Planner', trigger: [1], threshold: 4, role: 'Prevents surprises through hyper-organization', need: 'Needs to trust that you can handle uncertainty safely' },
                               { name: 'The Perfectionist', trigger: [7], threshold: 4, role: 'Prevents exposure of perceived flaws', need: 'Needs to learn that imperfection does not mean rejection' },
-                              { name: 'The People Pleaser', trigger: [9], threshold: 4, role: 'Keeps relationships safe through compliance', need: 'Needs to know your true self is lovable without performing' },
+                              { name: 'The People Pleaser', trigger: [9], threshold: 4, role: 'Keeps relationships safe through attunement and careful connection', need: 'Needs to know your true self is lovable without performing' },
                               { name: 'The Controller', trigger: [5], threshold: 4, role: 'Manages situations to prevent vulnerability', need: 'Needs to feel safe enough to release control and trust the process' },
                               { name: 'The Worrier', trigger: [14], threshold: 4, role: 'Anticipates danger through hypervigilance', need: 'Needs reassurance that you are safe in the present moment' }
                             ],
@@ -5957,14 +6092,14 @@ const TherapistDashboard = () => {
               <Heart className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h2 className={`text-lg font-semibold ${textPrimary}`}>Live Guided Practice Sessions</h2>
-              <p className={`text-sm ${textSecondary}`}>Guide therapy activities together with your client in real time</p>
+              <h2 className={`text-lg font-semibold ${textPrimary}`}>Live Advisor-Guided Practice</h2>
+              <p className={`text-sm ${textSecondary}`}>Guide IFS practices together with your client in real time</p>
             </div>
           </div>
 
           <div className={`${cardBg} rounded-xl border ${cardBorder} p-6 mb-6`}>
             <p className={`text-sm ${textSecondary} mb-4`}>
-              Select a client and launch a guided therapy activity. You'll walk through each step together, with space for your clinical notes and observations at every stage.
+              Select a client and launch an Advisor-guided IFS practice. You'll walk through each step together, with space for Advisor notes and observations at every stage.
             </p>
             <div className="mb-4">
               <label className={`block text-sm font-medium ${textSecondary} mb-2`}>Select Client</label>
@@ -6004,22 +6139,22 @@ const TherapistDashboard = () => {
                 className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg border border-emerald-200 text-emerald-700 dark:text-emerald-200 font-medium hover:bg-emerald-50 dark:hover:bg-emerald-950/30 transition-all"
               >
                 <Play className="w-4 h-4" />
-                Legacy Live Guided Practice Guide
+                Legacy Live Practice Guide
               </Link>
             </div>
           </div>
 
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {[
-              { title: 'Guided Parts Dialogue', desc: 'Advisor-led conversation with internal parts', duration: '20-30 min', category: 'in-session' },
-              { title: 'Protector Negotiation', desc: 'Help protective parts feel safe for deeper work', duration: '25-35 min', category: 'in-session' },
-              { title: 'Unburdening Ceremony', desc: 'Sacred step-by-step guide for burden release', duration: '30-45 min', category: 'in-session' },
-              { title: 'Inner Child Rescue', desc: 'Find, comfort, and retrieve wounded exile parts', duration: '25-40 min', category: 'in-session' },
-              { title: 'Parts Council Meeting', desc: 'Facilitate communication between multiple parts', duration: '30-45 min', category: 'in-session' },
-              { title: 'Somatic Parts Work', desc: 'Use body sensations to discover and heal parts', duration: '20-30 min', category: 'in-session' },
-              { title: 'Attachment Repair', desc: 'Reparent exile parts and repair attachment wounds', duration: '30-40 min', category: 'in-session' },
-              { title: 'Self-Energy Cultivation', desc: 'Strengthen the compassionate core of Self', duration: '15-20 min', category: 'in-session' },
-              { title: 'Trailhead Exploration', desc: 'Use real-life triggers to discover healing paths', duration: '20-30 min', category: 'in-session' }
+              { title: 'Guided Parts Dialogue', desc: 'Advisor-guided conversation with internal parts', duration: '20-30 min', category: 'live practice' },
+              { title: 'Protector Negotiation', desc: 'Help protective parts feel safe for deeper work', duration: '25-35 min', category: 'live practice' },
+              { title: 'Unburdening Ceremony', desc: 'Sacred step-by-step guide for burden release', duration: '30-45 min', category: 'live practice' },
+              { title: 'Inner Child Rescue', desc: 'Find, comfort, and retrieve wounded exile parts', duration: '25-40 min', category: 'live practice' },
+              { title: 'Parts Council Meeting', desc: 'Facilitate communication between multiple parts', duration: '30-45 min', category: 'live practice' },
+              { title: 'Somatic Parts Work', desc: 'Use body sensations to discover and heal parts', duration: '20-30 min', category: 'live practice' },
+              { title: 'Attachment Repair', desc: 'Reparent exile parts and repair attachment wounds', duration: '30-40 min', category: 'live practice' },
+              { title: 'Self-Energy Cultivation', desc: 'Strengthen the compassionate core of Self', duration: '15-20 min', category: 'live practice' },
+              { title: 'Trailhead Exploration', desc: 'Use real-life triggers to discover healing paths', duration: '20-30 min', category: 'live practice' }
             ].map((activity, i) => (
               <div key={i} className={`${cardBg} rounded-xl border ${cardBorder} p-4 transition-all hover:shadow-md`}>
                 <div className="flex items-start gap-3">
@@ -6044,6 +6179,40 @@ const TherapistDashboard = () => {
         </div>
       )}
 
+      {activeTab === 'settings' && (
+        <div className="space-y-6">
+          <section className={`${cardBg} rounded-3xl border ${cardBorder} p-6`}>
+            <p className={`text-xs font-semibold uppercase tracking-[0.25em] ${textMuted}`}>Settings</p>
+            <h2 className={`mt-2 text-2xl font-serif ${textPrimary}`}>Settings / Admin Tools</h2>
+            <p className={`mt-2 max-w-3xl text-sm ${textSecondary}`}>
+              Manage caseload access, assignment tools, notifications, and lower-priority items without crowding the Advisor workflow.
+            </p>
+          </section>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {[
+              { label: 'Caseload Manager', desc: 'Assign, discharge, reactivate, and reassign clients.', icon: Users, onClick: () => navigate('/caseload') },
+              { label: 'Create Client PIN', desc: 'Create a secure client login when you need to add someone to the IFS Path.', icon: Key, onClick: () => { setActiveAction('create-client'); setActiveTab('actions'); } },
+              { label: 'Advisor Messages', desc: 'Open secure client messages and updates.', icon: MessageCircle, onClick: () => navigate('/advisor-messages') },
+              { label: 'Notifications', desc: 'Review unread updates and notification preferences.', icon: Bell, onClick: () => navigate('/notifications') },
+              { label: 'Resource Library', desc: 'Open learning supports and reference materials.', icon: FileText, onClick: () => navigate('/resource-library') },
+              { label: 'Coming Later', desc: 'Future-facing ideas are kept here instead of in primary navigation.', icon: Gem, onClick: () => setActiveTab('roadmap') }
+            ].map((item) => {
+              const Icon = item.icon;
+              return (
+                <button key={item.label} onClick={item.onClick} className={`${cardBg} rounded-3xl border ${cardBorder} p-5 text-left transition-all hover:-translate-y-0.5 hover:border-brand-gold-300 hover:shadow-lg`}>
+                  <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-2xl bg-brand-gold-100 text-brand-stone-700 dark:bg-brand-gold-900/30 dark:text-brand-gold-200">
+                    <Icon className="h-5 w-5" />
+                  </div>
+                  <h3 className={`font-semibold ${textPrimary}`}>{item.label}</h3>
+                  <p className={`mt-1 text-sm ${textSecondary}`}>{item.desc}</p>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+
       {activeTab === 'roadmap' && (
         <div>
           <div className="flex items-center gap-3 mb-6">
@@ -6051,22 +6220,22 @@ const TherapistDashboard = () => {
               <Gem className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h2 className={`text-lg font-semibold ${textPrimary}`}>Future Features Roadmap</h2>
-              <p className={`text-sm ${textSecondary}`}>Upcoming enhancements planned for the IFS therapy platform</p>
+              <h2 className={`text-lg font-semibold ${textPrimary}`}>Coming Later</h2>
+              <p className={`text-sm ${textSecondary}`}>Ideas and lower-priority improvements kept outside primary Advisor navigation</p>
             </div>
           </div>
           <div className="space-y-4">
             {[
               { title: 'Parts Relationship Mapping', desc: 'Interactive visual SVG map showing how a client\'s protectors, managers, firefighters, and exiles relate to each other — including alliances, conflicts, and polarizations between parts. Navigate to Parts Studio to use.', icon: Users, color: 'from-blue-500 to-cyan-600', status: 'Live' },
               { title: 'Guided Unburdening Protocol', desc: '8-step digital unburdening ceremony with guided prompts, visualization, and burden release tracking. Includes post-unburdening integration exercises. Available under Therapy Integration.', icon: Heart, color: 'from-rose-500 to-emerald-600', status: 'Live' },
-              { title: 'Assessment Builder', desc: 'Create custom assessments tailored to your practice — define questions, scoring, and wound mappings. Generate shareable client links. Available in Curriculum Studio.', icon: Target, color: 'from-sky-500 to-blue-600', status: 'Live' },
+              { title: 'Assessment Generator', desc: 'Create custom assessments tied to curriculum support — define questions, scoring, and wound mappings. Generate shareable client links. Available in Curriculum & Assessments.', icon: Target, color: 'from-sky-500 to-blue-600', status: 'Live' },
               { title: 'Parts Dialogue Voice Mode', desc: 'Voice-guided parts dialogue where clients speak to their parts using speech recognition, with AI facilitating the conversation and text-to-speech responses. Available under Parts Dialogue.', icon: MessageCircle, color: 'from-teal-500 to-emerald-600', status: 'Live' },
               { title: 'AI-Powered Session Summaries', desc: 'Automatically generate structured session summaries from advisor notes using AI, with key themes, parts identified, progress markers, and suggested assigned IFS practice — saving advisors 15+ minutes per session.', icon: Sparkles, color: 'from-amber-500 to-stone-600', status: 'In Development' },
               { title: 'Mood & Parts Pattern Analytics', desc: 'Advanced analytics dashboard showing correlations between mood entries, active parts, triggers, and healing progress over time — with trend detection and early warning alerts.', icon: TrendingUp, color: 'from-emerald-500 to-teal-600', status: 'Live', link: '/mood-analytics' },
               { title: 'Client Self-Check-In Between Sessions', desc: 'Daily micro check-ins where clients rate their parts activity, Self-energy level, and emotional state — with automatic alerts to advisor if concerning patterns emerge.', icon: Activity, color: 'from-amber-500 to-yellow-600', status: 'Live', link: '/daily-checkin' },
               { title: 'Secure Video Session Integration', desc: 'Built-in HIPAA-compliant video sessions with real-time parts tracking sidebar, live session notes, and automatic recording transcription for review.', icon: Play, color: 'from-red-500 to-orange-600', status: 'Researching' },
-              { title: 'Group Therapy Module', desc: 'Support for IFS-informed group therapy with shared exercises, group parts mapping, anonymous reflection sharing, and facilitator controls for managing group dynamics.', icon: Users, color: 'from-brand-gold-600 to-brand-emerald-700', status: 'Researching' },
-              { title: 'Multi-Advisor Practice Management', desc: 'Support for therapy practices with multiple advisors — shared client handoffs, supervisor oversight, cross-advisor analytics, billing integration, and team coordination tools.', icon: Crown, color: 'brightness-105', status: 'Planned' }
+              { title: 'Group Practice Module', desc: 'Support for IFS-informed group practice with shared exercises, group parts mapping, anonymous reflection sharing, and facilitator controls for managing group dynamics.', icon: Users, color: 'from-brand-gold-600 to-brand-emerald-700', status: 'Researching' },
+              { title: 'Multi-Advisor Admin Tools', desc: 'Support for Advisor teams with multiple practitioners — shared client handoffs, supervisor oversight, cross-advisor analytics, billing integration, and team coordination tools.', icon: Crown, color: 'brightness-105', status: 'Planned' }
             ].map((feature, idx) => {
               const FIcon = feature.icon;
               const statusColors = {

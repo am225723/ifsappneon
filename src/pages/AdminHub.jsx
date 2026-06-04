@@ -107,10 +107,10 @@ export default function AdminHub() {
 
       <section className="mb-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {[
-          { to: '/curriculum', label: 'Curriculum Studio', desc: 'Review the IFS Path and learning supports.', icon: BookOpen },
+          { to: '/curriculum', label: 'Curriculum & Assessments', desc: 'Review the IFS Path, learning supports, and curriculum tools.', icon: BookOpen },
           { to: '/assessment-builder', label: 'Assessment Generator', desc: 'Create or manage assessment experiences.', icon: ClipboardCheck },
           { to: '/advisor-homework', label: 'Practice Generator', desc: 'Open the Assigned IFS Practice Generator.', icon: Sparkles },
-          { to: '/advisor-reports', label: 'Client Progress', desc: 'Review client progress and Advisor reports.', icon: FileText },
+          { to: '/advisor-reports', label: 'Insights & Reports', desc: 'Review client progress and Advisor reports.', icon: FileText },
         ].map((item) => {
           const Icon = item.icon;
           return (
@@ -126,7 +126,7 @@ export default function AdminHub() {
       <section className={`mb-6 rounded-3xl border p-5 ${cardBg}`}>
         <p className={`text-xs font-semibold uppercase tracking-[0.25em] ${textSecondary}`}>Overview</p>
         <h2 className={`mt-1 text-2xl font-serif ${textPrimary}`}>Advisor assignment flow</h2>
-        <p className={`mt-2 text-sm ${textSecondary}`}>Use this hub to keep clients connected to an Advisor, then use the Curriculum Studio, Assessment Generator, Practice Generator, and Client Progress tools for day-to-day support.</p>
+        <p className={`mt-2 text-sm ${textSecondary}`}>Use this hub to keep clients connected to an Advisor, then use Curriculum & Assessments, the Practice Generator, Review Queue, and Insights & Reports for day-to-day support.</p>
       </section>
 
       {error && (

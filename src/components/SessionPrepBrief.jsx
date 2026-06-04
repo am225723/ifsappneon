@@ -14,12 +14,12 @@ function AgendaDetail({ label, value }) {
   return <div><p className="text-xs font-semibold uppercase tracking-wide text-blue-500">{label}</p><p className="text-sm text-blue-950 whitespace-pre-wrap">{value}</p></div>;
 }
 
-const AI_DISCLAIMER = 'AI-generated draft for clinician review. Verify against the chart and use clinical judgment.';
+const AI_DISCLAIMER = 'AI-generated draft for Advisor review. Verify against client context and use your professional judgment.';
 
 function formatAiError(error) {
   if (!error) return '';
   if (error.code === 'unauthorized') return 'Unauthorized: please sign in again before generating an AI summary.';
-  if (error.code === 'forbidden') return 'Unauthorized: this client is not assigned to your therapist account.';
+  if (error.code === 'forbidden') return 'Unauthorized: this client is not assigned to your Advisor account.';
   if (error.code === 'missing_client_id') return 'No client selected. Select an active assigned client first.';
   if (error.code === 'no_recent_data') return 'No recent data is available to summarize for this client.';
   if (error.code === 'openai_api_key_missing') return 'OpenAI API key missing. Ask an administrator to configure OPENAI_API_KEY on the server.';
@@ -192,7 +192,7 @@ export default function SessionPrepBrief({ clientId, therapistId, clients = [], 
 
             {latestAgenda.safety_concerns && (
               <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
-                <div className="flex gap-2"><AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" /><p>Client reported safety-related content in this check-in. Review clinically and follow your practice’s safety workflow as appropriate.</p></div>
+                <div className="flex gap-2"><AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" /><p>Client reported safety-related content in this check-in. Review carefully and follow your practice’s safety workflow as appropriate.</p></div>
               </div>
             )}
 
@@ -209,7 +209,7 @@ export default function SessionPrepBrief({ clientId, therapistId, clients = [], 
             <AgendaDetail label="Mood label" value={latestAgenda.current_mood_label} />
             <AgendaDetail label="Safety concerns" value={latestAgenda.safety_concerns} />
 
-            <label className="block text-sm font-medium text-blue-950">Brief therapist note
+            <label className="block text-sm font-medium text-blue-950">Brief Advisor note
               <textarea value={reviewNotes} onChange={(e) => setReviewNotes(e.target.value)} rows={3} className="mt-1 w-full rounded-lg border border-blue-200 px-3 py-2 text-sm text-gray-900" placeholder="Optional review note..." />
             </label>
             <button onClick={markReviewed} disabled={saving || latestAgenda.status === 'archived'} className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white disabled:bg-gray-400 flex items-center gap-2">
@@ -236,7 +236,7 @@ export default function SessionPrepBrief({ clientId, therapistId, clients = [], 
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <h4 className="font-semibold text-purple-950">AI Session Prep Summary</h4>
-            <p className="text-xs text-purple-700">Generate on demand from scoped agenda, mood, journal, parts, homework, and progress data. This does not replace the structured Session Prep Brief.</p>
+            <p className="text-xs text-purple-700">Generate on demand from scoped agenda, mood, journal, parts, assigned IFS practice, and progress data. This does not replace the structured Session Prep Brief.</p>
           </div>
           <button
             type="button"
