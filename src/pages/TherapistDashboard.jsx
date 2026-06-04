@@ -96,11 +96,11 @@ const MODULE_SEQUENCE = [
 ];
 
 const MEDITATION_RECOMMENDATIONS = {
-  abandonment: { title: 'Inner Child Connection Meditation', desc: 'Guided meditation to connect with and reassure the Lonely Child part', duration: '15 min', path: '/guided-meditation' },
-  shame: { title: 'Self-Compassion Meditation', desc: 'Loving-kindness practice directed toward the Unworthy Child', duration: '15 min', path: '/guided-meditation' },
-  neglect: { title: 'Body Awareness & Grounding Meditation', desc: 'Somatic meditation to reconnect with the body and feel present', duration: '12 min', path: '/guided-meditation' },
-  betrayal: { title: 'Safe Space Visualization', desc: 'Build an internal sanctuary where trust can slowly be rebuilt', duration: '15 min', path: '/guided-meditation' },
-  helplessness: { title: 'Empowerment & Agency Meditation', desc: 'Guided practice to cultivate inner strength and sense of choice', duration: '12 min', path: '/guided-meditation' }
+  abandonment: { title: 'Inner Child Connection Meditation', desc: 'Guided meditation to connect with and reassure the Lonely Child part', duration: '15 min', path: '/meditation' },
+  shame: { title: 'Self-Compassion Meditation', desc: 'Loving-kindness practice directed toward the Unworthy Child', duration: '15 min', path: '/meditation' },
+  neglect: { title: 'Body Awareness & Grounding Meditation', desc: 'Somatic meditation to reconnect with the body and feel present', duration: '12 min', path: '/meditation' },
+  betrayal: { title: 'Safe Space Visualization', desc: 'Build an internal sanctuary where trust can slowly be rebuilt', duration: '15 min', path: '/meditation' },
+  helplessness: { title: 'Empowerment & Agency Meditation', desc: 'Guided practice to cultivate inner strength and sense of choice', duration: '12 min', path: '/meditation' }
 };
 
 const HOMEWORK_BY_WOUND = {

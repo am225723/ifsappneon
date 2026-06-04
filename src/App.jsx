@@ -1,7 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Link, useLocation, Navigate } from 'react-router-dom';
 import { useState, useEffect, useCallback } from 'react';
 import { SignIn, SignUp, useAuth, UserButton } from '@clerk/clerk-react';
-import { Settings as SettingsIcon, Home as HomeIcon, BookOpen, ClipboardList, BookHeart, Handshake, LogOut, MessageSquare, Compass as CompassIcon, Sparkles as SparklesIcon, Trophy } from 'lucide-react';
+import { Settings as SettingsIcon, Home as HomeIcon, ClipboardList, Handshake, LogOut, MessageSquare, Compass as CompassIcon, Sparkles as SparklesIcon, Grid3X3 } from 'lucide-react';
 import { useTheme } from './contexts/ThemeContext';
 import { supabase } from './lib/supabase';
 import SSOCallback from './components/SSOCallback';
@@ -68,6 +68,7 @@ import WeeklyReflection from './pages/WeeklyReflection';
 import LetterWriting from './pages/LetterWriting';
 import PartsCards from './pages/PartsCards';
 import HealingTracker from './pages/HealingTracker';
+import ToolsDirectory from './pages/ToolsDirectory';
 import OnboardingFlow from './components/OnboardingFlow';
 import { initializePushNotifications } from './lib/pushNotifications';
 import ResourceLibrary from './pages/ResourceLibrary';
@@ -216,17 +217,20 @@ function UnauthorizedRedirect({ currentClient, message = 'This area is not avail
   );
 }
 
-function BottomNav() {
+function BottomNav({ messagePath = '/inbox', advisorWorkspacePath = '/therapist-dashboard', isTherapistRole = false, isAdminOrSupervisor = false }) {
   const location = useLocation();
-  const navItems = [
+  const navItems = isTherapistRole ? [
     { path: '/', icon: HomeIcon, label: 'Home' },
-    { path: '/exercises', icon: BookOpen, label: 'Practice' },
-    { path: '/life-integration', icon: SparklesIcon, label: 'Daily Life' },
-    { path: '/journal', icon: BookHeart, label: 'Journal' },
-    { path: '/parts-mapping', icon: CompassIcon, label: 'Parts' },
-    { path: '/healing-timeline', icon: Trophy, label: 'Timeline' },
-    { path: '/inbox', icon: MessageSquare, label: 'Advisor' },
+    { path: advisorWorkspacePath, icon: ClipboardList, label: isAdminOrSupervisor ? 'Admin' : 'Advisor' },
+    { path: '/my-ifs', icon: SparklesIcon, label: 'My IFS' },
+    { path: '/tools', icon: Grid3X3, label: 'Tools' },
     { path: '/profile', icon: Handshake, label: 'Profile' },
+  ] : [
+    { path: '/', icon: HomeIcon, label: 'Home' },
+    { path: '/life-integration', icon: SparklesIcon, label: 'Practice' },
+    { path: '/parts-mapping', icon: CompassIcon, label: 'Parts' },
+    { path: messagePath, icon: MessageSquare, label: 'Advisor' },
+    { path: '/tools', icon: Grid3X3, label: 'Tools' },
   ];
 
   return (
@@ -545,6 +549,7 @@ function AppContent({ authChecked, clerkLoaded, clerkSignedIn, isAuthenticated, 
                 <Route path="/inner-library-mockup" element={<InnerLibraryMockup />} />
                 <Route path="/journal" element={<FeatureGate feature="journal"><Journal /></FeatureGate>} />
                 <Route path="/profile" element={<Profile client={currentClient} />} />
+                <Route path="/tools" element={<ToolsDirectory currentClient={currentClient} />} />
                 <Route path="/settings" element={<Settings />} />
                 <Route path="/notifications" element={<Notifications currentClient={currentClient} />} />
                 <Route path="/notification-preferences" element={<NotificationPreferences currentClient={currentClient} />} />
@@ -589,7 +594,7 @@ function AppContent({ authChecked, clerkLoaded, clerkSignedIn, isAuthenticated, 
                 <Route path="/life-integration/protector-check-in" element={clientOnly(<ProtectorCheckInPractice />)} />
                 <Route path="/life-integration/needs-boundaries" element={clientOnly(<NeedsBoundariesPractice />)} />
                 <Route path="/unburdening" element={<FeatureGate feature="unburdening"><UnburdeningProtocol /></FeatureGate>} />
-                <Route path="/assessment-builder" element={<AssessmentBuilder />} />
+                <Route path="/assessment-builder" element={therapistOnly(<AssessmentBuilder />)} />
                 <Route path="/custom-assessment/:assessmentId" element={<CustomAssessment />} />
                 <Route path="/meditation" element={<FeatureGate feature="meditations"><GuidedMeditation /></FeatureGate>} />
                 <Route path="/daily-checkin" element={<FeatureGate feature="dailyCheckin"><DailyCheckin /></FeatureGate>} />
@@ -609,7 +614,7 @@ function AppContent({ authChecked, clerkLoaded, clerkSignedIn, isAuthenticated, 
               </Routes>
               </div>
 
-              <BottomNav />
+              <BottomNav messagePath={messagePath} advisorWorkspacePath={advisorWorkspacePath} isTherapistRole={isTherapistRole} isAdminOrSupervisor={isAdminOrSupervisor} />
             </>
           )}
         </div>
