@@ -2631,7 +2631,10 @@ const TherapistDashboard = () => {
 
   const advisorToolTiles = [
     { label: 'Advisor Session Prep', desc: 'Review submitted pre-session check-ins and prepare for client support.', icon: ClipboardCheck, onClick: () => setActiveTab('session-prep') },
-    { label: 'Assigned IFS Practices', desc: 'Create, assign, and review Advisor-guided practices.', icon: BookOpen, onClick: () => navigate('/advisor-homework') },
+    { label: 'Assigned IFS Practice Generator', desc: 'Generate, edit, assign, and review Advisor-guided practices.', icon: BookOpen, onClick: () => navigate('/advisor-homework') },
+    { label: 'Assessment Generator', desc: 'Create custom assessment experiences that connect back to the IFS Path.', icon: ClipboardCheck, onClick: () => navigate('/assessment-builder') },
+    { label: 'View Curriculum', desc: 'Open the client curriculum and IFS learning modules.', icon: BookOpen, onClick: () => navigate('/curriculum') },
+    { label: 'Resource Library', desc: 'Open learning supports and curriculum resources.', icon: FileText, onClick: () => navigate('/resource-library') },
     { label: 'Shared Life Reflections', desc: 'Review reflections clients intentionally shared from their IFS in Daily Life practices.', icon: Heart, onClick: () => navigate('/advisor/shared-reflections') },
     { label: 'Growth Goals', desc: 'Review IFS path goals and support plans.', icon: Target, onClick: () => setActiveTab('treatment-plans') },
     { label: 'Advisor Notes', desc: 'Write Advisor-only notes with tagged parts and goals.', icon: FileText, onClick: () => setActiveTab('clinical-notes') },
@@ -2742,12 +2745,12 @@ const TherapistDashboard = () => {
           { id: 'clinical-notes', label: 'Advisor Notes', icon: FileText },
           { id: 'notes', label: 'Advisor Notes', icon: FileText },
           { id: 'session-prep', label: 'Advisor Session Prep', icon: ClipboardCheck },
-          { id: 'progress', label: 'Progress', icon: BarChart3 },
+          { id: 'progress', label: 'Client Progress', icon: BarChart3 },
           { id: 'analytics', label: 'Longitudinal Insights', icon: TrendingUp },
-          { id: 'alerts', label: 'Alerts', icon: AlertTriangle },
-          { id: 'actions', label: 'Quick Actions', icon: Sparkles },
-          { id: 'lessons', label: 'Lesson Plans', icon: BookOpen },
-          { id: 'insights', label: 'Client Insights', icon: Eye },
+          { id: 'alerts', label: 'Review & Follow-Up', icon: AlertTriangle },
+          { id: 'actions', label: 'Curriculum Studio', icon: Sparkles },
+          { id: 'lessons', label: 'Curriculum & Content Studio', icon: BookOpen },
+          { id: 'insights', label: 'Client Support Workspace', icon: Eye },
           { id: 'co-therapy', label: 'Live Guided Practice', icon: Heart },
           { id: 'roadmap', label: 'Future Features', icon: Gem }
         ].map(tab => {
@@ -2795,7 +2798,7 @@ const TherapistDashboard = () => {
           <section>
             <div className="mb-4">
               <p className={`text-xs uppercase tracking-[0.25em] ${textMuted}`}>Overview</p>
-              <h2 className={`text-2xl font-serif ${textPrimary}`}>Current Advisor support needs</h2>
+              <h2 className={`text-2xl font-serif ${textPrimary}`}>Overview</h2>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-6 gap-4">
               {workspaceOverviewCards.map((card) => {
@@ -2823,7 +2826,7 @@ const TherapistDashboard = () => {
               <div className="mb-4 flex items-start justify-between gap-3">
                 <div>
                   <p className={`text-xs uppercase tracking-[0.25em] ${textMuted}`}>Needs Attention</p>
-                  <h2 className={`text-xl font-bold ${textPrimary}`}>Advisor actions to review next</h2>
+                  <h2 className={`text-xl font-bold ${textPrimary}`}>Review & Follow-Up</h2>
                 </div>
                 <span className="rounded-full bg-brand-gold-100 px-3 py-1 text-xs font-semibold text-brand-gold-700 dark:bg-brand-gold-900/30 dark:text-brand-gold-200">{attentionItems.length} items</span>
               </div>
@@ -2885,7 +2888,7 @@ const TherapistDashboard = () => {
                     {[
                       ['Open Session Prep', () => { setSelectedPrepClientId(selectedWorkspaceClient.id); setActiveTab('session-prep'); }],
                       ['Draft Session Note', () => { setDraftNotePrefill({ clientId: selectedWorkspaceClient.id, sessionDate: new Date().toISOString().split('T')[0] }); setActiveTab('clinical-notes'); }],
-                      ['Assign IFS Practice', () => navigate('/advisor-homework')],
+                      ['Practice Generator', () => navigate('/advisor-homework')],
                       ['Open Growth Goals', () => setActiveTab('treatment-plans')],
                       ['Open Advisor Notes', () => { setNoteForm((form) => ({ ...form, clientId: selectedWorkspaceClient.id })); setActiveTab('clinical-notes'); }],
                       ['Start Live Guided Practice', () => navigate('/live-co-therapy')],
@@ -2927,7 +2930,7 @@ const TherapistDashboard = () => {
                     <div className="mt-4 flex flex-wrap gap-2">
                       {[
                         ['Session Prep', () => { setSelectedPrepClientId(client.id); setActiveTab('session-prep'); }],
-                        ['Assign Practice', () => navigate('/advisor-homework')],
+                        ['Practice Generator', () => navigate('/advisor-homework')],
                         ['Growth Goals', () => setActiveTab('treatment-plans')],
                         ['Advisor Notes', () => setActiveTab('clinical-notes')],
                         ['Draft Session Note', () => { setDraftNotePrefill({ clientId: client.id, sessionDate: new Date().toISOString().split('T')[0] }); setActiveTab('clinical-notes'); }],
@@ -2944,8 +2947,8 @@ const TherapistDashboard = () => {
 
           <div className="grid grid-cols-1 xl:grid-cols-[1fr_0.8fr] gap-6">
             <section className={`${cardBg} rounded-3xl border ${cardBorder} p-5`}>
-              <p className={`text-xs uppercase tracking-[0.25em] ${textMuted}`}>Advisor Tools</p>
-              <h2 className={`mb-4 text-xl font-bold ${textPrimary}`}>Stable Advisor workflows</h2>
+              <p className={`text-xs uppercase tracking-[0.25em] ${textMuted}`}>Curriculum & Content Studio</p>
+              <h2 className={`mb-4 text-xl font-bold ${textPrimary}`}>Curriculum & Content Studio</h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 {advisorToolTiles.map((tool) => {
                   const Icon = tool.icon;
@@ -3811,11 +3814,11 @@ const TherapistDashboard = () => {
                 { id: 'send-reminder', label: 'Send Reminder', icon: MessageSquare, color: 'from-brand-emerald-600 to-brand-emerald-700', desc: 'Send session or activity reminders to clients' },
                 { id: 'link:/caseload', label: 'Caseload Manager', icon: Users, color: 'from-emerald-500 to-teal-600', desc: 'Assign, discharge, and reactivate clients' },
                 { id: 'link:/advisor-messages', label: 'Client Messages', icon: MessageCircle, color: 'from-brand-stone-500 to-brand-stone-600', desc: 'Send and receive secure messages with clients' },
-                { id: 'link:/advisor-homework', label: 'Assigned Practices', icon: Target, color: 'from-brand-gold-600 to-brand-emerald-700', desc: 'Create, assign, and review assigned IFS practices' },
+                { id: 'link:/advisor-homework', label: 'Assigned IFS Practice Generator', icon: Target, color: 'from-brand-gold-600 to-brand-emerald-700', desc: 'Create, assign, and review assigned IFS practices' },
                 { id: 'link:/advisor/shared-reflections', label: 'Shared Life Reflections', icon: Heart, color: 'from-brand-emerald-600 to-brand-gold-600', desc: 'Review reflections clients intentionally shared from their IFS in Daily Life practices' },
                 { id: 'link:/advisor-reports', label: 'Advisor Reports', icon: Download, color: 'from-emerald-500 to-teal-600', desc: 'Generate and export client progress reports' },
                 { id: 'link:/analytics', label: 'Longitudinal Insights', icon: TrendingUp, color: 'from-blue-500 to-indigo-600', desc: 'Review secure trends for one assigned client at a time' },
-                { id: 'link:/assessment-builder', label: 'Assessment Builder', icon: FileText, color: 'from-brand-gold-600 to-brand-emerald-700', desc: 'Create custom assessments for clients' },
+                { id: 'link:/assessment-builder', label: 'Assessment Generator', icon: FileText, color: 'from-brand-gold-600 to-brand-emerald-700', desc: 'Create custom assessments for clients' },
                 { id: 'link:/mood-analytics', label: 'Mood & Parts Analytics', icon: TrendingUp, color: 'from-brand-stone-500 to-brand-gold-600', desc: 'View mood trends, parts patterns, and self-energy over time' },
                 { id: 'export-reports', label: 'Export All Reports', icon: Download, color: 'from-brand-gold-600 to-brand-emerald-700', desc: 'Download comprehensive progress reports' },
                 { id: 'group-analytics', label: 'View Group Analytics', icon: BarChart3, color: 'from-brand-gold-600 to-brand-emerald-700', desc: 'Analyze trends across all clients' }
@@ -3859,7 +3862,7 @@ const TherapistDashboard = () => {
                 className={`flex items-center gap-2 mb-4 text-sm ${textSecondary} hover:${textPrimary} transition-colors`}
               >
                 <ArrowLeft className="w-4 h-4" />
-                Back to Quick Actions
+                Back to Curriculum Studio
               </button>
 
               {activeAction === 'create-client' && (
@@ -6056,7 +6059,7 @@ const TherapistDashboard = () => {
             {[
               { title: 'Parts Relationship Mapping', desc: 'Interactive visual SVG map showing how a client\'s protectors, managers, firefighters, and exiles relate to each other — including alliances, conflicts, and polarizations between parts. Navigate to Parts Studio to use.', icon: Users, color: 'from-blue-500 to-cyan-600', status: 'Live' },
               { title: 'Guided Unburdening Protocol', desc: '8-step digital unburdening ceremony with guided prompts, visualization, and burden release tracking. Includes post-unburdening integration exercises. Available under Therapy Integration.', icon: Heart, color: 'from-rose-500 to-emerald-600', status: 'Live' },
-              { title: 'Assessment Builder', desc: 'Create custom assessments tailored to your practice — define questions, scoring, and wound mappings. Generate shareable client links. Available under Quick Actions.', icon: Target, color: 'from-sky-500 to-blue-600', status: 'Live' },
+              { title: 'Assessment Builder', desc: 'Create custom assessments tailored to your practice — define questions, scoring, and wound mappings. Generate shareable client links. Available in Curriculum Studio.', icon: Target, color: 'from-sky-500 to-blue-600', status: 'Live' },
               { title: 'Parts Dialogue Voice Mode', desc: 'Voice-guided parts dialogue where clients speak to their parts using speech recognition, with AI facilitating the conversation and text-to-speech responses. Available under Parts Dialogue.', icon: MessageCircle, color: 'from-teal-500 to-emerald-600', status: 'Live' },
               { title: 'AI-Powered Session Summaries', desc: 'Automatically generate structured session summaries from advisor notes using AI, with key themes, parts identified, progress markers, and suggested assigned IFS practice — saving advisors 15+ minutes per session.', icon: Sparkles, color: 'from-amber-500 to-stone-600', status: 'In Development' },
               { title: 'Mood & Parts Pattern Analytics', desc: 'Advanced analytics dashboard showing correlations between mood entries, active parts, triggers, and healing progress over time — with trend detection and early warning alerts.', icon: TrendingUp, color: 'from-emerald-500 to-teal-600', status: 'Live', link: '/mood-analytics' },

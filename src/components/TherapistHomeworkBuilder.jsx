@@ -51,8 +51,8 @@ export default function TherapistHomeworkBuilder({ clientId, clients = [], onAss
           <BookOpen className="w-5 h-5 text-white" />
         </div>
         <div>
-          <h3 className="font-bold text-gray-900">Assign Curriculum Homework</h3>
-          <p className="text-sm text-gray-600">Assigned modules bypass normal curriculum locks for the client.</p>
+          <h3 className="font-bold text-gray-900">Assign Curriculum IFS Practice</h3>
+          <p className="text-sm text-gray-600">Assigned modules support the client's IFS Path and can be opened even when normal curriculum locks apply.</p>
         </div>
       </div>
 
@@ -80,13 +80,13 @@ export default function TherapistHomeworkBuilder({ clientId, clients = [], onAss
       {selectedModule && <p className="rounded-lg bg-white/80 p-3 text-sm text-gray-600">{selectedModule.description}</p>}
 
       <label className="block text-sm font-medium text-gray-700">
-        Instructions (optional)
+        Advisor guidance (optional)
         <textarea value={instructions} onChange={(e) => setInstructions(e.target.value)} rows={3} className="mt-1 w-full rounded-lg border border-amber-200 bg-white px-3 py-2" placeholder="Add context, focus points, or encouragement..." />
       </label>
 
       <button type="submit" disabled={saving || !targetClientId || !moduleId} className="w-full rounded-lg bg-amber-600 px-4 py-2.5 font-semibold text-white hover:bg-amber-700 disabled:bg-gray-400 flex items-center justify-center gap-2">
         {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-        Assign Module
+        Assign Curriculum Practice
       </button>
       {message && <p className="text-sm text-amber-700 flex items-center gap-1"><CheckCircle className="w-4 h-4" /> {message}</p>}
     </form>

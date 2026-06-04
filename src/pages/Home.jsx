@@ -16,7 +16,11 @@ import {
   HeartPulse,
   MessageSquare,
   Sparkles,
-  ShieldCheck
+  ShieldCheck,
+  Library,
+  Map,
+  ClipboardCheck,
+  Layers
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { loadClientSessionAgendas } from '../lib/sessionAgendas';
@@ -26,6 +30,7 @@ import { loadAssignedHomeworkForClient } from '../lib/assignedHomework';
 import { LIFE_REFLECTION_TYPES, loadLifeIntegrationReflections } from '../lib/lifeIntegration';
 import { loadHealingTimeline } from '../lib/healingTimeline';
 import RecentActivityFeed from '../components/RecentActivityFeed';
+import { curriculumModules, getNextModule } from '../data/curriculumData';
 
 const iconTones = {
   emerald: 'bg-brand-emerald-50 text-brand-emerald-700 dark:bg-brand-emerald-950/40 dark:text-brand-emerald-100',
@@ -81,6 +86,8 @@ const Home = ({ clientId, client }) => {
   const [activeAssignedPractice, setActiveAssignedPractice] = useState(null);
   const [recentLifeReflection, setRecentLifeReflection] = useState(null);
   const [latestMilestone, setLatestMilestone] = useState(null);
+  const [curriculumSummary, setCurriculumSummary] = useState(null);
+  const [assignedPracticeCount, setAssignedPracticeCount] = useState(0);
 
   useEffect(() => {
     const loadData = async () => {
@@ -95,12 +102,16 @@ const Home = ({ clientId, client }) => {
 
           if (data?.data) setSavedAssessment(data.data);
 
-          const [agendasResult, goalsResult, assignedResult, reflectionsResult, timelineResult] = await Promise.all([
+          const [agendasResult, goalsResult, assignedResult, reflectionsResult, timelineResult, progressResult] = await Promise.all([
             loadClientSessionAgendas(clientId),
             loadActiveTreatmentPlansForClient(clientId),
             loadAssignedHomeworkForClient(clientId),
             loadLifeIntegrationReflections(),
-            loadHealingTimeline({ clientId, range: 'ALL' })
+            loadHealingTimeline({ clientId, range: 'ALL' }),
+            supabase
+              .from('ifs_client_progress')
+              .select('module_id, completed, current_step, updated_at')
+              .eq('client_id', clientId)
           ]);
           const agendas = agendasResult.data || [];
           setGrowthGoals((goalsResult.data || []).filter((goal) => ['active', 'completed'].includes(goal.status)).slice(0, 3));
@@ -108,9 +119,31 @@ const Home = ({ clientId, client }) => {
             lastSubmitted: agendas.find((agenda) => agenda.status === 'submitted' || agenda.status === 'reviewed')?.created_at || null,
             hasDraft: agendas.some((agenda) => agenda.status === 'draft')
           });
-          setActiveAssignedPractice((assignedResult.data || []).find((item) => ['assigned', 'in_progress'].includes(item.status)) || null);
+          const assignedPractices = assignedResult.data || [];
+          setAssignedPracticeCount(assignedPractices.filter((item) => ['assigned', 'in_progress'].includes(item.status)).length);
+          setActiveAssignedPractice(assignedPractices.find((item) => ['assigned', 'in_progress'].includes(item.status)) || null);
           setRecentLifeReflection((reflectionsResult.data || [])[0] || null);
           setLatestMilestone((timelineResult.data?.timeline || [])[0] || null);
+
+          const progressRows = progressResult.data || [];
+          const completedModuleIds = progressRows.filter((row) => row.completed).map((row) => row.module_id);
+          const completedCount = completedModuleIds.length;
+          const totalModules = curriculumModules.length || 1;
+          const nextModule = getNextModule(completedModuleIds) || curriculumModules.find((module) => !completedModuleIds.includes(module.id)) || curriculumModules[0];
+          const lastCompletedId = [...progressRows]
+            .filter((row) => row.completed)
+            .sort((a, b) => new Date(b.updated_at || 0) - new Date(a.updated_at || 0))[0]?.module_id;
+          const lastCompletedModule = curriculumModules.find((module) => module.id === lastCompletedId);
+          const activeAssignedModuleId = assignedPractices.find((item) => ['assigned', 'in_progress'].includes(item.status) && item.module_id)?.module_id;
+          const assignedModule = curriculumModules.find((module) => module.id === activeAssignedModuleId);
+          setCurriculumSummary({
+            completedCount,
+            totalModules,
+            percent: Math.round((completedCount / totalModules) * 100),
+            nextModule,
+            lastCompletedModule,
+            assignedModule
+          });
 
           const liveResult = await getActiveLiveSessionForClient();
           if (!liveResult.error) setActiveLiveSession(liveResult.data || null);
@@ -123,6 +156,11 @@ const Home = ({ clientId, client }) => {
 
     loadData();
   }, [clientId]);
+
+  const clientFirstName = (client?.name || client?.full_name || '').split(' ').filter(Boolean)[0];
+  const assessmentPrimary = savedAssessment?.primaryWound?.name || savedAssessment?.primaryWound?.id || savedAssessment?.topWound?.name || savedAssessment?.topWound?.id || null;
+  const curriculumProgress = curriculumSummary?.percent ?? 0;
+  const currentModule = curriculumSummary?.assignedModule || curriculumSummary?.nextModule;
 
   const gentleFocus = activeLiveSession
     ? {
@@ -183,44 +221,26 @@ const Home = ({ clientId, client }) => {
                 tone: 'emerald'
               };
 
-  const todayTiles = [
-    gentleFocus,
-    { to: '/life-integration/return-to-self', icon: Sun, title: 'Return to Self-energy', description: 'Reconnect with calm, clarity, compassion, curiosity, courage, and connectedness.', buttonLabel: 'Return to Self', tone: 'gold' },
-    { to: '/life-integration', icon: Sparkles, title: 'Practice IFS in daily life', description: 'Bring parts awareness into work, home, school, relationships, and daily stress.', buttonLabel: 'Open Daily Life', tone: 'stone' },
-    { to: '/journal', icon: BookOpen, title: 'Reflect in your journal', description: 'Make space for parts, needs, and insights without pressure to perform.', buttonLabel: 'Open Journal', tone: 'emerald' }
+  const assessmentProgressTiles = [
+    { to: '/assessments', icon: Brain, title: 'Wound Assessment', description: savedAssessment ? 'Review your assessment and how it can personalize your IFS path.' : 'Take the first assessment so the curriculum can better support your parts work.', buttonLabel: 'Take / Review Assessment', badge: savedAssessment ? 'Complete' : 'Start here', tone: savedAssessment ? 'emerald' : 'gold' },
+    { to: '/profile', icon: ClipboardCheck, title: 'Assessment Insights', description: assessmentPrimary ? `Your current assessment points to ${assessmentPrimary} themes. Review insights gently.` : 'Your assessments help personalize how the curriculum supports your parts work.', buttonLabel: 'View Insights', tone: 'stone' },
+    { to: '/curriculum', icon: BookOpen, title: 'Curriculum Progress', description: curriculumSummary ? `${curriculumSummary.completedCount} of ${curriculumSummary.totalModules} modules completed on your IFS Path.` : 'Start your guided IFS curriculum step by step.', buttonLabel: 'View Progress', progress: curriculumProgress, tone: 'emerald' },
+    { to: '/healing-timeline', icon: Trophy, title: 'Healing Timeline', description: latestMilestone?.title || 'Notice milestones, reflections, and growth without turning healing into pressure.', buttonLabel: 'View Timeline', tone: 'gold' },
+    { to: '/assigned-practices', icon: CalendarCheck, title: 'Assigned IFS Practices', description: assignedPracticeCount ? `${assignedPracticeCount} Advisor-guided practice${assignedPracticeCount === 1 ? '' : 's'} ready to support your curriculum.` : 'View practices your Advisor shares to support what you are learning.', buttonLabel: 'View Assigned Practices', badge: assignedPracticeCount ? `${assignedPracticeCount} active` : null, tone: 'emerald' },
+    { to: '/parts-relationships', icon: Map, title: 'Parts / Inner System Progress', description: 'See how your parts relationships and inner system understanding are unfolding.', buttonLabel: 'View Inner System', tone: 'stone' }
   ];
 
-  const innerSystemTiles = [
-    { to: '/parts-mapping', icon: Compass, title: 'Parts / Inner System Map', description: 'Explore the parts of you that are showing up and build a more compassionate relationship with your inner system.', buttonLabel: 'Open Parts Map', tone: 'emerald' },
-    { to: '/daily-checkin', icon: HeartPulse, title: 'Part Check-In', description: 'Notice which parts are present today and what they may be trying to help with.', buttonLabel: 'Check In', tone: 'gold' },
-    { to: '/life-integration/notice-part', icon: Smile, title: 'Notice a Part in the Moment', description: 'Pause in a real-life moment and listen inward with curiosity.', buttonLabel: 'Notice a Part', tone: 'stone' },
-    { to: '/life-integration/protector-check-in', icon: ShieldCheck, title: 'Protector Check-In', description: 'Appreciate a protector and ask what it needs from you today.', buttonLabel: 'Meet a Protector', tone: 'emerald' }
-  ];
-
-  const selfEnergyTiles = [
-    { to: '/life-integration/return-to-self', icon: Sun, title: 'Return to Self-Energy', description: 'Use a short unblending practice to reconnect with calm, clarity, compassion, curiosity, courage, and connectedness.', buttonLabel: 'Begin Practice', tone: 'gold' },
-    { to: '/exercises', icon: Play, title: 'Guided Practice Library', description: 'Choose a meditation or exercise that supports Self-energy and inner leadership.', buttonLabel: 'Choose Practice', tone: 'emerald' },
-    { to: '/qualities', icon: Sparkles, title: "Qualities of Self", description: "Explore the 8 C's and 5 P's as gentle anchors for your day.", buttonLabel: 'Explore Qualities', tone: 'stone' }
-  ];
-
-  const dailyLifeTiles = [
-    { to: '/life-integration/notice-part', icon: Smile, title: 'Notice a Part in the Moment', description: 'Pause and identify which part is showing up right now.', buttonLabel: 'Notice a Part', tone: 'emerald' },
-    { to: '/life-integration/return-to-self', icon: ShieldCheck, title: 'Return to Self-Energy', description: 'Use a short unblending practice to reconnect with Self.', buttonLabel: 'Return to Self', tone: 'gold' },
-    { to: '/life-integration/trigger-reflection', icon: BookOpen, title: 'Reflect on a Trigger', description: 'Explore what happened, which parts reacted, and what they may need.', buttonLabel: 'Reflect', tone: 'stone' },
-    { to: '/life-integration/repair-after-conflict', icon: Heart, title: 'Repair After Conflict', description: 'Use IFS to understand your reaction and move toward repair.', buttonLabel: 'Start Repair Reflection', tone: 'emerald' },
-    { to: '/life-integration/protector-check-in', icon: ShieldCheck, title: 'Protector Check-In', description: 'Appreciate a protector and ask what it needs from you today.', buttonLabel: 'Check In', tone: 'gold' },
-    { to: '/life-integration/needs-boundaries', icon: Sparkles, title: 'Needs & Boundaries Reflection', description: 'Listen for the need beneath tension and choose a clear next step.', buttonLabel: 'Reflect', tone: 'stone' }
-  ];
-
-  const journalTiles = [
-    { to: '/journal', icon: BookOpen, title: 'Healing Journal', description: 'Write freely about parts, needs, feelings, and moments of insight.', buttonLabel: 'Open Journal', tone: 'emerald' },
-    { to: '/life-integration', icon: Feather, title: 'Life Integration Reflections', description: 'Review private-by-default reflections from daily-life IFS practices.', buttonLabel: 'View Reflections', tone: 'gold' },
-    { to: '/weekly-reflection', icon: CalendarCheck, title: 'Weekly Reflection', description: 'Look back gently and notice what shifted without turning growth into pressure.', buttonLabel: 'Reflect on Week', tone: 'stone' }
-  ];
-
-  const healingTiles = [
-    { to: '/healing-timeline', icon: Trophy, title: 'My Healing Timeline', description: 'Notice your growth without turning healing into pressure.', buttonLabel: 'View Timeline', tone: 'gold' },
-    { to: '/progress-timeline', icon: CheckCircle2, title: 'My Growth Goals', description: 'Review the goals you and your Advisor are supporting over time.', buttonLabel: 'View Goals', tone: 'emerald' }
+  const curriculumSupportTiles = [
+    { to: '/parts-mapping', icon: Compass, title: 'Parts Map / Inner System Map', description: 'Map the parts you meet as the curriculum invites deeper parts work.', buttonLabel: 'Open Parts Map', tone: 'emerald' },
+    { to: '/parts-dialogue', icon: MessageSquare, title: 'Parts Dialogue', description: 'Practice curious, compassionate conversations with parts from your modules.', buttonLabel: 'Start Dialogue', tone: 'gold' },
+    { to: '/journal', icon: BookOpen, title: 'Healing Journal', description: 'Reflect on module prompts, parts, needs, and insights.', buttonLabel: 'Open Journal', tone: 'stone' },
+    { to: '/meditation', icon: Play, title: 'Guided Meditation', description: 'Use grounding and Self-energy practices alongside your lessons.', buttonLabel: 'Choose Meditation', tone: 'emerald' },
+    { to: '/qualities', icon: Sparkles, title: 'Affirmations & Self-Energy', description: 'Explore qualities of Self and supportive affirmations for your IFS path.', buttonLabel: 'Explore Qualities', tone: 'gold' },
+    { to: '/mood-analytics', icon: HeartPulse, title: 'Mood Tracker', description: 'Notice patterns in your daily check-ins as supportive context for parts work.', buttonLabel: 'View Mood Patterns', tone: 'stone' },
+    { to: '/resource-library', icon: Library, title: 'Resource Library', description: 'Find learning supports that reinforce curriculum themes.', buttonLabel: 'Open Resources', tone: 'emerald' },
+    { to: '/cheat-sheet', icon: Layers, title: 'IFS Cheat Sheet', description: 'Keep core IFS concepts close while you move through modules.', buttonLabel: 'Open Cheat Sheet', tone: 'gold' },
+    { to: '/unburdening', icon: Feather, title: 'Unburdening Practice', description: 'Use only when your learning path invites deeper release work.', buttonLabel: 'Begin Practice', tone: 'stone' },
+    { to: '/weekly-reflection', icon: CalendarCheck, title: 'Weekly Reflection', description: 'Look back gently at curriculum, parts work, and daily practice.', buttonLabel: 'Reflect on Week', tone: 'emerald' }
   ];
 
   const advisorTiles = [
@@ -253,31 +273,33 @@ const Home = ({ clientId, client }) => {
         </section>
       )}
 
-      <section className="mb-16 text-center lg:flex lg:items-center lg:justify-between lg:text-left">
+      <section className="mb-12 text-center lg:flex lg:items-center lg:justify-between lg:text-left">
         <div className="max-w-2xl">
           <p className="mb-4 text-xs font-bold uppercase tracking-[0.28em] text-brand-emerald-700 dark:text-brand-emerald-100">The Luminous Self</p>
           <h1 className="mb-4 text-4xl font-normal text-brand-stone-900 dark:text-slate-100 lg:text-6xl">
-            Welcome back to your inner work
+            {clientFirstName ? `Hello, ${clientFirstName}` : 'Welcome back to your IFS path'}
           </h1>
           <p className="mb-8 text-lg leading-relaxed text-brand-stone-600 dark:text-slate-400">
-            Check in with your parts, return to Self-energy, and bring IFS into daily life.
+            Continue your IFS path and use the tools below to understand, support, and connect with your parts.
           </p>
           <div className="flex flex-col justify-center gap-4 sm:flex-row lg:justify-start">
-            <button onClick={() => navigate('/daily-checkin')} className="btn-sanctuary-primary justify-center">
-              <Sun className="h-5 w-5" />
-              Begin Today's Check-In
+            <button onClick={() => navigate('/curriculum')} className="btn-sanctuary-primary justify-center">
+              <BookOpen className="h-5 w-5" />
+              Continue Curriculum
             </button>
-            {!savedAssessment && (
-              <button onClick={() => navigate('/assessments')} className="btn-sanctuary-secondary justify-center">
-                <Brain className="h-5 w-5" />
-                Explore Core Wounds
-              </button>
-            )}
+            <button onClick={() => navigate('/progress-timeline')} className="btn-sanctuary-secondary justify-center">
+              <Trophy className="h-5 w-5" />
+              View My Progress
+            </button>
+            <button onClick={() => navigate('/assessments')} className="btn-sanctuary-secondary justify-center">
+              <Brain className="h-5 w-5" />
+              Take / Review Assessment
+            </button>
           </div>
           <div className="mt-5 flex flex-wrap justify-center gap-2 text-xs lg:justify-start">
-            <span className="rounded-full bg-white/80 px-3 py-1 font-semibold text-brand-emerald-700 shadow-sm dark:bg-slate-900/60 dark:text-brand-emerald-100">IFS-first self-guidance</span>
+            <span className="rounded-full bg-white/80 px-3 py-1 font-semibold text-brand-emerald-700 shadow-sm dark:bg-slate-900/60 dark:text-brand-emerald-100">Curriculum-first IFS path</span>
             {activeAssignedPractice && <span className="rounded-full bg-brand-gold-50 px-3 py-1 font-semibold text-brand-gold-700 dark:bg-brand-gold-950/30 dark:text-brand-gold-500">Advisor-guided practice ready</span>}
-            {activeLiveSession && <span className="rounded-full bg-brand-emerald-600 px-3 py-1 font-semibold text-white">Advisor-guided practice available</span>}
+            {activeLiveSession && <span className="rounded-full bg-brand-emerald-600 px-3 py-1 font-semibold text-white">Live guided practice available</span>}
           </div>
         </div>
         <div className="mt-10 hidden lg:block">
@@ -289,74 +311,68 @@ const Home = ({ clientId, client }) => {
       </section>
 
       <section className="mb-14">
-        <SectionHeader title="Today's IFS Focus" subtitle="One gentle next step for noticing parts, unblending, and returning to Self-energy today." />
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
-          {todayTiles.map((tile) => <ClientHomeTile key={tile.title} {...tile} />)}
-        </div>
-      </section>
-
-      <section className="mb-14">
-        <SectionHeader title="My Inner System" subtitle="Explore the parts of you that are showing up and build a more compassionate relationship with your inner system." />
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
-          {innerSystemTiles.map((tile) => <ClientHomeTile key={tile.title} {...tile} />)}
-        </div>
-      </section>
-
-      <section className="mb-14">
-        <SectionHeader title="Self-Energy Practice" subtitle="Practice calm, clarity, compassion, curiosity, courage, and connectedness as gentle anchors for your day." />
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {selfEnergyTiles.map((tile) => <ClientHomeTile key={tile.title} {...tile} />)}
-        </div>
-      </section>
-
-      <section className="mb-14">
-        <div className="rounded-[2rem] border border-brand-gold-100 bg-gradient-to-br from-white via-brand-gold-50/60 to-brand-emerald-50 p-6 shadow-premium dark:border-slate-800 dark:from-brand-cardDark dark:via-brand-gold-950/20 dark:to-brand-emerald-950/20 lg:p-8">
-          <SectionHeader eyebrow="Life Integration" title="IFS in Daily Life" subtitle="Bring IFS into real moments at work, home, school, relationships, and daily stress." />
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {dailyLifeTiles.map((tile) => <ClientHomeTile key={tile.title} {...tile} />)}
-          </div>
-          <Link to="/life-integration" className="mt-6 inline-flex items-center gap-2 text-sm font-bold text-brand-gold-700 dark:text-brand-gold-500">
-            Open the Life Integration Toolkit <ArrowRight className="h-4 w-4" />
-          </Link>
-        </div>
-      </section>
-
-      <section className="mb-14">
-        <SectionHeader title="Journal / Reflection" subtitle="Give your parts room to be heard. Reflections stay private by default unless you choose to share one with your Advisor." />
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {journalTiles.map((tile) => <ClientHomeTile key={tile.title} {...tile} />)}
-        </div>
-      </section>
-
-      <section className="mb-14">
-        <SectionHeader title="My Healing Timeline" subtitle="Notice your growth without turning healing into pressure." />
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-          {healingTiles.map((tile) => <ClientHomeTile key={tile.title} {...tile} />)}
-        </div>
-
-        {growthGoals.length > 0 && (
-          <div className="soft-card mt-6 border border-brand-emerald-100 bg-white/80 p-6 dark:bg-brand-cardDark">
-            <div className="mb-4 flex items-start justify-between gap-4">
-              <div>
-                <h3 className="text-xl font-semibold text-brand-stone-900 dark:text-slate-100">My Growth Goals</h3>
-                <p className="mt-1 text-sm text-brand-stone-600 dark:text-slate-400">Client-safe goals you and your Advisor are supporting over time.</p>
-              </div>
-              <CheckCircle2 className="h-6 w-6 text-brand-emerald-700 dark:text-brand-emerald-100" />
-            </div>
-            <div className="grid gap-3 md:grid-cols-3">
-              {growthGoals.map((goal) => (
-                <div key={goal.id} className="rounded-2xl border border-brand-stone-100 p-4 dark:border-slate-800">
-                  <div className="mb-2 flex items-center justify-between gap-2">
-                    <h4 className="font-semibold text-brand-stone-900 dark:text-slate-100">{goal.goal_title}</h4>
-                    <span className="rounded-full bg-brand-emerald-50 px-2 py-0.5 text-[10px] uppercase tracking-wide text-brand-emerald-700">{goal.status}</span>
+        <div className="rounded-[2rem] border border-brand-gold-100 bg-gradient-to-br from-white via-brand-gold-50/70 to-brand-emerald-50 p-6 shadow-premium dark:border-slate-800 dark:from-brand-cardDark dark:via-brand-gold-950/20 dark:to-brand-emerald-950/20 lg:p-8">
+          <div className="grid gap-8 lg:grid-cols-[1.25fr_0.75fr] lg:items-center">
+            <div>
+              <p className="mb-2 text-xs font-bold uppercase tracking-[0.24em] text-brand-gold-700 dark:text-brand-gold-500">Continue Your IFS Path</p>
+              <h2 className="text-4xl font-serif font-normal text-brand-stone-900 dark:text-slate-100">Your IFS Curriculum</h2>
+              <p className="mt-3 max-w-2xl text-sm leading-relaxed text-brand-stone-600 dark:text-slate-400">
+                The curriculum is your main path through IFS. Use the tools below to support what you are learning.
+              </p>
+              <div className="mt-6 rounded-3xl bg-white/80 p-5 shadow-sm dark:bg-slate-900/50">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-wide text-brand-emerald-700 dark:text-brand-emerald-100">
+                      {curriculumSummary?.assignedModule ? 'Assigned by your Advisor' : curriculumSummary ? 'Next lesson' : 'Warm beginning'}
+                    </p>
+                    <h3 className="mt-1 text-2xl font-semibold text-brand-stone-900 dark:text-slate-100">
+                      {currentModule?.title || 'Start with the first module'}
+                    </h3>
+                    <p className="mt-2 text-sm text-brand-stone-600 dark:text-slate-400">
+                      {currentModule?.description || 'Start with the first module and build your understanding of parts, protectors, exiles, and Self-energy step by step.'}
+                    </p>
+                    {curriculumSummary?.lastCompletedModule && (
+                      <p className="mt-3 text-xs font-semibold text-brand-stone-500 dark:text-slate-500">Last completed: {curriculumSummary.lastCompletedModule.title}</p>
+                    )}
                   </div>
-                  {goal.goal_description && <p className="line-clamp-3 text-sm text-brand-stone-600 dark:text-slate-400">{goal.goal_description}</p>}
-                  {goal.review_date && <p className="mt-3 text-xs text-brand-stone-500 dark:text-slate-500">Review date: {new Date(goal.review_date).toLocaleDateString()}</p>}
+                  <div className="shrink-0 rounded-3xl bg-brand-emerald-50 px-5 py-4 text-center dark:bg-brand-emerald-950/30">
+                    <p className="text-3xl font-bold text-brand-emerald-700 dark:text-brand-emerald-100">{curriculumProgress}%</p>
+                    <p className="text-xs uppercase tracking-wide text-brand-stone-500 dark:text-slate-500">complete</p>
+                  </div>
                 </div>
-              ))}
+                <div className="mt-5 h-3 overflow-hidden rounded-full bg-brand-stone-100 dark:bg-slate-800">
+                  <div className="h-full rounded-full bg-gradient-to-r from-brand-gold-500 to-brand-emerald-600" style={{ width: `${curriculumProgress}%` }} />
+                </div>
+                <div className="mt-5 flex flex-wrap gap-3">
+                  <Link to={currentModule?.id ? `/curriculum/module/${currentModule.id}` : '/curriculum'} className="btn-sanctuary-primary">Resume Module <ArrowRight className="h-4 w-4" /></Link>
+                  <Link to="/curriculum" className="btn-sanctuary-secondary">View Full Curriculum</Link>
+                </div>
+              </div>
+            </div>
+            <div className="rounded-[2rem] border border-white/70 bg-white/70 p-5 dark:border-slate-800 dark:bg-slate-900/45">
+              <h3 className="font-semibold text-brand-stone-900 dark:text-slate-100">IFS Path at a glance</h3>
+              <div className="mt-4 space-y-3 text-sm text-brand-stone-600 dark:text-slate-400">
+                <p><span className="font-semibold text-brand-stone-900 dark:text-slate-100">Modules:</span> {curriculumSummary ? `${curriculumSummary.completedCount} of ${curriculumSummary.totalModules} complete` : 'Ready to begin'}</p>
+                <p><span className="font-semibold text-brand-stone-900 dark:text-slate-100">Assessment:</span> {savedAssessment ? 'Available for personalization' : 'Not completed yet'}</p>
+                <p><span className="font-semibold text-brand-stone-900 dark:text-slate-100">Assigned IFS Practices:</span> {assignedPracticeCount || 'None active'}</p>
+              </div>
             </div>
           </div>
-        )}
+        </div>
+      </section>
+
+      <section className="mb-14">
+        <SectionHeader title="My Assessments & Progress" subtitle="Review your assessment insights and see how they connect to your IFS path. Track your curriculum, reflections, parts work, and Advisor-guided practices." />
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {assessmentProgressTiles.map((tile) => <ClientHomeTile key={tile.title} {...tile} />)}
+        </div>
+      </section>
+
+      <section className="mb-14">
+        <SectionHeader title="Tools to Support Your IFS Path" subtitle="Use these when a module invites reflection, parts work, grounding, or deeper understanding." />
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {curriculumSupportTiles.map((tile) => <ClientHomeTile key={tile.title} {...tile} />)}
+        </div>
       </section>
 
       <section className="mb-14 opacity-95">
