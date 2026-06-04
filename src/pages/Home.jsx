@@ -29,6 +29,13 @@ import { getActiveLiveSessionForClient } from '../lib/liveSession';
 import { loadAssignedHomeworkForClient } from '../lib/assignedHomework';
 import { LIFE_REFLECTION_TYPES, loadLifeIntegrationReflections } from '../lib/lifeIntegration';
 import { loadHealingTimeline } from '../lib/healingTimeline';
+import {
+  getPartsMapParts,
+  isCurriculumInteractiveModule,
+  isInteractiveAssessmentModule,
+  normalizeInteractiveResult,
+  summarizeInteractiveInsights
+} from '../lib/interactiveResults';
 import RecentActivityFeed from '../components/RecentActivityFeed';
 import { curriculumModules, getNextModule } from '../data/curriculumData';
 
@@ -88,21 +95,48 @@ const Home = ({ clientId, client, mode = 'home', selfProfileResult = null }) => 
   const [latestMilestone, setLatestMilestone] = useState(null);
   const [curriculumSummary, setCurriculumSummary] = useState(null);
   const [assignedPracticeCount, setAssignedPracticeCount] = useState(0);
+  const [assessmentSummary, setAssessmentSummary] = useState({
+    latestFormalWound: null,
+    interactiveAssessments: [],
+    curriculumModuleRows: [],
+    partsMapRow: null,
+    partsCount: 0,
+    relationshipsCount: 0
+  });
 
   useEffect(() => {
     const loadData = async () => {
       if (clientId) {
         try {
-          const { data } = await supabase
-            .from('ifs_interactive_data')
-            .select('data')
-            .eq('client_id', clientId)
-            .eq('module_id', 'assessment_wounds')
-            .maybeSingle();
-
-          if (data?.data) setSavedAssessment(data.data);
-
-          const [agendasResult, goalsResult, assignedResult, reflectionsResult, timelineResult, progressResult] = await Promise.all([
+          const [
+            interactiveResult,
+            formalAssessmentResult,
+            partsCountResult,
+            relationshipsCountResult,
+            agendasResult,
+            goalsResult,
+            assignedResult,
+            reflectionsResult,
+            timelineResult,
+            progressResult
+          ] = await Promise.all([
+            supabase
+              .from('ifs_interactive_data')
+              .select('id, client_id, module_id, data, created_at, updated_at')
+              .eq('client_id', clientId),
+            supabase
+              .from('ifs_assessment_results')
+              .select('id, primary_wound, secondary_wound, tertiary_wounds, assessment_date, created_at')
+              .eq('client_id', clientId)
+              .order('created_at', { ascending: false }),
+            supabase
+              .from('ifs_parts')
+              .select('id', { count: 'exact', head: true })
+              .eq('client_id', clientId),
+            supabase
+              .from('ifs_part_relationships')
+              .select('id', { count: 'exact', head: true })
+              .eq('client_id', clientId),
             loadClientSessionAgendas(clientId),
             loadActiveTreatmentPlansForClient(clientId),
             loadAssignedHomeworkForClient(clientId),
@@ -113,6 +147,25 @@ const Home = ({ clientId, client, mode = 'home', selfProfileResult = null }) => 
               .select('module_id, completed, current_step, updated_at')
               .eq('client_id', clientId)
           ]);
+
+          const interactiveRows = interactiveResult.data || [];
+          const normalizedInteractive = interactiveRows.map(normalizeInteractiveResult);
+          const interactiveAssessments = normalizedInteractive.filter((row) => isInteractiveAssessmentModule(row.moduleId));
+          const curriculumModuleRows = normalizedInteractive.filter((row) => isCurriculumInteractiveModule(row.moduleId));
+          const partsMapRow = interactiveRows.find((row) => row.module_id === 'parts_map') || null;
+          const assessmentWounds = interactiveAssessments.find((row) => row.moduleId === 'assessment_wounds');
+          const latestFormalWound = (formalAssessmentResult.data || [])[0] || null;
+
+          setSavedAssessment(assessmentWounds?.data || latestFormalWound || null);
+          setAssessmentSummary({
+            latestFormalWound,
+            interactiveAssessments,
+            curriculumModuleRows,
+            partsMapRow,
+            partsCount: partsCountResult.count || 0,
+            relationshipsCount: relationshipsCountResult.count || 0
+          });
+
           const agendas = agendasResult.data || [];
           setGrowthGoals((goalsResult.data || []).filter((goal) => ['active', 'completed'].includes(goal.status)).slice(0, 3));
           setAgendaSummary({
@@ -126,7 +179,10 @@ const Home = ({ clientId, client, mode = 'home', selfProfileResult = null }) => 
           setLatestMilestone((timelineResult.data?.timeline || [])[0] || null);
 
           const progressRows = progressResult.data || [];
-          const completedModuleIds = progressRows.filter((row) => row.completed).map((row) => row.module_id);
+          const completedModuleIds = Array.from(new Set([
+            ...progressRows.filter((row) => row.completed).map((row) => row.module_id),
+            ...curriculumModuleRows.map((row) => row.moduleId)
+          ]));
           const completedCount = completedModuleIds.length;
           const totalModules = curriculumModules.length || 1;
           const nextModule = getNextModule(completedModuleIds) || curriculumModules.find((module) => !completedModuleIds.includes(module.id)) || curriculumModules[0];
@@ -158,7 +214,15 @@ const Home = ({ clientId, client, mode = 'home', selfProfileResult = null }) => 
   }, [clientId]);
 
   const clientFirstName = (client?.name || client?.full_name || '').split(' ').filter(Boolean)[0];
-  const assessmentPrimary = savedAssessment?.primaryWound?.name || savedAssessment?.primaryWound?.id || savedAssessment?.topWound?.name || savedAssessment?.topWound?.id || null;
+  const assessmentPrimary = savedAssessment?.primaryWound?.name || savedAssessment?.primaryWound?.id || savedAssessment?.topWound?.name || savedAssessment?.topWound?.id || savedAssessment?.primary_wound || savedAssessment?.primary || null;
+  const formalWoundPrimary = assessmentSummary.latestFormalWound?.primary_wound || null;
+  const formalWoundSecondary = assessmentSummary.latestFormalWound?.secondary_wound || null;
+  const interactiveAssessmentLabels = assessmentSummary.interactiveAssessments.map((item) => item.label);
+  const interactiveInsightLines = summarizeInteractiveInsights(assessmentSummary.interactiveAssessments);
+  const partsMapPartsCount = getPartsMapParts(assessmentSummary.partsMapRow).length;
+  const hasInteractiveWounds = assessmentSummary.interactiveAssessments.some((item) => item.moduleId === 'assessment_wounds');
+  const hasWoundAssessment = Boolean(assessmentSummary.latestFormalWound || hasInteractiveWounds);
+  const hasInnerSystemProgress = assessmentSummary.partsCount > 0 || Boolean(assessmentSummary.partsMapRow);
   const curriculumProgress = curriculumSummary?.percent ?? 0;
   const currentModule = curriculumSummary?.assignedModule || curriculumSummary?.nextModule;
   const isMyIFSMode = mode === 'my-ifs';
@@ -225,12 +289,62 @@ const Home = ({ clientId, client, mode = 'home', selfProfileResult = null }) => 
               };
 
   const assessmentProgressTiles = [
-    { to: '/assessments', icon: Brain, title: 'Wound Assessment', description: savedAssessment ? 'Review your assessment and how it can personalize your IFS path.' : 'Take the first assessment so the curriculum can better support your parts work.', buttonLabel: 'Take / Review Assessment', badge: savedAssessment ? 'Complete' : 'Start here', tone: savedAssessment ? 'emerald' : 'gold' },
-    { to: '/profile', icon: ClipboardCheck, title: 'Assessment Insights', description: assessmentPrimary ? `Your current assessment points to ${assessmentPrimary} themes. Review insights gently.` : 'Your assessments help personalize how the curriculum supports your parts work.', buttonLabel: 'View Insights', tone: 'stone' },
-    { to: '/curriculum', icon: BookOpen, title: 'Curriculum Progress', description: curriculumSummary ? `${curriculumSummary.completedCount} of ${curriculumSummary.totalModules} modules completed on your IFS Path.` : 'Start your guided IFS curriculum step by step.', buttonLabel: 'View Progress', progress: curriculumProgress, tone: 'emerald' },
+    {
+      to: '/assessments',
+      icon: Brain,
+      title: 'Wound Assessment',
+      description: hasWoundAssessment
+        ? `Review your wound assessment${formalWoundPrimary ? ` themes: ${[formalWoundPrimary, formalWoundSecondary].filter(Boolean).join(' / ')}` : ''}${hasInteractiveWounds ? ' with interactive insights included' : ''}.`
+        : 'Take the first assessment so the curriculum can better support your parts work.',
+      buttonLabel: 'Take / Review Assessment',
+      badge: hasWoundAssessment ? 'Connected' : 'Start here',
+      tone: hasWoundAssessment ? 'emerald' : 'gold'
+    },
+    {
+      to: '/assessments',
+      icon: ClipboardCheck,
+      title: 'Interactive Assessments',
+      description: assessmentSummary.interactiveAssessments.length
+        ? `${assessmentSummary.interactiveAssessments.length} interactive assessment${assessmentSummary.interactiveAssessments.length === 1 ? '' : 's'} connected: ${interactiveAssessmentLabels.join(', ')}.`
+        : 'Complete interactive assessments to add gentle personalization to your IFS path.',
+      buttonLabel: 'Review Assessments',
+      badge: assessmentSummary.interactiveAssessments.length ? `${assessmentSummary.interactiveAssessments.length} connected` : null,
+      tone: assessmentSummary.interactiveAssessments.length ? 'emerald' : 'stone'
+    },
+    {
+      to: '/profile',
+      icon: Sun,
+      title: 'Assessment Insights',
+      description: interactiveInsightLines.length
+        ? interactiveInsightLines.slice(0, 4).join(' • ')
+        : assessmentPrimary ? `Your current assessment points to ${assessmentPrimary} themes. Review insights gently.` : 'Your assessments help personalize how the curriculum supports your parts work.',
+      buttonLabel: 'View Insights',
+      tone: 'stone'
+    },
+    {
+      to: '/curriculum',
+      icon: BookOpen,
+      title: 'Curriculum Progress',
+      description: curriculumSummary
+        ? `${curriculumSummary.completedCount} of ${curriculumSummary.totalModules} modules connected on your IFS Path${assessmentSummary.curriculumModuleRows.length ? `, including ${assessmentSummary.curriculumModuleRows.length} interactive module row${assessmentSummary.curriculumModuleRows.length === 1 ? '' : 's'}` : ''}.`
+        : 'Start your guided IFS curriculum step by step.',
+      buttonLabel: 'View Progress',
+      progress: curriculumProgress,
+      tone: 'emerald'
+    },
     { to: '/healing-timeline', icon: Trophy, title: 'Healing Timeline', description: latestMilestone?.title || 'Notice milestones, reflections, and growth without turning healing into pressure.', buttonLabel: 'View Timeline', tone: 'gold' },
     { to: '/assigned-practices', icon: CalendarCheck, title: 'Assigned IFS Practices', description: assignedPracticeCount ? `${assignedPracticeCount} Advisor-guided practice${assignedPracticeCount === 1 ? '' : 's'} ready to support your curriculum.` : 'View practices your Advisor shares to support what you are learning.', buttonLabel: 'View Assigned Practices', badge: assignedPracticeCount ? `${assignedPracticeCount} active` : null, tone: 'emerald' },
-    { to: '/parts-relationships', icon: Map, title: 'Parts / Inner System Progress', description: 'See how your parts relationships and inner system understanding are unfolding.', buttonLabel: 'View Inner System', tone: 'stone' }
+    {
+      to: '/parts-relationships',
+      icon: Map,
+      title: 'Parts / Inner System Progress',
+      description: hasInnerSystemProgress
+        ? `${assessmentSummary.partsCount ? `${assessmentSummary.partsCount} saved part${assessmentSummary.partsCount === 1 ? '' : 's'}` : `Legacy Inner System Map started${partsMapPartsCount ? ` with ${partsMapPartsCount} mapped item${partsMapPartsCount === 1 ? '' : 's'}` : ''}`}${assessmentSummary.relationshipsCount ? ` and ${assessmentSummary.relationshipsCount} relationship${assessmentSummary.relationshipsCount === 1 ? '' : 's'}` : ''}.`
+        : 'See how your parts relationships and inner system understanding are unfolding.',
+      buttonLabel: assessmentSummary.partsCount ? 'View Inner System' : assessmentSummary.partsMapRow ? 'Continue Map' : 'Start Inner System',
+      badge: hasInnerSystemProgress ? 'Started' : null,
+      tone: hasInnerSystemProgress ? 'emerald' : 'stone'
+    }
   ];
 
   const curriculumSupportTiles = [
@@ -375,7 +489,7 @@ const Home = ({ clientId, client, mode = 'home', selfProfileResult = null }) => 
               <h3 className="font-semibold text-brand-stone-900 dark:text-slate-100">IFS Path at a glance</h3>
               <div className="mt-4 space-y-3 text-sm text-brand-stone-600 dark:text-slate-400">
                 <p><span className="font-semibold text-brand-stone-900 dark:text-slate-100">Modules:</span> {curriculumSummary ? `${curriculumSummary.completedCount} of ${curriculumSummary.totalModules} complete` : 'Ready to begin'}</p>
-                <p><span className="font-semibold text-brand-stone-900 dark:text-slate-100">Assessment:</span> {savedAssessment ? 'Available for personalization' : 'Not completed yet'}</p>
+                <p><span className="font-semibold text-brand-stone-900 dark:text-slate-100">Assessment:</span> {hasWoundAssessment || assessmentSummary.interactiveAssessments.length ? 'Available for personalization' : 'Not completed yet'}</p>
                 <p><span className="font-semibold text-brand-stone-900 dark:text-slate-100">Assigned IFS Practices:</span> {assignedPracticeCount || 'None active'}</p>
               </div>
             </div>
