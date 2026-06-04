@@ -126,6 +126,13 @@ export default function ClientLiveSession() {
               <button type="button" onClick={handleLeave} className="btn-sanctuary-secondary"><DoorOpen className="w-4 h-4" /> Leave session</button>
             </div>
 
+            {session.current_activity === 'shared_parts_map' && (
+              <div className="rounded-2xl border border-brand-emerald-100 bg-brand-emerald-50 p-4 text-sm text-brand-emerald-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">
+                <p className="font-semibold">Your Advisor has opened a Shared Parts Map.</p>
+                <p className="mt-1">You can choose what feels true, rename parts, and decide what to save to your inner system.</p>
+              </div>
+            )}
+
             {session.current_activity ? (
               <LiveActivityRenderer currentActivity={session.current_activity} activityState={session.activity_state} sessionStatus={session.status} sessionId={session.id} role="client" onSessionUpdate={setSession} />
             ) : (

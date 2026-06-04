@@ -7,7 +7,8 @@ export const LIVE_ACTIVITY_TYPES = {
   BODY_SCAN: 'body_scan',
   WINDOW_OF_TOLERANCE: 'window_of_tolerance',
   FEELINGS_WHEEL: 'feelings_wheel',
-  PARTS_CHECK_IN: 'parts_check_in'
+  PARTS_CHECK_IN: 'parts_check_in',
+  SHARED_PARTS_MAP: 'shared_parts_map'
 };
 
 export const LIVE_ACTIVITY_DEFINITIONS = {
@@ -174,6 +175,18 @@ export const LIVE_ACTIVITY_DEFINITIONS = {
       { title: 'Thank the part for showing up', prompt: 'Thank the part for showing up.', helper: 'Appreciation can be quiet and simple.' },
       { title: 'Choose one gentle next step', prompt: 'Choose one gentle next step.', helper: 'You can keep it private and simply carry it with you.' }
     ]
+  },
+  [LIVE_ACTIVITY_TYPES.SHARED_PARTS_MAP]: {
+    id: LIVE_ACTIVITY_TYPES.SHARED_PARTS_MAP,
+    title: 'Shared Parts Map',
+    shortTitle: 'Parts Map',
+    sourcePractice: 'My Inner System / Parts Work',
+    advisorDescription: 'Map parts together during a live Advisor-guided session while keeping the client in control of what is saved.',
+    clientDescription: 'Explore which parts are present and choose what, if anything, you want to save to your inner system.',
+    defaultDurationSeconds: 300,
+    tone: 'collaborative-inner-system-mapping',
+    iconName: 'Map',
+    steps: []
   }
 };
 

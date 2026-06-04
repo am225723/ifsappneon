@@ -96,8 +96,15 @@ export default function LiveCoTherapy() {
     return runAction(() => startLiveActivity({
       sessionId: session.id,
       activity: selectedActivity,
-      activityState: selectedActivity === 'guided_breathing'
+      activityState: selectedActivity === 'shared_parts_map'
         ? {
+            sourcePractice: definition?.sourcePractice || 'My Inner System / Parts Work',
+            map: { nodes: [], edges: [] },
+            advisorPrompt: '',
+            selectedNodeId: null
+          }
+        : selectedActivity === 'guided_breathing'
+          ? {
             durationSeconds: definition?.defaultDurationSeconds || 180,
             inhaleSeconds: 4,
             holdSeconds: 2,
@@ -105,7 +112,7 @@ export default function LiveCoTherapy() {
             message: definition?.clientDescription || 'Follow the breathing circle gently.',
             sourcePractice: definition?.sourcePractice
           }
-        : {
+          : {
             durationSeconds: definition?.defaultDurationSeconds || 300,
             sourcePractice: definition?.sourcePractice,
             sourceActivity: definition?.sourceActivity,
@@ -210,7 +217,7 @@ export default function LiveCoTherapy() {
                 </div>
               </div>
               <button type="button" onClick={handleLaunchPractice} disabled={busy} className="btn-sanctuary-secondary w-full justify-center">
-                <HeartPulse className="w-4 h-4" /> Start Guided Practice
+                <HeartPulse className="w-4 h-4" /> {selectedActivity === 'shared_parts_map' ? 'Start Shared Parts Map' : 'Start Guided Practice'}
               </button>
 
               {isStepBased && (
