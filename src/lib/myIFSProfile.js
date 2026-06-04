@@ -9,7 +9,7 @@ function isSameId(left, right) {
   return left && right && String(left) === String(right);
 }
 
-async function hasRows(table, columns, clientId, queryBuilder = null) {
+async function hasRows(table, columns, clientId, queryBuilder = null, errors = []) {
   try {
     let query = supabase
       .from(table)
@@ -20,9 +20,13 @@ async function hasRows(table, columns, clientId, queryBuilder = null) {
     if (queryBuilder) query = queryBuilder(query);
 
     const { data, error } = await query;
-    if (error) return false;
+    if (error) {
+      errors.push({ table, status: error.status || error.statusCode || null, message: error.message || 'Request failed', effectiveClientId: clientId });
+      return false;
+    }
     return (data || []).length > 0;
-  } catch {
+  } catch (error) {
+    errors.push({ table, status: error?.status || error?.statusCode || null, message: error?.message || 'Request failed', effectiveClientId: clientId });
     return false;
   }
 }
@@ -33,7 +37,7 @@ function safeRowCount(result) {
   return 0;
 }
 
-async function countRows(table, clientId, queryBuilder = null) {
+async function countRows(table, clientId, queryBuilder = null, errors = []) {
   try {
     let query = supabase
       .from(table)
@@ -43,21 +47,28 @@ async function countRows(table, clientId, queryBuilder = null) {
     if (queryBuilder) query = queryBuilder(query);
 
     const result = await query;
-    if (result.error) return 0;
+    if (result.error) {
+      errors.push({ table, status: result.error.status || result.error.statusCode || null, message: result.error.message || 'Request failed', effectiveClientId: clientId });
+      return 0;
+    }
     return safeRowCount(result);
-  } catch {
+  } catch (error) {
+    errors.push({ table, status: error?.status || error?.statusCode || null, message: error?.message || 'Request failed', effectiveClientId: clientId });
     return 0;
   }
 }
 
-async function loadInteractiveSignals(clientId) {
+async function loadInteractiveSignals(clientId, errors = []) {
   try {
     const { data, error } = await supabase
       .from('ifs_interactive_data')
       .select('id, module_id, data, updated_at')
       .eq('client_id', clientId);
 
-    if (error) return { rows: [], assessments: [], curriculumModules: [], partsMap: null, hasPartsMap: false, partsMapCount: 0 };
+    if (error) {
+      errors.push({ table: 'ifs_interactive_data', status: error.status || error.statusCode || null, message: error.message || 'Request failed', effectiveClientId: clientId });
+      return { rows: [], assessments: [], curriculumModules: [], partsMap: null, hasPartsMap: false, partsMapCount: 0 };
+    }
 
     const rows = data || [];
     const assessments = rows.filter((row) => String(row.module_id || '').startsWith('assessment_'));
@@ -73,7 +84,8 @@ async function loadInteractiveSignals(clientId) {
       hasPartsMap: Boolean(partsMap),
       partsMapCount
     };
-  } catch {
+  } catch (error) {
+    errors.push({ table: 'ifs_interactive_data', status: error?.status || error?.statusCode || null, message: error?.message || 'Request failed', effectiveClientId: clientId });
     return { rows: [], assessments: [], curriculumModules: [], partsMap: null, hasPartsMap: false, partsMapCount: 0 };
   }
 }
@@ -113,6 +125,8 @@ export async function loadMyIFSProfile(currentAppUser = null) {
     };
   }
 
+  const queryErrors = [];
+
   const [
     formalWoundCount,
     interactiveSignals,
@@ -123,14 +137,14 @@ export async function loadMyIFSProfile(currentAppUser = null) {
     healingTimeline,
     journalCount
   ] = await Promise.all([
-    countRows('ifs_assessment_results', profile.id),
-    loadInteractiveSignals(profile.id),
-    countRows('ifs_client_progress', profile.id),
-    countRows('ifs_parts', profile.id),
-    countRows('ifs_part_relationships', profile.id),
-    hasRows('ifs_assigned_homework', 'id', profile.id),
+    countRows('ifs_assessment_results', profile.id, null, queryErrors),
+    loadInteractiveSignals(profile.id, queryErrors),
+    countRows('ifs_client_progress', profile.id, null, queryErrors),
+    countRows('ifs_parts', profile.id, null, queryErrors),
+    countRows('ifs_part_relationships', profile.id, null, queryErrors),
+    hasRows('ifs_assigned_homework', 'id', profile.id, null, queryErrors),
     hasRows('ifs_healing_timeline_events', 'id', profile.id),
-    countRows('ifs_journal_entries', profile.id)
+    countRows('ifs_journal_entries', profile.id, null, queryErrors)
   ]);
 
   const connectedData = {
@@ -177,7 +191,8 @@ export async function loadMyIFSProfile(currentAppUser = null) {
       journalCount
     },
     needsManualLink: false,
-    message: null
+    message: queryErrors.length ? 'Your IFS data could not be loaded right now. Please refresh or try again.' : null,
+    queryErrors
   };
 }
 

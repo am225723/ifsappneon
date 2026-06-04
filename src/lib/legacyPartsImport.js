@@ -26,7 +26,7 @@ async function callPartsImportApi(payload) {
   if (!response.ok) {
     return {
       data: json.data || null,
-      error: json.error || { message: response.statusText || 'Unable to complete legacy parts import.' }
+      error: { ...(json.error || { message: response.statusText || 'Unable to complete legacy parts import.' }), status: response.status }
     };
   }
   return { data: json.data, error: null };

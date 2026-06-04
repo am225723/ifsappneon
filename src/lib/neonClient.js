@@ -23,7 +23,7 @@ async function request(payload) {
 
   const json = await response.json().catch(() => ({}));
   if (!response.ok) {
-    return { data: null, error: json.error || { message: response.statusText } };
+    return { data: null, error: { ...(json.error || { message: response.statusText }), status: response.status } };
   }
   return { data: json.data, error: null };
 }
