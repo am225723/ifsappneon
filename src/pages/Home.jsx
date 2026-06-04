@@ -307,7 +307,6 @@ const Home = ({ clientId, client, mode = 'home', selfProfile = null, selfProfile
   const curriculumProgress = curriculumSummary?.percent ?? 0;
   const currentModule = curriculumSummary?.assignedModule || curriculumSummary?.nextModule;
   const hasSelfData = selfProfileResult?.hasPersonalData !== false;
-  const selfDataSignals = selfProfileResult?.dataSignals || [];
 
   useEffect(() => {
     if (import.meta.env.DEV && mode === 'my-ifs') {
@@ -390,9 +389,9 @@ const Home = ({ clientId, client, mode = 'home', selfProfile = null, selfProfile
     {
       to: '/assessments',
       icon: Brain,
-      title: 'Wound Assessment',
+      title: 'Wound Patterns Assessment',
       description: hasWoundAssessment
-        ? `Review your wound assessment${formalWoundPrimary ? ` themes: ${[formalWoundPrimary, formalWoundSecondary].filter(Boolean).join(' / ')}` : ''}${hasInteractiveWounds ? ' with interactive insights included' : ''}.`
+        ? `Review your wound patterns assessment${formalWoundPrimary ? ` themes: ${[formalWoundPrimary, formalWoundSecondary].filter(Boolean).join(' / ')}` : ''}${hasInteractiveWounds ? ' with interactive insights included' : ''}.`
         : 'Take the first assessment so the curriculum can better support your parts work.',
       buttonLabel: 'Take / Review Assessment',
       badge: hasWoundAssessment ? 'Connected' : 'Start here',
@@ -435,7 +434,7 @@ const Home = ({ clientId, client, mode = 'home', selfProfile = null, selfProfile
     {
       to: '/parts-relationships',
       icon: Map,
-      title: 'Parts / Inner System Progress',
+      title: 'My Inner System Map',
       description: hasInnerSystemProgress
         ? `${assessmentSummary.partsCount ? `${assessmentSummary.partsCount} saved part${assessmentSummary.partsCount === 1 ? '' : 's'}` : `Inner System Map started${partsMapPartsCount ? ` with ${partsMapPartsCount} older mapped item${partsMapPartsCount === 1 ? '' : 's'}` : ''}`}${assessmentSummary.relationshipsCount ? ` and ${assessmentSummary.relationshipsCount} relationship${assessmentSummary.relationshipsCount === 1 ? '' : 's'}` : ''}.`
         : 'See how your parts relationships and inner system understanding are unfolding.',
@@ -465,7 +464,16 @@ const Home = ({ clientId, client, mode = 'home', selfProfile = null, selfProfile
     { to: '/inbox', icon: MessageSquare, title: 'Advisor Messages', description: 'View supportive messages and updates from your Advisor.', buttonLabel: 'Open Messages', tone: 'gold' }
   ];
 
-  if (loading) return null;
+  if (loading) {
+    return (
+      <div className="mx-auto max-w-6xl px-6 py-12 lg:py-20">
+        <div className="soft-card p-8 text-center">
+          <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-b-2 border-t-2 border-brand-gold-600" />
+          <p className="text-sm text-brand-stone-600 dark:text-slate-400">Loading your IFS path…</p>
+        </div>
+      </div>
+    );
+  }
 
   if (shouldShowWorkspaceChoice) {
     return (
@@ -554,13 +562,7 @@ const Home = ({ clientId, client, mode = 'home', selfProfile = null, selfProfile
       {dataLoadError && (
         <section className="mb-8 rounded-3xl border border-red-200 bg-red-50 p-5 text-sm text-red-700 dark:border-red-900/60 dark:bg-red-950/20 dark:text-red-200">
           <p className="font-semibold">{dataLoadError.message}</p>
-          {import.meta.env.DEV && dataLoadError.details?.length > 0 && (
-            <ul className="mt-2 list-disc space-y-1 pl-5 text-xs">
-              {dataLoadError.details.map((item) => (
-                <li key={`${item.table}-${item.status || 'error'}`}>{item.table}: {item.status || 'error'} (effectiveClientId: {item.effectiveClientId || 'none'}, selfProfile: {item.selfProfilePresent ? 'yes' : 'no'})</li>
-              ))}
-            </ul>
-          )}
+
         </section>
       )}
 
@@ -570,21 +572,20 @@ const Home = ({ clientId, client, mode = 'home', selfProfile = null, selfProfile
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.24em] text-brand-gold-700 dark:text-brand-gold-500">My IFS Work</p>
               <p className="mt-1 font-semibold text-brand-stone-900 dark:text-slate-100">Your personal IFS path is connected.</p>
-              <p className="mt-1">You are viewing your own IFS path as the authenticated user. Admin/advisor permissions stay available separately.</p>
+              <p className="mt-1">Continue your curriculum, revisit your assessments, and return to the tools that support your parts work.</p>
               {!hasSelfData && (
-                <p className="mt-2 font-semibold">No personal IFS records were found yet for this linked profile. Start curriculum or take an assessment to begin, or verify a manual Clerk link if your self-work exists in another row.</p>
+                <p className="mt-2 font-semibold">Start with the curriculum or an assessment to begin your IFS path.</p>
               )}
             </div>
             <div className="rounded-2xl bg-white/70 px-4 py-3 text-xs dark:bg-slate-900/50">
-              <p className="font-bold text-brand-stone-900 dark:text-slate-100">Connected to your IFS profile</p>
+              <p className="font-bold text-brand-stone-900 dark:text-slate-100">Your path summary</p>
               <div className="mt-2 grid gap-1 sm:grid-cols-2">
                 <span>Curriculum progress: {curriculumSummary ? `${curriculumSummary.completedCount}/${curriculumSummary.totalModules} modules` : 'Ready to begin'}</span>
                 <span>Assessments completed: {assessmentSummary.formalWoundCount + assessmentSummary.interactiveAssessments.length}</span>
                 <span>Interactive tools completed: {assessmentSummary.interactiveDataCount}</span>
                 <span>Inner System Map: {hasInnerSystemProgress ? 'Started' : 'Not started yet'}</span>
-                <span>Journal/reflections: {assessmentSummary.journalCount ? 'Started' : 'Not started yet'}</span>
+                <span>Journal reflections: {assessmentSummary.journalCount ? 'Started' : 'Not started yet'}</span>
               </div>
-              {selfDataSignals.length > 0 && <p className="mt-2"><span className="font-bold">Connected data:</span> {selfDataSignals.join(', ')}</p>}
             </div>
           </div>
         </section>
@@ -644,7 +645,7 @@ const Home = ({ clientId, client, mode = 'home', selfProfile = null, selfProfile
       </section>
 
       <section className="mb-14">
-        <SectionHeader title="My Assessments & Progress" subtitle="Review your assessment insights and see how they connect to your IFS path. Track your curriculum, reflections, parts work, and Advisor-guided practices." />
+        <SectionHeader title="My Assessments & Progress" subtitle="Your assessments help personalize how the curriculum supports your parts work. Review patterns, progress, parts work, and Advisor-guided practices without over-focusing on scores." />
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
           {assessmentProgressTiles.map((tile) => <ClientHomeTile key={tile.title} {...tile} />)}
         </div>

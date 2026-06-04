@@ -25,10 +25,10 @@ const LearningModuleRenderer = ({ userProgress = {} }) => {
             <ChevronLeft className={`w-8 h-8 ${theme?.isDark ? 'text-slate-500' : 'text-gray-400'}`} />
           </div>
           <h2 className={`text-xl font-bold mb-2 ${theme?.isDark ? 'text-white' : 'text-gray-900'}`}>
-            Module Not Available
+            Module Coming Up
           </h2>
           <p className={`text-sm mb-4 ${theme?.isDark ? 'text-slate-400' : 'text-gray-500'}`}>
-            This module is not yet available for your account. Contact your advisor to request access.
+            This module will open as you continue your IFS path.
           </p>
           <button onClick={() => navigate('/curriculum')} className="text-amber-600 hover:text-amber-700 font-medium text-sm">
             Back to Curriculum

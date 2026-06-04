@@ -36,11 +36,11 @@ const sections = [
     title: 'Core IFS Path',
     description: 'Start with curriculum, assessments, and your overall IFS progress.',
     items: [
-      { label: 'Curriculum / IFS Path', to: '/curriculum', icon: BookOpen, roles: ['client', 'therapist', 'advisor', 'admin', 'supervisor'] },
-      { label: 'Wound Assessment / Assessments', to: '/assessments', icon: Brain, roles: ['client', 'therapist', 'advisor', 'admin', 'supervisor'] },
-      { label: 'My IFS Work', to: '/my-ifs', icon: Sparkles, roles: ['client', 'therapist', 'advisor', 'admin', 'supervisor'] },
-      { label: 'My Assessments & Progress', to: '/profile', icon: ClipboardCheck, roles: ['client', 'therapist', 'advisor', 'admin', 'supervisor'] },
-      { label: 'Progress Timeline', to: '/progress-timeline', icon: Trophy, roles: ['client', 'therapist', 'advisor', 'admin', 'supervisor'] },
+      { label: 'Curriculum / IFS Path', description: 'Begin or continue the main guided IFS learning path.', to: '/curriculum', icon: BookOpen, roles: ['client', 'therapist', 'advisor', 'admin', 'supervisor'] },
+      { label: 'Interactive Assessments', description: 'Wound Patterns, Parts System, Self-Energy, and Attachment Pattern reflections.', to: '/assessments', icon: Brain, roles: ['client', 'therapist', 'advisor', 'admin', 'supervisor'] },
+      { label: 'My IFS Work', description: 'Your personal self-work home for curriculum, parts, and reflections.', to: '/my-ifs', icon: Sparkles, roles: ['client', 'therapist', 'advisor', 'admin', 'supervisor'] },
+      { label: 'My Assessments & Progress', description: 'Review assessment insights and progress summaries.', to: '/profile', icon: ClipboardCheck, roles: ['client', 'therapist', 'advisor', 'admin', 'supervisor'] },
+      { label: 'Progress Timeline', description: 'See curriculum and practice progress over time.', to: '/progress-timeline', icon: Trophy, roles: ['client', 'therapist', 'advisor', 'admin', 'supervisor'] },
     ],
   },
   {
@@ -61,7 +61,7 @@ const sections = [
     description: 'Map, listen to, and build relationship with parts of your inner system.',
     items: [
       { label: 'Parts Map', to: '/parts-mapping', icon: Compass, roles: clientRoles },
-      { label: 'Inner System Map', to: '/parts-relationships', icon: Map, roles: clientRoles },
+      { label: 'Inner System Map', description: 'Place parts and relationships around Self-energy.', to: '/parts-relationships', icon: Map, roles: clientRoles },
       { label: 'Parts Dialogue', to: '/parts-dialogue', icon: MessageSquare, roles: clientRoles, feature: 'partsDialogue' },
       { label: 'Parts Cards', to: '/parts-cards', icon: ScrollText, roles: clientRoles, feature: 'partsCards' },
       { label: 'Parts Studio', to: '/parts-studio', icon: Sparkles, roles: clientRoles, feature: 'partsStudio' },
@@ -152,7 +152,8 @@ function ToolCard({ item }) {
       <div className="flex items-start justify-between gap-3">
         <div>
           <h3 className={`font-semibold ${available ? 'text-brand-stone-900 dark:text-slate-100' : 'text-brand-stone-500 dark:text-slate-500'}`}>{item.label}</h3>
-          {item.feature && !available && <p className="mt-1 text-xs text-brand-stone-500 dark:text-slate-500">Not available for your account.</p>}
+          {item.description && <p className="mt-1 text-xs leading-relaxed text-brand-stone-500 dark:text-slate-500">{item.description}</p>}
+          {item.feature && !available && <p className="mt-1 text-xs text-brand-stone-500 dark:text-slate-500">Available when this practice is included with your account.</p>}
         </div>
       </div>
     </>
@@ -188,7 +189,7 @@ export default function ToolsDirectory({ currentClient }) {
       <header className="mb-8 rounded-[2rem] border border-brand-gold-100 bg-gradient-to-br from-white via-brand-sanctuary to-brand-gold-50/60 p-6 shadow-sm dark:border-brand-gold-900/40 dark:from-brand-cardDark dark:via-brand-midnight dark:to-brand-gold-950/20 md:p-8">
         <p className="text-xs font-semibold uppercase tracking-[0.3em] text-brand-gold-700 dark:text-brand-gold-500">Tools</p>
         <h1 className="mt-3 text-3xl font-serif font-semibold text-brand-stone-900 dark:text-slate-100 md:text-4xl">Tools & Practices</h1>
-        <p className="mt-3 max-w-3xl text-brand-stone-600 dark:text-slate-300">Find the IFS tools, reflections, assessments, and support areas available to your account.</p>
+        <p className="mt-3 max-w-3xl text-brand-stone-600 dark:text-slate-300">Find the IFS tools, reflections, assessments, and support areas available to your account. Start with the Curriculum / IFS Path; these practices are here to support it.</p>
       </header>
 
       <div className="space-y-8">
@@ -198,7 +199,7 @@ export default function ToolsDirectory({ currentClient }) {
               <h2 id={`${section.title.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}-heading`} className="text-2xl font-serif font-semibold text-brand-stone-900 dark:text-slate-100">{section.title}</h2>
               <p className="mt-1 text-sm text-brand-stone-600 dark:text-slate-400">{section.description}</p>
             </div>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div className={`grid gap-4 sm:grid-cols-2 ${section.title === 'Admin / Advisor Tools' ? 'lg:grid-cols-4' : 'lg:grid-cols-3'}`}>
               {section.items.map((item) => <ToolCard key={`${section.title}-${item.label}-${item.to}`} item={item} />)}
             </div>
           </section>

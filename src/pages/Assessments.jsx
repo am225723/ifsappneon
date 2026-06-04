@@ -41,8 +41,8 @@ const protectivePartsDefinitions = {
 const assessmentDefinitions = [
   {
     id: 'wounds',
-    title: 'IFS Wound Assessment',
-    subtitle: 'Discover which inner child wounds may be affecting you',
+    title: 'Wound Patterns Assessment',
+    subtitle: 'Notice wound patterns that may shape your parts work',
     icon: Heart,
     gradient: 'from-brand-gold-600 to-brand-emerald-700',
     lightBg: 'from-brand-gold-50 to-brand-emerald-50',
@@ -90,8 +90,8 @@ const assessmentDefinitions = [
   },
   {
     id: 'parts',
-    title: 'Identify Your Protective Parts',
-    subtitle: 'Learn which protective parts are most active in your system',
+    title: 'Parts System Assessment',
+    subtitle: 'Learn which protective parts are most active in your inner system',
     icon: Shield,
     gradient: 'from-brand-emerald-600 to-brand-gold-600',
     lightBg: 'from-brand-emerald-50 to-brand-stone-50',
@@ -121,7 +121,7 @@ const assessmentDefinitions = [
   {
     id: 'self-energy',
     title: 'Self-Energy Assessment',
-    subtitle: 'Evaluate your connection to the 8 C\'s of Self',
+    subtitle: 'Reflect on your connection to the 8 C\'s of Self',
     icon: Sparkles,
     gradient: 'from-emerald-500 to-teal-600',
     lightBg: 'from-emerald-50 to-teal-50',
@@ -156,8 +156,8 @@ const assessmentDefinitions = [
   },
   {
     id: 'attachment',
-    title: 'Attachment Style Assessment',
-    subtitle: 'Understand your relationship patterns and attachment style',
+    title: 'Attachment Pattern Assessment',
+    subtitle: 'Understand your relationship patterns with gentleness',
     icon: Users,
     gradient: 'from-brand-stone-600 to-brand-gold-600',
     lightBg: 'from-brand-stone-50 to-brand-gold-50',
@@ -1163,10 +1163,10 @@ export default function Assessments() {
             <CheckCircle className="w-10 h-10 text-white" />
           </div>
           <h1 className="text-4xl lg:text-6xl font-serif font-normal mb-4 text-brand-stone-900 dark:text-slate-100">
-            Self-Assessments
+            Interactive Assessments
           </h1>
           <p className="text-lg max-w-2xl mx-auto text-brand-stone-600 dark:text-slate-400">
-            Gain insights into your inner world through guided self-assessments. These are reflective exercises to increase self-awareness, not diagnostic tools.
+            Your assessments help personalize how the curriculum supports your parts work. Use them as reflective snapshots, not labels or diagnoses.
           </p>
         </div>
 
@@ -1191,7 +1191,7 @@ export default function Assessments() {
                     <div className={`text-center py-4`}>
                       <Lock className={`w-8 h-8 mx-auto mb-2 ${theme.isDark ? 'text-slate-500' : 'text-gray-400'}`} />
                       <p className="text-sm font-medium text-brand-stone-500 dark:text-slate-400">
-                        Contact your advisor to unlock this assessment
+                        This assessment will open as you continue your IFS path
                       </p>
                     </div>
                   ) : (

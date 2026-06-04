@@ -1,7 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Link, useLocation, Navigate } from 'react-router-dom';
 import { useState, useEffect, useCallback } from 'react';
 import { SignIn, SignUp, useAuth, UserButton } from '@clerk/clerk-react';
-import { Settings as SettingsIcon, Home as HomeIcon, ClipboardList, Handshake, LogOut, MessageSquare, Compass as CompassIcon, Sparkles as SparklesIcon, Grid3X3 } from 'lucide-react';
+import { Settings as SettingsIcon, Home as HomeIcon, ClipboardList, Handshake, LogOut, MessageSquare, Compass as CompassIcon, Sparkles as SparklesIcon, Grid3X3, BookOpen } from 'lucide-react';
 import { useTheme } from './contexts/ThemeContext';
 import { supabase } from './lib/supabase';
 import SSOCallback from './components/SSOCallback';
@@ -227,10 +227,11 @@ function BottomNav({ messagePath = '/inbox', advisorWorkspacePath = '/therapist-
     { path: '/profile', icon: Handshake, label: 'Profile' },
   ] : [
     { path: '/', icon: HomeIcon, label: 'Home' },
-    { path: '/life-integration', icon: SparklesIcon, label: 'Practice' },
+    { path: '/curriculum', icon: BookOpen, label: 'Path' },
     { path: '/parts-mapping', icon: CompassIcon, label: 'Parts' },
     { path: messagePath, icon: MessageSquare, label: 'Advisor' },
     { path: '/tools', icon: Grid3X3, label: 'Tools' },
+    { path: '/profile', icon: Handshake, label: 'Profile' },
   ];
 
   return (

@@ -9,15 +9,13 @@ const Navbar = ({ unreadCount = 0, messagePath = '/inbox', rightSlot = null, wor
   const navItems = workspaceLinks.length ? [
     { path: '/', icon: Home, label: 'Home' },
     { path: '/tools', icon: Grid3X3, label: 'Tools' },
-    { path: messagePath, icon: MessageSquare, label: 'Messages', badge: unreadCount },
     { path: '/profile', icon: Heart, label: 'Profile' },
   ] : [
     { path: '/', icon: Home, label: 'Home' },
     { path: '/curriculum', icon: BookOpen, label: 'Curriculum' },
-    { path: '/life-integration', icon: Sparkles, label: 'Daily Life' },
-    { path: '/journal', icon: User, label: 'Journal' },
+    { path: '/life-integration', icon: Sparkles, label: 'Practice' },
     { path: '/parts-mapping', icon: Compass, label: 'Parts' },
-    { path: messagePath, icon: MessageSquare, label: 'Advisor Support', badge: unreadCount },
+    { path: messagePath, icon: MessageSquare, label: 'Advisor', badge: unreadCount },
     { path: '/tools', icon: Grid3X3, label: 'Tools' },
     { path: '/profile', icon: Heart, label: 'Profile' },
   ];
@@ -61,7 +59,7 @@ const Navbar = ({ unreadCount = 0, messagePath = '/inbox', rightSlot = null, wor
                 <Link
                   key={item.path}
                   to={item.path}
-                  className={`relative flex items-center space-x-2 px-5 py-2.5 rounded-xl transition-all duration-300 ${
+                  className={`relative flex items-center space-x-2 px-3 py-2.5 rounded-xl transition-all duration-300 ${
                     isActive
                       ? 'bg-brand-gold-50 dark:bg-brand-gold-950/30 text-brand-gold-700 dark:text-brand-gold-500'
                       : 'text-brand-stone-500 dark:text-slate-400 hover:text-brand-stone-900 dark:hover:text-slate-100 hover:bg-brand-stone-50 dark:hover:bg-slate-800/50'

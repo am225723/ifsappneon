@@ -179,7 +179,16 @@ const CurriculumSystem = ({ onModuleSelect, userProgress = {}, clientId }) => {
     return 'available';
   };
 
-  const isTherapistAssigned = (moduleId) => assignedHomeworkIds.has(moduleId);
+  const isAdvisorAssigned = (moduleId) => assignedHomeworkIds.has(moduleId);
+
+  const getModuleStatusLabel = (status) => {
+    if (status === 'completed') return 'Completed';
+    if (status === 'assigned') return 'Assigned by Advisor';
+    if (status === 'available') return 'Available';
+    return 'Coming up';
+  };
+
+  const getModuleUnavailableCopy = () => 'This module will open as you continue your IFS path.';
 
   const getStatusIcon = (status) => {
     if (status === 'completed') return <CheckCircle className="w-6 h-6 text-green-500 flex-shrink-0" />;
@@ -237,7 +246,7 @@ const CurriculumSystem = ({ onModuleSelect, userProgress = {}, clientId }) => {
           <div className="flex items-center justify-between flex-wrap gap-4">
             <div>
               <h1 className="text-3xl font-bold bg-gradient-to-r from-amber-600 to-emerald-600 bg-clip-text text-transparent">
-                Inner Child Healing Journey
+                Your IFS Curriculum
               </h1>
               <p className="text-gray-600 mt-1 text-sm">
                 {woundConfig ? (
@@ -247,7 +256,7 @@ const CurriculumSystem = ({ onModuleSelect, userProgress = {}, clientId }) => {
                     {secondaryWoundConfig && <> &amp; <strong>{secondaryWoundConfig.childName}</strong></>}
                   </span>
                 ) : (
-                  'A comprehensive IFS curriculum for healing your Inner Child wounds'
+                  'A guided IFS path for parts work, Self-energy, and inner child healing'
                 )}
               </p>
             </div>
@@ -258,7 +267,7 @@ const CurriculumSystem = ({ onModuleSelect, userProgress = {}, clientId }) => {
                 className="bg-gradient-to-r from-amber-600 to-emerald-600 text-white px-6 py-3 rounded-lg font-semibold hover:from-amber-700 hover:to-emerald-700 transition-all flex items-center space-x-2 shadow-lg"
               >
                 <Play className="w-5 h-5" />
-                <span>Continue Learning</span>
+                <span>Continue</span>
               </Link>
             )}
           </div>
@@ -297,7 +306,7 @@ const CurriculumSystem = ({ onModuleSelect, userProgress = {}, clientId }) => {
                         to={status !== 'locked' && status !== 'restricted' ? `/curriculum/module/${mod.id}` : '#'}
                         onClick={() => status !== 'locked' && status !== 'restricted' && handleModuleSelect(mod)}
                         className={`block rounded-xl border bg-white p-3 transition-all hover:shadow-md group ${status === 'locked' || status === 'restricted' ? 'opacity-60 cursor-not-allowed' : ''}`}
-                        title={status === 'restricted' ? 'Contact your advisor to unlock this module' : undefined}
+                        title={status === 'restricted' ? 'This module will open as you continue your IFS path.' : undefined}
                       >
                         <div className="flex items-start gap-2">
                           <div className={`w-7 h-7 rounded-lg bg-gradient-to-br ${woundConfig.gradient} flex items-center justify-center flex-shrink-0 mt-0.5`}>
@@ -344,7 +353,7 @@ const CurriculumSystem = ({ onModuleSelect, userProgress = {}, clientId }) => {
                           to={status !== 'locked' && status !== 'restricted' ? `/curriculum/module/${mod.id}` : '#'}
                           onClick={() => status !== 'locked' && status !== 'restricted' && handleModuleSelect(mod)}
                           className={`block rounded-lg border bg-white p-2.5 transition-all hover:shadow-sm text-xs ${status === 'locked' || status === 'restricted' ? 'opacity-60 cursor-not-allowed' : ''}`}
-                          title={status === 'restricted' ? 'Contact your advisor to unlock this module' : undefined}
+                          title={status === 'restricted' ? 'This module will open as you continue your IFS path.' : undefined}
                         >
                           <div className="flex items-center gap-2">
                             <div className={`w-6 h-6 rounded-md bg-gradient-to-br ${secondaryWoundConfig.gradient} flex items-center justify-center flex-shrink-0`}>
@@ -450,7 +459,7 @@ const CurriculumSystem = ({ onModuleSelect, userProgress = {}, clientId }) => {
                     <Star className="w-6 h-6" />
                   </div>
                   <div>
-                    <h3 className="text-xl font-bold">Next Recommended</h3>
+                    <h3 className="text-xl font-bold">Continue Your IFS Path</h3>
                     {woundConfig && getModulePriority(nextModule.id)?.level === 'core' && (
                       <span className="text-xs bg-white bg-opacity-20 px-2 py-0.5 rounded-full font-semibold">
                         🎯 Core focus for your healing
@@ -469,7 +478,7 @@ const CurriculumSystem = ({ onModuleSelect, userProgress = {}, clientId }) => {
                 onClick={() => handleModuleSelect(nextModule)}
                 className="bg-white text-amber-600 px-6 py-3 rounded-lg font-semibold hover:bg-amber-50 transition-colors flex items-center space-x-2 flex-shrink-0"
               >
-                <span>Start Module</span>
+                <span>Continue</span>
                 <ChevronRight className="w-5 h-5" />
               </Link>
             </div>
@@ -504,7 +513,7 @@ const CurriculumSystem = ({ onModuleSelect, userProgress = {}, clientId }) => {
                           </span>
                         )}
                       </div>
-                      <p className="text-sm text-gray-600">{categoryCompleted} of {categoryTotal} modules completed</p>
+                      <p className="text-sm text-gray-600">{categoryCompleted} of {categoryTotal} modules completed · {category.modules.filter(m => ['available', 'assigned'].includes(getModuleStatus(m))).length} available</p>
                     </div>
                   </div>
                   <div className="flex items-center space-x-3">
@@ -545,10 +554,18 @@ const CurriculumSystem = ({ onModuleSelect, userProgress = {}, clientId }) => {
                                   to={status !== 'locked' && status !== 'restricted' ? `/curriculum/module/${module.id}` : '#'}
                                   onClick={() => (status !== 'locked' && status !== 'restricted') && handleModuleSelect(module)}
                                   className={`block ${status !== 'locked' && status !== 'restricted' ? 'hover:text-amber-600 transition-colors' : 'cursor-not-allowed pointer-events-none'}`}
-                                  title={status === 'restricted' ? 'Contact your advisor to unlock this module' : undefined}
+                                  title={status === 'restricted' ? 'This module will open as you continue your IFS path.' : undefined}
                                 >
                                   <div className="flex items-center gap-2 flex-wrap mb-0.5">
                                     <h4 className="font-semibold text-gray-900">{module.title}</h4>
+                                    <span className={`text-xs font-bold px-2 py-0.5 rounded-full flex-shrink-0 ${
+                                      status === 'completed' ? 'bg-green-100 text-green-700' :
+                                      status === 'assigned' ? 'bg-blue-100 text-blue-700' :
+                                      status === 'available' ? 'bg-emerald-100 text-emerald-700' :
+                                      'bg-brand-stone-100 text-brand-stone-600'
+                                    }`}>
+                                      {getModuleStatusLabel(status)}
+                                    </span>
                                     {priority?.badge && woundConfig && (
                                       <span className={`text-xs font-bold px-2 py-0.5 rounded-full flex-shrink-0 ${
                                         isCore ? `${woundConfig.darkBg} ${woundConfig.textColor}` :
@@ -558,9 +575,9 @@ const CurriculumSystem = ({ onModuleSelect, userProgress = {}, clientId }) => {
                                         {priority.badge}
                                       </span>
                                     )}
-                                    {isTherapistAssigned(module.id) && (
+                                    {isAdvisorAssigned(module.id) && (
                                       <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 flex-shrink-0">
-                                        Assigned by therapist
+                                        Assigned by Advisor
                                       </span>
                                     )}
                                     {module._secondaryPriority && secondaryWoundConfig && (module._secondaryPriority.level === 'core' || module._secondaryPriority.level === 'high') && (
@@ -571,9 +588,9 @@ const CurriculumSystem = ({ onModuleSelect, userProgress = {}, clientId }) => {
                                   </div>
                                   <p className="text-sm text-gray-600">{module.description}</p>
 
-                                  {status === 'restricted' && (
-                                    <p className="text-xs text-amber-600 mt-1 flex items-center gap-1">
-                                      <Lock className="w-3 h-3" /> Contact your advisor to unlock this module
+                                  {(status === 'restricted' || status === 'locked') && (
+                                    <p className="text-xs text-amber-700 mt-1 flex items-center gap-1">
+                                      <Lock className="w-3 h-3" /> {getModuleUnavailableCopy()}
                                     </p>
                                   )}
 
@@ -605,10 +622,10 @@ const CurriculumSystem = ({ onModuleSelect, userProgress = {}, clientId }) => {
                                         <span>Personalized</span>
                                       </span>
                                     )}
-                                    {isTherapistAssigned(module.id) && (
+                                    {isAdvisorAssigned(module.id) && (
                                       <span className="flex items-center space-x-1 text-blue-600">
                                         <Flag className="w-3 h-3" />
-                                        <span>Unlocked by therapist</span>
+                                        <span>Assigned by Advisor</span>
                                       </span>
                                     )}
                                     {module.prerequisites?.length > 0 && (
@@ -632,14 +649,14 @@ const CurriculumSystem = ({ onModuleSelect, userProgress = {}, clientId }) => {
                                       : 'bg-amber-600 hover:bg-amber-700'
                                   }`}
                                 >
-                                  Start
+                                  Continue
                                 </Link>
                               )}
                               {status === 'completed' && (
                                 <div className="flex flex-col items-end gap-1.5">
                                   <div className="flex items-center space-x-1 text-green-600">
                                     <CheckCircle className="w-5 h-5" />
-                                    <span className="text-sm font-medium">Done</span>
+                                    <span className="text-sm font-medium">Completed</span>
                                   </div>
                                   <button
                                     onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleRestartModule(module); }}
