@@ -1,7 +1,7 @@
 /* global process */
 import { requireTherapist, requireTherapistAssignment, sql } from './_auth.js';
+import { callOpenRouterChat } from './_aiProvider.js';
 
-const OPENAI_CHAT_COMPLETIONS_URL = 'https://api.openai.com/v1/chat/completions';
 const DISCLAIMER = 'AI-generated draft for Advisor review. Verify, edit, and use professional judgment before saving.';
 const ADVISOR_ASSIGNMENT_ROLES = new Set(['advisor', 'therapist']);
 const ADVISOR_ACCESS_ROLES = new Set(['advisor', 'therapist', 'admin', 'supervisor']);
@@ -275,34 +275,13 @@ function buildMessages({ client, currentUser, normalized, context }) {
   ];
 }
 
-async function callOpenAI(messages) {
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) {
-    throw Object.assign(new Error('OpenAI API key missing. Configure OPENAI_API_KEY on the server.'), { statusCode: 500, code: 'openai_api_key_missing' });
-  }
-
-  const response = await fetch(OPENAI_CHAT_COMPLETIONS_URL, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
-      messages,
-      temperature: 0.15
-    })
+async function callAdvisorNoteAI(messages) {
+  const result = await callOpenRouterChat({
+    messages,
+    temperature: 0.15,
+    maxTokens: 1400
   });
-
-  const payload = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    const message = payload?.error?.message || `OpenAI request failed with status ${response.status}`;
-    throw Object.assign(new Error(message), { statusCode: response.status >= 500 ? 502 : 500, code: 'openai_request_failed' });
-  }
-
-  const draft = payload?.choices?.[0]?.message?.content?.trim();
-  if (!draft) throw Object.assign(new Error('OpenAI returned an empty note draft.'), { statusCode: 502, code: 'openai_empty_response' });
-  return draft;
+  return result.text;
 }
 
 export default async function handler(req, res) {
@@ -333,7 +312,7 @@ export default async function handler(req, res) {
 
     const context = await loadSessionNoteContext(client.id, normalized.sessionDate, normalized);
     const messages = buildMessages({ client, currentUser, normalized, context });
-    const draft = await callOpenAI(messages);
+    const draft = await callAdvisorNoteAI(messages);
 
     return res.status(200).json({
       data: {

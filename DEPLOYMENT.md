@@ -33,18 +33,21 @@ Configure these in Vercel Project Settings → Environment Variables:
 ```text
 DATABASE_URL
 CLERK_SECRET_KEY
-OPENAI_API_KEY
+OPENROUTER_API_KEY
 ```
 
-`OPENAI_API_KEY` must remain server-side only. Do not create a `VITE_OPENAI_API_KEY` variable.
+`OPENROUTER_API_KEY` must remain server-side only. Do not create a `VITE_OPENROUTER_API_KEY` variable. OpenRouter is the application AI provider; previous providers are no longer required for runtime AI workflows.
 
 ## ⚙️ Optional Environment Variables
 
 ```text
 CLERK_AUTHORIZED_PARTIES
+OPENROUTER_MODEL=openrouter/free
+OPENROUTER_SITE_URL
+OPENROUTER_APP_TITLE=IFS App
 ```
 
-Use `CLERK_AUTHORIZED_PARTIES` when Clerk JWT verification should be restricted to known production/preview origins.
+Use `CLERK_AUTHORIZED_PARTIES` when Clerk JWT verification should be restricted to known production/preview origins. `OPENROUTER_MODEL` defaults to `openrouter/free`; `OPENROUTER_SITE_URL` and `OPENROUTER_APP_TITLE` are optional OpenRouter attribution headers.
 
 Upload support also uses the existing UploadThing server variables when upload flows are enabled:
 
@@ -56,10 +59,10 @@ UPLOADTHING_CALLBACK_URL
 
 ## 🔐 Server/Client Boundary Expectations
 
-- `DATABASE_URL`, `CLERK_SECRET_KEY`, and `OPENAI_API_KEY` are read by server-side API code only.
+- `DATABASE_URL`, `CLERK_SECRET_KEY`, and `OPENROUTER_API_KEY` are read by server-side API code only.
 - Frontend code may use `VITE_*` variables only for non-secret client configuration.
 - UploadThing database writes must remain in the server router under `api/_uploadthingRouter.js`.
-- Session prep summaries use the OpenAI server API path and do not require Perplexity/PPLX configuration.
+- Session prep summaries, Advisor note drafts, Assigned IFS Practice drafts, Curriculum support, Life Integration prompts, Parts Work guidance, educational content, and generic drafting use the OpenRouter server API path. Perplexity and OpenAI are no longer required for runtime AI workflows.
 
 ## ✅ Pre-Deploy Verification
 
@@ -70,7 +73,7 @@ npm ci
 npm run build
 git diff --check
 rg "uploadthing|_uploadthingRouter|DATABASE_URL|CLERK_SECRET_KEY" src api
-rg "OPENAI_API_KEY|VITE_OPENAI_API_KEY|DATABASE_URL|CLERK_SECRET_KEY|CLERK_AUTHORIZED_PARTIES|PERPLEXITY|PPLX" src api . --glob '!node_modules'
+rg "OPENROUTER_API_KEY|VITE_OPENROUTER_API_KEY|DATABASE_URL|CLERK_SECRET_KEY|CLERK_AUTHORIZED_PARTIES|OPENROUTER_MODEL|OPENROUTER_SITE_URL|OPENROUTER_APP_TITLE" src api . --glob '!node_modules'
 ```
 
 A successful local build plus a successful Vercel Preview Build means the app is ready to promote.

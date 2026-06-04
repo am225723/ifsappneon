@@ -1,10 +1,10 @@
 /* global process */
 import { requireTherapist, requireTherapistAssignment, sql } from './_auth.js';
+import { callOpenRouterChat } from './_aiProvider.js';
 
-const OPENAI_CHAT_COMPLETIONS_URL = 'https://api.openai.com/v1/chat/completions';
 const DEFAULT_RANGE_DAYS = 7;
 const MAX_RANGE_DAYS = 30;
-const DISCLAIMER = 'AI-generated draft for clinician review. Verify against the chart and use clinical judgment.';
+const DISCLAIMER = 'AI-generated draft for Advisor review. Verify against the client record and use professional judgment.';
 
 function sendError(res, status, message, code = 'server_error') {
   return res.status(status).json({ error: { code, message } });
@@ -109,16 +109,16 @@ function hasAnyClinicalData(data) {
 
 function buildMessages({ client, currentUser, rangeDays, since, clinicalData }) {
   const safetyText = clinicalData.latestAgenda?.safety_concerns
-    ? 'Safety-related content appears in submitted check-in data. Summarize it plainly and recommend therapist review.'
+    ? 'Safety-related content appears in submitted check-in data. Summarize it plainly and recommend Advisor review.'
     : 'No safety-related content was submitted in the available check-in data.';
 
   return [
     {
       role: 'system',
       content: [
-        'You create concise therapist-facing IFS session preparation summaries from scoped app data.',
+        'You create concise Advisor-facing IFS session preparation summaries from scoped app data.',
         'Do not diagnose, do not generate clinical notes, and do not score or infer risk beyond the supplied data.',
-        'Do not say the client is safe. Do not say low risk unless explicit clinician-reviewed risk data is supplied.',
+        'Do not say the client is safe. Do not say low risk unless explicit Advisor-reviewed risk data is supplied.',
         'Clearly distinguish client-submitted language from cautious AI interpretation.',
         'If information is missing, say so. Avoid invented details.',
         'Use concise bullets under exactly the requested numbered section headings.'
@@ -127,14 +127,14 @@ function buildMessages({ client, currentUser, rangeDays, since, clinicalData }) 
     {
       role: 'user',
       content: JSON.stringify({
-        task: 'Generate an on-demand AI Session Prep Summary for clinician review only.',
+        task: 'Generate an on-demand AI Session Prep Summary for Advisor review only.',
         required_disclaimer: DISCLAIMER,
         required_sections: [
           '1. Quick Clinical Snapshot',
           '2. What the Client Wants to Focus On',
           '3. Active Parts / Internal System Themes',
           '4. Mood, Stress, and Pattern Shifts',
-          '5. Homework / Between-Session Follow-Through',
+          '5. Assigned IFS Practice / Between-Session Follow-Through',
           '6. Safety-Related Content',
           '7. Suggested Session Openers',
           '8. Documentation Considerations'
@@ -153,34 +153,13 @@ function buildMessages({ client, currentUser, rangeDays, since, clinicalData }) 
   ];
 }
 
-async function callOpenAI(messages) {
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) {
-    throw Object.assign(new Error('OpenAI API key missing. Configure OPENAI_API_KEY on the server.'), { statusCode: 500, code: 'openai_api_key_missing' });
-  }
-
-  const response = await fetch(OPENAI_CHAT_COMPLETIONS_URL, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
-      messages,
-      temperature: 0.2
-    })
+async function callSessionSummaryAI(messages) {
+  const result = await callOpenRouterChat({
+    messages,
+    temperature: 0.2,
+    maxTokens: 1200
   });
-
-  const payload = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    const message = payload?.error?.message || `OpenAI request failed with status ${response.status}`;
-    throw Object.assign(new Error(message), { statusCode: response.status >= 500 ? 502 : 500, code: 'openai_request_failed' });
-  }
-
-  const summary = payload?.choices?.[0]?.message?.content?.trim();
-  if (!summary) throw Object.assign(new Error('OpenAI returned an empty summary.'), { statusCode: 502, code: 'openai_empty_response' });
-  return summary;
+  return result.text;
 }
 
 async function loadClinicalData(clientId, since) {
@@ -274,7 +253,7 @@ export default async function handler(req, res) {
     }
 
     const messages = buildMessages({ client, currentUser, rangeDays, since, clinicalData });
-    const summary = await callOpenAI(messages);
+    const summary = await callSessionSummaryAI(messages);
 
     return res.status(200).json({
       data: {

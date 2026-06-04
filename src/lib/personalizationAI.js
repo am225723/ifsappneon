@@ -1,73 +1,32 @@
-const PERPLEXITY_API_URL = 'https://api.perplexity.ai/chat/completions';
-
-class PerplexityService {
-  constructor() {
-    this.apiKey = import.meta.env.VITE_PERPLEXITY_API_KEY || null;
+async function getAuthToken() {
+  try {
+    const clerk = window.Clerk;
+    if (clerk?.session?.getToken) return await clerk.session.getToken();
+  } catch (error) {
+    console.warn('Unable to read Clerk token:', error);
   }
+  return null;
+}
 
-  isAvailable() {
-    return !!this.apiKey;
-  }
-
+class PersonalizationAIService {
   async generatePersonalizedGuidance(woundProfile) {
-    if (!this.isAvailable()) {
-      console.log('Perplexity API not configured, using local personalization');
-      return this.getLocalPersonalization(woundProfile);
-    }
-
-    const { primaryWound, secondaryWound, intensity, scores } = woundProfile;
-
-    const systemPrompt = `You are an expert Internal Family Systems (IFS) therapist specializing in inner child healing. 
-You help clients understand their wound patterns with compassion and provide actionable guidance. 
-Keep responses concise, warm, and supportive. Focus on IFS concepts like parts, Self-energy, and unburdening.
-Do not diagnose or provide medical advice. Frame everything as self-discovery and personal growth.`;
-
-    const userPrompt = `Based on this assessment, provide personalized healing guidance:
-
-Primary Wound: ${primaryWound.name} (${primaryWound.score}/24 - ${intensity} intensity)
-Secondary Wound: ${secondaryWound?.name || 'None identified'} (${secondaryWound?.score || 0}/24)
-
-Please provide:
-1. A compassionate 2-3 sentence summary of what these patterns mean for the person
-2. 3 specific healing priorities for their journey
-3. One grounding affirmation they can use daily
-4. A brief description of what their personalized curriculum will focus on
-
-Keep the response warm, encouraging, and focused on hope and healing potential.`;
-
     try {
-      const response = await fetch(PERPLEXITY_API_URL, {
+      const token = await getAuthToken();
+      const response = await fetch('/api/ai-personalization', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${this.apiKey}`,
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {})
         },
-        body: JSON.stringify({
-          model: 'sonar',
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: userPrompt }
-          ],
-          max_tokens: 500,
-          temperature: 0.7,
-          stream: false
-        })
+        body: JSON.stringify({ woundProfile })
       });
 
-      if (!response.ok) {
-        throw new Error(`Perplexity API error: ${response.status}`);
-      }
-
-      const data = await response.json();
-      const aiResponse = data.choices?.[0]?.message?.content;
-
-      if (aiResponse) {
-        return this.parseAIResponse(aiResponse, woundProfile);
-      }
-
-      return this.getLocalPersonalization(woundProfile);
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload?.error?.message || `AI request failed (${response.status}).`);
+      const aiResponse = payload?.data?.text;
+      return aiResponse ? this.parseAIResponse(aiResponse, woundProfile) : this.getLocalPersonalization(woundProfile);
     } catch (error) {
-      console.error('Perplexity API error:', error);
+      console.error('OpenRouter personalization error:', error);
       return this.getLocalPersonalization(woundProfile);
     }
   }
@@ -217,5 +176,5 @@ Keep the response warm, encouraging, and focused on hope and healing potential.`
   }
 }
 
-export const perplexityService = new PerplexityService();
-export default perplexityService;
+export const personalizationAIService = new PersonalizationAIService();
+export default personalizationAIService;

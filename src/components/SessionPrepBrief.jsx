@@ -22,7 +22,7 @@ function formatAiError(error) {
   if (error.code === 'forbidden') return 'Unauthorized: this client is not assigned to your Advisor account.';
   if (error.code === 'missing_client_id') return 'No client selected. Select an active assigned client first.';
   if (error.code === 'no_recent_data') return 'No recent data is available to summarize for this client.';
-  if (error.code === 'openai_api_key_missing') return 'OpenAI API key missing. Ask an administrator to configure OPENAI_API_KEY on the server.';
+  if (error.code === 'openrouter_api_key_missing') return 'OpenRouter API key missing. Ask an administrator to configure OPENROUTER_API_KEY on the server.';
   return error.message || 'Server error: unable to generate AI summary.';
 }
 

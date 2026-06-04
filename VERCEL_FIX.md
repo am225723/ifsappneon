@@ -26,15 +26,18 @@ The rewrite order keeps `/api/*` requests routed to Vercel serverless functions 
 ```text
 DATABASE_URL
 CLERK_SECRET_KEY
-OPENAI_API_KEY
+OPENROUTER_API_KEY
 ```
 
-Do not expose `OPENAI_API_KEY`, `DATABASE_URL`, or `CLERK_SECRET_KEY` as frontend `VITE_*` variables.
+Do not expose `OPENROUTER_API_KEY`, `DATABASE_URL`, or `CLERK_SECRET_KEY` as frontend `VITE_*` variables. Do not create `VITE_OPENROUTER_API_KEY`. OpenRouter is the application AI provider; OpenAI and Perplexity are no longer required for runtime AI workflows.
 
 ## Optional Vercel Environment Variables
 
 ```text
 CLERK_AUTHORIZED_PARTIES
+OPENROUTER_MODEL=openrouter/free
+OPENROUTER_SITE_URL
+OPENROUTER_APP_TITLE=IFS App
 ```
 
 Upload flows also require the existing UploadThing variables when enabled:

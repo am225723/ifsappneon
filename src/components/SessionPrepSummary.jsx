@@ -8,7 +8,7 @@ function formatError(error) {
   if (!error) return '';
   if (error.code === 'unauthorized') return 'Unauthorized: please sign in again before generating an AI summary.';
   if (error.code === 'forbidden') return 'Unauthorized: this client is not assigned to your therapist account.';
-  if (error.code === 'openai_api_key_missing') return 'OpenAI API key missing. Ask an administrator to configure OPENAI_API_KEY on the server.';
+  if (error.code === 'openrouter_api_key_missing') return 'OpenRouter API key missing. Ask an administrator to configure OPENROUTER_API_KEY on the server.';
   if (error.code === 'no_recent_data') return 'No recent data is available to summarize for this client.';
   return error.message || 'Unable to generate summary.';
 }

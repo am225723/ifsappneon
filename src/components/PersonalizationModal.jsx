@@ -11,7 +11,7 @@ import {
   Star,
   Loader2
 } from 'lucide-react';
-import perplexityService from '../lib/perplexityService';
+import personalizationAIService from '../lib/personalizationAI';
 
 const PersonalizationModal = ({ 
   isOpen, 
@@ -56,7 +56,7 @@ const PersonalizationModal = ({
         }))
       };
 
-      const result = await perplexityService.generatePersonalizedGuidance(woundProfile);
+      const result = await personalizationAIService.generatePersonalizedGuidance(woundProfile);
       setPersonalization(result);
     } catch (error) {
       console.error('Error generating personalization:', error);
