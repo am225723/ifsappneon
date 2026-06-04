@@ -6,8 +6,8 @@ CREATE TABLE IF NOT EXISTS public.ifs_part_relationships (
 
   client_id UUID NOT NULL REFERENCES public.ifs_clients(id) ON DELETE CASCADE,
 
-  from_part_id UUID NOT NULL REFERENCES public.ifs_parts(id) ON DELETE CASCADE,
-  to_part_id UUID NOT NULL REFERENCES public.ifs_parts(id) ON DELETE CASCADE,
+  from_part_id VARCHAR NOT NULL,
+  to_part_id VARCHAR NOT NULL,
 
   relationship_type VARCHAR(100) DEFAULT 'unknown',
   label VARCHAR(255),
@@ -19,7 +19,10 @@ CREATE TABLE IF NOT EXISTS public.ifs_part_relationships (
   created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
 
-  UNIQUE(client_id, from_part_id, to_part_id, relationship_type)
+  UNIQUE(client_id, from_part_id, to_part_id, relationship_type),
+
+  FOREIGN KEY (client_id, from_part_id) REFERENCES public.ifs_parts(client_id, id) ON DELETE CASCADE,
+  FOREIGN KEY (client_id, to_part_id) REFERENCES public.ifs_parts(client_id, id) ON DELETE CASCADE
 );
 
 CREATE INDEX IF NOT EXISTS idx_ifs_part_relationships_client

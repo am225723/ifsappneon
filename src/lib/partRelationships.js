@@ -11,14 +11,18 @@ const RELATIONSHIP_TYPES = new Set([
   'unknown'
 ]);
 
+function normalizePartId(value) {
+  return value === undefined || value === null || value === '' ? value : String(value);
+}
+
 function normalizeRelationshipPayload(payload = {}) {
   const relationshipType = RELATIONSHIP_TYPES.has(payload.relationship_type || payload.relationshipType)
     ? (payload.relationship_type || payload.relationshipType)
     : 'unknown';
   return {
     client_id: payload.client_id || payload.clientId,
-    from_part_id: payload.from_part_id || payload.fromPartId,
-    to_part_id: payload.to_part_id || payload.toPartId,
+    from_part_id: normalizePartId(payload.from_part_id || payload.fromPartId),
+    to_part_id: normalizePartId(payload.to_part_id || payload.toPartId),
     relationship_type: relationshipType,
     label: String(payload.label || '').trim().slice(0, 255) || null,
     description: String(payload.description || '').trim().slice(0, DESCRIPTION_LIMIT) || null,
@@ -55,7 +59,7 @@ export async function updatePartRelationship(relationshipId, updates) {
   return supabase
     .from('ifs_part_relationships')
     .update(safeUpdates)
-    .eq('id', relationshipId)
+    .eq('id', String(relationshipId))
     .select()
     .single();
 }
@@ -64,7 +68,7 @@ export async function deletePartRelationship(relationshipId) {
   return supabase
     .from('ifs_part_relationships')
     .delete()
-    .eq('id', relationshipId)
+    .eq('id', String(relationshipId))
     .select()
     .single();
 }
