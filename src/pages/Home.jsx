@@ -162,8 +162,8 @@ const Home = ({ clientId, client, mode = 'home', selfProfileResult = null }) => 
             interactiveAssessments,
             curriculumModuleRows,
             partsMapRow,
-            partsCount: partsCountResult.count || 0,
-            relationshipsCount: relationshipsCountResult.count || 0
+            partsCount: partsCountResult.count || (partsCountResult.data || []).length || 0,
+            relationshipsCount: relationshipsCountResult.count || (relationshipsCountResult.data || []).length || 0
           });
 
           const agendas = agendasResult.data || [];
@@ -222,7 +222,8 @@ const Home = ({ clientId, client, mode = 'home', selfProfileResult = null }) => 
   const partsMapPartsCount = getPartsMapParts(assessmentSummary.partsMapRow).length;
   const hasInteractiveWounds = assessmentSummary.interactiveAssessments.some((item) => item.moduleId === 'assessment_wounds');
   const hasWoundAssessment = Boolean(assessmentSummary.latestFormalWound || hasInteractiveWounds);
-  const hasInnerSystemProgress = assessmentSummary.partsCount > 0 || Boolean(assessmentSummary.partsMapRow);
+  const hasLegacyPartsMapOnly = assessmentSummary.partsCount === 0 && partsMapPartsCount > 0;
+  const hasInnerSystemProgress = assessmentSummary.partsCount > 0 || partsMapPartsCount > 0;
   const curriculumProgress = curriculumSummary?.percent ?? 0;
   const currentModule = curriculumSummary?.assignedModule || curriculumSummary?.nextModule;
   const isMyIFSMode = mode === 'my-ifs';
@@ -339,9 +340,9 @@ const Home = ({ clientId, client, mode = 'home', selfProfileResult = null }) => 
       icon: Map,
       title: 'Parts / Inner System Progress',
       description: hasInnerSystemProgress
-        ? `${assessmentSummary.partsCount ? `${assessmentSummary.partsCount} saved part${assessmentSummary.partsCount === 1 ? '' : 's'}` : `Legacy Inner System Map started${partsMapPartsCount ? ` with ${partsMapPartsCount} mapped item${partsMapPartsCount === 1 ? '' : 's'}` : ''}`}${assessmentSummary.relationshipsCount ? ` and ${assessmentSummary.relationshipsCount} relationship${assessmentSummary.relationshipsCount === 1 ? '' : 's'}` : ''}.`
+        ? `${assessmentSummary.partsCount ? `${assessmentSummary.partsCount} saved part${assessmentSummary.partsCount === 1 ? '' : 's'}` : `Inner System Map started${partsMapPartsCount ? ` with ${partsMapPartsCount} older mapped item${partsMapPartsCount === 1 ? '' : 's'}` : ''}`}${assessmentSummary.relationshipsCount ? ` and ${assessmentSummary.relationshipsCount} relationship${assessmentSummary.relationshipsCount === 1 ? '' : 's'}` : ''}.`
         : 'See how your parts relationships and inner system understanding are unfolding.',
-      buttonLabel: assessmentSummary.partsCount ? 'View Inner System' : assessmentSummary.partsMapRow ? 'Continue Map' : 'Start Inner System',
+      buttonLabel: assessmentSummary.partsCount ? 'View Inner System' : hasLegacyPartsMapOnly ? 'Import existing map' : 'Start Inner System',
       badge: hasInnerSystemProgress ? 'Started' : null,
       tone: hasInnerSystemProgress ? 'emerald' : 'stone'
     }

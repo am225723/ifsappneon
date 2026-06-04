@@ -29,12 +29,12 @@ async function hasRows(table, columns, clientId, queryBuilder = null) {
 
 async function countRows(table, clientId) {
   try {
-    const { count, error } = await supabase
+    const { data, count, error } = await supabase
       .from(table)
       .select('id', { count: 'exact', head: true })
       .eq('client_id', clientId);
     if (error) return 0;
-    return count || 0;
+    return count || (data || []).length || 0;
   } catch {
     return 0;
   }

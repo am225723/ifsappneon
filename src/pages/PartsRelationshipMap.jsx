@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Edit3, Loader2, Plus, Save, Sparkles, Trash2 } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, Edit3, Loader2, Plus, Save, Sparkles, Trash2 } from 'lucide-react';
 import InnerSystemMapCanvas, { pointerToSvgPoint } from '../components/parts/InnerSystemMapCanvas';
 import PartDetailPanel from '../components/parts/PartDetailPanel';
 import { normalizeMapPart, relationshipLabel, RELATIONSHIP_OPTIONS } from '../components/parts/mapConstants';
 import { clientAuth } from '../lib/supabasePersonalization';
 import { supabase } from '../lib/supabase';
 import { getPartsMapParts } from '../lib/interactiveResults';
+import { importLegacyPartsMap, previewLegacyPartsImport } from '../lib/legacyPartsImport';
 import {
   createPartRelationship,
   deletePartRelationship,
@@ -32,6 +33,12 @@ export default function PartsRelationshipMap() {
   const [parts, setParts] = useState([]);
   const [relationships, setRelationships] = useState([]);
   const [legacyPartsMap, setLegacyPartsMap] = useState(null);
+  const [legacyImportPreview, setLegacyImportPreview] = useState(null);
+  const [selectedLegacyPartIds, setSelectedLegacyPartIds] = useState([]);
+  const [legacyImportConfirmed, setLegacyImportConfirmed] = useState(false);
+  const [legacyImportLoading, setLegacyImportLoading] = useState(false);
+  const [legacyImportDismissed, setLegacyImportDismissed] = useState(false);
+  const [legacyImportResult, setLegacyImportResult] = useState(null);
   const [selectedPartId, setSelectedPartId] = useState(null);
   const [localPositions, setLocalPositions] = useState({});
   const [draggingPartId, setDraggingPartId] = useState(null);
@@ -139,6 +146,54 @@ export default function PartsRelationshipMap() {
     movePartBy(part, (dx / length) * delta, (dy / length) * delta);
   };
 
+
+
+  const legacyPartsCount = getPartsMapParts(legacyPartsMap).length;
+  const importAvailable = !loading && !legacyImportDismissed && legacyPartsCount > 0;
+
+  const handlePreviewLegacyImport = async () => {
+    if (!client?.id) return;
+    setLegacyImportLoading(true);
+    setLegacyImportResult(null);
+    setLegacyImportConfirmed(false);
+    setError('');
+    const { data, error: previewError } = await previewLegacyPartsImport({ clientId: client.id });
+    if (previewError) {
+      setLegacyImportPreview(null);
+      setError(previewError.message || 'We could not preview the import. Your older map is still safe and unchanged.');
+    } else {
+      setLegacyImportPreview(data);
+      setSelectedLegacyPartIds((data?.importable || []).map((part) => String(part.id)));
+    }
+    setLegacyImportLoading(false);
+  };
+
+  const toggleLegacyPartSelection = (partId) => {
+    setSelectedLegacyPartIds((prev) => (
+      prev.includes(String(partId)) ? prev.filter((id) => id !== String(partId)) : [...prev, String(partId)]
+    ));
+  };
+
+  const handleImportLegacyParts = async () => {
+    if (!client?.id || !legacyImportConfirmed || selectedLegacyPartIds.length === 0) return;
+    setLegacyImportLoading(true);
+    setLegacyImportResult(null);
+    setError('');
+    const { data, error: importError } = await importLegacyPartsMap({
+      clientId: client.id,
+      selectedPartIds: selectedLegacyPartIds,
+      overwrite: false
+    });
+    if (importError) {
+      setLegacyImportResult(data || { imported: [], skipped: [], errors: [{ message: importError.message }], legacyPreserved: true });
+      setError(importError.message || 'We could not complete the import. Your older map is still safe and unchanged.');
+    } else {
+      setLegacyImportResult(data);
+      await loadMap();
+    }
+    setLegacyImportLoading(false);
+  };
+
   const resetRelationshipForm = () => setRelationshipForm(emptyRelationshipForm);
 
   const handleRelationshipSubmit = async (event) => {
@@ -205,14 +260,98 @@ export default function PartsRelationshipMap() {
 
         {error && <div className="rounded-2xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</div>}
 
-        {!loading && parts.length === 0 && legacyPartsMap && (
-          <div className="rounded-3xl border border-brand-gold-200 bg-brand-gold-50/80 p-4 text-sm text-brand-stone-700 dark:border-brand-gold-900/40 dark:bg-brand-gold-950/20 dark:text-slate-300">
-            <p className="font-semibold text-brand-stone-900 dark:text-slate-100">Your earlier Inner System Map has been found.</p>
-            <p className="mt-1">
-              We found a legacy parts map with {getPartsMapParts(legacyPartsMap).length || 'some'} mapped item{getPartsMapParts(legacyPartsMap).length === 1 ? '' : 's'}. It is recognized as started, but it is not auto-imported into persistent parts. Continue here when you are ready to recreate or import it intentionally.
-            </p>
-            <Link to="/parts-mapping" className="btn-sanctuary-secondary mt-3 inline-flex">Continue Map</Link>
-          </div>
+        {importAvailable && (
+          <section className="rounded-3xl border border-brand-gold-200 bg-brand-gold-50/80 p-4 text-sm text-brand-stone-700 dark:border-brand-gold-900/40 dark:bg-brand-gold-950/20 dark:text-slate-300">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+              <div>
+                <p className="font-semibold text-brand-stone-900 dark:text-slate-100">Import Existing Parts Map</p>
+                <p className="mt-1">
+                  We found an older saved Parts Map. You can bring those parts into your current Inner System Map when you are ready.
+                </p>
+                <p className="mt-2 text-xs text-brand-stone-600 dark:text-slate-400">
+                  Nothing will be deleted. Your older map stays preserved, and duplicates are skipped unless a future merge option is explicitly added.
+                </p>
+              </div>
+              <div className="flex shrink-0 flex-wrap gap-2">
+                <button type="button" onClick={handlePreviewLegacyImport} disabled={legacyImportLoading} className="btn-sanctuary-primary disabled:opacity-50">
+                  {legacyImportLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />} Preview Import
+                </button>
+                <button type="button" onClick={() => setLegacyImportDismissed(true)} className="btn-sanctuary-secondary">Not Now</button>
+              </div>
+            </div>
+
+            {legacyImportPreview && (
+              <div className="mt-4 rounded-3xl border border-white/70 bg-white/85 p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950/70">
+                <p className="font-semibold text-brand-stone-900 dark:text-slate-100">Import My Existing Parts Map</p>
+                <p className="mt-1">
+                  We found an older saved Parts Map. You can import it into your current Inner System Map. Nothing will be deleted, and you can review what will be added before saving.
+                </p>
+                {legacyImportPreview.onlySelf && (
+                  <p className="mt-2 rounded-2xl bg-brand-emerald-50 px-3 py-2 text-brand-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-100">
+                    Your older map currently contains Self. You can import it as the starting center of your Inner System Map.
+                  </p>
+                )}
+                {legacyImportPreview.persistentPartCount > 0 && (
+                  <p className="mt-2 rounded-2xl bg-brand-stone-50 px-3 py-2 text-brand-stone-700 dark:bg-slate-900 dark:text-slate-300">
+                    You already have parts in your current Inner System Map. The import will skip duplicates unless you choose a future merge option.
+                  </p>
+                )}
+                <div className="mt-4 grid gap-3 lg:grid-cols-2">
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-wide text-brand-emerald-700 dark:text-brand-emerald-100">Will be imported</p>
+                    <div className="mt-2 space-y-2">
+                      {legacyImportPreview.importable.length === 0 ? (
+                        <p className="rounded-2xl bg-brand-stone-50 p-3 text-brand-stone-600 dark:bg-slate-900 dark:text-slate-400">No new importable parts were found.</p>
+                      ) : legacyImportPreview.importable.map((part) => (
+                        <label key={part.id} className="flex items-start gap-3 rounded-2xl border border-brand-stone-100 bg-brand-stone-50 p-3 dark:border-slate-800 dark:bg-slate-900">
+                          <input type="checkbox" className="mt-1" checked={selectedLegacyPartIds.includes(String(part.id))} onChange={() => toggleLegacyPartSelection(part.id)} />
+                          <span>
+                            <span className="block font-semibold text-brand-stone-900 dark:text-slate-100">{part.name}</span>
+                            <span className="block text-xs text-brand-stone-500 dark:text-slate-500">New part id: {part.id}{part.type ? ` • ${part.type}` : ''}</span>
+                            {part.role && <span className="mt-1 block text-xs text-brand-stone-600 dark:text-slate-400">{part.role}</span>}
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-wide text-brand-stone-500 dark:text-slate-500">Skipped for safety</p>
+                    <div className="mt-2 space-y-2">
+                      {legacyImportPreview.skipped.length === 0 ? (
+                        <p className="rounded-2xl bg-brand-stone-50 p-3 text-brand-stone-600 dark:bg-slate-900 dark:text-slate-400">No duplicate or invalid parts detected in the preview.</p>
+                      ) : legacyImportPreview.skipped.map((part, index) => (
+                        <div key={`${part.legacyId || part.name || 'skipped'}-${index}`} className="rounded-2xl bg-brand-stone-50 p-3 dark:bg-slate-900">
+                          <p className="font-semibold text-brand-stone-900 dark:text-slate-100">{part.name || 'Unnamed part'}</p>
+                          <p className="text-xs text-brand-stone-500 dark:text-slate-500">{part.message || part.reason}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+                <label className="mt-4 flex items-start gap-3 rounded-2xl bg-brand-emerald-50 p-3 text-brand-emerald-950 dark:bg-emerald-950/40 dark:text-emerald-100">
+                  <input type="checkbox" className="mt-1" checked={legacyImportConfirmed} onChange={(event) => setLegacyImportConfirmed(event.target.checked)} />
+                  <span>I understand this will add selected parts to my current Inner System Map and will not delete my older map.</span>
+                </label>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <button type="button" onClick={handleImportLegacyParts} disabled={legacyImportLoading || !legacyImportConfirmed || selectedLegacyPartIds.length === 0} className="btn-sanctuary-primary disabled:opacity-50">
+                    {legacyImportLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />} Import Selected Parts
+                  </button>
+                  <button type="button" onClick={() => setLegacyImportPreview(null)} className="btn-sanctuary-secondary">Not Now</button>
+                </div>
+              </div>
+            )}
+
+            {legacyImportResult && (
+              <div className="mt-4 rounded-2xl border border-brand-emerald-100 bg-brand-emerald-50 p-3 text-brand-emerald-900 dark:border-emerald-900/50 dark:bg-emerald-950/30 dark:text-emerald-100">
+                <p className="font-semibold">
+                  {legacyImportResult.errors?.length ? 'We could not complete every import. Your older map is still safe and unchanged.' : 'Your selected parts were added to your Inner System Map.'}
+                </p>
+                <p className="mt-1 text-xs">
+                  Imported {legacyImportResult.imported?.length || 0}; skipped {legacyImportResult.skipped?.length || 0}; legacy preserved: {legacyImportResult.legacyPreserved ? 'yes' : 'unknown'}.
+                </p>
+              </div>
+            )}
+          </section>
         )}
 
         <div className="grid xl:grid-cols-[1fr,380px] gap-5">
