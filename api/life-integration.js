@@ -146,7 +146,10 @@ async function handleList(appUser, body) {
     throw Object.assign(new Error('Unsupported Life Integration reflection type'), { statusCode: 400 });
   }
 
-  if (appUser.user_role === 'client') {
+  const selfRequestedClientId = body.client_id || appUser.id;
+  const isSelfAccess = String(selfRequestedClientId) === String(appUser.id) && (appUser.user_role === 'client' || body.self === true);
+
+  if (appUser.user_role === 'client' || isSelfAccess) {
     return sql.query(`
       SELECT r.*, p.part_name AS linked_part_name, p.name AS linked_part_alias, p.part_type AS linked_part_type
       FROM ifs_life_integration_reflections r
@@ -156,7 +159,7 @@ async function handleList(appUser, body) {
         AND ($3::boolean IS TRUE OR r.archived_at IS NULL)
       ORDER BY r.created_at DESC
       LIMIT 50
-    `, [appUser.id, type || null, includeArchived]);
+    `, [selfRequestedClientId, type || null, includeArchived]);
   }
 
   if (isTherapistUser(appUser)) {

@@ -76,7 +76,7 @@ const ClientHomeTile = ({ icon, title, description, buttonLabel, to, badge, tone
   </Link>
 );
 
-const Home = ({ clientId, client }) => {
+const Home = ({ clientId, client, mode = 'home', selfProfileResult = null }) => {
   const navigate = useNavigate();
   const [savedAssessment, setSavedAssessment] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -106,7 +106,7 @@ const Home = ({ clientId, client }) => {
             loadClientSessionAgendas(clientId),
             loadActiveTreatmentPlansForClient(clientId),
             loadAssignedHomeworkForClient(clientId),
-            loadLifeIntegrationReflections(),
+            loadLifeIntegrationReflections({ clientId, self: mode === 'my-ifs' }),
             loadHealingTimeline({ clientId, range: 'ALL' }),
             supabase
               .from('ifs_client_progress')
@@ -161,6 +161,9 @@ const Home = ({ clientId, client }) => {
   const assessmentPrimary = savedAssessment?.primaryWound?.name || savedAssessment?.primaryWound?.id || savedAssessment?.topWound?.name || savedAssessment?.topWound?.id || null;
   const curriculumProgress = curriculumSummary?.percent ?? 0;
   const currentModule = curriculumSummary?.assignedModule || curriculumSummary?.nextModule;
+  const isMyIFSMode = mode === 'my-ifs';
+  const hasSelfData = selfProfileResult?.hasPersonalData !== false;
+  const selfDataSignals = selfProfileResult?.dataSignals || [];
 
   const gentleFocus = activeLiveSession
     ? {
@@ -309,6 +312,25 @@ const Home = ({ clientId, client }) => {
           </div>
         </div>
       </section>
+
+      {isMyIFSMode && (
+        <section className="mb-8 rounded-3xl border border-brand-gold-200/70 bg-brand-gold-50/80 p-5 text-sm text-brand-stone-700 dark:border-brand-gold-900/50 dark:bg-brand-gold-950/20 dark:text-slate-300">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[0.24em] text-brand-gold-700 dark:text-brand-gold-500">My IFS Work</p>
+              <p className="mt-1">You are viewing your own IFS path as the authenticated user. Admin/advisor permissions stay available separately.</p>
+              {!hasSelfData && (
+                <p className="mt-2 font-semibold">No personal IFS records were found yet for this linked profile. Start curriculum or take an assessment to begin, or verify a manual Clerk link if your self-work exists in another row.</p>
+              )}
+            </div>
+            {selfDataSignals.length > 0 && (
+              <div className="rounded-2xl bg-white/70 px-4 py-3 text-xs dark:bg-slate-900/50">
+                <span className="font-bold">Connected data:</span> {selfDataSignals.join(', ')}
+              </div>
+            )}
+          </div>
+        </section>
+      )}
 
       <section className="mb-14">
         <div className="rounded-[2rem] border border-brand-gold-100 bg-gradient-to-br from-white via-brand-gold-50/70 to-brand-emerald-50 p-6 shadow-premium dark:border-slate-800 dark:from-brand-cardDark dark:via-brand-gold-950/20 dark:to-brand-emerald-950/20 lg:p-8">
