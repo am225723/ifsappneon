@@ -10,13 +10,13 @@ async function getAuthToken() {
 
 function normalizeApiError(response, payload) {
   const apiError = payload?.error;
-  const code = apiError?.code || (response.status === 401 ? 'unauthorized' : response.status === 403 ? 'forbidden' : response.status === 402 ? 'payment_required' : 'server_error');
+  const code = apiError?.code || (response.status === 401 ? 'unauthorized' : response.status === 403 ? 'forbidden' : 'server_error');
   const fallbackMessage = response.status === 401
     ? 'Please sign in again before generating an Advisor note draft.'
     : response.status === 403
       ? 'You are not authorized to draft an Advisor note for this client.'
-      : response.status === 402
-        ? 'AI note drafting is not available for this account.'
+      : code === 'openai_api_key_missing'
+        ? 'OpenAI API key missing. Ask an administrator to configure OPENAI_API_KEY on the server.'
         : 'Unable to generate Advisor note draft.';
 
   return {
@@ -29,9 +29,13 @@ function normalizeApiError(response, payload) {
 export async function generateSessionNoteDraft({
   clientId,
   sessionDate,
-  noteFormat = 'DARP',
-  advisorBullets = {},
-  includeData = {}
+  advisorBullets = '',
+  includeAgenda = true,
+  includeAssignedPractices = true,
+  includeGrowthGoals = true,
+  includeSharedLifeReflections = true,
+  includeParts = true,
+  includeRecentMood = true
 } = {}) {
   if (!clientId) {
     return { data: null, error: { code: 'missing_client_id', message: 'Select an assigned client before generating an Advisor note draft.' } };
@@ -44,7 +48,17 @@ export async function generateSessionNoteDraft({
       'Content-Type': 'application/json',
       ...(token ? { Authorization: `Bearer ${token}` } : {})
     },
-    body: JSON.stringify({ clientId, sessionDate, noteFormat, advisorBullets, includeData })
+    body: JSON.stringify({
+      clientId,
+      sessionDate,
+      advisorBullets,
+      includeAgenda,
+      includeAssignedPractices,
+      includeGrowthGoals,
+      includeSharedLifeReflections,
+      includeParts,
+      includeRecentMood
+    })
   });
 
   const payload = await response.json().catch(() => ({}));

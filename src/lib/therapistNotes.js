@@ -12,7 +12,7 @@ function compactTags(tags) {
 }
 
 function normalizeNoteType(noteType) {
-  const allowed = new Set(['session_note', 'advisor_session_note', 'prep_note', 'homework_review', 'treatment_plan_review', 'general', 'archived']);
+  const allowed = new Set(['session_note', 'prep_note', 'homework_review', 'treatment_plan_review', 'general', 'archived']);
   return allowed.has(noteType) ? noteType : 'general';
 }
 
