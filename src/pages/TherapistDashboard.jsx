@@ -2635,7 +2635,7 @@ const TherapistDashboard = () => {
     { label: 'Shared Life Reflections', desc: 'Review reflections clients intentionally shared from their IFS in Daily Life practices.', icon: Heart, onClick: () => navigate('/advisor/shared-reflections') },
     { label: 'Growth Goals', desc: 'Review IFS path goals and support plans.', icon: Target, onClick: () => setActiveTab('treatment-plans') },
     { label: 'Advisor Notes', desc: 'Write Advisor-only notes with tagged parts and goals.', icon: FileText, onClick: () => setActiveTab('clinical-notes') },
-    { label: 'Draft Session Note', desc: 'AI-assisted draft for Advisor review; never auto-saved.', icon: Sparkles, onClick: () => setActiveTab('clinical-notes') },
+    { label: 'AI-Assisted Advisor Note Draft', desc: 'Draft a note from Advisor-entered bullets and selected IFS context. Review and edit before saving.', icon: Sparkles, onClick: () => setActiveTab('clinical-notes') },
     { label: 'Longitudinal Insights', desc: 'Open assigned-client analytics and IFS trends.', icon: TrendingUp, onClick: () => navigate('/longitudinal-analytics') },
     { label: 'Advisor Reports', desc: 'Generate and review Advisor reports for assigned clients.', icon: Download, onClick: () => navigate('/advisor-reports') },
     { label: 'Live Guided Practice', desc: 'Start or join a synchronous Advisor-guided practice.', icon: Heart, onClick: () => navigate('/live-co-therapy') },
@@ -2897,7 +2897,7 @@ const TherapistDashboard = () => {
                     ))}
                   </div>
                   <p className={`rounded-2xl bg-brand-gold-50 p-3 text-xs ${isDark ? 'bg-brand-gold-900/20 text-brand-gold-100' : 'text-brand-stone-700'}`}>
-                    AI-assisted draft for Advisor review is available from Draft Session Note. It does not auto-generate, auto-save, or expose Advisor notes to clients.
+                    AI-Assisted Advisor Note Draft is available for Advisor-entered bullets and selected IFS context. It does not auto-generate, auto-save, or expose Advisor notes to clients.
                   </p>
                 </div>
               )}
