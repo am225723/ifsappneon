@@ -6,6 +6,7 @@ import PartDetailPanel from '../components/parts/PartDetailPanel';
 import { normalizeMapPart, relationshipLabel, RELATIONSHIP_OPTIONS } from '../components/parts/mapConstants';
 import { clientAuth } from '../lib/supabasePersonalization';
 import { supabase } from '../lib/supabase';
+import { getPartsMapParts } from '../lib/interactiveResults';
 import {
   createPartRelationship,
   deletePartRelationship,
@@ -30,6 +31,7 @@ export default function PartsRelationshipMap() {
   const [client, setClient] = useState(null);
   const [parts, setParts] = useState([]);
   const [relationships, setRelationships] = useState([]);
+  const [legacyPartsMap, setLegacyPartsMap] = useState(null);
   const [selectedPartId, setSelectedPartId] = useState(null);
   const [localPositions, setLocalPositions] = useState({});
   const [draggingPartId, setDraggingPartId] = useState(null);
@@ -58,19 +60,30 @@ export default function PartsRelationshipMap() {
 
     setLoading(true);
     setError('');
-    const [{ data: partRows, error: partsError }, { data: relationshipRows, error: relationshipsError }] = await Promise.all([
+    const [
+      { data: partRows, error: partsError },
+      { data: relationshipRows, error: relationshipsError },
+      { data: partsMapRow }
+    ] = await Promise.all([
       supabase
         .from('ifs_parts')
         .select('id, client_id, name, part_name, type, part_type, role, description, x, y, size, color, notes, updated_at')
         .eq('client_id', currentClient.id)
         .order('updated_at', { ascending: false }),
-      loadPartRelationships({ clientId: currentClient.id })
+      loadPartRelationships({ clientId: currentClient.id }),
+      supabase
+        .from('ifs_interactive_data')
+        .select('id, data, updated_at')
+        .eq('client_id', currentClient.id)
+        .eq('module_id', 'parts_map')
+        .maybeSingle()
     ]);
 
     if (partsError) setError(partsError.message || 'Unable to load parts.');
     if (relationshipsError) setError(relationshipsError.message || 'Unable to load relationships.');
     setParts(partRows || []);
     setRelationships(relationshipRows || []);
+    setLegacyPartsMap(partsMapRow || null);
     setLoading(false);
   }, []);
 
@@ -191,6 +204,16 @@ export default function PartsRelationshipMap() {
         </section>
 
         {error && <div className="rounded-2xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</div>}
+
+        {!loading && parts.length === 0 && legacyPartsMap && (
+          <div className="rounded-3xl border border-brand-gold-200 bg-brand-gold-50/80 p-4 text-sm text-brand-stone-700 dark:border-brand-gold-900/40 dark:bg-brand-gold-950/20 dark:text-slate-300">
+            <p className="font-semibold text-brand-stone-900 dark:text-slate-100">Your earlier Inner System Map has been found.</p>
+            <p className="mt-1">
+              We found a legacy parts map with {getPartsMapParts(legacyPartsMap).length || 'some'} mapped item{getPartsMapParts(legacyPartsMap).length === 1 ? '' : 's'}. It is recognized as started, but it is not auto-imported into persistent parts. Continue here when you are ready to recreate or import it intentionally.
+            </p>
+            <Link to="/parts-mapping" className="btn-sanctuary-secondary mt-3 inline-flex">Continue Map</Link>
+          </div>
+        )}
 
         <div className="grid xl:grid-cols-[1fr,380px] gap-5">
           <section className="rounded-3xl border border-brand-stone-200 dark:border-slate-700 bg-white dark:bg-slate-950 p-4 min-h-[560px]">
