@@ -29,7 +29,7 @@ const THERAPIST_ACTIONS = new Set([
   'remove_map_node'
 ]);
 const READ_ACTIONS = new Set(['get_state', 'get_active_for_client', 'get_map_parts']);
-const CLIENT_CONFIRMATION_ACTIONS = new Set(['update_map_node_position', 'accept_suggestion', 'dismiss_suggestion', 'accept_relationship', 'dismiss_relationship', 'save_confirmed_map', 'update_shared_map', 'select_map_node', 'confirm_map_node', 'remove_map_node']);
+const CLIENT_CONFIRMATION_ACTIONS = new Set(['update_map_node_position', 'accept_suggestion', 'dismiss_suggestion', 'accept_relationship', 'dismiss_relationship', 'save_confirmed_map', 'save_confirmed_map_node', 'update_shared_map', 'select_map_node', 'confirm_map_node', 'remove_map_node']);
 const EVENT_TYPES = new Set([
   'session_started',
   'client_joined',
@@ -96,6 +96,7 @@ const MAP_MODES = new Set(['explore', 'protectors', 'exiles', 'relationships', '
 const PART_TYPES = new Set(['protector', 'manager', 'firefighter', 'exile', 'self', 'self-like', 'unknown', '']);
 const SHARED_MAP_ROLES = new Set(['protector', 'manager', 'firefighter', 'exile', 'self-like', 'unknown']);
 const SHARED_MAP_COLORS = new Set(['amber', 'orange', 'emerald', 'green', 'rose', 'sky', 'stone', 'gold']);
+const SAVED_SHARED_MAP_STATUS = 'saved_to_inner_system';
 const RELATIONSHIP_TYPES = new Set(['close_to', 'protects', 'concerned_about', 'polarized_with', 'supports', 'needs_space_from', 'unknown']);
 
 function sendError(res, status, message, code = 'live_session_error') {
@@ -220,17 +221,21 @@ function sanitizeSharedMapNode(raw = {}, existingNode = {}, actor = 'client') {
   const createdBy = node.createdBy === 'advisor' || node.createdBy === 'client' ? node.createdBy : (existingNode.localId ? existingCreatedBy : actor);
   const name = sanitizeText(node.name ?? existingNode.name ?? 'Unnamed part', MAX_SHARED_MAP_NAME_LENGTH) || 'Unnamed part';
   const clientConfirmed = Boolean(existingNode.clientConfirmed || node.clientConfirmed === true);
+  const partId = node.partId ? sanitizePartId(node.partId) : (existingNode.partId || null);
+  const savedAt = existingNode.savedAt || (node.savedAt ? sanitizeText(node.savedAt, 60) : null);
+  const isSaved = Boolean(partId && (existingNode.status === SAVED_SHARED_MAP_STATUS || node.status === SAVED_SHARED_MAP_STATUS || savedAt));
   return {
     localId,
-    partId: node.partId ? sanitizePartId(node.partId) : (existingNode.partId || null),
+    partId,
     name,
     role: sanitizeSharedMapRole(node.role ?? existingNode.role),
     color: sanitizeSharedMapColor(node.color ?? existingNode.color),
     x: sanitizeSharedMapPosition(node.x ?? existingNode.x ?? 50, 'x'),
     y: sanitizeSharedMapPosition(node.y ?? existingNode.y ?? 50, 'y'),
     createdBy,
-    status: clientConfirmed ? 'client_confirmed' : 'draft',
+    status: isSaved ? SAVED_SHARED_MAP_STATUS : (clientConfirmed ? 'client_confirmed' : 'draft'),
     clientConfirmed,
+    ...(savedAt ? { savedAt } : {}),
     updatedAt: new Date().toISOString(),
     createdAt: existingNode.createdAt || new Date().toISOString()
   };
@@ -1002,6 +1007,105 @@ async function saveConfirmedMap(user, body) {
   return publicSession(rows[0]);
 }
 
+
+function buildSharedMapPartId(sessionId, nodeId) {
+  const safeSessionId = String(sessionId || '').replace(/[^A-Za-z0-9]/g, '').slice(0, 24);
+  const safeNodeId = sanitizePartId(nodeId, 'nodeId').replace(/[^A-Za-z0-9_.:-]/g, '').slice(0, 60);
+  return `shared_${safeSessionId}_${safeNodeId}`.slice(0, 100);
+}
+
+async function createInnerSystemPartFromMapNode(clientId, sessionId, node) {
+  const partId = buildSharedMapPartId(sessionId, node.localId);
+  const partName = sanitizeText(node.name, MAX_SHARED_MAP_NAME_LENGTH);
+  const partRole = sanitizeSharedMapRole(node.role);
+  const color = sanitizeSharedMapColor(node.color);
+
+  const existingRows = await sql`
+    SELECT id
+    FROM ifs_parts
+    WHERE client_id = ${clientId}
+      AND LOWER(COALESCE(part_name, name)) = LOWER(${partName})
+      AND COALESCE(is_active, true) = true
+    ORDER BY updated_at DESC NULLS LAST, created_at DESC NULLS LAST
+    LIMIT 1
+  `;
+  if (existingRows[0]?.id) return existingRows[0];
+
+  const rows = await sql`
+    INSERT INTO ifs_parts (client_id, id, name, part_name, type, part_type, role, x, y, color, is_active, created_at, updated_at)
+    VALUES (${clientId}, ${partId}, ${partName}, ${partName}, ${partRole}, ${partRole}, ${partRole}, ${node.x ?? null}, ${node.y ?? null}, ${color}, true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+    ON CONFLICT (client_id, id) DO UPDATE
+    SET updated_at = CURRENT_TIMESTAMP
+    RETURNING id
+  `;
+
+  if (!rows[0]?.id) {
+    throw Object.assign(new Error('Unable to save this part right now. Please try again.'), { statusCode: 409, code: 'part_save_conflict' });
+  }
+
+  return rows[0];
+}
+
+async function saveConfirmedMapNode(user, body) {
+  const session = await getSession(requireUuid(body.sessionId, 'sessionId'));
+  if (user.user_role !== 'client' || String(user.id) !== String(session.client_id)) {
+    throw Object.assign(new Error('Only the client can save this part to their inner system'), { statusCode: 403, code: 'client_save_required' });
+  }
+  ensureSharedMapActivity(session);
+  if (session.status === 'ended') throw Object.assign(new Error('Live session has ended'), { statusCode: 400, code: 'session_ended' });
+
+  const nodeId = sanitizeSharedMapLocalId(body.nodeId);
+  const state = normalizeSharedMapState(session.activity_state || {});
+  const node = state.map.nodes.find((item) => item.localId === nodeId);
+  if (!node) throw Object.assign(new Error('Map node was not found'), { statusCode: 404, code: 'map_node_not_found' });
+  if (node.partId) {
+    throw Object.assign(new Error('This part is already saved to your inner system'), { statusCode: 409, code: 'already_saved', node });
+  }
+  if (node.clientConfirmed !== true) {
+    throw Object.assign(new Error('Confirm this part before saving it to your inner system'), { statusCode: 400, code: 'node_not_confirmed' });
+  }
+
+  const partName = sanitizeText(node.name, MAX_SHARED_MAP_NAME_LENGTH);
+  if (!partName || partName.toLowerCase() === 'unnamed part') {
+    throw Object.assign(new Error('Name this part before saving it to your inner system'), { statusCode: 400, code: 'part_name_required' });
+  }
+  const partRole = sanitizeSharedMapRole(node.role);
+  if (!SHARED_MAP_ROLES.has(partRole)) {
+    throw Object.assign(new Error('Choose a valid role before saving'), { statusCode: 400, code: 'invalid_part_role' });
+  }
+
+  const savedPart = await createInnerSystemPartFromMapNode(session.client_id, session.id, { ...node, name: partName, role: partRole });
+  const savedAt = new Date().toISOString();
+  const updatedNode = {
+    ...node,
+    name: partName,
+    role: partRole,
+    partId: savedPart.id,
+    status: SAVED_SHARED_MAP_STATUS,
+    savedAt,
+    clientConfirmed: true,
+    updatedAt: savedAt
+  };
+  const nodes = state.map.nodes.map((item) => (item.localId === nodeId ? updatedNode : item));
+  const nextState = {
+    ...state,
+    map: { nodes, edges: [] },
+    selectedNodeId: nodeId,
+    lastAction: SAVED_SHARED_MAP_STATUS,
+    lastSavedNodeId: nodeId,
+    updatedAt: savedAt
+  };
+  const rows = await sql`
+    UPDATE ifs_live_sessions
+    SET activity_state = ${JSON.stringify(nextState)}::jsonb,
+        client_last_seen_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+    WHERE id = ${session.id}
+    RETURNING *
+  `;
+  await recordEvent(rows[0], 'prompt_sent', { eventName: SAVED_SHARED_MAP_STATUS, nodeId, partId: savedPart.id });
+  return { session: publicSession(rows[0]), node: updatedNode, partId: savedPart.id };
+}
+
 async function updateSharedMap(user, body) {
   const session = await getSession(requireUuid(body.sessionId, 'sessionId'));
   await assertCanAccessSession(user, session);
@@ -1192,6 +1296,7 @@ export default async function handler(req, res) {
       accept_relationship: () => updateSuggestionStatus(user, body, 'accepted'),
       dismiss_relationship: () => updateSuggestionStatus(user, body, 'dismissed'),
       save_confirmed_map: () => saveConfirmedMap(user, body),
+      save_confirmed_map_node: () => saveConfirmedMapNode(user, body),
       update_shared_map: () => updateSharedMap(user, body),
       select_map_node: () => selectMapNode(user, body),
       confirm_map_node: () => confirmMapNode(user, body),

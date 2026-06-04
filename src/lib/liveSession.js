@@ -99,6 +99,11 @@ export function confirmSharedMapNode({ sessionId, nodeId }) {
   return liveSessionRequest({ action: 'confirm_map_node', sessionId, nodeId });
 }
 
+
+export function saveConfirmedMapNode({ sessionId, nodeId }) {
+  return liveSessionRequest({ action: 'save_confirmed_map_node', sessionId, nodeId });
+}
+
 export function removeSharedMapNode({ sessionId, nodeId }) {
   return liveSessionRequest({ action: 'remove_map_node', sessionId, nodeId });
 }

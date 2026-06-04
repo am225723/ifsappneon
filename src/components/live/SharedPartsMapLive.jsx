@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react';
-import { CheckCircle2, Compass, Lightbulb, Move, Plus, Send, ShieldCheck, Trash2 } from 'lucide-react';
+import { CheckCircle2, Compass, Lightbulb, Move, Plus, Save, Send, ShieldCheck, Trash2 } from 'lucide-react';
 import {
   confirmSharedMapNode,
   removeSharedMapNode,
+  saveConfirmedMapNode,
   selectSharedMapNode,
   updateSharedPartsMap
 } from '../../lib/liveSession';
@@ -141,17 +142,30 @@ export default function SharedPartsMapLive({ sessionId, activityState = {}, role
     return runAction(() => removeSharedMapNode({ sessionId, nodeId: selectedNode.localId }));
   };
 
+  const handleSaveSelected = async () => {
+    if (!selectedNode || selectedNode.partId || !selectedNode.clientConfirmed) return null;
+    setBusy(true);
+    setError('');
+    const { data, error: actionError } = await saveConfirmedMapNode({ sessionId, nodeId: selectedNode.localId });
+    if (actionError) setError(actionError.message);
+    if (data?.session && onSessionUpdate) onSessionUpdate(data.session);
+    setBusy(false);
+    return data;
+  };
+
   const handleSendPrompt = (event) => {
     event.preventDefault();
     return commitNodes(nodes, { selectedNodeId: selectedNode?.localId || null, advisorPrompt: promptDraft, lastAction: 'advisor_prompt_sent' });
   };
 
-  const canEditSelected = selectedNode && (
+  const selectedIsSaved = Boolean(selectedNode?.partId || selectedNode?.status === 'saved_to_inner_system');
+  const canEditSelected = selectedNode && !selectedIsSaved && (
     isAdvisor ? selectedNode.createdBy === 'advisor' && !selectedNode.clientConfirmed : true
   );
-  const canRemoveSelected = selectedNode && (
+  const canRemoveSelected = selectedNode && !selectedIsSaved && (
     isAdvisor ? selectedNode.createdBy === 'advisor' && !selectedNode.clientConfirmed : !selectedNode.clientConfirmed || selectedNode.createdBy === 'client'
   );
+  const canSaveSelected = Boolean(!isAdvisor && selectedNode && selectedNode.clientConfirmed && !selectedIsSaved);
 
   return (
     <div className="space-y-5">
@@ -166,7 +180,7 @@ export default function SharedPartsMapLive({ sessionId, activityState = {}, role
                 : 'Your Advisor has opened a Shared Parts Map. You can choose what feels true, rename parts, and decide what to save to your inner system.'}
             </p>
             <p className="mt-2 text-xs font-medium text-brand-stone-600 dark:text-slate-400">
-              Parts are named by the client. Advisor suggestions are invitations, not conclusions.
+              Parts are named by you. Advisor suggestions are invitations, not conclusions.
             </p>
           </div>
           <div className="rounded-2xl bg-white/80 px-4 py-3 text-sm text-brand-stone-700 shadow-sm dark:bg-slate-950/70 dark:text-slate-300">
@@ -178,7 +192,7 @@ export default function SharedPartsMapLive({ sessionId, activityState = {}, role
 
       {!isAdvisor && (
         <div className="rounded-2xl border border-brand-emerald-100 bg-brand-emerald-50 p-4 text-sm text-brand-emerald-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">
-          This shared map is used during Advisor-guided practice. Only save what feels accurate to you.
+          Only save parts that feel accurate to you. You can rename or leave a suggested part unsaved.
         </div>
       )}
 
@@ -223,7 +237,7 @@ export default function SharedPartsMapLive({ sessionId, activityState = {}, role
                   <span className="mt-1 block text-[11px]">{roleLabel(node.role)}</span>
                   <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-white/80 px-2 py-0.5 text-[10px] font-semibold">
                     {node.clientConfirmed ? <CheckCircle2 className="h-3 w-3" /> : <Move className="h-3 w-3" />}
-                    {node.clientConfirmed ? 'Client-confirmed' : 'Draft'} · {node.createdBy === 'advisor' ? 'Advisor' : 'Client'}
+                    {node.partId ? 'Saved' : (node.clientConfirmed ? 'Client-confirmed' : 'Draft')} · {node.createdBy === 'advisor' ? 'Advisor' : 'Client'}
                   </span>
                 </button>
               );
@@ -257,7 +271,7 @@ export default function SharedPartsMapLive({ sessionId, activityState = {}, role
                   <h3 className="font-semibold text-brand-stone-900 dark:text-slate-100">Selected part</h3>
                   <p className="text-xs text-brand-stone-500">Created by {selectedNode.createdBy === 'advisor' ? 'Advisor' : 'Client'}</p>
                 </div>
-                <span className={`rounded-full px-2 py-1 text-[11px] font-semibold ${selectedNode.clientConfirmed ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}`}>{selectedNode.clientConfirmed ? 'Client-confirmed' : 'Draft'}</span>
+                <span className={`rounded-full px-2 py-1 text-[11px] font-semibold ${selectedIsSaved ? 'bg-brand-emerald-100 text-brand-emerald-900' : (selectedNode.clientConfirmed ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800')}`}>{selectedIsSaved ? 'Saved to My Inner System' : (selectedNode.clientConfirmed ? 'Client-confirmed' : 'Draft')}</span>
               </div>
 
               <label className="mt-4 block text-xs font-semibold text-brand-stone-600">Part name</label>
@@ -304,16 +318,34 @@ export default function SharedPartsMapLive({ sessionId, activityState = {}, role
                   <ShieldCheck className="h-4 w-4" /> Confirm this part
                 </button>
               )}
-              {isAdvisor && !selectedNode.clientConfirmed && (
-                <p className="mt-4 rounded-2xl bg-amber-50 p-3 text-xs text-amber-900">Client confirmation required. Advisor suggestions are invitations, not saved conclusions.</p>
+              {!isAdvisor && selectedNode.createdBy === 'advisor' && !selectedIsSaved && (
+                <p className="mt-4 rounded-2xl bg-sky-50 p-3 text-xs text-sky-900">
+                  Your Advisor suggested this part. Only save it if it feels true to you.
+                </p>
+              )}
+
+              {!isAdvisor && selectedNode.clientConfirmed && !selectedIsSaved && (
+                <button type="button" onClick={handleSaveSelected} disabled={busy || !canSaveSelected} className="btn-sanctuary-primary mt-4 w-full justify-center disabled:opacity-50">
+                  <Save className="h-4 w-4" /> Save to My Inner System
+                </button>
+              )}
+              {!isAdvisor && selectedIsSaved && (
+                <p className="mt-4 rounded-2xl bg-emerald-50 p-3 text-xs font-semibold text-emerald-900">Saved to My Inner System</p>
+              )}
+              {!isAdvisor && !selectedNode.clientConfirmed && (
+                <p className="mt-4 rounded-2xl bg-brand-stone-50 p-3 text-xs text-brand-stone-700">Confirm first to save</p>
+              )}
+              {isAdvisor && (
+                <div className="mt-4 rounded-2xl bg-amber-50 p-3 text-xs text-amber-900">
+                  <p>Client confirmation is required before saving.</p>
+                  <p className="mt-1 font-semibold">Only the client can save this to their inner system.</p>
+                  {selectedIsSaved && <p className="mt-1 text-emerald-800">Saved to My Inner System</p>}
+                </div>
               )}
               {canRemoveSelected && (
                 <button type="button" onClick={handleRemoveSelected} disabled={busy} className="mt-3 w-full rounded-2xl border border-red-200 px-4 py-2 text-sm font-semibold text-red-700 hover:bg-red-50 disabled:opacity-50">
                   <Trash2 className="mr-2 inline h-4 w-4" /> Remove draft part
                 </button>
-              )}
-              {!isAdvisor && selectedNode.clientConfirmed && (
-                <p className="mt-4 rounded-2xl bg-emerald-50 p-3 text-xs text-emerald-900">Permanent “Save to My Inner System” is deferred in this phase. This confirmed part stays in the live shared map for now.</p>
               )}
             </div>
           ) : (
