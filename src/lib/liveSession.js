@@ -86,3 +86,19 @@ export function endLiveSession({ sessionId }) {
 export function heartbeatLiveSession({ sessionId, role }) {
   return liveSessionRequest({ action: 'heartbeat', sessionId, role });
 }
+
+export function updateSharedPartsMap({ sessionId, mapUpdate }) {
+  return liveSessionRequest({ action: 'update_shared_map', sessionId, mapUpdate });
+}
+
+export function selectSharedMapNode({ sessionId, nodeId }) {
+  return liveSessionRequest({ action: 'select_map_node', sessionId, nodeId });
+}
+
+export function confirmSharedMapNode({ sessionId, nodeId }) {
+  return liveSessionRequest({ action: 'confirm_map_node', sessionId, nodeId });
+}
+
+export function removeSharedMapNode({ sessionId, nodeId }) {
+  return liveSessionRequest({ action: 'remove_map_node', sessionId, nodeId });
+}

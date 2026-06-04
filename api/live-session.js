@@ -22,10 +22,14 @@ const THERAPIST_ACTIONS = new Set([
   'update_map_draft',
   'suggest_part',
   'update_map_node_position',
-  'suggest_relationship'
+  'suggest_relationship',
+  'update_shared_map',
+  'select_map_node',
+  'confirm_map_node',
+  'remove_map_node'
 ]);
 const READ_ACTIONS = new Set(['get_state', 'get_active_for_client', 'get_map_parts']);
-const CLIENT_CONFIRMATION_ACTIONS = new Set(['update_map_node_position', 'accept_suggestion', 'dismiss_suggestion', 'accept_relationship', 'dismiss_relationship', 'save_confirmed_map']);
+const CLIENT_CONFIRMATION_ACTIONS = new Set(['update_map_node_position', 'accept_suggestion', 'dismiss_suggestion', 'accept_relationship', 'dismiss_relationship', 'save_confirmed_map', 'update_shared_map', 'select_map_node', 'confirm_map_node', 'remove_map_node']);
 const EVENT_TYPES = new Set([
   'session_started',
   'client_joined',
@@ -47,7 +51,7 @@ const SUPPORTED_ACTIVITIES = new Set([
   'window_of_tolerance',
   'feelings_wheel',
   'parts_check_in',
-  // Kept for existing shared map sessions; not shown in the Phase 14A live practice picker.
+  // Phase 14B collaborative Shared Parts Map practice.
   'shared_parts_map'
 ]);
 const STEP_COUNTS = new Map([
@@ -79,13 +83,19 @@ const SOURCE_PRACTICES = new Map([
   ['body_scan', 'Mini Body Scan'],
   ['window_of_tolerance', 'Window of Tolerance Mapping'],
   ['feelings_wheel', 'Needs & Boundaries Reflection'],
-  ['parts_check_in', 'Notice a Part in the Moment']
+  ['parts_check_in', 'Notice a Part in the Moment'],
+  ['shared_parts_map', 'My Inner System / Parts Work']
 ]);
 const MAX_PROMPT_LENGTH = 500;
 const MAX_SUGGESTION_NAME_LENGTH = 100;
 const MAX_SUGGESTION_DESCRIPTION_LENGTH = 500;
+const MAX_SHARED_MAP_NODES = 30;
+const MAX_SHARED_MAP_NAME_LENGTH = 80;
+const MAX_SHARED_MAP_PROMPT_LENGTH = 240;
 const MAP_MODES = new Set(['explore', 'protectors', 'exiles', 'relationships', 'self_energy']);
-const PART_TYPES = new Set(['protector', 'manager', 'firefighter', 'exile', 'self', 'unknown', '']);
+const PART_TYPES = new Set(['protector', 'manager', 'firefighter', 'exile', 'self', 'self-like', 'unknown', '']);
+const SHARED_MAP_ROLES = new Set(['protector', 'manager', 'firefighter', 'exile', 'self-like', 'unknown']);
+const SHARED_MAP_COLORS = new Set(['amber', 'orange', 'emerald', 'green', 'rose', 'sky', 'stone', 'gold']);
 const RELATIONSHIP_TYPES = new Set(['close_to', 'protects', 'concerned_about', 'polarized_with', 'supports', 'needs_space_from', 'unknown']);
 
 function sendError(res, status, message, code = 'live_session_error') {
@@ -114,19 +124,7 @@ function normalizeActivityState(activity, requestedState = {}) {
   }
 
   if (activity === 'shared_parts_map') {
-    const mapMode = MAP_MODES.has(requestedState.mapMode) ? requestedState.mapMode : 'explore';
-    return {
-      activity: 'shared_parts_map',
-      startedAt: new Date().toISOString(),
-      status: 'active',
-      selectedPartId: null,
-      mapMode,
-      advisorPrompt: String(requestedState.advisorPrompt || '').replace(/\s+/g, ' ').trim().slice(0, MAX_PROMPT_LENGTH),
-      pendingSuggestions: [],
-      layoutDraft: sanitizeLayoutDraft(requestedState.layoutDraft || {}),
-      clientConfirmationRequired: true,
-      hasUnsavedConfirmedChanges: false
-    };
+    return normalizeSharedMapState(requestedState);
   }
 
   if (activity !== 'guided_breathing') {
@@ -187,6 +185,119 @@ function normalizeActivityState(activity, requestedState = {}) {
 
 function sanitizeText(value, maxLength) {
   return String(value || '').replace(/\s+/g, ' ').trim().slice(0, maxLength);
+}
+
+function sanitizeSharedMapLocalId(value) {
+  const text = String(value || '').trim();
+  if (!text || text.length > 80 || !/^[A-Za-z0-9_.:-]+$/.test(text)) {
+    throw Object.assign(new Error('Map node id is invalid'), { statusCode: 400, code: 'invalid_map_node_id' });
+  }
+  return text;
+}
+
+function sanitizeSharedMapRole(value) {
+  const role = String(value || '').toLowerCase().trim();
+  return SHARED_MAP_ROLES.has(role) ? role : 'unknown';
+}
+
+function sanitizeSharedMapColor(value) {
+  const color = String(value || '').toLowerCase().trim();
+  return SHARED_MAP_COLORS.has(color) ? color : 'amber';
+}
+
+function sanitizeSharedMapPosition(value, label) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) {
+    throw Object.assign(new Error(`${label} must be a finite number`), { statusCode: 400, code: 'invalid_map_position' });
+  }
+  return Math.min(Math.max(Math.round(number), 0), 100);
+}
+
+function sanitizeSharedMapNode(raw = {}, existingNode = {}, actor = 'client') {
+  const node = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
+  const localId = sanitizeSharedMapLocalId(node.localId || existingNode.localId);
+  const existingCreatedBy = existingNode.createdBy === 'advisor' ? 'advisor' : 'client';
+  const createdBy = node.createdBy === 'advisor' || node.createdBy === 'client' ? node.createdBy : (existingNode.localId ? existingCreatedBy : actor);
+  const name = sanitizeText(node.name ?? existingNode.name ?? 'Unnamed part', MAX_SHARED_MAP_NAME_LENGTH) || 'Unnamed part';
+  const clientConfirmed = Boolean(existingNode.clientConfirmed || node.clientConfirmed === true);
+  return {
+    localId,
+    partId: node.partId ? sanitizePartId(node.partId) : (existingNode.partId || null),
+    name,
+    role: sanitizeSharedMapRole(node.role ?? existingNode.role),
+    color: sanitizeSharedMapColor(node.color ?? existingNode.color),
+    x: sanitizeSharedMapPosition(node.x ?? existingNode.x ?? 50, 'x'),
+    y: sanitizeSharedMapPosition(node.y ?? existingNode.y ?? 50, 'y'),
+    createdBy,
+    status: clientConfirmed ? 'client_confirmed' : 'draft',
+    clientConfirmed,
+    updatedAt: new Date().toISOString(),
+    createdAt: existingNode.createdAt || new Date().toISOString()
+  };
+}
+
+function normalizeSharedMapState(requestedState = {}) {
+  const existingNodes = Array.isArray(requestedState.map?.nodes) ? requestedState.map.nodes : [];
+  const nodes = existingNodes.slice(0, MAX_SHARED_MAP_NODES).map((node) => sanitizeSharedMapNode(node, {}, node.createdBy === 'advisor' ? 'advisor' : 'client'));
+  return {
+    activity: 'shared_parts_map',
+    startedAt: requestedState.startedAt || new Date().toISOString(),
+    status: requestedState.status === 'paused' ? 'paused' : 'active',
+    sourcePractice: sanitizeText(requestedState.sourcePractice || SOURCE_PRACTICES.get('shared_parts_map') || '', 120),
+    map: {
+      nodes,
+      edges: []
+    },
+    selectedNodeId: requestedState.selectedNodeId ? sanitizeSharedMapLocalId(requestedState.selectedNodeId) : null,
+    advisorPrompt: sanitizeText(requestedState.advisorPrompt || '', MAX_SHARED_MAP_PROMPT_LENGTH),
+    clientConfirmationRequired: true,
+    lastAction: sanitizeText(requestedState.lastAction || 'map_started', 80)
+  };
+}
+
+function applySharedMapUpdate(currentState = {}, mapUpdate = {}, actor = 'client') {
+  const current = normalizeSharedMapState(currentState.activity === 'shared_parts_map' ? currentState : {});
+  const update = mapUpdate && typeof mapUpdate === 'object' && !Array.isArray(mapUpdate) ? mapUpdate : {};
+  const currentById = new Map(current.map.nodes.map((node) => [String(node.localId), node]));
+  const incomingNodes = Array.isArray(update.map?.nodes) ? update.map.nodes : (Array.isArray(update.nodes) ? update.nodes : null);
+  const rawNodes = incomingNodes || current.map.nodes;
+  if (rawNodes.length > MAX_SHARED_MAP_NODES) {
+    throw Object.assign(new Error(`Shared Parts Map can include up to ${MAX_SHARED_MAP_NODES} parts`), { statusCode: 400, code: 'too_many_map_nodes' });
+  }
+  const nodes = rawNodes.map((rawNode) => {
+    const localId = sanitizeSharedMapLocalId(rawNode.localId);
+    const existing = currentById.get(localId) || {};
+    if (actor === 'advisor' && existing.clientConfirmed) {
+      return existing;
+    }
+    const safeNode = sanitizeSharedMapNode(rawNode, existing, actor);
+    if (actor === 'advisor') {
+      safeNode.clientConfirmed = Boolean(existing.clientConfirmed);
+      safeNode.status = safeNode.clientConfirmed ? 'client_confirmed' : 'draft';
+      safeNode.createdBy = existing.localId ? existing.createdBy : 'advisor';
+    } else if (actor === 'client') {
+      safeNode.createdBy = existing.localId ? existing.createdBy : 'client';
+      if (!existing.clientConfirmed && rawNode.clientConfirmed !== true) {
+        safeNode.clientConfirmed = false;
+        safeNode.status = 'draft';
+      }
+    }
+    return safeNode;
+  });
+  const selectedNodeId = update.selectedNodeId !== undefined
+    ? (update.selectedNodeId ? sanitizeSharedMapLocalId(update.selectedNodeId) : null)
+    : current.selectedNodeId;
+  if (selectedNodeId && !nodes.some((node) => node.localId === selectedNodeId)) {
+    throw Object.assign(new Error('Selected map node was not found'), { statusCode: 404, code: 'map_node_not_found' });
+  }
+  return {
+    ...current,
+    map: { nodes, edges: [] },
+    selectedNodeId,
+    advisorPrompt: update.advisorPrompt !== undefined ? sanitizeText(update.advisorPrompt, MAX_SHARED_MAP_PROMPT_LENGTH) : current.advisorPrompt,
+    lastAction: sanitizeText(update.lastAction || 'map_updated', 80),
+    updatedAt: new Date().toISOString()
+  };
 }
 
 function sanitizePartId(value, label = 'partId') {
@@ -891,6 +1002,104 @@ async function saveConfirmedMap(user, body) {
   return publicSession(rows[0]);
 }
 
+async function updateSharedMap(user, body) {
+  const session = await getSession(requireUuid(body.sessionId, 'sessionId'));
+  await assertCanAccessSession(user, session);
+  ensureSharedMapActivity(session);
+  if (session.status === 'ended') throw Object.assign(new Error('Live session has ended'), { statusCode: 400, code: 'session_ended' });
+  const actor = user.user_role === 'client' ? 'client' : 'advisor';
+  const nextState = applySharedMapUpdate(session.activity_state || {}, body.mapUpdate || {}, actor);
+  const rows = await sql`
+    UPDATE ifs_live_sessions
+    SET activity_state = ${JSON.stringify(nextState)}::jsonb,
+        updated_at = CURRENT_TIMESTAMP,
+        therapist_last_seen_at = CASE WHEN ${actor === 'advisor'} THEN CURRENT_TIMESTAMP ELSE therapist_last_seen_at END,
+        client_last_seen_at = CASE WHEN ${actor === 'client'} THEN CURRENT_TIMESTAMP ELSE client_last_seen_at END
+    WHERE id = ${session.id}
+    RETURNING *
+  `;
+  await recordEvent(rows[0], 'prompt_sent', { eventName: 'map_node_updated', actor, nodeCount: nextState.map.nodes.length });
+  return publicSession(rows[0]);
+}
+
+async function selectMapNode(user, body) {
+  const session = await getSession(requireUuid(body.sessionId, 'sessionId'));
+  await assertCanAccessSession(user, session);
+  ensureSharedMapActivity(session);
+  const nodeId = body.nodeId ? sanitizeSharedMapLocalId(body.nodeId) : null;
+  const state = normalizeSharedMapState(session.activity_state || {});
+  if (nodeId && !state.map.nodes.some((node) => node.localId === nodeId)) {
+    throw Object.assign(new Error('Selected map node was not found'), { statusCode: 404, code: 'map_node_not_found' });
+  }
+  const nextState = { ...state, selectedNodeId: nodeId, selectedAt: new Date().toISOString(), lastAction: 'part_selected' };
+  const rows = await sql`
+    UPDATE ifs_live_sessions
+    SET activity_state = ${JSON.stringify(nextState)}::jsonb, updated_at = CURRENT_TIMESTAMP
+    WHERE id = ${session.id}
+    RETURNING *
+  `;
+  await recordEvent(rows[0], 'prompt_sent', { eventName: 'map_node_selected', nodeId });
+  return publicSession(rows[0]);
+}
+
+async function confirmMapNode(user, body) {
+  const session = await getSession(requireUuid(body.sessionId, 'sessionId'));
+  await assertCanAccessSession(user, session);
+  ensureSharedMapActivity(session);
+  if (user.user_role !== 'client' || String(user.id) !== String(session.client_id)) {
+    throw Object.assign(new Error('Client confirmation is required'), { statusCode: 403, code: 'client_confirmation_required' });
+  }
+  const nodeId = sanitizeSharedMapLocalId(body.nodeId);
+  const state = normalizeSharedMapState(session.activity_state || {});
+  let found = false;
+  const nodes = state.map.nodes.map((node) => {
+    if (node.localId !== nodeId) return node;
+    found = true;
+    return { ...node, clientConfirmed: true, status: 'client_confirmed', confirmedAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+  });
+  if (!found) throw Object.assign(new Error('Map node was not found'), { statusCode: 404, code: 'map_node_not_found' });
+  const nextState = { ...state, map: { nodes, edges: [] }, selectedNodeId: nodeId, lastAction: 'part_confirmed', updatedAt: new Date().toISOString() };
+  const rows = await sql`
+    UPDATE ifs_live_sessions
+    SET activity_state = ${JSON.stringify(nextState)}::jsonb,
+        client_last_seen_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+    WHERE id = ${session.id}
+    RETURNING *
+  `;
+  await recordEvent(rows[0], 'prompt_sent', { eventName: 'map_node_confirmed', nodeId });
+  return publicSession(rows[0]);
+}
+
+async function removeMapNode(user, body) {
+  const session = await getSession(requireUuid(body.sessionId, 'sessionId'));
+  await assertCanAccessSession(user, session);
+  ensureSharedMapActivity(session);
+  const actor = user.user_role === 'client' ? 'client' : 'advisor';
+  const nodeId = sanitizeSharedMapLocalId(body.nodeId);
+  const state = normalizeSharedMapState(session.activity_state || {});
+  const node = state.map.nodes.find((item) => item.localId === nodeId);
+  if (!node) throw Object.assign(new Error('Map node was not found'), { statusCode: 404, code: 'map_node_not_found' });
+  if (node.clientConfirmed && actor !== 'client' && !isAdminUser(user)) {
+    throw Object.assign(new Error('Confirmed parts can only be removed by the client'), { statusCode: 403, code: 'client_confirmation_required' });
+  }
+  if (!node.clientConfirmed && actor === 'advisor' && node.createdBy !== 'advisor' && !isAdminUser(user)) {
+    throw Object.assign(new Error('Advisor can only remove Advisor-created draft parts'), { statusCode: 403, code: 'map_node_remove_denied' });
+  }
+  const nodes = state.map.nodes.filter((item) => item.localId !== nodeId);
+  const nextState = { ...state, map: { nodes, edges: [] }, selectedNodeId: state.selectedNodeId === nodeId ? null : state.selectedNodeId, lastAction: 'part_removed', updatedAt: new Date().toISOString() };
+  const rows = await sql`
+    UPDATE ifs_live_sessions
+    SET activity_state = ${JSON.stringify(nextState)}::jsonb,
+        updated_at = CURRENT_TIMESTAMP,
+        therapist_last_seen_at = CASE WHEN ${actor === 'advisor'} THEN CURRENT_TIMESTAMP ELSE therapist_last_seen_at END,
+        client_last_seen_at = CASE WHEN ${actor === 'client'} THEN CURRENT_TIMESTAMP ELSE client_last_seen_at END
+    WHERE id = ${session.id}
+    RETURNING *
+  `;
+  await recordEvent(rows[0], 'prompt_sent', { eventName: 'map_node_removed', nodeId, actor });
+  return publicSession(rows[0]);
+}
+
 async function endSession(user, body) {
   const session = await getSession(requireUuid(body.sessionId, 'sessionId'));
   await assertTherapistControl(user, session);
@@ -983,6 +1192,10 @@ export default async function handler(req, res) {
       accept_relationship: () => updateSuggestionStatus(user, body, 'accepted'),
       dismiss_relationship: () => updateSuggestionStatus(user, body, 'dismissed'),
       save_confirmed_map: () => saveConfirmedMap(user, body),
+      update_shared_map: () => updateSharedMap(user, body),
+      select_map_node: () => selectMapNode(user, body),
+      confirm_map_node: () => confirmMapNode(user, body),
+      remove_map_node: () => removeMapNode(user, body),
       end_session: () => endSession(user, body),
       heartbeat: () => heartbeat(user, body)
     };
