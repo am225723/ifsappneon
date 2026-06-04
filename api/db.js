@@ -273,7 +273,7 @@ async function assertTagsBelongToClients(clientIds, rows) {
 
   const partIds = extractTagIds(rows.flatMap((row) => row?.tagged_parts || []));
   if (partIds.length) {
-    const partRows = await sql.query('SELECT id, client_id FROM ifs_parts WHERE id = ANY($1::uuid[])', [partIds]);
+    const partRows = await sql.query('SELECT id, client_id FROM ifs_parts WHERE id = ANY($1::text[])', [partIds]);
     if (partRows.length !== partIds.length || partRows.some((row) => !ids.includes(String(row.client_id)))) {
       throw Object.assign(new Error('Tagged parts must belong to the selected assigned client'), { statusCode: 403 });
     }
@@ -300,8 +300,8 @@ async function assertRelationshipPartsBelongToClient(rows) {
     if (String(fromPartId) === String(toPartId)) {
       throw Object.assign(new Error('Relationship must connect two different parts'), { statusCode: 400 });
     }
-    const partRows = await sql.query('SELECT id, client_id FROM ifs_parts WHERE id = ANY($1::uuid[])', [[fromPartId, toPartId]]);
-    if (partRows.length !== 2 || partRows.some((part) => String(part.client_id) !== String(clientId))) {
+    const partRows = await sql.query('SELECT id, client_id FROM ifs_parts WHERE client_id = $1 AND id = ANY($2::text[])', [clientId, [fromPartId, toPartId].map(String)]);
+    if (partRows.length !== 2) {
       throw Object.assign(new Error('Relationship parts must belong to the selected client'), { statusCode: 403 });
     }
     const type = row.relationship_type || 'unknown';
