@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, ArrowRight, Check, Heart, Lock, Share2 } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Check, Heart, Lock, PenLine, Share2 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { saveLifeIntegrationReflection } from '../../lib/lifeIntegration';
+import { clientAuth } from '../../lib/supabasePersonalization';
 
 const emptyForm = {
   situation: '',
@@ -17,7 +18,7 @@ const emptyForm = {
 };
 
 function getClientId() {
-  return localStorage.getItem('client_id');
+  return clientAuth.getCurrentClient()?.id || localStorage.getItem('client_id');
 }
 
 function Field({ field, value, onChange }) {
@@ -157,7 +158,7 @@ export default function LifePracticeShell({ type, config }) {
             <div className="p-6 sm:p-8">
               <div className="mb-5">
                 <h2 className="text-xl font-semibold text-brand-stone-900 dark:text-slate-100">Optional reflection</h2>
-                <p className="mt-2 text-sm leading-relaxed text-brand-stone-600 dark:text-slate-400">Write only what helps. You can save this as a private Life Integration reflection.</p>
+                <p className="mt-2 text-sm leading-relaxed text-brand-stone-600 dark:text-slate-400">Write only what helps. You can save this as a private Life Integration reflection, or skip writing and keep practicing offline.</p>
               </div>
 
               <div className="space-y-4">
@@ -195,9 +196,31 @@ export default function LifePracticeShell({ type, config }) {
                 {error && <p className="rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-700 dark:bg-red-950/20 dark:text-red-300">{error}</p>}
                 {saved && <p className="rounded-2xl bg-brand-emerald-50 px-4 py-3 text-sm font-semibold text-brand-emerald-700 dark:bg-brand-emerald-950/30 dark:text-brand-emerald-100"><Check className="mr-2 inline h-4 w-4" />Reflection saved.</p>}
 
-                <button type="button" onClick={handleSave} disabled={saving} className="btn-sanctuary-primary w-full justify-center disabled:opacity-60">
-                  {saving ? 'Saving…' : 'Save reflection'}
-                </button>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <button type="button" onClick={handleSave} disabled={saving} className="btn-sanctuary-primary justify-center disabled:opacity-60">
+                    {saving ? 'Saving…' : 'Save reflection'}
+                  </button>
+                  <Link to="/life-integration" className="btn-sanctuary-secondary justify-center">
+                    Skip writing
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="mt-6 rounded-3xl border border-brand-stone-100 bg-white/75 p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900/45">
+          <div className="flex items-start gap-3">
+            <PenLine className="mt-1 h-5 w-5 shrink-0 text-brand-gold-700 dark:text-brand-gold-500" />
+            <div>
+              <h2 className="text-base font-semibold text-brand-stone-900 dark:text-slate-100">Keep going gently</h2>
+              <p className="mt-1 text-sm leading-relaxed text-brand-stone-600 dark:text-slate-400">This Daily Life Practice can connect back into your IFS Path and the tools you already use.</p>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <Link to="/curriculum" className="rounded-full bg-brand-emerald-50 px-3 py-1.5 text-xs font-semibold text-brand-emerald-700 transition hover:bg-brand-emerald-100 dark:bg-brand-emerald-950/30 dark:text-brand-emerald-100">Continue Curriculum</Link>
+                <Link to="/journal" className="rounded-full bg-brand-gold-50 px-3 py-1.5 text-xs font-semibold text-brand-gold-700 transition hover:bg-brand-gold-100 dark:bg-brand-gold-950/30 dark:text-brand-gold-500">Open Journal</Link>
+                {(config.relatedLinks || []).map((link) => (
+                  <Link key={`${link.label}-${link.to}`} to={link.to} className="rounded-full bg-brand-stone-100 px-3 py-1.5 text-xs font-semibold text-brand-stone-700 transition hover:bg-brand-stone-200 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700">{link.label}</Link>
+                ))}
               </div>
             </div>
           </div>

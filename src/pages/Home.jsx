@@ -457,6 +457,16 @@ const Home = ({ clientId, client, mode = 'home', selfProfile = null, selfProfile
     { to: '/weekly-reflection', icon: CalendarCheck, title: 'Weekly Reflection', description: 'Look back gently at curriculum, parts work, and daily practice.', buttonLabel: 'Reflect on Week', tone: 'emerald' }
   ];
 
+  const lifeIntegrationTiles = [
+    { to: '/life-integration', icon: Sparkles, title: 'IFS in Daily Life', description: 'Short Life Integration practices for using IFS in real moments between curriculum modules.', buttonLabel: 'Open Toolkit', tone: 'emerald' },
+    { to: '/life-integration/notice-part', icon: Smile, title: 'Notice a Part in the Moment', description: 'Pause, identify what part is showing up, and choose one gentle next step.', buttonLabel: 'Notice a Part', tone: 'gold' },
+    { to: '/life-integration/return-to-self', icon: Sun, title: 'Return to Self-Energy', description: 'Invite unblending and reconnect with calm, curiosity, compassion, or another Self-energy quality.', buttonLabel: 'Return to Self', tone: 'emerald' },
+    { to: '/life-integration/trigger-reflection', icon: Feather, title: 'Reflect on a Trigger', description: 'Explore what happened lightly, which parts reacted, and what they may need.', buttonLabel: 'Reflect Gently', tone: 'stone' },
+    { to: '/life-integration/repair-after-conflict', icon: Heart, title: 'Repair After Conflict', description: 'Understand activated parts and choose one repair, boundary, or honest communication.', buttonLabel: 'Explore Repair', tone: 'gold' },
+    { to: '/life-integration/protector-check-in', icon: ShieldCheck, title: 'Protector Check-In', description: 'Appreciate a protector and ask what it needs from you today.', buttonLabel: 'Check In', tone: 'emerald' },
+    { to: '/life-integration/needs-boundaries', icon: Compass, title: 'Needs & Boundaries Reflection', description: 'Notice what need or boundary a part may be trying to express.', buttonLabel: 'Name Needs', tone: 'stone' }
+  ];
+
   const advisorTiles = [
     { to: '/assigned-practices', icon: BookOpen, title: 'Assigned by My Advisor', description: 'IFS practices and reflections shared by your Advisor.', buttonLabel: 'View Assigned Practices', badge: activeAssignedPractice ? 'Active' : null, tone: 'gold' },
     { to: '/pre-session-checkin', icon: CalendarCheck, title: 'Pre-Session Check-In', description: 'Prepare for your next Advisor session by naming what feels important.', buttonLabel: agendaSummary.hasDraft ? 'Continue Check-In' : 'Start Check-In', badge: agendaSummary.lastSubmitted ? `Last ${new Date(agendaSummary.lastSubmitted).toLocaleDateString()}` : null, tone: 'emerald' },
@@ -655,6 +665,13 @@ const Home = ({ clientId, client, mode = 'home', selfProfile = null, selfProfile
         <SectionHeader title="Tools to Support Your IFS Path" subtitle="Use these when a module invites reflection, parts work, grounding, or deeper understanding." />
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
           {curriculumSupportTiles.map((tile) => <ClientHomeTile key={tile.title} {...tile} />)}
+        </div>
+      </section>
+
+      <section className="mb-14">
+        <SectionHeader title="Life Integration" subtitle="Use these short Daily Life Practice tools between modules and outside the app. They support your IFS Path without replacing it." />
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {lifeIntegrationTiles.map((tile) => <ClientHomeTile key={tile.title} {...tile} />)}
         </div>
       </section>
 
