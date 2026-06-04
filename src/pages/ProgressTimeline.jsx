@@ -24,7 +24,7 @@ function generateSampleMilestones() {
     { id: 1, date: new Date(now - 30 * 86400000).toISOString(), type: 'module', title: 'Started Your IFS Journey', description: 'Completed Module 1: Introduction to Internal Family Systems. Learned about the concept of parts and the Self.', details: 'Key takeaway: Everyone has parts, and all parts have positive intentions.' },
     { id: 2, date: new Date(now - 28 * 86400000).toISOString(), type: 'journal', title: 'First Journal Entry', description: 'Reflected on initial feelings about starting the IFS journey.', details: 'Wrote about noticing a protector part that feels skeptical about therapy.' },
     { id: 3, date: new Date(now - 26 * 86400000).toISOString(), type: 'exercise', title: 'Parts Awareness Exercise', description: 'Completed the "Noticing Your Parts" meditation exercise.', details: 'Identified 3 parts: an inner critic, a people-pleaser, and a vulnerable child part.' },
-    { id: 4, date: new Date(now - 24 * 86400000).toISOString(), type: 'assessment', title: 'Initial Self-Assessment', description: 'Completed the baseline Parts Awareness assessment.', details: 'Score: 45/100 on Self-energy awareness. Areas for growth: unblending from protector parts.' },
+    { id: 4, date: new Date(now - 24 * 86400000).toISOString(), type: 'assessment', title: 'Initial Self-Assessment', description: 'Completed the baseline Parts Awareness assessment.', details: 'Early Self-energy snapshot: growing awareness around unblending from protector parts.' },
     { id: 5, date: new Date(now - 22 * 86400000).toISOString(), type: 'module', title: 'Understanding Protectors', description: 'Completed Module 2: Firefighters and Managers. Learned about protective parts.', details: 'Discovered how manager parts try to keep control and firefighters react to overwhelm.' },
     { id: 6, date: new Date(now - 20 * 86400000).toISOString(), type: 'journal', title: 'Protector Dialogue', description: 'Journaled a dialogue with an inner critic protector part.', details: 'The inner critic revealed it was trying to protect from rejection by pushing for perfection.' },
     { id: 7, date: new Date(now - 18 * 86400000).toISOString(), type: 'badge', title: 'First Week Complete', description: 'Earned the "Brave Beginning" badge for completing your first week.', details: 'Completed 2 modules, 2 journal entries, and 1 exercise in your first week.' },
@@ -32,7 +32,7 @@ function generateSampleMilestones() {
     { id: 9, date: new Date(now - 14 * 86400000).toISOString(), type: 'module', title: 'Meeting Your Exiles', description: 'Completed Module 3: Understanding Exile Parts and their burdens.', details: 'Learned about how exiles carry pain and how protectors try to keep them hidden.' },
     { id: 10, date: new Date(now - 12 * 86400000).toISOString(), type: 'journal', title: 'Exile Awareness', description: 'Wrote about a childhood memory that may be connected to an exile part.', details: 'Noticed feelings of sadness and loneliness connected to a younger part.' },
     { id: 11, date: new Date(now - 10 * 86400000).toISOString(), type: 'exercise', title: 'Unblending Practice', description: 'Practiced the unblending technique to separate from intense emotions.', details: 'Successfully created space between Self and an anxious protector part.' },
-    { id: 12, date: new Date(now - 8 * 86400000).toISOString(), type: 'assessment', title: 'Mid-Journey Check-in', description: 'Completed the mid-point Self-energy assessment.', details: 'Score improved to 62/100. Notable growth in recognizing parts and accessing curiosity.' },
+    { id: 12, date: new Date(now - 8 * 86400000).toISOString(), type: 'assessment', title: 'Mid-Journey Check-in', description: 'Completed the mid-point Self-energy assessment.', details: 'Notable growth in recognizing parts and accessing curiosity.' },
     { id: 13, date: new Date(now - 6 * 86400000).toISOString(), type: 'badge', title: 'Consistent Explorer', description: 'Earned the "Consistent Explorer" badge for 3 weeks of engagement.', details: 'Maintained regular practice with modules, journaling, and exercises.' },
     { id: 14, date: new Date(now - 4 * 86400000).toISOString(), type: 'module', title: 'The Unburdening Process', description: 'Completed Module 4: How parts release their burdens through Self-leadership.', details: 'Understood the steps of witnessing, retrieving, and unburdening exile parts.' },
     { id: 15, date: new Date(now - 3 * 86400000).toISOString(), type: 'journal', title: 'Gratitude for Parts', description: 'Wrote a gratitude letter to protector parts for their service.', details: 'Expressed appreciation to the inner critic for trying to keep you safe all these years.' },
@@ -117,7 +117,7 @@ export default function ProgressTimeline() {
           </div>
           <div>
             <h1 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Your Healing Journey</h1>
-            <p className={`text-sm ${isDark ? 'text-slate-400' : 'text-gray-500'}`}>Track your progress and celebrate milestones</p>
+            <p className={`text-sm ${isDark ? 'text-slate-400' : 'text-gray-500'}`}>Notice curriculum, assessments, parts work, and reflections over time</p>
           </div>
         </div>
       </div>
@@ -126,7 +126,7 @@ export default function ProgressTimeline() {
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className={`font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>My Healing Timeline</h2>
-            <p className={`text-sm ${isDark ? 'text-slate-400' : 'text-gray-600'}`}>Open the client-safe timeline for milestones from parts work, check-ins, homework, goals, and reflections.</p>
+            <p className={`text-sm ${isDark ? 'text-slate-400' : 'text-gray-600'}`}>Open a gentle timeline for milestones from your curriculum, parts work, check-ins, assigned IFS practices, and reflections.</p>
           </div>
           <Link to="/healing-timeline" className="inline-flex items-center justify-center rounded-xl bg-amber-600 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-700">
             View Timeline

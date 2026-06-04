@@ -67,7 +67,7 @@ export default function MyIFSWork({ currentClient }) {
           </div>
           {isAdminModeUser && (
             <p className="mt-5 rounded-2xl bg-brand-stone-100 px-4 py-3 text-xs text-brand-stone-600 dark:bg-slate-900/50 dark:text-slate-400">
-              Admin/advisor note: if your self-work data is stored in a separate client row, manually verify the correct row and link it by Clerk user ID or verified email before using this workspace. Name-only matching is intentionally not used.
+              Advisor/Admin note: if your personal self-work lives in a separate profile, verify the correct profile connection before using this workspace. Name-only matching is intentionally not used.
             </p>
           )}
         </div>

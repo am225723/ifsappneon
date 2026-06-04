@@ -210,14 +210,13 @@ const Profile = ({ client }) => {
     report += `Client: ${client?.name || 'Anonymous'}\n\n`;
 
     if (assessment) {
-      report += `WOUND ASSESSMENT RESULTS\n${'-'.repeat(30)}\n`;
+      report += `WOUND PATTERNS ASSESSMENT\n${'-'.repeat(30)}\n`;
       const scores = assessment.scores || {};
       Object.entries(scores).forEach(([wound, score]) => {
         const intensity = getIntensityLevel(score);
-        const bar = '█'.repeat(Math.round(score / 25 * 20)) + '░'.repeat(20 - Math.round(score / 25 * 20));
-        report += `${wound.charAt(0).toUpperCase() + wound.slice(1)}: ${score}/25 (${intensity.level})\n  [${bar}]\n`;
+        report += `${wound.charAt(0).toUpperCase() + wound.slice(1)}: ${intensity.level} theme\n`;
       });
-      report += `\nAssessment Date: ${formatDate(assessment.created_at)}\n\n`;
+      report += `\nCompleted: ${formatDate(assessment.created_at)}\n\n`;
     }
 
     if (streakData.currentStreak) {
@@ -259,7 +258,7 @@ const Profile = ({ client }) => {
     }
 
     report += `${'='.repeat(55)}\n`;
-    report += `This report is for personal use and therapist review.\n`;
+    report += `This report is for personal reflection and optional Advisor review.\n`;
     report += `For crisis support: 988 Suicide & Crisis Lifeline\n`;
 
     const blob = new Blob([report], { type: 'text/plain' });
@@ -296,7 +295,7 @@ const Profile = ({ client }) => {
       <div className="min-h-screen flex items-center justify-center">
         <div className="flex items-center gap-3 text-amber-600">
           <RefreshCw className="w-6 h-6 animate-spin" />
-          <span className="text-lg">Loading your profile...</span>
+          <span className="text-lg">Loading your assessments and progress…</span>
         </div>
       </div>
     );
@@ -338,7 +337,7 @@ const Profile = ({ client }) => {
                 </div>
                 <div>
                   <h1 className="text-xl sm:text-2xl font-bold">{client?.name || 'Your Profile'}</h1>
-                  <p className="text-amber-100">IFS Healing Journey</p>
+                  <p className="text-amber-100">Assessments & Progress</p>
                 </div>
               </div>
             </div>
@@ -347,7 +346,7 @@ const Profile = ({ client }) => {
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
                 <h2 className="text-xl font-semibold text-brand-stone-900 dark:text-slate-100 flex items-center gap-2">
                   <Heart className="w-5 h-5 text-emerald-500" />
-                  Wound Assessment Results
+                  Wound Patterns Assessment
                 </h2>
                 <div className="no-print flex gap-2">
                   <button
@@ -370,27 +369,27 @@ const Profile = ({ client }) => {
               {!assessment ? (
                 <div className="text-center py-12 bg-brand-stone-50 dark:bg-slate-800/50 rounded-xl">
                   <AlertCircle className="w-12 h-12 text-brand-stone-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-brand-stone-700 dark:text-slate-300 mb-2">No Assessment Found</h3>
-                  <p className="text-brand-stone-500 dark:text-slate-500 mb-4">You haven't completed the wound assessment yet.</p>
+                  <h3 className="text-lg font-medium text-brand-stone-700 dark:text-slate-300 mb-2">No assessment yet</h3>
+                  <p className="text-brand-stone-500 dark:text-slate-500 mb-4">Start with an assessment when you are ready. Your assessments help personalize how the curriculum supports your parts work.</p>
                   <button
                     onClick={() => navigate('/assessments')}
                     className="no-print px-6 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors"
                   >
-                    Take Assessment
+                    Start Assessment
                   </button>
                 </div>
               ) : (
                 <>
                   <div className="flex items-center gap-2 text-sm text-brand-stone-500 dark:text-slate-500 mb-6">
                     <Calendar className="w-4 h-4" />
-                    Assessment Date: {formatDate(assessment.assessment_date || assessment.created_at)}
+                    Completed: {formatDate(assessment.assessment_date || assessment.created_at)}
                   </div>
 
                   <div className="grid md:grid-cols-2 gap-6 mb-8">
                     <div className={`p-6 rounded-xl ${woundColors[assessment.primary_wound]?.bg || 'bg-brand-stone-100 dark:bg-slate-800/60'} border-2 ${woundColors[assessment.primary_wound]?.border || 'border-brand-stone-200'}`}>
                       <div className="flex items-center gap-2 mb-2">
                         <Shield className="w-5 h-5" />
-                        <span className="text-sm font-medium uppercase tracking-wide">Primary Wound</span>
+                        <span className="text-sm font-medium uppercase tracking-wide">Primary Pattern</span>
                       </div>
                       <h3 className={`text-2xl font-bold capitalize mb-2 ${woundColors[assessment.primary_wound]?.text || 'text-brand-stone-700 dark:text-slate-300'}`}>
                         {assessment.primary_wound}
@@ -404,7 +403,7 @@ const Profile = ({ client }) => {
                       <div className={`p-6 rounded-xl ${woundColors[assessment.secondary_wound]?.bg || 'bg-brand-stone-100 dark:bg-slate-800/60'} border-2 ${woundColors[assessment.secondary_wound]?.border || 'border-brand-stone-200'}`}>
                         <div className="flex items-center gap-2 mb-2">
                           <Shield className="w-5 h-5" />
-                          <span className="text-sm font-medium uppercase tracking-wide">Secondary Wound</span>
+                          <span className="text-sm font-medium uppercase tracking-wide">Secondary Pattern</span>
                         </div>
                         <h3 className={`text-2xl font-bold capitalize mb-2 ${woundColors[assessment.secondary_wound]?.text || 'text-brand-stone-700 dark:text-slate-300'}`}>
                           {assessment.secondary_wound}
@@ -418,7 +417,7 @@ const Profile = ({ client }) => {
 
                   <h3 className="text-lg font-semibold text-brand-stone-900 dark:text-slate-100 mb-4 flex items-center gap-2">
                     <TrendingUp className="w-5 h-5 text-stone-500" />
-                    Detailed Scores
+                    Pattern overview
                   </h3>
 
                   <div className="space-y-4 mb-8">
@@ -434,8 +433,7 @@ const Profile = ({ client }) => {
                           <div className="flex justify-between items-center mb-2">
                             <span className={`font-medium capitalize ${colors.text}`}>{wound}</span>
                             <div className="flex items-center gap-3">
-                              <span className={`text-sm font-medium ${intensity.color}`}>{intensity.level}</span>
-                              <span className="font-bold text-brand-stone-700 dark:text-slate-300">{score}/25</span>
+                              <span className={`text-sm font-semibold ${intensity.color}`}>{intensity.level} theme</span>
                             </div>
                           </div>
                           <div className="w-full bg-brand-stone-200 dark:bg-slate-700 rounded-full h-3">
@@ -450,12 +448,9 @@ const Profile = ({ client }) => {
                   </div>
 
                   <div className="bg-gradient-to-r from-amber-50 to-stone-50 rounded-xl p-6 border border-amber-200">
-                    <h3 className="font-semibold text-amber-800 mb-3">What This Means For Your Healing</h3>
+                    <h3 className="font-semibold text-amber-800 mb-3">How this can support your IFS path</h3>
                     <p className="text-brand-stone-700 dark:text-slate-300 leading-relaxed">
-                      Your assessment reveals that <strong className="text-amber-700">{assessment.primary_wound}</strong> is 
-                      your primary area for healing work. This doesn't define you—it simply shows where your inner child 
-                      may need the most attention and compassion. Your curriculum has been personalized to address these 
-                      patterns with targeted exercises and IFS techniques.
+                      Your assessment points to <strong className="text-amber-700">{assessment.primary_wound}</strong> themes as a place for extra compassion and curiosity. This does not define you; it helps the curriculum offer more relevant parts work, reflection, and Self-energy practices.
                     </p>
                   </div>
                 </>
@@ -496,7 +491,7 @@ const Profile = ({ client }) => {
                                 {percentage >= 66 ? 'High' : percentage >= 33 ? 'Moderate' : 'Low'}
                               </span>
                               <span className="font-bold text-brand-stone-700 dark:text-slate-300">
-                                {data.average?.toFixed(1) || (data.total / data.count).toFixed(1)}/{data.maxScale || 5}
+                                {level}
                               </span>
                             </div>
                           </div>
@@ -551,7 +546,7 @@ const Profile = ({ client }) => {
                 {identifiedParts.length === 0 && (
                   <div className="bg-brand-stone-100 rounded-xl p-6 border border-brand-stone-200 text-center">
                     <Shield className="w-8 h-8 text-brand-stone-400 mx-auto mb-2" />
-                    <p className="text-sm text-brand-stone-600">No strongly active protective parts identified from this assessment</p>
+                    <p className="text-sm text-brand-stone-600">No strongly active protective parts were identified from this assessment. You can return later as your awareness grows.</p>
                   </div>
                 )}
               </div>
@@ -585,9 +580,6 @@ const Profile = ({ client }) => {
                             <span className="font-medium capitalize text-brand-stone-700 dark:text-slate-300">{category}</span>
                             <div className="flex items-center gap-3">
                               <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${levelStyle}`}>{level}</span>
-                              <span className="font-bold text-brand-stone-700 dark:text-slate-300">
-                                {data.average?.toFixed(1) || (data.total / data.count).toFixed(1)}/{data.maxScale || 5}
-                              </span>
                             </div>
                           </div>
                           <div className="w-full bg-brand-stone-200 dark:bg-slate-700 rounded-full h-3">
@@ -601,7 +593,7 @@ const Profile = ({ client }) => {
                 <div className="bg-emerald-50 rounded-xl p-6 border border-emerald-200">
                   <h3 className="font-semibold text-emerald-800 mb-3">Understanding Self-Energy</h3>
                   <p className="text-brand-stone-700 dark:text-slate-300 leading-relaxed">
-                    Self-energy reflects your connection to qualities like curiosity, compassion, and calm. Higher scores indicate stronger access to your core Self, which is the foundation for healing in IFS therapy.
+                    Self-energy reflects your connection to qualities like curiosity, compassion, and calm. Treat these results as a gentle snapshot of which Self qualities feel available now and which may want more practice.
                   </p>
                 </div>
               </div>
@@ -613,7 +605,7 @@ const Profile = ({ client }) => {
               <div className="p-4 sm:p-8">
                 <h2 className="text-xl font-semibold text-brand-stone-900 dark:text-slate-100 flex items-center gap-2 mb-6">
                   <Users className="w-5 h-5 text-brand-gold-700" />
-                  Attachment Style Assessment
+                  Attachment Pattern Assessment
                 </h2>
                 {attachmentAssessment.completedAt && (
                   <div className="flex items-center gap-2 text-sm text-brand-stone-500 dark:text-slate-500 mb-6">
@@ -634,11 +626,8 @@ const Profile = ({ client }) => {
                           <div className="flex justify-between items-center mb-2">
                             <span className="font-medium text-brand-stone-700 dark:text-slate-300">{styleLabels[category] || category}</span>
                             <div className="flex items-center gap-3">
-                              {idx === 0 && <span className="text-xs px-2 py-0.5 rounded-full font-semibold bg-brand-gold-50 text-brand-gold-700">Primary Style</span>}
+                              {idx === 0 && <span className="text-xs px-2 py-0.5 rounded-full font-semibold bg-brand-gold-50 text-brand-gold-700">Primary Pattern</span>}
                               <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${levelStyle}`}>{level}</span>
-                              <span className="font-bold text-brand-stone-700 dark:text-slate-300">
-                                {data.average?.toFixed(1) || (data.total / data.count).toFixed(1)}/5
-                              </span>
                             </div>
                           </div>
                           <div className="w-full bg-brand-stone-200 dark:bg-slate-700 rounded-full h-3">
@@ -650,9 +639,9 @@ const Profile = ({ client }) => {
                   </div>
                 )}
                 <div className="bg-brand-gold-50 rounded-xl p-6 border border-brand-gold-100">
-                  <h3 className="font-semibold text-brand-gold-700 mb-3">Understanding Attachment Styles</h3>
+                  <h3 className="font-semibold text-brand-gold-700 mb-3">Understanding Attachment Patterns</h3>
                   <p className="text-brand-stone-700 dark:text-slate-300 leading-relaxed">
-                    Your attachment style reflects patterns learned in early relationships. Most people have a blend of styles. Understanding your dominant pattern helps you recognize relationship cycles and develop more secure connections through IFS work in Module 9.
+                    Your attachment patterns reflect learned ways of seeking closeness, safety, and independence. Most people have a blend of patterns. Understanding them can support more compassionate parts work and more secure connection over time.
                   </p>
                 </div>
               </div>
@@ -693,7 +682,7 @@ const Profile = ({ client }) => {
                                       'bg-green-100 text-green-700'
                                     }`}>{data.label || 'N/A'}</span>
                                     <span className="text-sm font-semibold text-brand-stone-600 dark:text-slate-400">
-                                      {data.average?.toFixed(1)}/{data.maxScale || 5}
+                                      {data.label || 'Theme noted'}
                                     </span>
                                   </div>
                                 </div>
@@ -720,7 +709,7 @@ const Profile = ({ client }) => {
               >
                 <h2 className="text-lg font-semibold text-brand-stone-900 dark:text-slate-100 flex items-center gap-2">
                   <FileText className="w-5 h-5 text-stone-500" />
-                  Assessment History ({allAssessments.length} total)
+                  Wound Patterns History ({allAssessments.length} total)
                 </h2>
                 {showHistory ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
               </button>

@@ -126,7 +126,7 @@ function EmptyState({ range }) {
       <h2 className="mt-4 text-xl font-semibold text-brand-stone-900 dark:text-slate-100">Your timeline will grow with you.</h2>
       <p className="mx-auto mt-2 max-w-xl text-sm leading-relaxed text-brand-stone-600 dark:text-slate-400">
         {range === 'ALL'
-          ? 'When you map parts, complete modules, submit check-ins, add reflections, or reach goals, gentle milestones will appear here.'
+          ? 'Start with the curriculum or an assessment to begin your IFS path. As you map parts, complete modules, check in, and reflect, gentle milestones will appear here.'
           : 'No milestones appeared in this range. Try widening the range or return after your next reflection, check-in, or module.'}
       </p>
     </div>
@@ -200,7 +200,7 @@ export default function HealingTimeline() {
         </div>
 
         <section className="mb-8 overflow-hidden rounded-[2rem] border border-brand-emerald-100 bg-gradient-to-br from-white via-brand-emerald-50/50 to-brand-gold-50/70 p-8 shadow-sm dark:border-slate-800 dark:from-brand-cardDark dark:via-slate-900/60 dark:to-brand-midnight">
-          <p className="text-xs font-bold uppercase tracking-[0.28em] text-brand-emerald-700 dark:text-brand-emerald-100">Client-safe progress view</p>
+          <p className="text-xs font-bold uppercase tracking-[0.28em] text-brand-emerald-700 dark:text-brand-emerald-100">Assessments & Progress</p>
           <h1 className="mt-3 text-4xl font-serif font-normal text-brand-stone-900 dark:text-slate-100">My Healing Timeline</h1>
           <p className="mt-3 max-w-2xl text-base leading-relaxed text-brand-stone-600 dark:text-slate-400">
             A gentle look at your progress, milestones, and moments of engagement over time.
@@ -209,9 +209,9 @@ export default function HealingTimeline() {
 
         <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
           <SummaryCard icon={Sparkles} label="Milestones" value={summary.totalMilestones || 0} detail={`Range: ${range === 'ALL' ? 'All time' : range}`} />
-          <SummaryCard icon={CheckCircle} label="Modules Completed" value={summary.modulesCompleted || 0} detail="Assigned and curriculum modules" />
-          <SummaryCard icon={CalendarCheck} label="Check-Ins" value={(summary.checkInsSubmitted || 0) + (summary.moodCheckIns || 0)} detail="Session and mood check-ins" />
-          <SummaryCard icon={Target} label="Goals Completed" value={summary.goalsCompleted || 0} detail="Care plan milestones" />
+          <SummaryCard icon={CheckCircle} label="Modules Completed" value={summary.modulesCompleted || 0} detail="Curriculum modules" />
+          <SummaryCard icon={CalendarCheck} label="Check-Ins" value={(summary.checkInsSubmitted || 0) + (summary.moodCheckIns || 0)} detail="Practice and mood check-ins" />
+          <SummaryCard icon={Target} label="Growth Milestones" value={summary.goalsCompleted || 0} detail="Supportive milestones" />
           <SummaryCard icon={PenLine} label="Reflections" value={summary.journalEntries || 0} detail="Journal entries" />
         </div>
 
@@ -233,7 +233,7 @@ export default function HealingTimeline() {
             <div className="mb-6 flex items-center justify-between gap-4">
               <div>
                 <h2 className="text-2xl font-serif text-brand-stone-900 dark:text-slate-100">Progress moments</h2>
-                <p className="text-sm text-brand-stone-600 dark:text-slate-400">Supportive milestones from client-safe activity only.</p>
+                <p className="text-sm text-brand-stone-600 dark:text-slate-400">Supportive milestones from curriculum, parts work, assessments, and reflections.</p>
               </div>
             </div>
             <div>

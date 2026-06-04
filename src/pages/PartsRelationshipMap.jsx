@@ -392,7 +392,7 @@ export default function PartsRelationshipMap() {
                           <input type="checkbox" className="mt-1" checked={selectedLegacyPartIds.includes(String(part.id))} onChange={() => toggleLegacyPartSelection(part.id)} />
                           <span>
                             <span className="block font-semibold text-brand-stone-900 dark:text-slate-100">{part.name}</span>
-                            <span className="block text-xs text-brand-stone-500 dark:text-slate-500">New part id: {part.id}{part.type ? ` • ${part.type}` : ''}</span>
+                            <span className="block text-xs text-brand-stone-500 dark:text-slate-500">Ready to add{part.type ? ` • ${part.type}` : ''}</span>
                             {part.role && <span className="mt-1 block text-xs text-brand-stone-600 dark:text-slate-400">{part.role}</span>}
                           </span>
                         </label>
@@ -432,7 +432,7 @@ export default function PartsRelationshipMap() {
                   {legacyImportResult.errors?.length ? 'We could not complete every import. Your older map is still safe and unchanged.' : 'Your selected parts were added to your Inner System Map.'}
                 </p>
                 <p className="mt-1 text-xs">
-                  Imported {legacyImportResult.imported?.length || 0}; skipped {legacyImportResult.skipped?.length || 0}; legacy preserved: {legacyImportResult.legacyPreserved ? 'yes' : 'unknown'}.
+                  Imported {legacyImportResult.imported?.length || 0}; skipped {legacyImportResult.skipped?.length || 0}. Your older map remains preserved.
                 </p>
               </div>
             )}
@@ -442,12 +442,12 @@ export default function PartsRelationshipMap() {
         <div className="grid xl:grid-cols-[1fr,380px] gap-5">
           <section className="rounded-3xl border border-brand-stone-200 dark:border-slate-700 bg-white dark:bg-slate-950 p-4 min-h-[560px]">
             {loading ? (
-              <div className="h-96 flex items-center justify-center text-brand-stone-600 dark:text-slate-400"><Loader2 className="w-5 h-5 animate-spin mr-2" /> Loading your parts…</div>
+              <div className="h-96 flex items-center justify-center text-brand-stone-600 dark:text-slate-400"><Loader2 className="w-5 h-5 animate-spin mr-2" /> Loading your Inner System Map…</div>
             ) : mappedParts.length === 0 ? (
               <div className="h-96 flex flex-col items-center justify-center text-center text-brand-stone-600 dark:text-slate-400 px-6">
                 <Sparkles className="w-10 h-10 text-brand-emerald-600 mb-3" />
                 <h2 className="text-xl font-semibold text-brand-stone-900 dark:text-slate-100">Begin with one part</h2>
-                <p className="mt-2 max-w-md">Create a part first, then return here to place it gently on your Inner System Map.</p>
+                <p className="mt-2 max-w-md">Start with one part when you are ready, then return here to place it gently on your Inner System Map.</p>
                 <Link to="/parts-mapping" className="btn-sanctuary-primary mt-4"><Plus className="w-4 h-4" /> Create a part</Link>
               </div>
             ) : (

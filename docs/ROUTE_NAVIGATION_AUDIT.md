@@ -240,3 +240,13 @@ Tools Directory
 - Admin/advisor dashboards stay separate from My IFS Work so assigned-client loading does not become self-work loading.
 - Self-owned API access allows app users to read their own client-scoped rows regardless of role when the requested client id matches the authenticated app user id.
 - Advisor notes and client-hidden reporting data remain blocked from self/client views and are not surfaced in My IFS Work, Client Home, or Tools & Practices cards.
+
+## Phase 15G Visual Polish Notes
+
+- My IFS Work, Home, and Profile now share a calmer curriculum-first visual/data hierarchy with human-readable path and assessment summary labels.
+- Tools Directory remains complete for discovery, but its copy positions tools and practices as secondary support for the Curriculum / IFS Path.
+- Inner System Map import remains user-confirmed and non-destructive; older saved Parts Map data is preserved unless the user explicitly previews, selects, confirms, and imports.
+- Admin/Advisor tools remain role-limited, visually separated from self-work tools, and Admin Hub remains limited to admin/supervisor roles.
+- Profile assessment summaries use Wound Patterns / Attachment Pattern language and de-emphasize numeric scores on overview cards.
+- No route/security wrapper changes were made for Phase 15G.
+- No SQL or migrations were required for Phase 15G.
