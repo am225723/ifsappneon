@@ -52,6 +52,7 @@ export default function LifeIntegration() {
             <p className="mb-4 text-xs font-bold uppercase tracking-[0.28em] text-brand-emerald-700 dark:text-brand-emerald-100">Life Integration Toolkit</p>
             <h1 className="text-5xl font-serif font-normal text-brand-stone-900 dark:text-slate-100">IFS in Daily Life</h1>
             <p className="mt-4 text-lg leading-relaxed text-brand-stone-600 dark:text-slate-400">Practice noticing parts, unblending, and returning to Self-energy in real moments.</p>
+            <p className="mt-3 text-base leading-relaxed text-brand-stone-600 dark:text-slate-400">Use these short practices when something comes up in daily life. They are here to support your IFS Path, not replace it.</p>
             <div className="mt-6 flex flex-wrap gap-3 text-sm text-brand-stone-600 dark:text-slate-400">
               <span className="rounded-full bg-white/80 px-4 py-2 shadow-sm dark:bg-slate-900/60">There is no right way to do this.</span>
               <span className="rounded-full bg-white/80 px-4 py-2 shadow-sm dark:bg-slate-900/60">Go gently. You can stop at any time.</span>
@@ -121,6 +122,17 @@ export default function LifeIntegration() {
             <div className="soft-card bg-brand-emerald-50/70 p-6 dark:bg-brand-emerald-950/20">
               <Heart className="mb-3 h-6 w-6 text-brand-emerald-700 dark:text-brand-emerald-100" />
               <p className="text-sm leading-relaxed text-brand-stone-700 dark:text-slate-300">A reflection can be one sentence, one word, or simply a pause. Your inner system gets to move at its own pace.</p>
+            </div>
+            <div className="soft-card bg-white/85 p-6 dark:bg-brand-cardDark/90">
+              <h3 className="text-xl font-semibold text-brand-stone-900 dark:text-slate-100">Connect with your existing tools</h3>
+              <div className="mt-4 flex flex-col gap-2 text-sm font-semibold">
+                <Link to="/curriculum" className="rounded-2xl bg-brand-emerald-50 px-4 py-3 text-brand-emerald-700 transition hover:bg-brand-emerald-100 dark:bg-brand-emerald-950/30 dark:text-brand-emerald-100">Continue Curriculum / IFS Path</Link>
+                <Link to="/journal" className="rounded-2xl bg-brand-gold-50 px-4 py-3 text-brand-gold-700 transition hover:bg-brand-gold-100 dark:bg-brand-gold-950/30 dark:text-brand-gold-500">Open Journal</Link>
+                <Link to="/parts-relationships" className="rounded-2xl bg-white px-4 py-3 text-brand-stone-700 transition hover:bg-brand-stone-50 dark:bg-slate-900/50 dark:text-slate-200 dark:hover:bg-slate-800">Open Inner System Map</Link>
+                <Link to="/parts-dialogue" className="rounded-2xl bg-white px-4 py-3 text-brand-stone-700 transition hover:bg-brand-stone-50 dark:bg-slate-900/50 dark:text-slate-200 dark:hover:bg-slate-800">Start Parts Dialogue</Link>
+                <Link to="/meditation" className="rounded-2xl bg-white px-4 py-3 text-brand-stone-700 transition hover:bg-brand-stone-50 dark:bg-slate-900/50 dark:text-slate-200 dark:hover:bg-slate-800">Guided Meditation</Link>
+                <Link to="/healing-timeline" className="rounded-2xl bg-white px-4 py-3 text-brand-stone-700 transition hover:bg-brand-stone-50 dark:bg-slate-900/50 dark:text-slate-200 dark:hover:bg-slate-800">View Healing Timeline</Link>
+              </div>
             </div>
           </aside>
         </section>

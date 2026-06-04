@@ -250,3 +250,20 @@ Tools Directory
 - Profile assessment summaries use Wound Patterns / Attachment Pattern language and de-emphasize numeric scores on overview cards.
 - No route/security wrapper changes were made for Phase 15G.
 - No SQL or migrations were required for Phase 15G.
+
+## Phase 16A Life Integration Toolkit Notes
+
+- `/life-integration` is the client/self-work landing route for **IFS in Daily Life**. It presents Life Integration as a Daily Life Practice toolkit that supports the Curriculum / IFS Path rather than replacing it.
+- Six guided practice routes are preserved under the existing self-work route wrapper:
+  - `/life-integration/notice-part` — Notice a Part in the Moment.
+  - `/life-integration/return-to-self` — Return to Self-Energy.
+  - `/life-integration/trigger-reflection` — Reflect on a Trigger.
+  - `/life-integration/repair-after-conflict` — Repair After Conflict.
+  - `/life-integration/protector-check-in` — Protector Check-In.
+  - `/life-integration/needs-boundaries` — Needs & Boundaries Reflection.
+- The toolkit connects back to existing app tools including `/curriculum`, `/journal`, `/parts-relationships`, `/parts-dialogue`, `/meditation`, and `/healing-timeline` so Life Integration remains secondary support for the main IFS Path.
+- Saved Life Integration reflections use the existing `ifs_life_integration_reflections` storage and API helpers. Reflections are private by default with `is_private = true` and `shared_with_advisor = false` unless the user explicitly chooses Advisor sharing.
+- Advisor sharing remains explicit and limited to the existing shared-reflection API/assignment checks; private reflections are not exposed in Advisor/Admin views.
+- No SQL or migrations were added for Phase 16A because the existing Life Integration reflection table and check constraint already support the six reflection types.
+- Existing `clientOnly`/self-work access wrappers, Advisor/Admin route separation, `FeatureGate` wrappers, and assignment-based shared-reflection authorization are preserved.
+- The Tools Directory surfaces Life Integration under Daily Practice while keeping Core IFS Path first, and Home places Life Integration below Curriculum, Assessments & Progress, and the core support tools.
