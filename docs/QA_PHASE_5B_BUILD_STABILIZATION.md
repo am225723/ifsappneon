@@ -8,7 +8,7 @@ This checklist records the dependency, build, server/client boundary, and Vercel
 - [x] Confirm npm registry is `https://registry.npmjs.org/`.
 - [x] Run `npm ci` from the committed lockfile.
 - [x] Avoid broad dependency upgrades.
-- [x] Confirm no future-only dependency on `@ai-sdk/openai`, `ai`, `@react-pdf/renderer`, `recharts`, Puppeteer, or Chromium was introduced.
+- [x] Confirm no future-only dependency on `@ai-sdk provider packages`, `ai`, `@react-pdf/renderer`, `recharts`, Puppeteer, or Chromium was introduced.
 
 ## Build verification
 
@@ -30,22 +30,25 @@ Required Vercel environment variables:
 ```text
 DATABASE_URL
 CLERK_SECRET_KEY
-OPENAI_API_KEY
+OPENROUTER_API_KEY
 ```
 
 Optional Vercel environment variables:
 
 ```text
 CLERK_AUTHORIZED_PARTIES
+OPENROUTER_MODEL=openrouter/free
+OPENROUTER_SITE_URL
+OPENROUTER_APP_TITLE=IFS App
 ```
 
 Validation expectations:
 
-- [x] `OPENAI_API_KEY` is read only by server-side API code.
+- [x] `OPENROUTER_API_KEY` is read only by server-side API code.
 - [x] `DATABASE_URL` is read only by server-side API code.
 - [x] `CLERK_SECRET_KEY` is read only by server-side API code.
-- [x] No frontend `VITE_OPENAI_API_KEY` usage exists.
-- [x] Session-prep summary remains OpenAI-only and does not require Perplexity/PPLX configuration.
+- [x] No frontend `VITE_OPENROUTER_API_KEY` usage exists; do not create this variable.
+- [x] Session prep summaries, Advisor note drafts, Assigned IFS Practice drafts, Curriculum support, Life Integration prompts, Parts Work guidance, educational content, and generic drafting use the OpenRouter server provider. OpenAI and Perplexity are no longer required for runtime AI workflows.
 
 ## Security regression checks
 

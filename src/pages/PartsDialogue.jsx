@@ -1,15 +1,23 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { 
   MessageSquare, Send, Heart, Shield, Brain, Sparkles, 
-  User, Bot, RefreshCw, ChevronDown, AlertCircle, Settings,
+  User, Bot, RefreshCw, ChevronDown, Settings,
   Volume2, Loader, Mic, MicOff, VolumeX
 } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import { supabaseHelpers } from '../lib/supabase';
 import { clientAuth } from '../lib/supabasePersonalization';
 
-const PERPLEXITY_API_URL = 'https://api.perplexity.ai/chat/completions';
-const apiKey = import.meta.env.VITE_PERPLEXITY_API_KEY;
+
+async function getAuthToken() {
+  try {
+    const clerk = window.Clerk;
+    if (clerk?.session?.getToken) return await clerk.session.getToken();
+  } catch (error) {
+    console.warn('Unable to read Clerk token:', error);
+  }
+  return null;
+}
 
 const PART_TYPES = [
   {
@@ -129,8 +137,6 @@ export default function PartsDialogue() {
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [fallbackIndex, setFallbackIndex] = useState({});
-  const hasApiKey = !!apiKey;
-
   const [voiceMode, setVoiceMode] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [speakResponses, setSpeakResponses] = useState(true);
@@ -251,50 +257,34 @@ export default function PartsDialogue() {
     setInputValue('');
     setIsLoading(true);
 
-    if (hasApiKey) {
-      try {
-        const conversationHistory = messages.slice(-10).map(m => ({
-          role: m.role === 'user' ? 'user' : 'assistant',
-          content: m.content,
-        }));
-
-        const response = await fetch(PERPLEXITY_API_URL, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${apiKey}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            model: 'sonar',
-            messages: [
-              { role: 'system', content: selectedPart.systemPrompt },
-              ...conversationHistory,
-              { role: 'user', content: text.trim() },
-            ],
-            max_tokens: 300,
-            temperature: 0.8,
-            stream: false,
-          }),
-        });
-
-        if (!response.ok) throw new Error(`API error: ${response.status}`);
-        const data = await response.json();
-        const aiContent = data.choices?.[0]?.message?.content;
-
-        if (aiContent) {
-          setMessages(prev => [...prev, { role: 'assistant', content: aiContent, timestamp: Date.now(), partId: selectedPart.id }]);
-          if (voiceMode) speakText(aiContent);
-        } else {
-          throw new Error('No response content');
-        }
-      } catch (err) {
-        console.error('Perplexity API error:', err);
-        const fallback = getFallbackResponse(selectedPart.id);
-        setMessages(prev => [...prev, { role: 'assistant', content: fallback, timestamp: Date.now(), partId: selectedPart.id, isFallback: true }]);
-        if (voiceMode) speakText(fallback);
-      }
-    } else {
-      await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 1500));
+    try {
+      const client = clientAuth.getCurrentClient();
+      const conversationHistory = messages.slice(-10).map(m => ({
+        role: m.role === 'user' ? 'user' : 'assistant',
+        content: m.content,
+      }));
+      const token = await getAuthToken();
+      const response = await fetch('/api/ai-parts-dialogue', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({
+          clientId: client?.id,
+          partId: selectedPart.id,
+          message: text.trim(),
+          conversationHistory
+        })
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload?.error?.message || `API error: ${response.status}`);
+      const aiContent = payload?.data?.text;
+      if (!aiContent) throw new Error('No response content');
+      setMessages(prev => [...prev, { role: 'assistant', content: aiContent, timestamp: Date.now(), partId: selectedPart.id }]);
+      if (voiceMode) speakText(aiContent);
+    } catch (err) {
+      console.error('OpenRouter Parts Work guidance error:', err);
       const fallback = getFallbackResponse(selectedPart.id);
       setMessages(prev => [...prev, { role: 'assistant', content: fallback, timestamp: Date.now(), partId: selectedPart.id, isFallback: true }]);
       if (voiceMode) speakText(fallback);
@@ -361,13 +351,6 @@ export default function PartsDialogue() {
           );
         })}
       </div>
-
-      {!hasApiKey && (
-        <div className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs mb-3 ${isDark ? 'bg-amber-900/30 border border-amber-700/40 text-amber-300' : 'bg-amber-50 border border-amber-200 text-amber-700'}`}>
-          <AlertCircle className="w-4 h-4 flex-shrink-0" />
-          <span>Running in offline mode with pre-written responses. Add a VITE_PERPLEXITY_API_KEY for AI-powered conversations.</span>
-        </div>
-      )}
 
       <div className={`flex-1 overflow-y-auto rounded-xl p-4 mb-3 space-y-3 ${isDark ? 'bg-slate-800/50 border border-slate-700/40' : 'bg-gray-50 border border-gray-200'}`}>
         {messages.length === 0 ? (

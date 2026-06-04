@@ -15,8 +15,8 @@ function normalizeApiError(response, payload) {
     ? 'Please sign in again before generating an Advisor note draft.'
     : response.status === 403
       ? 'You are not authorized to draft an Advisor note for this client.'
-      : code === 'openai_api_key_missing'
-        ? 'OpenAI API key missing. Ask an administrator to configure OPENAI_API_KEY on the server.'
+      : code === 'openrouter_api_key_missing'
+        ? 'OpenRouter API key missing. Ask an administrator to configure OPENROUTER_API_KEY on the server.'
         : 'Unable to generate Advisor note draft.';
 
   return {

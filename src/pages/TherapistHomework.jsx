@@ -124,6 +124,7 @@ const TherapistHomework = () => {
     try {
       const wounds = await loadClientWound(aiClientId);
       const result = await generateHomework({
+        clientId: aiClientId,
         woundType: wounds?.primary || '',
         secondaryWound: wounds?.secondary || '',
         category: aiCategory || '',
@@ -153,6 +154,7 @@ const TherapistHomework = () => {
     try {
       const wounds = await loadClientWound(aiClientId);
       const results = await generateHomeworkBatch({
+        clientId: aiClientId,
         woundType: wounds?.primary || '',
         secondaryWound: wounds?.secondary || '',
         guidance: aiGuidance,
@@ -359,7 +361,7 @@ const TherapistHomework = () => {
             }`}
           >
             <Sparkles className="w-4 h-4" />
-            Practice Generator
+            Assigned IFS Practice Generator
           </button>
           <button
             onClick={() => { resetForm(); setShowForm(true); setShowAIPanel(false); setShowBatchResults(false); }}
@@ -393,7 +395,7 @@ const TherapistHomework = () => {
                 <Wand2 className={`w-4 h-4 ${isDark ? 'text-purple-400' : 'text-purple-600'}`} />
               </div>
               <div>
-                <h3 className={`text-sm font-semibold ${textPrimary}`}>Assigned IFS Practice Generator</h3>
+                <h3 className={`text-sm font-semibold ${textPrimary}`}>Assigned IFS Assigned IFS Practice Generator</h3>
                 <p className={`text-xs ${textMuted}`}>Select an assigned client, optionally use assessment context, then generate an editable IFS practice</p>
               </div>
             </div>

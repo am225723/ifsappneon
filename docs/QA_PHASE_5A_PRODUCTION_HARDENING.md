@@ -38,7 +38,7 @@ Use this checklist before promoting a Vercel preview to production. Record teste
 - [ ] Caseload loads only active assigned clients.
 - [ ] Assigned homework can be assigned to an active assigned client and reviewed after completion.
 - [ ] Session prep brief loads submitted agendas and handles clients with no agendas.
-- [ ] AI session prep summary can be generated only for assigned clients, uses server-side OpenAI configuration, and displays clinician-review disclaimer copy.
+- [ ] AI session prep summary can be generated only for assigned clients, uses server-side OpenRouter configuration, and displays clinician-review disclaimer copy.
 - [ ] Treatment plans load empty, active, paused, completed, and archived goal states without crashing.
 - [ ] Tagged notes save and display tags only for parts/goals that belong to the selected assigned client.
 - [ ] Longitudinal analytics handles no mood entries, no parts, no homework, no agendas, no goals, no journals, and no assessments.
@@ -51,9 +51,9 @@ Use this checklist before promoting a Vercel preview to production. Record teste
 - [ ] No endpoint returns therapist notes to clients.
 - [ ] Reports do not expose therapist notes in client progress summaries.
 - [ ] Report audit metadata saves to `ifs_generated_reports` with `therapist_id`, `client_id`, `generated_by`, report type, sections, format, and generated timestamp.
-- [ ] `OPENAI_API_KEY` is configured only server-side and is not present in frontend `VITE_*` variables.
-- [ ] Session prep path has no required Perplexity/PPLX environment variable.
-- [ ] Error responses for missing `DATABASE_URL`, `CLERK_SECRET_KEY`, or `OPENAI_API_KEY` are clear and do not leak secret values.
+- [ ] `OPENROUTER_API_KEY` is configured only server-side and is not present in frontend `VITE_*` variables.
+- [ ] Session prep path has no required legacy AI provider environment variable.
+- [ ] Error responses for missing `DATABASE_URL`, `CLERK_SECRET_KEY`, or `OPENROUTER_API_KEY` are clear and do not leak secret values.
 
 ## Data / SQL Checks
 

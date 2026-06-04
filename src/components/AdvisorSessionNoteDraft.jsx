@@ -32,7 +32,7 @@ function formatDraftError(error) {
   if (error.code === 'unauthorized') return 'Unauthorized: please sign in again before generating an Advisor note draft.';
   if (error.code === 'forbidden') return 'This client is not assigned to your Advisor account.';
   if (error.code === 'missing_client_id') return 'Select an assigned client before generating a draft.';
-  if (error.code === 'openai_api_key_missing') return 'OpenAI API key missing. Ask an administrator to configure OPENAI_API_KEY on the server.';
+  if (error.code === 'openrouter_api_key_missing') return 'OpenRouter API key missing. Ask an administrator to configure OPENROUTER_API_KEY on the server.';
   return error.message || 'Unable to generate Advisor note draft.';
 }
 
