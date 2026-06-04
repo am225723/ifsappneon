@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
-import { AlertTriangle, BookOpen, ClipboardCheck, FileText, Heart, Loader2, RefreshCw, Shield, Sparkles, Users } from 'lucide-react';
+import { AlertTriangle, BookOpen, ClipboardCheck, FileText, Grid3X3, Heart, Loader2, RefreshCw, Shield, Sparkles, Users } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import { supabase } from '../lib/supabase';
 import { clientAuth } from '../lib/supabasePersonalization';
@@ -102,6 +102,10 @@ export default function AdminHub() {
           <Link to="/my-ifs" className={`inline-flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold ${cardBg} ${textSecondary}`}>
             <Heart className="h-4 w-4 text-amber-600" />
             My IFS Work
+          </Link>
+          <Link to="/tools" className={`inline-flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold ${cardBg} ${textSecondary}`}>
+            <Grid3X3 className="h-4 w-4 text-amber-600" />
+            Tools Directory
           </Link>
           <button type="button" onClick={loadData} className={`inline-flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold ${cardBg} ${textSecondary}`}>
             <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
