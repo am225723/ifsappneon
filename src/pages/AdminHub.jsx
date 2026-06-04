@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Navigate } from 'react-router-dom';
-import { AlertTriangle, Loader2, RefreshCw, Shield, Users } from 'lucide-react';
+import { Link, Navigate } from 'react-router-dom';
+import { AlertTriangle, BookOpen, ClipboardCheck, FileText, Loader2, RefreshCw, Shield, Sparkles, Users } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import { supabase } from '../lib/supabase';
 import { clientAuth } from '../lib/supabasePersonalization';
@@ -94,8 +94,8 @@ export default function AdminHub() {
             <Shield className="h-6 w-6" />
           </div>
           <div>
-            <h1 className={`text-3xl font-bold ${textPrimary}`}>Supervisor Admin Hub</h1>
-            <p className={`text-sm ${textSecondary}`}>Manage therapist caseloads across the group practice.</p>
+            <h1 className={`text-3xl font-bold ${textPrimary}`}>Advisor Admin Hub</h1>
+            <p className={`text-sm ${textSecondary}`}>Flow-based oversight for Advisor assignments, curriculum support, and client progress.</p>
           </div>
         </div>
         <button type="button" onClick={loadData} className={`inline-flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold ${cardBg} ${textSecondary}`}>
@@ -103,6 +103,31 @@ export default function AdminHub() {
           Refresh
         </button>
       </div>
+
+
+      <section className="mb-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        {[
+          { to: '/curriculum', label: 'Curriculum Studio', desc: 'Review the IFS Path and learning supports.', icon: BookOpen },
+          { to: '/assessment-builder', label: 'Assessment Generator', desc: 'Create or manage assessment experiences.', icon: ClipboardCheck },
+          { to: '/advisor-homework', label: 'Practice Generator', desc: 'Open the Assigned IFS Practice Generator.', icon: Sparkles },
+          { to: '/advisor-reports', label: 'Client Progress', desc: 'Review client progress and Advisor reports.', icon: FileText },
+        ].map((item) => {
+          const Icon = item.icon;
+          return (
+            <Link key={item.label} to={item.to} className={`rounded-3xl border p-5 transition hover:-translate-y-0.5 hover:shadow-lg ${cardBg}`}>
+              <Icon className="mb-4 h-6 w-6 text-amber-600" />
+              <h2 className={`font-semibold ${textPrimary}`}>{item.label}</h2>
+              <p className={`mt-1 text-sm ${textSecondary}`}>{item.desc}</p>
+            </Link>
+          );
+        })}
+      </section>
+
+      <section className={`mb-6 rounded-3xl border p-5 ${cardBg}`}>
+        <p className={`text-xs font-semibold uppercase tracking-[0.25em] ${textSecondary}`}>Overview</p>
+        <h2 className={`mt-1 text-2xl font-serif ${textPrimary}`}>Advisor assignment flow</h2>
+        <p className={`mt-2 text-sm ${textSecondary}`}>Use this hub to keep clients connected to an Advisor, then use the Curriculum Studio, Assessment Generator, Practice Generator, and Client Progress tools for day-to-day support.</p>
+      </section>
 
       {error && (
         <div className="mb-5 flex items-start gap-2 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-950/20 dark:text-red-200">
@@ -114,7 +139,7 @@ export default function AdminHub() {
       {loading ? (
         <div className={`rounded-3xl border p-10 text-center ${cardBg}`}>
           <Loader2 className="mx-auto mb-3 h-8 w-8 animate-spin text-amber-600" />
-          <p className={textSecondary}>Loading therapists and caseloads...</p>
+          <p className={textSecondary}>Loading Advisors and caseloads...</p>
         </div>
       ) : (
         <div className="space-y-4">
@@ -126,11 +151,11 @@ export default function AdminHub() {
                 <button type="button" onClick={() => setExpandedTherapistId(expanded ? null : therapist.id)} className="flex w-full items-center justify-between gap-3 p-5 text-left">
                   <div className="flex items-center gap-3">
                     <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-amber-100 font-bold text-amber-700 dark:bg-amber-900/40 dark:text-amber-100">
-                      {therapist.name?.charAt(0) || 'T'}
+                      {therapist.name?.charAt(0) || 'A'}
                     </div>
                     <div>
-                      <h2 className={`font-semibold ${textPrimary}`}>{therapist.name || 'Unnamed therapist'}</h2>
-                      <p className={`text-xs ${textSecondary}`}>{therapist.email || therapist.user_role} · {caseload.length} active client{caseload.length === 1 ? '' : 's'}</p>
+                      <h2 className={`font-semibold ${textPrimary}`}>{therapist.name || 'Unnamed Advisor'}</h2>
+                      <p className={`text-xs ${textSecondary}`}>{therapist.email || 'Advisor'} · {caseload.length} active client{caseload.length === 1 ? '' : 's'}</p>
                     </div>
                   </div>
                   <Users className={`h-5 w-5 ${textSecondary}`} />
@@ -167,9 +192,9 @@ export default function AdminHub() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 px-4">
           <div className={`w-full max-w-md rounded-3xl border p-6 shadow-2xl ${cardBg}`}>
             <h2 className={`mb-2 text-xl font-bold ${textPrimary}`}>Reassign client</h2>
-            <p className={`mb-4 text-sm ${textSecondary}`}>Move {reassignTarget.client_name || reassignTarget.client_id} to another therapist.</p>
+            <p className={`mb-4 text-sm ${textSecondary}`}>Move {reassignTarget.client_name || reassignTarget.client_id} to another Advisor.</p>
             <select value={newTherapistId} onChange={(event) => setNewTherapistId(event.target.value)} className="mb-4 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-white">
-              <option value="">Choose therapist...</option>
+              <option value="">Choose Advisor...</option>
               {therapists.filter(therapist => therapist.id !== reassignTarget.therapist_id).map((therapist) => (
                 <option key={therapist.id} value={therapist.id}>{therapist.name || therapist.email}</option>
               ))}

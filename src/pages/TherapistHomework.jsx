@@ -345,8 +345,8 @@ const TherapistHomework = () => {
             <ClipboardList className="w-5 h-5 text-white" />
           </div>
           <div>
-            <h1 className={`text-xl font-bold ${textPrimary}`}>Homework Assignments</h1>
-            <p className={`text-sm ${textMuted}`}>Create and track client homework</p>
+            <h1 className={`text-xl font-bold ${textPrimary}`}>Assigned IFS Practices</h1>
+            <p className={`text-sm ${textMuted}`}>Create, edit, and review Advisor-guided IFS practices</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -359,14 +359,14 @@ const TherapistHomework = () => {
             }`}
           >
             <Sparkles className="w-4 h-4" />
-            AI Generate
+            Practice Generator
           </button>
           <button
             onClick={() => { resetForm(); setShowForm(true); setShowAIPanel(false); setShowBatchResults(false); }}
             className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 text-white rounded-xl text-sm font-medium hover:from-amber-600 hover:to-amber-700 transition-all"
           >
             <Plus className="w-4 h-4" />
-            Assign Homework
+            Assign IFS Practice
           </button>
         </div>
       </div>
@@ -393,8 +393,8 @@ const TherapistHomework = () => {
                 <Wand2 className={`w-4 h-4 ${isDark ? 'text-purple-400' : 'text-purple-600'}`} />
               </div>
               <div>
-                <h3 className={`text-sm font-semibold ${textPrimary}`}>AI Homework Generator</h3>
-                <p className={`text-xs ${textMuted}`}>Select a client, then generate personalized homework</p>
+                <h3 className={`text-sm font-semibold ${textPrimary}`}>Assigned IFS Practice Generator</h3>
+                <p className={`text-xs ${textMuted}`}>Select an assigned client, optionally use assessment context, then generate an editable IFS practice</p>
               </div>
             </div>
             <button onClick={() => setShowAIPanel(false)} className={`p-1 rounded-lg ${isDark ? 'hover:bg-slate-700' : 'hover:bg-gray-100'}`}>
@@ -483,7 +483,7 @@ const TherapistHomework = () => {
               {aiGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Layers className="w-4 h-4" />}
               Generate Set of 4
             </button>
-            {aiGenerating && <span className={`text-xs ${textMuted}`}>Generating personalized homework...</span>}
+            {aiGenerating && <span className={`text-xs ${textMuted}`}>Generating an IFS-aligned practice...</span>}
           </div>
         </div>
       )}
@@ -534,7 +534,7 @@ const TherapistHomework = () => {
         <div className={`${cardBg} rounded-2xl border ${cardBorder} p-6 mb-6`}>
           <div className="flex items-center justify-between mb-4">
             <h2 className={`text-lg font-semibold ${textPrimary}`}>
-              {editingId ? 'Edit Assignment' : 'New Homework Assignment'}
+              {editingId ? 'Edit Assignment' : 'New Assigned IFS Practice'}
             </h2>
             <button onClick={resetForm} className={`p-1 rounded-lg ${isDark ? 'hover:bg-slate-700' : 'hover:bg-gray-100'}`}>
               <X className="w-5 h-5" />
@@ -620,7 +620,7 @@ const TherapistHomework = () => {
               disabled={!form.clientId || !form.title.trim()}
               className="px-6 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 text-white rounded-lg text-sm font-medium hover:from-amber-600 hover:to-amber-700 transition-all disabled:opacity-50"
             >
-              {editingId ? 'Update Assignment' : 'Assign Homework'}
+              {editingId ? 'Update Assignment' : 'Assign IFS Practice'}
             </button>
           </div>
         </div>
@@ -693,7 +693,7 @@ const TherapistHomework = () => {
               </div>
               {item.status === 'completed' || item.status === 'reviewed' ? (
                 <div className="mt-3">
-                  <label className={`block text-xs font-semibold ${textMuted} mb-1`}>Therapist feedback</label>
+                  <label className={`block text-xs font-semibold ${textMuted} mb-1`}>Advisor feedback</label>
                   <textarea value={reviewFeedback[item.id] ?? item.therapist_feedback ?? ''} onChange={e => setReviewFeedback(prev => ({ ...prev, [item.id]: e.target.value }))} rows={2} className={`w-full px-3 py-2 rounded-lg border ${inputBg} text-sm`} />
                   <button onClick={() => handleReviewAssignedModule(item)} className="mt-2 px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 text-white hover:bg-emerald-700">Mark reviewed</button>
                 </div>
@@ -738,8 +738,8 @@ const TherapistHomework = () => {
         {filtered.length === 0 ? (
           <div className={`${cardBg} rounded-2xl border ${cardBorder} p-12 text-center`}>
             <ClipboardList className={`w-12 h-12 mx-auto mb-3 ${textMuted} opacity-30`} />
-            <p className={`text-sm font-medium ${textSecondary}`}>No homework assignments found</p>
-            <p className={`text-xs ${textMuted} mt-1`}>Click "Assign Homework" to create one</p>
+            <p className={`text-sm font-medium ${textSecondary}`}>No assigned IFS practices found</p>
+            <p className={`text-xs ${textMuted} mt-1`}>Click "Assign IFS Practice" to create one</p>
           </div>
         ) : (
           filtered.map(item => {
