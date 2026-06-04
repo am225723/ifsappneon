@@ -101,7 +101,7 @@ Navbar (client)
   Profile -> /profile
 
 Navbar (Advisor/Admin)
-  Advisor Dashboard -> /therapist-dashboard OR Admin Hub -> /admin-hub
+  Advisor Dashboard -> /therapist OR Admin Hub -> /admin-hub
   My IFS Work -> /my-ifs
   Home -> /
   Tools -> /tools
@@ -178,16 +178,16 @@ Tools Directory
     Healing Tracker -> /healing-tracker
     Letters -> /letters
   Admin / Advisor Tools
-    Advisor Dashboard -> /therapist-dashboard
+    Advisor Dashboard -> /therapist
     Admin Hub -> /admin-hub
-    Clients -> /therapist-dashboard
+    Clients -> /therapist
     Caseload -> /caseload
     Curriculum & Assessments -> /curriculum
     Assessment Generator -> /assessment-builder
     Practice Generator -> /advisor-homework
     Review Queue -> /advisor-homework
     Growth Goals -> /treatment-plans
-    Advisor Notes -> /therapist-dashboard
+    Advisor Notes -> /therapist
     Shared Reflections -> /advisor/shared-reflections
     Messages -> /messages
     Reports -> /reports
@@ -230,3 +230,13 @@ Tools Directory
 - Feature-gated Tools Directory items use `canAccessFeature`; unavailable tools render disabled with “Not available for your account.”
 - Debug, diagnostic, mockup, auth-flow, and direct-only dynamic routes are not included in user-facing navigation.
 - No SQL or migrations are required for this navigation audit.
+
+## My IFS Runtime QA Notes
+
+- `/my-ifs` uses self-owned profile resolution through `loadMyIFSProfile` and passes the resolved profile id as the effective client id for personal self-work data.
+- `/home` may render self-mode data when called from My IFS Work; direct Advisor/Admin `/home` access now points users toward My IFS Work for personal self-work or the Advisor/Admin workspace for operational workflows.
+- `/parts-relationships` supports a user-confirmed legacy `parts_map` import from `ifs_interactive_data`; preview is required, selected parts must be confirmed, and the legacy interactive row remains preserved.
+- `/tools` remains the main discoverability directory for Curriculum, Assessments, Inner System Map, reflections, Tools & Practices, and Advisor/Admin workflow links.
+- Admin/advisor dashboards stay separate from My IFS Work so assigned-client loading does not become self-work loading.
+- Self-owned API access allows app users to read their own client-scoped rows regardless of role when the requested client id matches the authenticated app user id.
+- Advisor notes and client-hidden reporting data remain blocked from self/client views and are not surfaced in My IFS Work, Client Home, or Tools & Practices cards.

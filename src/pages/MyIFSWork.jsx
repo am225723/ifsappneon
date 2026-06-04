@@ -38,7 +38,7 @@ export default function MyIFSWork({ currentClient }) {
       <div className="max-w-6xl mx-auto px-4 py-12">
         <div className="soft-card p-8 text-center">
           <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-b-2 border-t-2 border-brand-gold-600" />
-          <p className="text-sm text-brand-stone-600 dark:text-slate-400">Opening your personal IFS workspace…</p>
+          <p className="text-sm text-brand-stone-600 dark:text-slate-400">Loading your IFS path…</p>
         </div>
       </div>
     );
@@ -56,9 +56,9 @@ export default function MyIFSWork({ currentClient }) {
             <Link2 className="h-7 w-7" />
           </div>
           <p className="mb-2 text-xs font-bold uppercase tracking-[0.24em] text-brand-gold-700 dark:text-brand-gold-500">My IFS Work</p>
-          <h1 className="text-3xl font-serif font-normal text-brand-stone-900 dark:text-slate-100">Your personal IFS workspace is not connected yet.</h1>
+          <h1 className="text-3xl font-serif font-normal text-brand-stone-900 dark:text-slate-100">Your personal IFS path is not connected yet.</h1>
           <p className="mt-3 max-w-2xl text-sm leading-relaxed text-brand-stone-600 dark:text-slate-400">
-            We could not find an IFS client profile safely linked to your current Clerk account. We only use the authenticated user’s own Clerk-linked IFS record for this area, so no other client’s results are shown here.
+            Your IFS data could not be loaded right now. Please refresh or try again. If this is a new profile, start with the curriculum or an assessment to begin your IFS path.
           </p>
           <div className="mt-6 flex flex-wrap gap-3">
             <Link to="/curriculum" className="btn-sanctuary-primary"><BookOpen className="h-4 w-4" /> Start Curriculum</Link>
