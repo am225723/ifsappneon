@@ -9,6 +9,8 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useData } from '../contexts/DataContext';
 import { supabaseHelpers } from '../lib/supabase';
 import { clientAuth } from '../lib/supabasePersonalization';
+import { loadLifeIntegrationReflections } from '../lib/lifeIntegration';
+import { formatLifeReflectionType, normalizeLifeReflection, summarizeLifeReflection } from '../lib/lifeIntegrationDisplay';
 
 const milestoneTypes = {
   module: { label: 'Module', color: 'amber', icon: BookOpen, bg: 'bg-amber-100', text: 'text-amber-700', border: 'border-amber-300', dot: 'bg-amber-500', darkBg: 'bg-amber-900/30', darkText: 'text-amber-300', darkBorder: 'border-amber-700' },
@@ -16,6 +18,7 @@ const milestoneTypes = {
   journal: { label: 'Journal', color: 'blue', icon: Heart, bg: 'bg-blue-100', text: 'text-blue-700', border: 'border-blue-300', dot: 'bg-blue-500', darkBg: 'bg-blue-900/30', darkText: 'text-blue-300', darkBorder: 'border-blue-700' },
   exercise: { label: 'Exercise', color: 'green', icon: Activity, bg: 'bg-green-100', text: 'text-green-700', border: 'border-green-300', dot: 'bg-green-500', darkBg: 'bg-green-900/30', darkText: 'text-green-300', darkBorder: 'border-green-700' },
   badge: { label: 'Badge', color: 'gold', icon: Award, bg: 'bg-yellow-100', text: 'text-yellow-700', border: 'border-yellow-300', dot: 'bg-yellow-500', darkBg: 'bg-yellow-900/30', darkText: 'text-yellow-300', darkBorder: 'border-yellow-700' },
+  daily_life: { label: 'Daily Life Practice', color: 'emerald', icon: Sparkles, bg: 'bg-emerald-100', text: 'text-emerald-700', border: 'border-emerald-300', dot: 'bg-emerald-500', darkBg: 'bg-emerald-900/30', darkText: 'text-emerald-300', darkBorder: 'border-emerald-700' },
 };
 
 function generateSampleMilestones() {
@@ -46,8 +49,9 @@ export default function ProgressTimeline() {
   const { theme } = useTheme();
   const isDark = theme.isDark;
   const [milestones, setMilestones] = useState([]);
+  const [lifeReflections, setLifeReflections] = useState([]);
   const [expandedId, setExpandedId] = useState(null);
-  const [activeFilters, setActiveFilters] = useState(new Set(['module', 'assessment', 'journal', 'exercise', 'badge']));
+  const [activeFilters, setActiveFilters] = useState(new Set(['module', 'assessment', 'journal', 'exercise', 'badge', 'daily_life']));
 
   useEffect(() => {
     const loadMilestones = async () => {
@@ -56,11 +60,22 @@ export default function ProgressTimeline() {
       if (!clientId) return;
       try {
         const data = await supabaseHelpers.getMilestones(clientId);
+        const { data: reflectionRows } = await loadLifeIntegrationReflections({ clientId, self: true });
+        const normalizedLifeReflections = (reflectionRows || []).map(normalizeLifeReflection);
+        setLifeReflections(normalizedLifeReflections);
+        const lifeMilestones = normalizedLifeReflections.map((reflection) => ({
+          id: `life-${reflection.id}`,
+          date: reflection.created_at,
+          type: 'daily_life',
+          title: reflection.label,
+          description: summarizeLifeReflection(reflection),
+          details: 'These reflections show moments when you practiced IFS outside the app.'
+        }));
         if (data && data.length > 0) {
-          setMilestones(data);
+          setMilestones([...data, ...lifeMilestones]);
         } else {
           const sample = generateSampleMilestones();
-          setMilestones(sample);
+          setMilestones([...sample, ...lifeMilestones]);
           for (const milestone of sample) {
             await supabaseHelpers.saveMilestone(clientId, milestone);
           }
@@ -94,6 +109,7 @@ export default function ProgressTimeline() {
     modulesCompleted: milestones.filter(m => m.type === 'module').length,
     exercisesDone: milestones.filter(m => m.type === 'exercise').length,
     journalEntries: milestones.filter(m => m.type === 'journal').length,
+    dailyLifeReflections: lifeReflections.length,
   };
 
   const formatDate = (dateStr) => {
@@ -106,6 +122,7 @@ export default function ProgressTimeline() {
     { label: 'Modules Completed', value: stats.modulesCompleted, icon: BookOpen, color: 'from-amber-500 to-stone-500' },
     { label: 'Exercises Done', value: stats.exercisesDone, icon: Activity, color: 'from-green-500 to-emerald-500' },
     { label: 'Journal Entries', value: stats.journalEntries, icon: Heart, color: 'from-blue-500 to-cyan-500' },
+    { label: 'Daily-life reflections', value: stats.dailyLifeReflections, icon: Sparkles, color: 'from-emerald-500 to-teal-500' },
   ];
 
   return (
@@ -150,6 +167,26 @@ export default function ProgressTimeline() {
           );
         })}
       </div>
+
+      <section className={`mb-6 rounded-2xl border p-4 ${isDark ? 'border-emerald-900/50 bg-emerald-950/20' : 'border-emerald-100 bg-emerald-50/70'}`}>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <p className={`text-xs font-bold uppercase tracking-[0.2em] ${isDark ? 'text-emerald-300' : 'text-emerald-700'}`}>Daily Life Practice</p>
+            <h2 className={`mt-1 font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>Life Integration activity</h2>
+            <p className={`mt-2 text-sm ${isDark ? 'text-slate-400' : 'text-gray-600'}`}>These reflections show moments when you practiced IFS outside the app.</p>
+          </div>
+          <Link to="/life-integration" className="inline-flex items-center justify-center rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700">
+            Open Life Integration
+          </Link>
+        </div>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <span className={`rounded-full px-3 py-1 text-xs font-semibold ${isDark ? 'bg-slate-800 text-slate-200' : 'bg-white text-gray-700'}`}>{lifeReflections.length} saved reflection{lifeReflections.length === 1 ? '' : 's'}</span>
+          {[...new Set(lifeReflections.map((reflection) => reflection.reflection_type))].slice(0, 4).map((type) => (
+            <span key={type} className={`rounded-full px-3 py-1 text-xs font-semibold ${isDark ? 'bg-emerald-900/40 text-emerald-200' : 'bg-emerald-100 text-emerald-700'}`}>{formatLifeReflectionType(type)}</span>
+          ))}
+          {lifeReflections[0]?.created_at && <span className={`rounded-full px-3 py-1 text-xs font-semibold ${isDark ? 'bg-slate-800 text-slate-200' : 'bg-white text-gray-700'}`}>Latest {formatDate(lifeReflections[0].created_at)}</span>}
+        </div>
+      </section>
 
       <div className="flex flex-wrap gap-2 mb-6">
         {Object.entries(milestoneTypes).map(([key, mt]) => {

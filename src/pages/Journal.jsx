@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import { 
   Heart, 
   Brain, 
@@ -34,6 +35,8 @@ import { supabase } from '../lib/supabase';
 import { clientAuth } from '../lib/supabasePersonalization';
 import { useTheme } from '../contexts/ThemeContext';
 import { useParts } from '../contexts/PartsContext';
+import { loadLifeIntegrationReflections } from '../lib/lifeIntegration';
+import { normalizeLifeReflection } from '../lib/lifeIntegrationDisplay';
 
 const CONCERNING_KEYWORDS = [
   'suicide', 'suicidal', 'kill myself', 'end my life', 'want to die', 'better off dead',
@@ -166,6 +169,7 @@ const PART_TYPE_CONFIG = {
 const Journal = () => {
   const [entries, setEntries] = useState([]);
   const [selectedEntry, setSelectedEntry] = useState(null);
+  const [lifeReflections, setLifeReflections] = useState([]);
   const [isWriting, setIsWriting] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedMood, setSelectedMood] = useState('all');
@@ -335,6 +339,16 @@ const Journal = () => {
       setEntries([]);
     };
     loadEntries();
+  }, []);
+
+  useEffect(() => {
+    const loadLifeReflections = async () => {
+      const client = clientAuth.getCurrentClientValidated();
+      if (!client?.id) return;
+      const { data, error } = await loadLifeIntegrationReflections({ clientId: client.id, self: true });
+      if (!error) setLifeReflections((data || []).slice(0, 6).map(normalizeLifeReflection));
+    };
+    loadLifeReflections();
   }, []);
 
   useEffect(() => {
@@ -1014,6 +1028,42 @@ const Journal = () => {
             </button>
           </div>
         </div>
+
+        <section className={`${cardBg} p-6 mb-8`}>
+          <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[0.22em] text-brand-gold-700 dark:text-brand-gold-500">IFS in Daily Life</p>
+              <h2 className={`text-2xl font-bold ${textPrimary}`}>Life Integration Reflections</h2>
+              <p className={`mt-2 text-sm ${textSecondary}`}>These saved reflections sit alongside your journal as private daily-life IFS moments.</p>
+            </div>
+            <Link to="/life-integration" className="btn-sanctuary-secondary inline-flex items-center justify-center">
+              Open Life Integration <ArrowRight className="ml-2 h-4 w-4" />
+            </Link>
+          </div>
+          {lifeReflections.length === 0 ? (
+            <div className={`rounded-2xl border border-dashed border-brand-stone-200 p-5 text-sm ${textSecondary} dark:border-slate-700`}>
+              Your daily-life reflections will appear here after you save them.
+            </div>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {lifeReflections.map((reflection) => (
+                <Link key={reflection.id} to={reflection.detailRoute} className="rounded-2xl border border-brand-stone-100 bg-white/70 p-4 transition hover:-translate-y-0.5 hover:shadow-sm dark:border-slate-800 dark:bg-slate-900/45">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-xs font-bold uppercase tracking-[0.18em] text-brand-gold-700 dark:text-brand-gold-500">{reflection.label}</p>
+                      <p className={`mt-2 text-sm font-semibold ${textPrimary}`}>{reflection.summary}</p>
+                    </div>
+                    <span className={`shrink-0 rounded-full px-2 py-1 text-[10px] font-bold uppercase tracking-wide ${reflection.isSharedWithAdvisor ? 'bg-brand-emerald-50 text-brand-emerald-700 dark:bg-brand-emerald-950/30 dark:text-brand-emerald-100' : 'bg-brand-stone-100 text-brand-stone-600 dark:bg-slate-800 dark:text-slate-300'}`}>{reflection.privacyLabel}</span>
+                  </div>
+                  <div className={`mt-3 flex flex-wrap gap-2 text-xs ${textTertiary}`}>
+                    <span>{new Date(reflection.created_at).toLocaleDateString()}</span>
+                    {reflection.linkedPartName && <span>Linked part: {reflection.linkedPartName}</span>}
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
+        </section>
 
         <div>
           <h2 className={`text-2xl font-bold ${textPrimary} mb-6`}>Recent Entries</h2>

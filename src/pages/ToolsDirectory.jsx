@@ -48,7 +48,7 @@ const sections = [
     description: 'Short IFS practices for grounding, noticing, and daily self-guidance.',
     items: [
       { label: 'Daily Check-In', to: '/daily-checkin', icon: CalendarCheck, roles: clientRoles, feature: 'dailyCheckin' },
-      { label: 'IFS in Daily Life', description: 'Open the Life Integration landing page for short real-moment IFS practices.', to: '/life-integration', icon: Sparkles, roles: clientRoles },
+      { label: 'IFS in Daily Life', description: 'Practice IFS in daily life. Saved reflections appear across your IFS path.', to: '/life-integration', icon: Sparkles, roles: clientRoles },
       { label: 'Notice a Part in the Moment', description: 'Pause and identify which part is showing up right now.', to: '/life-integration/notice-part', icon: Sparkles, roles: clientRoles },
       { label: 'Return to Self-Energy', description: 'Unblend gently and reconnect with a Self-energy quality.', to: '/life-integration/return-to-self', icon: Wand2, roles: clientRoles },
       { label: 'Reflect on a Trigger', description: 'Explore which parts reacted and what they may need.', to: '/life-integration/trigger-reflection', icon: PenLine, roles: clientRoles },

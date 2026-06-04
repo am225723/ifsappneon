@@ -3,7 +3,8 @@ import { ArrowLeft, CalendarDays, Eye, Lock, RefreshCw, Share2, ShieldCheck, Use
 import { Link } from 'react-router-dom';
 import { clientAuth } from '../lib/supabasePersonalization';
 import { loadAssignedClients } from '../lib/therapistAssignments';
-import { LIFE_REFLECTION_TYPES, getSharedLifeIntegrationReflectionForAdvisor, loadSharedLifeIntegrationReflectionsForAdvisor } from '../lib/lifeIntegration';
+import { getSharedLifeIntegrationReflectionForAdvisor, loadSharedLifeIntegrationReflectionsForAdvisor } from '../lib/lifeIntegration';
+import { formatLifeReflectionType, normalizeLifeReflection, summarizeLifeReflection } from '../lib/lifeIntegrationDisplay';
 
 const fieldLabels = [
   ['situation', 'Situation'],
@@ -57,7 +58,7 @@ export default function AdvisorSharedReflections() {
       setReflections([]);
       setSelectedReflection(null);
     } else {
-      setReflections(data || []);
+      setReflections((data || []).filter((reflection) => reflection.shared_with_advisor === true).map(normalizeLifeReflection));
       setSelectedReflection((current) => (data || []).find((item) => item.id === current?.id) || (data || [])[0] || null);
     }
     setLoadingReflections(false);
@@ -123,14 +124,15 @@ export default function AdvisorSharedReflections() {
                   <button key={reflection.id} onClick={() => openReflection(reflection)} className={`w-full rounded-3xl border p-5 text-left transition ${active ? 'border-brand-emerald-300 bg-brand-emerald-50/70 dark:border-brand-emerald-900 dark:bg-brand-emerald-950/20' : 'border-brand-stone-100 bg-white/80 hover:-translate-y-0.5 hover:shadow-md dark:border-slate-800 dark:bg-slate-900/50'}`}>
                     <div className="flex items-start justify-between gap-3">
                       <div>
-                        <p className="text-xs font-bold uppercase tracking-[0.18em] text-brand-gold-700 dark:text-brand-gold-500">{LIFE_REFLECTION_TYPES[reflection.reflection_type] || 'Life Integration reflection'}</p>
-                        <h3 className="mt-2 line-clamp-2 text-lg font-semibold text-brand-stone-900 dark:text-slate-100">{reflection.situation || reflection.part_noticed || reflection.next_step || 'Shared reflection'}</h3>
+                        <p className="text-xs font-bold uppercase tracking-[0.18em] text-brand-gold-700 dark:text-brand-gold-500">{reflection.label}</p>
+                        <h3 className="mt-2 line-clamp-2 text-lg font-semibold text-brand-stone-900 dark:text-slate-100">{reflection.summary}</h3>
                       </div>
                       <Eye className="h-4 w-4 shrink-0 text-brand-stone-400" />
                     </div>
                     <div className="mt-3 flex flex-wrap gap-2 text-xs text-brand-stone-500 dark:text-slate-500">
                       <span className="inline-flex items-center gap-1"><CalendarDays className="h-3.5 w-3.5" /> {new Date(reflection.created_at).toLocaleDateString()}</span>
-                      {(reflection.linked_part_name || reflection.linked_part_alias) && <span>Linked part: {reflection.linked_part_name || reflection.linked_part_alias}</span>}
+                      {reflection.linkedPartName && <span>Linked part: {reflection.linkedPartName}</span>}
+                      {selectedClient && <span>Client: {selectedClient.name || selectedClient.email || 'Assigned client'}</span>}
                       <span className="inline-flex items-center gap-1 text-brand-emerald-700 dark:text-brand-emerald-100"><Share2 className="h-3.5 w-3.5" /> Shared by client</span>
                     </div>
                   </button>
@@ -147,9 +149,10 @@ export default function AdvisorSharedReflections() {
                 <div className="mb-5 flex flex-col gap-3 border-b border-brand-stone-100 pb-5 dark:border-slate-800 md:flex-row md:items-start md:justify-between">
                   <div>
                     <p className="text-xs font-bold uppercase tracking-[0.22em] text-brand-emerald-700 dark:text-brand-emerald-100">Client-chosen shared reflection</p>
-                    <h2 className="mt-2 text-2xl font-serif font-normal text-brand-stone-900 dark:text-slate-100">{LIFE_REFLECTION_TYPES[selectedReflection.reflection_type] || 'Life Integration reflection'}</h2>
+                    <h2 className="mt-2 text-2xl font-serif font-normal text-brand-stone-900 dark:text-slate-100">{formatLifeReflectionType(selectedReflection.reflection_type)}</h2>
                     <p className="mt-2 text-sm text-brand-stone-500 dark:text-slate-500">Created {new Date(selectedReflection.created_at).toLocaleString()}</p>
                     {(selectedReflection.linked_part_name || selectedReflection.linked_part_alias) && <p className="mt-1 text-sm text-brand-stone-500 dark:text-slate-500">Linked part: {selectedReflection.linked_part_name || selectedReflection.linked_part_alias}</p>}
+                    <p className="mt-1 text-sm text-brand-stone-500 dark:text-slate-500">Summary: {summarizeLifeReflection(selectedReflection)}</p>
                   </div>
                   <span className="inline-flex w-fit items-center gap-2 rounded-full bg-brand-emerald-50 px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-brand-emerald-700 dark:bg-brand-emerald-950/30 dark:text-brand-emerald-100"><Share2 className="h-3.5 w-3.5" /> Shared</span>
                 </div>

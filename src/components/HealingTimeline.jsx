@@ -70,7 +70,13 @@ const BADGE_LABELS = {
   journal_entry: 'Reflection',
   mood_checkins: 'Check-In',
   first_module_completed: 'Progress',
-  module_progress_completed: 'Progress'
+  module_progress_completed: 'Progress',
+  life_integration_notice_part: 'Life Integration',
+  life_integration_return_to_self: 'Life Integration',
+  life_integration_trigger_reflection: 'Life Integration',
+  life_integration_repair_after_conflict: 'Life Integration',
+  life_integration_protector_check_in: 'Life Integration',
+  life_integration_needs_boundaries: 'Life Integration'
 };
 
 function formatDate(value) {
@@ -212,7 +218,7 @@ export default function HealingTimeline() {
           <SummaryCard icon={CheckCircle} label="Modules Completed" value={summary.modulesCompleted || 0} detail="Curriculum modules" />
           <SummaryCard icon={CalendarCheck} label="Check-Ins" value={(summary.checkInsSubmitted || 0) + (summary.moodCheckIns || 0)} detail="Practice and mood check-ins" />
           <SummaryCard icon={Target} label="Growth Milestones" value={summary.goalsCompleted || 0} detail="Supportive milestones" />
-          <SummaryCard icon={PenLine} label="Reflections" value={summary.journalEntries || 0} detail="Journal entries" />
+          <SummaryCard icon={PenLine} label="Reflections" value={(summary.journalEntries || 0) + (summary.lifeIntegrationReflections || 0)} detail="Journal + Life Integration" />
         </div>
 
         {loading && (
@@ -233,7 +239,7 @@ export default function HealingTimeline() {
             <div className="mb-6 flex items-center justify-between gap-4">
               <div>
                 <h2 className="text-2xl font-serif text-brand-stone-900 dark:text-slate-100">Progress moments</h2>
-                <p className="text-sm text-brand-stone-600 dark:text-slate-400">Supportive milestones from curriculum, parts work, assessments, and reflections.</p>
+                <p className="text-sm text-brand-stone-600 dark:text-slate-400">Supportive milestones from curriculum, parts work, assessments, Life Integration, and reflections.</p>
               </div>
             </div>
             <div>

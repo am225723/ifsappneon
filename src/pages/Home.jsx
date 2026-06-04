@@ -27,7 +27,8 @@ import { loadClientSessionAgendas } from '../lib/sessionAgendas';
 import { loadActiveTreatmentPlansForClient } from '../lib/treatmentPlans';
 import { getActiveLiveSessionForClient } from '../lib/liveSession';
 import { loadAssignedHomeworkForClient } from '../lib/assignedHomework';
-import { LIFE_REFLECTION_TYPES, loadLifeIntegrationReflections } from '../lib/lifeIntegration';
+import { loadLifeIntegrationReflections } from '../lib/lifeIntegration';
+import { formatLifeReflectionType, getLifeReflectionRoute, normalizeLifeReflection } from '../lib/lifeIntegrationDisplay';
 import { loadHealingTimeline } from '../lib/healingTimeline';
 import {
   getPartsMapParts,
@@ -117,6 +118,7 @@ const Home = ({ clientId, client, mode = 'home', selfProfile = null, selfProfile
   const [activeLiveSession, setActiveLiveSession] = useState(null);
   const [activeAssignedPractice, setActiveAssignedPractice] = useState(null);
   const [recentLifeReflection, setRecentLifeReflection] = useState(null);
+  const [lifeReflectionCount, setLifeReflectionCount] = useState(0);
   const [latestMilestone, setLatestMilestone] = useState(null);
   const [curriculumSummary, setCurriculumSummary] = useState(null);
   const [assignedPracticeCount, setAssignedPracticeCount] = useState(0);
@@ -245,7 +247,9 @@ const Home = ({ clientId, client, mode = 'home', selfProfile = null, selfProfile
           const assignedPractices = assignedResult.data || [];
           setAssignedPracticeCount(assignedPractices.filter((item) => ['assigned', 'in_progress'].includes(item.status)).length);
           setActiveAssignedPractice(assignedPractices.find((item) => ['assigned', 'in_progress'].includes(item.status)) || null);
-          setRecentLifeReflection((reflectionsResult.data || [])[0] || null);
+          const lifeReflections = reflectionsResult.data || [];
+          setLifeReflectionCount(lifeReflections.length);
+          setRecentLifeReflection(lifeReflections[0] ? normalizeLifeReflection(lifeReflections[0]) : null);
           setLatestMilestone((timelineResult.data?.timeline || [])[0] || null);
 
           const progressRows = progressResult.data || [];
@@ -361,7 +365,7 @@ const Home = ({ clientId, client, mode = 'home', selfProfile = null, selfProfile
               to: `/life-integration/reflections/${recentLifeReflection.id}`,
               icon: Feather,
               title: 'Return to a recent reflection',
-              description: LIFE_REFLECTION_TYPES[recentLifeReflection.reflection_type] || 'Revisit a Life Integration reflection with curiosity.',
+              description: recentLifeReflection.summary || 'Revisit a Life Integration reflection with curiosity.',
               buttonLabel: 'Open Reflection',
               badge: 'Recent',
               tone: 'emerald'
@@ -457,9 +461,14 @@ const Home = ({ clientId, client, mode = 'home', selfProfile = null, selfProfile
     { to: '/weekly-reflection', icon: CalendarCheck, title: 'Weekly Reflection', description: 'Look back gently at curriculum, parts work, and daily practice.', buttonLabel: 'Reflect on Week', tone: 'emerald' }
   ];
 
+  const lifeIntegrationSummary = lifeReflectionCount
+    ? `You have ${lifeReflectionCount} daily-life reflection${lifeReflectionCount === 1 ? '' : 's'} saved. Latest: ${formatLifeReflectionType(recentLifeReflection?.reflection_type)}.`
+    : 'Use Life Integration practices when something comes up in daily life.';
+  const latestPracticeRoute = recentLifeReflection?.practiceRoute || getLifeReflectionRoute('notice_part');
+
   const lifeIntegrationTiles = [
-    { to: '/life-integration', icon: Sparkles, title: 'IFS in Daily Life', description: 'Short Life Integration practices for using IFS in real moments between curriculum modules.', buttonLabel: 'Open Toolkit', tone: 'emerald' },
-    { to: '/life-integration/notice-part', icon: Smile, title: 'Notice a Part in the Moment', description: 'Pause, identify what part is showing up, and choose one gentle next step.', buttonLabel: 'Notice a Part', tone: 'gold' },
+    { to: '/life-integration', icon: Sparkles, title: 'IFS in Daily Life', description: lifeIntegrationSummary, buttonLabel: 'Open Toolkit', badge: lifeReflectionCount ? `${lifeReflectionCount} saved` : null, tone: 'emerald' },
+    { to: latestPracticeRoute, icon: Smile, title: recentLifeReflection ? 'Continue latest Daily Life Practice' : 'Notice a Part in the Moment', description: recentLifeReflection ? recentLifeReflection.summary : 'Pause, identify what part is showing up, and choose one gentle next step.', buttonLabel: recentLifeReflection ? 'Continue Practice' : 'Notice a Part', tone: 'gold' },
     { to: '/life-integration/return-to-self', icon: Sun, title: 'Return to Self-Energy', description: 'Invite unblending and reconnect with calm, curiosity, compassion, or another Self-energy quality.', buttonLabel: 'Return to Self', tone: 'emerald' },
     { to: '/life-integration/trigger-reflection', icon: Feather, title: 'Reflect on a Trigger', description: 'Explore what happened lightly, which parts reacted, and what they may need.', buttonLabel: 'Reflect Gently', tone: 'stone' },
     { to: '/life-integration/repair-after-conflict', icon: Heart, title: 'Repair After Conflict', description: 'Understand activated parts and choose one repair, boundary, or honest communication.', buttonLabel: 'Explore Repair', tone: 'gold' },
@@ -647,6 +656,7 @@ const Home = ({ clientId, client, mode = 'home', selfProfile = null, selfProfile
                 <p><span className="font-semibold text-brand-stone-900 dark:text-slate-100">Assessment:</span> {hasWoundAssessment || assessmentSummary.interactiveAssessments.length ? 'Available for personalization' : 'Not completed yet'}</p>
                 <p><span className="font-semibold text-brand-stone-900 dark:text-slate-100">Inner System Map:</span> {hasInnerSystemProgress ? 'Started' : 'Ready to begin'}</p>
                 <p><span className="font-semibold text-brand-stone-900 dark:text-slate-100">Journal/reflections:</span> {assessmentSummary.journalCount ? 'Started' : 'Ready to begin'}</p>
+                <p><span className="font-semibold text-brand-stone-900 dark:text-slate-100">Daily-life reflections:</span> {lifeReflectionCount ? `${lifeReflectionCount} saved` : 'Ready when daily life brings something up'}</p>
                 <p><span className="font-semibold text-brand-stone-900 dark:text-slate-100">Assigned IFS Practices:</span> {assignedPracticeCount || 'None active'}</p>
               </div>
             </div>
