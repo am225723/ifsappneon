@@ -108,6 +108,14 @@ Navbar (Advisor/Admin)
   Messages -> /messages
   Profile -> /profile
 
+Admin Hub
+  My IFS Work -> /my-ifs
+  Tools Directory -> /tools
+  Curriculum & Assessments -> /curriculum
+  Assessment Generator -> /assessment-builder
+  Practice Generator -> /advisor-homework
+  Insights & Reports -> /advisor-reports
+
 Mobile BottomNav (client)
   Home -> /
   Practice -> /life-integration
@@ -218,7 +226,7 @@ Tools Directory
 
 - Existing `clientOnly`, `therapistOnly`, Admin/Supervisor checks, protected authenticated app flow, and `FeatureGate` wrappers are preserved.
 - `/assessment-builder` is now wrapped with `therapistOnly` because it is surfaced as an Advisor/Admin Assessment Generator tool.
-- The Tools Directory renders Admin / Advisor Tools only for `therapist`, `advisor`, `admin`, and `supervisor` roles, and renders Admin Hub only for `admin` and `supervisor` roles.
+- The Tools Directory renders Admin / Advisor Tools only for `therapist`, `advisor`, `admin`, and `supervisor` roles, and renders Admin Hub only for `admin` and `supervisor` roles. Admin Hub also links back to `/tools` so Advisors/Admins can reach the complete directory from workflow navigation.
 - Feature-gated Tools Directory items use `canAccessFeature`; unavailable tools render disabled with “Not available for your account.”
 - Debug, diagnostic, mockup, auth-flow, and direct-only dynamic routes are not included in user-facing navigation.
 - No SQL or migrations are required for this navigation audit.
