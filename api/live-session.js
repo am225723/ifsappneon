@@ -40,22 +40,46 @@ const EVENT_TYPES = new Set([
 const SUPPORTED_ACTIVITIES = new Set([
   'guided_breathing',
   'grounding_54321',
-  'parts_check_in',
+  'unblending',
   'self_energy_check',
-  'unblending_practice',
   'protector_appreciation',
-  'feelings_needs_check',
-  'repair_after_conflict',
+  'body_scan',
+  'window_of_tolerance',
+  'feelings_wheel',
+  'parts_check_in',
+  // Kept for existing shared map sessions; not shown in the Phase 14A live practice picker.
   'shared_parts_map'
 ]);
 const STEP_COUNTS = new Map([
-  ['grounding_54321', 6],
-  ['parts_check_in', 6],
-  ['self_energy_check', 6],
-  ['unblending_practice', 6],
-  ['protector_appreciation', 6],
-  ['feelings_needs_check', 6],
-  ['repair_after_conflict', 6]
+  ['grounding_54321', 5],
+  ['unblending', 5],
+  ['self_energy_check', 8],
+  ['protector_appreciation', 5],
+  ['body_scan', 6],
+  ['window_of_tolerance', 6],
+  ['feelings_wheel', 6],
+  ['parts_check_in', 7]
+]);
+const DEFAULT_DURATIONS = new Map([
+  ['grounding_54321', 240],
+  ['unblending', 300],
+  ['self_energy_check', 300],
+  ['protector_appreciation', 300],
+  ['body_scan', 300],
+  ['window_of_tolerance', 300],
+  ['feelings_wheel', 300],
+  ['parts_check_in', 300]
+]);
+const SOURCE_PRACTICES = new Map([
+  ['guided_breathing', 'Breath Anchor'],
+  ['grounding_54321', 'Grounding practice'],
+  ['unblending', 'Return to Self-Energy'],
+  ['self_energy_check', 'Return to Self-Energy'],
+  ['protector_appreciation', 'Protector Check-In'],
+  ['body_scan', 'Mini Body Scan'],
+  ['window_of_tolerance', 'Window of Tolerance Mapping'],
+  ['feelings_wheel', 'Needs & Boundaries Reflection'],
+  ['parts_check_in', 'Notice a Part in the Moment']
 ]);
 const MAX_PROMPT_LENGTH = 500;
 const MAX_SUGGESTION_NAME_LENGTH = 100;
@@ -109,14 +133,28 @@ function normalizeActivityState(activity, requestedState = {}) {
     const currentStep = Number(requestedState.currentStep || 0);
     const stepCount = STEP_COUNTS.get(activity) || 1;
     const safeStep = Number.isFinite(currentStep) ? Math.min(Math.max(Math.floor(currentStep), 0), stepCount - 1) : 0;
+    const durationSeconds = Number(requestedState.durationSeconds || DEFAULT_DURATIONS.get(activity) || 300);
+    const safeDuration = Number.isFinite(durationSeconds) ? Math.min(Math.max(durationSeconds, 30), 900) : (DEFAULT_DURATIONS.get(activity) || 300);
+    const steps = Array.isArray(requestedState.steps)
+      ? requestedState.steps.slice(0, stepCount).map((step = {}) => ({
+          title: sanitizeText(step.title, 120),
+          prompt: sanitizeText(step.prompt, 500),
+          helper: sanitizeText(step.helper, 500)
+        }))
+      : [];
     return {
       activity,
+      presetId: sanitizeText(requestedState.presetId || activity, 100),
+      sourcePractice: sanitizeText(requestedState.sourcePractice || SOURCE_PRACTICES.get(activity) || '', 120),
+      sourceActivity: sanitizeText(requestedState.sourceActivity || '', 120),
       currentStep: safeStep,
       startedAt: new Date().toISOString(),
+      pausedAt: null,
+      durationSeconds: safeDuration,
       status: 'active',
-      steps: [],
+      steps,
       advisorPrompt: String(requestedState.advisorPrompt || requestedState.message || '').replace(/\s+/g, ' ').trim().slice(0, MAX_PROMPT_LENGTH),
-      clientCanReflect: true
+      clientCanReflect: false
     };
   }
 
@@ -141,7 +179,8 @@ function normalizeActivityState(activity, requestedState = {}) {
     exhaleSeconds: safeExhale,
     status: 'active',
     advisorPrompt: String(requestedState.advisorPrompt || '').replace(/\s+/g, ' ').trim().slice(0, MAX_PROMPT_LENGTH),
-    message: String(requestedState.message || 'Follow the breathing circle gently.').slice(0, MAX_PROMPT_LENGTH)
+    message: String(requestedState.message || 'Follow the breathing circle gently.').slice(0, MAX_PROMPT_LENGTH),
+    sourcePractice: sanitizeText(requestedState.sourcePractice || SOURCE_PRACTICES.get('guided_breathing') || '', 120)
   };
 }
 
