@@ -94,6 +94,20 @@ function getEffectiveClientId({ mode, currentClientId, selfProfile }) {
   return currentClientId || null;
 }
 
+function summarizeQueryErrors(resultsByTable, effectiveClientId, selfProfile) {
+  return Object.entries(resultsByTable)
+    .filter(([, result]) => result?.error)
+    .map(([table, result]) => ({
+      table,
+      status: result.error.status || result.error.statusCode || null,
+      message: result.error.message || 'Request failed',
+      effectiveClientId,
+      selfProfilePresent: Boolean(selfProfile?.id)
+    }));
+}
+
+const DATA_LOAD_ERROR_MESSAGE = 'Your IFS data could not be loaded right now. Please refresh or try again.';
+
 const Home = ({ clientId, client, mode = 'home', selfProfile = null, selfProfileResult = null }) => {
   const navigate = useNavigate();
   const [savedAssessment, setSavedAssessment] = useState(null);
@@ -106,6 +120,7 @@ const Home = ({ clientId, client, mode = 'home', selfProfile = null, selfProfile
   const [latestMilestone, setLatestMilestone] = useState(null);
   const [curriculumSummary, setCurriculumSummary] = useState(null);
   const [assignedPracticeCount, setAssignedPracticeCount] = useState(0);
+  const [dataLoadError, setDataLoadError] = useState(null);
   const effectiveClientId = getEffectiveClientId({ mode, currentClientId: clientId, selfProfile: selfProfile || selfProfileResult?.profile });
   const effectiveClient = mode === 'my-ifs' ? (selfProfile || selfProfileResult?.profile || client) : client;
   const [assessmentSummary, setAssessmentSummary] = useState({
@@ -123,6 +138,7 @@ const Home = ({ clientId, client, mode = 'home', selfProfile = null, selfProfile
 
   useEffect(() => {
     const loadData = async () => {
+      setDataLoadError(null);
       if (effectiveClientId) {
         try {
           const [
@@ -169,6 +185,27 @@ const Home = ({ clientId, client, mode = 'home', selfProfile = null, selfProfile
               .select('module_id, completed, current_step, updated_at')
               .eq('client_id', effectiveClientId)
           ]);
+
+          const queryErrors = summarizeQueryErrors({
+            ifs_interactive_data: interactiveResult,
+            ifs_assessment_results: formalAssessmentResult,
+            ifs_parts: partsCountResult,
+            ifs_part_relationships: relationshipsCountResult,
+            ifs_session_agendas: agendasResult,
+            ifs_treatment_plans: goalsResult,
+            ifs_assigned_homework: assignedResult,
+            ifs_life_integration_reflections: reflectionsResult,
+            healing_timeline: timelineResult,
+            ifs_journal_entries: journalResult,
+            ifs_client_progress: progressResult
+          }, effectiveClientId, selfProfile || selfProfileResult?.profile);
+
+          if (queryErrors.length) {
+            setDataLoadError({ message: DATA_LOAD_ERROR_MESSAGE, details: queryErrors });
+            if (import.meta.env.DEV) {
+              console.warn('[MyIFSWork/Home] data query failures', queryErrors);
+            }
+          }
 
           const interactiveRows = interactiveResult.data || [];
           const normalizedInteractive = interactiveRows.map(normalizeInteractiveResult);
@@ -231,6 +268,16 @@ const Home = ({ clientId, client, mode = 'home', selfProfile = null, selfProfile
           if (!liveResult.error) setActiveLiveSession(liveResult.data || null);
         } catch (err) {
           console.error('Error loading home data:', err);
+          setDataLoadError({
+            message: DATA_LOAD_ERROR_MESSAGE,
+            details: [{
+              table: 'home_data',
+              status: err?.status || err?.statusCode || null,
+              message: err?.message || 'Request failed',
+              effectiveClientId,
+              selfProfilePresent: Boolean((selfProfile || selfProfileResult?.profile)?.id)
+            }]
+          });
         }
       }
       setLoading(false);
@@ -471,6 +518,19 @@ const Home = ({ clientId, client, mode = 'home', selfProfile = null, selfProfile
           </div>
         </div>
       </section>
+
+      {dataLoadError && (
+        <section className="mb-8 rounded-3xl border border-red-200 bg-red-50 p-5 text-sm text-red-700 dark:border-red-900/60 dark:bg-red-950/20 dark:text-red-200">
+          <p className="font-semibold">{dataLoadError.message}</p>
+          {import.meta.env.DEV && dataLoadError.details?.length > 0 && (
+            <ul className="mt-2 list-disc space-y-1 pl-5 text-xs">
+              {dataLoadError.details.map((item) => (
+                <li key={`${item.table}-${item.status || 'error'}`}>{item.table}: {item.status || 'error'} (effectiveClientId: {item.effectiveClientId || 'none'}, selfProfile: {item.selfProfilePresent ? 'yes' : 'no'})</li>
+              ))}
+            </ul>
+          )}
+        </section>
+      )}
 
       {isMyIFSMode && (
         <section className="mb-8 rounded-3xl border border-brand-gold-200/70 bg-brand-gold-50/80 p-5 text-sm text-brand-stone-700 dark:border-brand-gold-900/50 dark:bg-brand-gold-950/20 dark:text-slate-300">

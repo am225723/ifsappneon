@@ -16,6 +16,12 @@ import {
   updatePartRelationship
 } from '../lib/partRelationships';
 
+const DATA_LOAD_ERROR_MESSAGE = 'Your IFS data could not be loaded right now. Please refresh or try again.';
+
+function getSafeErrorStatus(error) {
+  return error?.status || error?.statusCode || null;
+}
+
 const emptyRelationshipForm = {
   id: null,
   from_part_id: '',
@@ -87,7 +93,7 @@ export default function PartsRelationshipMap() {
     const [
       { data: partRows, error: partsError },
       { data: relationshipRows, error: relationshipsError },
-      { data: partsMapRow }
+      { data: partsMapRow, error: partsMapError }
     ] = await Promise.all([
       supabase
         .from('ifs_parts')
@@ -103,8 +109,22 @@ export default function PartsRelationshipMap() {
         .maybeSingle()
     ]);
 
-    if (partsError) setError(partsError.message || 'Unable to load parts.');
-    if (relationshipsError) setError(relationshipsError.message || 'Unable to load relationships.');
+    const loadErrors = [
+      partsError && { table: 'ifs_parts', status: getSafeErrorStatus(partsError) },
+      relationshipsError && { table: 'ifs_part_relationships', status: getSafeErrorStatus(relationshipsError) },
+      partsMapError && { table: 'ifs_interactive_data', status: getSafeErrorStatus(partsMapError) }
+    ].filter(Boolean);
+
+    if (loadErrors.length) {
+      setError(DATA_LOAD_ERROR_MESSAGE);
+      if (import.meta.env.DEV) {
+        console.warn('[PartsRelationshipMap] data query failures', loadErrors.map((item) => ({
+          ...item,
+          effectiveClientId,
+          selfProfilePresent: Boolean(clerkLinkedSelfProfile?.id)
+        })));
+      }
+    }
     setParts(partRows || []);
     setRelationships(relationshipRows || []);
     setLegacyPartsMap(partsMapRow || null);
@@ -204,6 +224,13 @@ export default function PartsRelationshipMap() {
     if (previewError) {
       setLegacyImportPreview(null);
       setError(previewError.message || 'We could not preview the import. Your older map is still safe and unchanged.');
+      if (import.meta.env.DEV) {
+        console.warn('[PartsRelationshipMap] legacy import preview failed', {
+          status: getSafeErrorStatus(previewError),
+          effectiveClientId,
+          selfProfilePresent: Boolean(resolvedSelfProfile?.id)
+        });
+      }
     } else {
       setLegacyImportPreview(data);
       setSelectedLegacyPartIds((data?.importable || []).map((part) => String(part.id)));
@@ -230,6 +257,13 @@ export default function PartsRelationshipMap() {
     if (importError) {
       setLegacyImportResult(data || { imported: [], skipped: [], errors: [{ message: importError.message }], legacyPreserved: true });
       setError(importError.message || 'We could not complete the import. Your older map is still safe and unchanged.');
+      if (import.meta.env.DEV) {
+        console.warn('[PartsRelationshipMap] legacy import failed', {
+          status: getSafeErrorStatus(importError),
+          effectiveClientId,
+          selfProfilePresent: Boolean(resolvedSelfProfile?.id)
+        });
+      }
     } else {
       setLegacyImportResult(data);
       await loadMap();

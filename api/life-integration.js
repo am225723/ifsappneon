@@ -186,11 +186,8 @@ async function handleGet(appUser, body) {
   const reflectionId = getReflectionId(body);
   if (!reflectionId) throw Object.assign(new Error('Reflection id is required'), { statusCode: 400 });
 
-  if (appUser.user_role === 'client') {
-    const row = await loadReflectionForClient(reflectionId, appUser.id);
-    if (!row) throw Object.assign(new Error('Reflection not found'), { statusCode: 404 });
-    return row;
-  }
+  const selfOwnedRow = await loadReflectionForClient(reflectionId, appUser.id);
+  if (selfOwnedRow) return selfOwnedRow;
 
   if (isTherapistUser(appUser)) {
     const row = await loadSharedReflectionForAdvisor(reflectionId, appUser.id);
@@ -202,9 +199,6 @@ async function handleGet(appUser, body) {
 }
 
 async function handleCreate(appUser, body) {
-  if (appUser.user_role !== 'client') {
-    throw Object.assign(new Error('Only clients can create Life Integration reflections'), { statusCode: 403 });
-  }
   const payload = pickPayload(body.payload || {}, appUser);
   await assertPartBelongsToClient(payload.part_id, payload.client_id);
 
@@ -225,9 +219,6 @@ async function handleCreate(appUser, body) {
 }
 
 async function handleUpdate(appUser, body) {
-  if (appUser.user_role !== 'client') {
-    throw Object.assign(new Error('Only clients can update Life Integration reflections'), { statusCode: 403 });
-  }
   const reflectionId = getReflectionId(body);
   if (!reflectionId) throw Object.assign(new Error('Reflection id is required'), { statusCode: 400 });
   const updates = pickUpdates(body.updates || {});
@@ -259,9 +250,6 @@ async function handleUpdate(appUser, body) {
 }
 
 async function handleDelete(appUser, body) {
-  if (appUser.user_role !== 'client') {
-    throw Object.assign(new Error('Only clients can archive Life Integration reflections'), { statusCode: 403 });
-  }
   const reflectionId = getReflectionId(body);
   if (!reflectionId) throw Object.assign(new Error('Reflection id is required'), { statusCode: 400 });
   const rows = await sql`
@@ -277,9 +265,6 @@ async function handleDelete(appUser, body) {
 }
 
 async function handleShare(appUser, body, shared) {
-  if (appUser.user_role !== 'client') {
-    throw Object.assign(new Error('Only clients can change Advisor sharing'), { statusCode: 403 });
-  }
   const reflectionId = getReflectionId(body);
   if (!reflectionId) throw Object.assign(new Error('Reflection id is required'), { statusCode: 400 });
   const rows = await sql`

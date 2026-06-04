@@ -106,6 +106,7 @@ export async function requireTherapistAssignment(therapistId, clientId) {
 
 export async function requireClientAccess(req, clientId) {
   const appUser = await getCurrentAppUserFromClerk(req);
+  if (appUser?.id && clientId && String(appUser.id) === String(clientId)) return appUser;
   if (isAdminUser(appUser)) return appUser;
   if (appUser?.user_role === 'client') {
     if (String(appUser.id) !== String(clientId)) {
