@@ -198,6 +198,7 @@ export default function PartsRelationshipMap() {
     (!legacyImportPreview || importPreviewAvailable)
   );
   const importAvailable = shouldShowImportCard;
+  const showNoLegacyImportMessage = Boolean(!loading && effectiveClientId && !legacyPartsMap && !legacyImportDismissed);
 
   useEffect(() => {
     if (import.meta.env.DEV) {
@@ -328,7 +329,7 @@ export default function PartsRelationshipMap() {
           <p className="text-xs font-bold uppercase tracking-[0.22em] text-brand-emerald-700 dark:text-brand-emerald-100">Parts Map</p>
           <h1 className="mt-2 text-3xl lg:text-4xl font-serif text-brand-stone-900 dark:text-slate-100">My Inner System Map</h1>
           <p className="mt-3 max-w-3xl text-brand-stone-700 dark:text-slate-300">
-            A client-owned map of your parts, their relationships, and their connection to Self-energy.
+            Your personal map of your parts, their relationships, and their connection to Self-energy.
           </p>
           <p className="mt-3 rounded-2xl bg-brand-emerald-50 dark:bg-emerald-950/40 px-4 py-3 text-sm text-brand-emerald-900 dark:text-emerald-100">
             This map belongs to you. Keep only what feels true for your inner system. Relationships can change over time, and there is no right or wrong map.
@@ -336,6 +337,13 @@ export default function PartsRelationshipMap() {
         </section>
 
         {error && <div className="rounded-2xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</div>}
+
+
+        {showNoLegacyImportMessage && (
+          <section className="rounded-3xl border border-brand-stone-200 bg-white/80 p-4 text-sm text-brand-stone-600 dark:border-slate-800 dark:bg-slate-950/70 dark:text-slate-400">
+            No older parts map was found to import.
+          </section>
+        )}
 
         {importAvailable && (
           <section className="rounded-3xl border border-brand-gold-200 bg-brand-gold-50/80 p-4 text-sm text-brand-stone-700 dark:border-brand-gold-900/40 dark:bg-brand-gold-950/20 dark:text-slate-300">
@@ -456,7 +464,7 @@ export default function PartsRelationshipMap() {
             )}
             <div className="mt-3 grid md:grid-cols-2 gap-3 text-xs text-brand-stone-600 dark:text-slate-400">
               <p>Drag nodes or use the move buttons to adjust each part’s relationship to Self-energy.</p>
-              <p>Relationship lines are saved in your client-owned Parts Map after you add or edit them here.</p>
+              <p>Relationship lines are saved in your personal Inner System Map after you add or edit them here.</p>
             </div>
           </section>
 

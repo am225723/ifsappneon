@@ -26,7 +26,8 @@ import {
 import { canAccessFeature } from '../lib/accessControl';
 import { clientAuth } from '../lib/supabasePersonalization';
 
-const clientRoles = ['client'];
+const selfWorkRoles = ['client', 'therapist', 'advisor', 'admin', 'supervisor'];
+const clientRoles = selfWorkRoles;
 const advisorRoles = ['therapist', 'advisor', 'admin', 'supervisor'];
 const adminRoles = ['admin', 'supervisor'];
 
@@ -116,16 +117,16 @@ const sections = [
     title: 'Admin / Advisor Tools',
     description: 'Workflow-based Advisor and Admin access for clients, curriculum, review, and reporting.',
     items: [
-      { label: 'Advisor Dashboard', to: '/therapist-dashboard', icon: ClipboardCheck, roles: advisorRoles },
+      { label: 'Advisor Dashboard', to: '/therapist', icon: ClipboardCheck, roles: advisorRoles },
       { label: 'Admin Hub', to: '/admin-hub', icon: Shield, roles: adminRoles },
-      { label: 'Clients', to: '/therapist-dashboard', icon: Users, roles: advisorRoles },
+      { label: 'Clients', to: '/therapist', icon: Users, roles: advisorRoles },
       { label: 'Caseload', to: '/caseload', icon: Users, roles: advisorRoles },
       { label: 'Curriculum & Assessments', to: '/curriculum', icon: BookOpen, roles: advisorRoles },
       { label: 'Assessment Generator', to: '/assessment-builder', icon: ClipboardCheck, roles: advisorRoles },
       { label: 'Practice Generator', to: '/advisor-homework', icon: Sparkles, roles: advisorRoles },
       { label: 'Review Queue', to: '/advisor-homework', icon: CalendarCheck, roles: advisorRoles },
       { label: 'Growth Goals', to: '/treatment-plans', icon: Trophy, roles: advisorRoles },
-      { label: 'Advisor Notes', to: '/therapist-dashboard', icon: PenLine, roles: advisorRoles },
+      { label: 'Advisor Notes', to: '/therapist', icon: PenLine, roles: advisorRoles },
       { label: 'Shared Reflections', to: '/advisor/shared-reflections', icon: ScrollText, roles: advisorRoles },
       { label: 'Messages', to: '/messages', icon: MessageSquare, roles: advisorRoles },
       { label: 'Reports', to: '/reports', icon: FileText, roles: advisorRoles },

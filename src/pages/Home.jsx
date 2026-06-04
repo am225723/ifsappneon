@@ -123,6 +123,9 @@ const Home = ({ clientId, client, mode = 'home', selfProfile = null, selfProfile
   const [dataLoadError, setDataLoadError] = useState(null);
   const effectiveClientId = getEffectiveClientId({ mode, currentClientId: clientId, selfProfile: selfProfile || selfProfileResult?.profile });
   const effectiveClient = mode === 'my-ifs' ? (selfProfile || selfProfileResult?.profile || client) : client;
+  const isMyIFSMode = mode === 'my-ifs';
+  const isAdvisorModeUser = ['therapist', 'advisor', 'admin', 'supervisor'].includes(effectiveClient?.user_role);
+  const shouldShowWorkspaceChoice = !isMyIFSMode && isAdvisorModeUser;
   const [assessmentSummary, setAssessmentSummary] = useState({
     latestFormalWound: null,
     interactiveAssessments: [],
@@ -139,6 +142,10 @@ const Home = ({ clientId, client, mode = 'home', selfProfile = null, selfProfile
   useEffect(() => {
     const loadData = async () => {
       setDataLoadError(null);
+      if (shouldShowWorkspaceChoice) {
+        setLoading(false);
+        return;
+      }
       if (effectiveClientId) {
         try {
           const [
@@ -284,7 +291,7 @@ const Home = ({ clientId, client, mode = 'home', selfProfile = null, selfProfile
     };
 
     loadData();
-  }, [effectiveClientId, mode]);
+  }, [effectiveClientId, mode, shouldShowWorkspaceChoice]);
 
   const clientFirstName = (effectiveClient?.name || effectiveClient?.full_name || '').split(' ').filter(Boolean)[0];
   const assessmentPrimary = savedAssessment?.primaryWound?.name || savedAssessment?.primaryWound?.id || savedAssessment?.topWound?.name || savedAssessment?.topWound?.id || savedAssessment?.primary_wound || savedAssessment?.primary || null;
@@ -299,7 +306,6 @@ const Home = ({ clientId, client, mode = 'home', selfProfile = null, selfProfile
   const hasInnerSystemProgress = assessmentSummary.partsCount > 0 || partsMapPartsCount > 0;
   const curriculumProgress = curriculumSummary?.percent ?? 0;
   const currentModule = curriculumSummary?.assignedModule || curriculumSummary?.nextModule;
-  const isMyIFSMode = mode === 'my-ifs';
   const hasSelfData = selfProfileResult?.hasPersonalData !== false;
   const selfDataSignals = selfProfileResult?.dataSignals || [];
 
@@ -461,6 +467,32 @@ const Home = ({ clientId, client, mode = 'home', selfProfile = null, selfProfile
 
   if (loading) return null;
 
+  if (shouldShowWorkspaceChoice) {
+    return (
+      <div className="mx-auto max-w-5xl px-6 py-12 lg:py-20">
+        <section className="rounded-[2rem] border border-brand-gold-100 bg-gradient-to-br from-white via-brand-sanctuary to-brand-gold-50/60 p-6 shadow-premium dark:border-brand-gold-900/40 dark:from-brand-cardDark dark:via-brand-midnight dark:to-brand-gold-950/20 md:p-8">
+          <p className="text-xs font-bold uppercase tracking-[0.28em] text-brand-gold-700 dark:text-brand-gold-500">Home</p>
+          <h1 className="mt-3 text-4xl font-serif font-normal text-brand-stone-900 dark:text-slate-100">Choose your IFS workspace</h1>
+          <p className="mt-3 max-w-3xl text-sm leading-relaxed text-brand-stone-600 dark:text-slate-400">
+            Your personal self-work and your Advisor/Admin workflows stay separate so client data is not mixed into your own IFS path.
+          </p>
+          <div className="mt-6 grid gap-4 md:grid-cols-2">
+            <Link to="/my-ifs" className="soft-card-interactive p-5">
+              <Sparkles className="mb-4 h-7 w-7 text-brand-gold-700 dark:text-brand-gold-500" />
+              <h2 className="font-semibold text-brand-stone-900 dark:text-slate-100">My IFS Work</h2>
+              <p className="mt-2 text-sm text-brand-stone-600 dark:text-slate-400">Open your own Curriculum, Assessments, Inner System Map, reflections, and tools.</p>
+            </Link>
+            <Link to={effectiveClient?.user_role === 'admin' || effectiveClient?.user_role === 'supervisor' ? '/admin-hub' : '/therapist'} className="soft-card-interactive p-5">
+              <ShieldCheck className="mb-4 h-7 w-7 text-brand-emerald-700 dark:text-brand-emerald-100" />
+              <h2 className="font-semibold text-brand-stone-900 dark:text-slate-100">Advisor/Admin workspace</h2>
+              <p className="mt-2 text-sm text-brand-stone-600 dark:text-slate-400">Continue assigned-client workflows, curriculum support, review queues, reports, and settings.</p>
+            </Link>
+          </div>
+        </section>
+      </div>
+    );
+  }
+
   return (
     <div className="mx-auto max-w-6xl px-6 py-12 lg:py-20">
       {activeLiveSession && (
@@ -537,16 +569,23 @@ const Home = ({ clientId, client, mode = 'home', selfProfile = null, selfProfile
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.24em] text-brand-gold-700 dark:text-brand-gold-500">My IFS Work</p>
+              <p className="mt-1 font-semibold text-brand-stone-900 dark:text-slate-100">Your personal IFS path is connected.</p>
               <p className="mt-1">You are viewing your own IFS path as the authenticated user. Admin/advisor permissions stay available separately.</p>
               {!hasSelfData && (
                 <p className="mt-2 font-semibold">No personal IFS records were found yet for this linked profile. Start curriculum or take an assessment to begin, or verify a manual Clerk link if your self-work exists in another row.</p>
               )}
             </div>
-            {selfDataSignals.length > 0 && (
-              <div className="rounded-2xl bg-white/70 px-4 py-3 text-xs dark:bg-slate-900/50">
-                <span className="font-bold">Connected data:</span> {selfDataSignals.join(', ')}
+            <div className="rounded-2xl bg-white/70 px-4 py-3 text-xs dark:bg-slate-900/50">
+              <p className="font-bold text-brand-stone-900 dark:text-slate-100">Connected to your IFS profile</p>
+              <div className="mt-2 grid gap-1 sm:grid-cols-2">
+                <span>Curriculum progress: {curriculumSummary ? `${curriculumSummary.completedCount}/${curriculumSummary.totalModules} modules` : 'Ready to begin'}</span>
+                <span>Assessments completed: {assessmentSummary.formalWoundCount + assessmentSummary.interactiveAssessments.length}</span>
+                <span>Interactive tools completed: {assessmentSummary.interactiveDataCount}</span>
+                <span>Inner System Map: {hasInnerSystemProgress ? 'Started' : 'Not started yet'}</span>
+                <span>Journal/reflections: {assessmentSummary.journalCount ? 'Started' : 'Not started yet'}</span>
               </div>
-            )}
+              {selfDataSignals.length > 0 && <p className="mt-2"><span className="font-bold">Connected data:</span> {selfDataSignals.join(', ')}</p>}
+            </div>
           </div>
         </section>
       )}
@@ -595,6 +634,8 @@ const Home = ({ clientId, client, mode = 'home', selfProfile = null, selfProfile
               <div className="mt-4 space-y-3 text-sm text-brand-stone-600 dark:text-slate-400">
                 <p><span className="font-semibold text-brand-stone-900 dark:text-slate-100">Modules:</span> {curriculumSummary ? `${curriculumSummary.completedCount} of ${curriculumSummary.totalModules} complete` : 'Ready to begin'}</p>
                 <p><span className="font-semibold text-brand-stone-900 dark:text-slate-100">Assessment:</span> {hasWoundAssessment || assessmentSummary.interactiveAssessments.length ? 'Available for personalization' : 'Not completed yet'}</p>
+                <p><span className="font-semibold text-brand-stone-900 dark:text-slate-100">Inner System Map:</span> {hasInnerSystemProgress ? 'Started' : 'Ready to begin'}</p>
+                <p><span className="font-semibold text-brand-stone-900 dark:text-slate-100">Journal/reflections:</span> {assessmentSummary.journalCount ? 'Started' : 'Ready to begin'}</p>
                 <p><span className="font-semibold text-brand-stone-900 dark:text-slate-100">Assigned IFS Practices:</span> {assignedPracticeCount || 'None active'}</p>
               </div>
             </div>
