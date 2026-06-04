@@ -1,14 +1,14 @@
 import { useEffect, useState } from 'react';
 import { AlertTriangle, DoorOpen, HeartPulse, Loader2, RefreshCw } from 'lucide-react';
 import LiveActivityRenderer from '../components/live/LiveActivityRenderer';
-import { getLiveActivityDefinition } from '../lib/liveActivityDefinitions';
+import { getLiveActivityDefinition } from '../components/live/liveActivityConfig';
 import {
   getActiveLiveSessionForClient,
   getLiveSessionState,
   heartbeatLiveSession
 } from '../lib/liveSession';
 
-const SAFETY_COPY = 'Live guided practices are used during scheduled or Advisor-supported care. They are not monitored for emergencies. If you are in immediate danger or may harm yourself or someone else, call 911 or your local crisis line now.';
+const SAFETY_COPY = 'This live practice is used during Advisor-guided care. It is not monitored for emergencies. If you are in immediate danger or may harm yourself or someone else, call 911 or your local crisis line now.';
 
 export default function ClientLiveSession() {
   const [session, setSession] = useState(null);
@@ -76,10 +76,10 @@ export default function ClientLiveSession() {
       <div className="soft-card p-6 border border-brand-emerald-100 dark:border-slate-700">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div>
-            <p className="text-xs font-bold uppercase tracking-[0.24em] text-brand-emerald-700 dark:text-brand-emerald-100">Live Guided Practice</p>
+            <p className="text-xs font-bold uppercase tracking-[0.24em] text-brand-emerald-700 dark:text-brand-emerald-100">Live Advisor-Guided Practice</p>
             <h1 className="text-3xl font-serif text-brand-stone-900 dark:text-slate-100 mt-2">Advisor-guided live practice</h1>
             <p className="text-sm text-brand-stone-600 dark:text-slate-400 mt-2 max-w-3xl">
-              Join during scheduled or Advisor-supported care. Your Advisor controls the activity; you can leave at any time.
+              Your Advisor has started a guided practice. You can follow along at your own pace, and you can leave this live practice at any time.
             </p>
           </div>
           <HeartPulse className="w-12 h-12 text-brand-emerald-700 dark:text-brand-emerald-100" />
@@ -111,8 +111,8 @@ export default function ClientLiveSession() {
         ) : !joined ? (
           <div className="flex h-80 flex-col items-center justify-center text-center">
             <HeartPulse className="w-12 h-12 text-brand-emerald-700 dark:text-brand-emerald-100 mb-4" />
-            <h2 className="text-xl font-semibold text-brand-stone-900 dark:text-slate-100">Your Advisor has started a live guided practice</h2>
-            <p className="text-sm text-brand-stone-600 dark:text-slate-400 mt-2 max-w-md">Join to see the synchronized activity on your screen. You may leave at any time.</p>
+            <h2 className="text-xl font-semibold text-brand-stone-900 dark:text-slate-100">Your Advisor has started a guided practice</h2>
+            <p className="text-sm text-brand-stone-600 dark:text-slate-400 mt-2 max-w-md">You can follow along at your own pace. You can leave this live practice at any time.</p>
             <button type="button" onClick={handleJoin} className="btn-sanctuary-primary mt-5"><HeartPulse className="w-4 h-4" /> Join Practice</button>
           </div>
         ) : (

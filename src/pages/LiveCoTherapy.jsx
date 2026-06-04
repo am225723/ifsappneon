@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { AlertTriangle, ChevronLeft, ChevronRight, HeartPulse, Loader2, Pause, Play, Send, Square, UserCheck } from 'lucide-react';
 import LiveActivityRenderer from '../components/live/LiveActivityRenderer';
-import { LIVE_ACTIVITY_OPTIONS, STEP_BASED_ACTIVITY_IDS, getLiveActivityDefinition } from '../lib/liveActivityDefinitions';
+import { LIVE_ACTIVITY_OPTIONS, STEP_BASED_ACTIVITY_IDS, getLiveActivityDefinition } from '../components/live/liveActivityConfig';
 import { clientAuth } from '../lib/supabasePersonalization';
 import { loadAssignedClients } from '../lib/advisorAssignments';
 import {
@@ -91,30 +91,30 @@ export default function LiveCoTherapy() {
 
   const handleStartSession = () => runAction(() => startLiveSession({ clientId: selectedClientId }));
 
-  const handleLaunchPractice = () => runAction(() => startLiveActivity({
-    sessionId: session.id,
-    activity: selectedActivity,
-    activityState: selectedActivity === 'guided_breathing'
-      ? {
-          durationSeconds: 180,
-          inhaleSeconds: 4,
-          holdSeconds: 2,
-          exhaleSeconds: 6,
-          message: 'Follow the breathing circle gently.'
-        }
-      : selectedActivity === 'shared_parts_map'
+  const handleLaunchPractice = () => {
+    const definition = getLiveActivityDefinition(selectedActivity);
+    return runAction(() => startLiveActivity({
+      sessionId: session.id,
+      activity: selectedActivity,
+      activityState: selectedActivity === 'guided_breathing'
         ? {
-            mapMode: 'explore',
-            advisorPrompt: '',
-            pendingSuggestions: [],
-            layoutDraft: {},
-            clientConfirmationRequired: true
+            durationSeconds: definition?.defaultDurationSeconds || 180,
+            inhaleSeconds: 4,
+            holdSeconds: 2,
+            exhaleSeconds: 6,
+            message: definition?.clientDescription || 'Follow the breathing circle gently.',
+            sourcePractice: definition?.sourcePractice
           }
         : {
-          currentStep: 0,
-          advisorPrompt: ''
-        }
-  }));
+            durationSeconds: definition?.defaultDurationSeconds || 300,
+            sourcePractice: definition?.sourcePractice,
+            sourceActivity: definition?.sourceActivity,
+            steps: definition?.steps || [],
+            presetId: definition?.id,
+            advisorPrompt: ''
+          }
+    }));
+  };
 
   const handleSendPrompt = async (event) => {
     event.preventDefault();
@@ -168,32 +168,49 @@ export default function LiveCoTherapy() {
             className="btn-sanctuary-primary w-full justify-center disabled:opacity-50"
           >
             {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
-            Start live guided practice
+            Start Guided Practice
           </button>
 
           <div className="rounded-2xl bg-brand-stone-50 dark:bg-slate-900/50 p-4 space-y-2 text-sm">
             <div className="flex justify-between"><span>Client</span><strong>{selectedClient?.name || 'Not selected'}</strong></div>
             <div className="flex justify-between"><span>Status</span><strong>{session?.status || 'No session'}</strong></div>
-            <div className="flex justify-between"><span>Client joined</span><strong className={clientOnline ? 'text-brand-emerald-700' : ''}>{clientOnline ? 'Recently active' : 'Not seen yet'}</strong></div>
+            <div className="flex justify-between"><span>Client presence</span><strong className={clientOnline ? 'text-brand-emerald-700' : ''}>{clientOnline ? 'Recently active' : 'Not seen yet'}</strong></div>
             {activeDefinition && <div className="flex justify-between"><span>Practice</span><strong>{activeDefinition.shortTitle}</strong></div>}
           </div>
 
           {session && session.status !== 'ended' && (
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-brand-stone-700 dark:text-slate-300 mb-2">Choose practice</label>
-                <select
-                  value={selectedActivity}
-                  onChange={(event) => setSelectedActivity(event.target.value)}
-                  className="w-full rounded-2xl border border-brand-stone-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-3 text-brand-stone-900 dark:text-slate-100"
-                >
-                  {LIVE_ACTIVITY_OPTIONS.map((activity) => (
-                    <option key={activity.id} value={activity.id}>{activity.title}</option>
-                  ))}
-                </select>
+                <p className="block text-sm font-medium text-brand-stone-700 dark:text-slate-300 mb-2">Choose an IFS practice</p>
+                <div className="grid gap-3" role="radiogroup" aria-label="Choose an IFS practice">
+                  {LIVE_ACTIVITY_OPTIONS.map((activity) => {
+                    const selected = selectedActivity === activity.id;
+                    return (
+                      <button
+                        key={activity.id}
+                        type="button"
+                        onClick={() => setSelectedActivity(activity.id)}
+                        role="radio"
+                        aria-checked={selected}
+                        className={`rounded-2xl border p-4 text-left transition ${selected ? 'border-brand-emerald-500 bg-brand-emerald-50 dark:bg-brand-emerald-950/30' : 'border-brand-stone-200 bg-white hover:border-brand-emerald-200 dark:border-slate-700 dark:bg-slate-900'}`}
+                      >
+                        <span className="flex items-center justify-between gap-3">
+                          <span className="font-semibold text-brand-stone-900 dark:text-slate-100">{activity.title}</span>
+                          <span className="text-xs text-brand-stone-500 dark:text-slate-500">{Math.round((activity.defaultDurationSeconds || 180) / 60)} min</span>
+                        </span>
+                        <span className="mt-2 block text-xs leading-relaxed text-brand-stone-600 dark:text-slate-400">{activity.advisorDescription}</span>
+                        {(activity.sourcePractice || activity.sourceActivity) && (
+                          <span className="mt-3 inline-flex rounded-full bg-brand-stone-100 dark:bg-slate-800 px-3 py-1 text-[11px] font-medium text-brand-stone-600 dark:text-slate-400">
+                            Source: {activity.sourcePractice || activity.sourceActivity}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
               <button type="button" onClick={handleLaunchPractice} disabled={busy} className="btn-sanctuary-secondary w-full justify-center">
-                <HeartPulse className="w-4 h-4" /> Launch selected practice
+                <HeartPulse className="w-4 h-4" /> Start Guided Practice
               </button>
 
               {isStepBased && (
@@ -207,7 +224,7 @@ export default function LiveCoTherapy() {
                 <button type="button" onClick={() => runAction(() => pauseLiveActivity({ sessionId: session.id }))} disabled={busy || session.status === 'paused' || !session.current_activity} className="btn-sanctuary-secondary justify-center disabled:opacity-50"><Pause className="w-4 h-4" /> Pause</button>
                 <button type="button" onClick={() => runAction(() => resumeLiveActivity({ sessionId: session.id }))} disabled={busy || session.status !== 'paused'} className="btn-sanctuary-secondary justify-center disabled:opacity-50"><Play className="w-4 h-4" /> Resume</button>
               </div>
-              <button type="button" onClick={() => runAction(() => endLiveActivity({ sessionId: session.id }))} disabled={busy || !session.current_activity} className="btn-sanctuary-secondary w-full justify-center disabled:opacity-50"><Square className="w-4 h-4" /> End activity</button>
+              <button type="button" onClick={() => runAction(() => endLiveActivity({ sessionId: session.id }))} disabled={busy || !session.current_activity} className="btn-sanctuary-secondary w-full justify-center disabled:opacity-50"><Square className="w-4 h-4" /> End practice</button>
               <form onSubmit={handleSendPrompt} className="space-y-2">
                 <textarea
                   value={prompt}
