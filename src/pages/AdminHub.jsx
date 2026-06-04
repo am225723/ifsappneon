@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
-import { AlertTriangle, BookOpen, ClipboardCheck, FileText, Loader2, RefreshCw, Shield, Sparkles, Users } from 'lucide-react';
+import { AlertTriangle, BookOpen, ClipboardCheck, FileText, Heart, Loader2, RefreshCw, Shield, Sparkles, Users } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import { supabase } from '../lib/supabase';
 import { clientAuth } from '../lib/supabasePersonalization';
@@ -37,7 +37,7 @@ export default function AdminHub() {
     setError('');
     try {
       const [{ data: therapistRows, error: therapistError }, { data: assignmentRows, error: assignmentError }] = await Promise.all([
-        supabase.from('ifs_clients').select('id, name, email, user_role').in('user_role', ['therapist', 'admin', 'supervisor']).order('name', { ascending: true }),
+        supabase.from('ifs_clients').select('id, name, email, user_role').in('user_role', ['therapist', 'advisor', 'admin', 'supervisor']).order('name', { ascending: true }),
         supabase.from('ifs_therapist_clients').select('*').eq('status', 'active').order('assigned_at', { ascending: false }),
       ]);
       if (therapistError) throw therapistError;
@@ -98,10 +98,16 @@ export default function AdminHub() {
             <p className={`text-sm ${textSecondary}`}>Flow-based oversight for Advisor assignments, curriculum support, and client progress.</p>
           </div>
         </div>
-        <button type="button" onClick={loadData} className={`inline-flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold ${cardBg} ${textSecondary}`}>
-          <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-          Refresh
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <Link to="/my-ifs" className={`inline-flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold ${cardBg} ${textSecondary}`}>
+            <Heart className="h-4 w-4 text-amber-600" />
+            My IFS Work
+          </Link>
+          <button type="button" onClick={loadData} className={`inline-flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold ${cardBg} ${textSecondary}`}>
+            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+            Refresh
+          </button>
+        </div>
       </div>
 
 

@@ -2,18 +2,20 @@ import { Link, useLocation } from 'react-router-dom';
 import { Home, Play, User, MessageSquare, Heart, Menu, X, Compass } from 'lucide-react';
 import { useState } from 'react';
 
-const Navbar = ({ unreadCount = 0, messagePath = '/inbox', rightSlot = null }) => {
+const Navbar = ({ unreadCount = 0, messagePath = '/inbox', rightSlot = null, workspaceLinks = [] }) => {
   const location = useLocation();
   const [isOpen, setIsOpen] = useState(false);
 
   const navItems = [
-    { path: '/', icon: Home, label: 'Home' },
+    { path: '/', icon: Home, label: workspaceLinks.length ? 'Home' : 'Home' },
     { path: '/exercises', icon: Play, label: 'Practice' },
     { path: '/journal', icon: User, label: 'Journal' },
     { path: '/parts-mapping', icon: Compass, label: 'Parts' },
     { path: messagePath, icon: MessageSquare, label: 'Advisor Support', badge: unreadCount },
     { path: '/profile', icon: Heart, label: 'Profile' },
   ];
+
+  const modeLinks = workspaceLinks.filter(Boolean);
 
   return (
     <nav className="bg-white/80 dark:bg-brand-midnight/80 backdrop-blur-md border-b border-brand-stone-200/30 dark:border-slate-800 sticky top-0 z-50">
@@ -29,6 +31,22 @@ const Navbar = ({ unreadCount = 0, messagePath = '/inbox', rightSlot = null }) =
           </Link>
 
           <div className="hidden md:flex items-center space-x-1">
+            {modeLinks.map((item) => {
+              const isActive = location.pathname === item.path;
+              return (
+                <Link
+                  key={item.path}
+                  to={item.path}
+                  className={`relative flex items-center space-x-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300 ${
+                    isActive
+                      ? 'bg-brand-emerald-50 dark:bg-brand-emerald-950/30 text-brand-emerald-700 dark:text-brand-emerald-100'
+                      : 'text-brand-stone-500 dark:text-slate-400 hover:text-brand-stone-900 dark:hover:text-slate-100 hover:bg-brand-stone-50 dark:hover:bg-slate-800/50'
+                  }`}
+                >
+                  {item.label}
+                </Link>
+              );
+            })}
             {navItems.map((item) => {
               const Icon = item.icon;
               const isActive = location.pathname === item.path;
@@ -67,6 +85,23 @@ const Navbar = ({ unreadCount = 0, messagePath = '/inbox', rightSlot = null }) =
 
         {isOpen && (
           <div className="md:hidden pb-6 space-y-2 animate-in slide-in-from-top duration-300">
+            {modeLinks.map((item) => {
+              const isActive = location.pathname === item.path;
+              return (
+                <Link
+                  key={item.path}
+                  to={item.path}
+                  onClick={() => setIsOpen(false)}
+                  className={`relative flex items-center space-x-3 px-4 py-4 rounded-2xl transition-all duration-300 ${
+                    isActive
+                      ? 'bg-brand-emerald-50 dark:bg-brand-emerald-950/30 text-brand-emerald-700 dark:text-brand-emerald-100'
+                      : 'text-brand-stone-600 dark:text-slate-400 hover:bg-brand-stone-50 dark:hover:bg-slate-800/50'
+                  }`}
+                >
+                  <span className="font-semibold">{item.label}</span>
+                </Link>
+              );
+            })}
             {navItems.map((item) => {
               const Icon = item.icon;
               const isActive = location.pathname === item.path;

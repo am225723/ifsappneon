@@ -34,8 +34,8 @@ async function lifeIntegrationRequest(payload) {
   return { data: json.data, error: null };
 }
 
-export function loadLifeIntegrationReflections({ type, includeArchived = false } = {}) {
-  return lifeIntegrationRequest({ action: 'list', type, includeArchived });
+export function loadLifeIntegrationReflections({ type, includeArchived = false, clientId, self = false } = {}) {
+  return lifeIntegrationRequest({ action: 'list', type, includeArchived, client_id: clientId, self });
 }
 
 export function saveLifeIntegrationReflection(payload) {

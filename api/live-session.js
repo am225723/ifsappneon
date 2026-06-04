@@ -611,7 +611,7 @@ async function getState(user, body) {
 }
 
 async function getActiveForClient(user) {
-  if (user.user_role !== 'client' && !isAdminUser(user)) {
+  if (user.user_role !== 'client' && !isTherapistUser(user)) {
     throw Object.assign(new Error('Client access required'), { statusCode: 403, code: 'client_required' });
   }
   const rows = await sql`

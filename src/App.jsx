@@ -9,6 +9,7 @@ import PINAuthDiagnostic from './components/PINAuthDiagnostic';
 import TestClientCreator from './components/TestClientCreator';
 import Navbar from './components/Navbar';
 import Home from './pages/Home';
+import MyIFSWork from './pages/MyIFSWork';
 import CurriculumSystem from './components/CurriculumSystem';
 import LearningModuleRenderer from './components/LearningModuleRenderer';
 import CheatSheet from './pages/CheatSheet';
@@ -308,7 +309,7 @@ function App() {
 
   useEffect(() => {
     if (!isAuthenticated || !currentClient) return;
-    if (currentClient.user_role === 'therapist') {
+    if (['therapist', 'advisor', 'admin', 'supervisor'].includes(currentClient.user_role)) {
       queueMicrotask(() => setOnboardingChecked(true));
       return;
     }
@@ -400,18 +401,21 @@ function AppContent({ authChecked, clerkLoaded, clerkSignedIn, isAuthenticated, 
   const bgClass = isAuthenticated ? 'bg-brand-sanctuary dark:bg-brand-midnight' : '';
   const [unreadMsgCount, setUnreadMsgCount] = useState(0);
   const isClient = currentClient?.user_role === 'client';
-  const isTherapist = currentClient?.user_role === 'therapist';
+  const isTherapist = currentClient?.user_role === 'therapist' || currentClient?.user_role === 'advisor';
   const isAdminOrSupervisor = currentClient?.user_role === 'admin' || currentClient?.user_role === 'supervisor';
   const isTherapistRole = isTherapist || isAdminOrSupervisor;
   const messagePath = isTherapistRole ? '/messages' : '/inbox';
+  const advisorWorkspacePath = isAdminOrSupervisor ? '/admin-hub' : '/therapist-dashboard';
   const homeElement = <Home clientId={currentClient?.id} client={currentClient} />;
-  const clientOnly = (element, message) => isClient ? element : <UnauthorizedRedirect currentClient={currentClient} message={message || 'Client workspace access is required for this page.'} />;
+  const myIFSWorkElement = <MyIFSWork currentClient={currentClient} />;
+  const selfWorkspaceAccess = isClient || isTherapistRole;
+  const clientOnly = (element, message) => selfWorkspaceAccess ? element : <UnauthorizedRedirect currentClient={currentClient} message={message || 'Client workspace access is required for this page.'} />;
   const therapistOnly = (element, message) => isTherapistRole ? element : <UnauthorizedRedirect currentClient={currentClient} message={message || 'Advisor, supervisor, or admin access is required for this page.'} />;
 
   const fetchUnreadCount = useCallback(async () => {
     if (!currentClient?.id) return;
     try {
-      const isTherapist = currentClient.user_role === 'therapist';
+      const isTherapist = currentClient.user_role === 'therapist' || currentClient.user_role === 'advisor';
       let query = supabase.from('ifs_messages').select('*');
       if (isTherapist) {
         query = query.eq('therapist_id', currentClient.id).eq('sender_role', 'client');
@@ -474,11 +478,15 @@ function AppContent({ authChecked, clerkLoaded, clerkSignedIn, isAuthenticated, 
           <Navbar
             unreadCount={unreadMsgCount}
             messagePath={messagePath}
+            workspaceLinks={isTherapistRole ? [
+              { path: advisorWorkspacePath, label: isAdminOrSupervisor ? 'Admin Hub' : 'Advisor Dashboard' },
+              { path: '/my-ifs', label: 'My IFS Work' }
+            ] : []}
             rightSlot={
               <>
                 {isTherapistRole && (
                   <Link
-                    to={isAdminOrSupervisor ? '/admin-hub' : '/therapist-dashboard'}
+                    to={advisorWorkspacePath}
                     className="p-2.5 rounded-xl transition-all text-brand-stone-500 dark:text-slate-400 hover:text-brand-gold-700 dark:hover:text-brand-gold-500 hover:bg-brand-gold-50 dark:hover:bg-slate-800/50"
                     title={isAdminOrSupervisor ? 'Supervisor Admin Hub' : 'Advisor Dashboard'}
                   >
@@ -521,6 +529,8 @@ function AppContent({ authChecked, clerkLoaded, clerkSignedIn, isAuthenticated, 
               <Routes>
                 <Route path="/" element={homeElement} />
                 <Route path="/home" element={clientOnly(homeElement)} />
+                <Route path="/my-ifs" element={myIFSWorkElement} />
+                <Route path="/my-ifs-path" element={<Navigate to="/my-ifs" replace />} />
                 <Route path="/curriculum" element={<CurriculumSystem clientId={currentClient?.id} userProgress={{}} />} />
                 <Route path="/curriculum/module/:moduleId" element={<LearningModuleRenderer userProgress={{}} />} />
                 <Route path="/cheat-sheet" element={<CheatSheet />} />
