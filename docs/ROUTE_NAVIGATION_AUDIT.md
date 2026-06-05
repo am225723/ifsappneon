@@ -303,3 +303,18 @@ Tools Directory
 - Advisor/Admin views should not see private curriculum reflection content by default, and reflections are not treated as Advisor notes or report content.
 - No SQL migrations were added for this phase.
 - Existing role/security wrappers and self-owned access patterns were preserved; no global client loading or name matching was introduced.
+
+## Phase 17C Correct-Repo Runtime Recovery Notes
+
+- The checkout was verified as the React/Vite + Neon/Clerk IFS app with root `package.json`, `src/App.jsx`, `api/db.js`, and the `neon/` directory present before runtime recovery changes were applied.
+- Wrong-repo emergency files from the accidental Next.js / `client/src` TypeScript pass were confirmed absent from this repository, so no legitimate `src/` or `api/` app files were removed for that cleanup.
+- Medication routes, medication placeholders, medication dashboard tiles, and medication support copy were not added because medication management is out of scope for this IFS self-guidance and Advisor support app. The remaining non-documentation medication search hit is historical CSV/journal text outside active app UI.
+- A Vite route error boundary now wraps the authenticated route switch and shows warm recovery actions for Refresh, My IFS Work, Home, Tools, and Go Back instead of exposing raw stack traces or blank pages.
+- Unknown authenticated routes now render a Not Found recovery page with links back to My IFS Work, Home, Tools, and role-allowed Advisor/Admin destinations.
+- Legacy/back-navigation aliases now use `Navigate` with `replace` for `/home`, `/my-ifs-path`, `/admin`, `/therapist`, `/my-homework`, and `/homework` so browser Back is less likely to return users to stale alias entries or blank route states.
+- My IFS connected/profile recovery states are separated: a resolved self profile keeps the connected banner, while optional downstream query failures show a section-level partial refresh warning instead of the global full-page IFS data error.
+- Profile loading, error, and empty assessment states are visible, with null/array guards for optional assessment payloads so missing data does not produce a blank route.
+- Route-level blank recovery was audited; the Parts Mapping route now has a visible fallback instead of a final `return null` if its local step state becomes unexpected.
+- Phase 17B curriculum reflection support is present and preserved through `src/lib/curriculumReflections.js` and existing private `ifs_interactive_data.data.curriculumReflections` storage. No Advisor-facing sharing behavior was added.
+- No SQL, migrations, or Neon backfills were added or run for Phase 17C.
+- Existing authenticated flow, `clientOnly` / Advisor/Admin wrappers, Admin/Supervisor checks, `FeatureGate` wrappers, self-owned access patterns, and Advisor notes protections were preserved.

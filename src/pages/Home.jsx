@@ -109,21 +109,7 @@ function summarizeQueryErrors(resultsByTable, effectiveClientId, selfProfile) {
 }
 
 const DATA_LOAD_ERROR_MESSAGE = 'Your IFS data could not be loaded right now. Please refresh or try again.';
-const PARTIAL_DATA_WARNING_MESSAGE = 'Some parts of your IFS path could not be refreshed. The rest of your information is still shown.';
-
-function unwrapOptionalResult(settledResult, table, effectiveClientId, selfProfile, fallbackData = []) {
-  if (settledResult.status === 'fulfilled') return settledResult.value || { data: fallbackData, error: null };
-  return {
-    data: fallbackData,
-    error: {
-      message: settledResult.reason?.message || 'Request failed',
-      status: settledResult.reason?.status || settledResult.reason?.statusCode || null,
-      table,
-      effectiveClientId,
-      selfProfilePresent: Boolean(selfProfile?.id)
-    }
-  };
-}
+const PARTIAL_DATA_LOAD_MESSAGE = 'Some parts of your IFS path could not be refreshed. The rest of your information is still shown.';
 
 const Home = ({ clientId, client, mode = 'home', selfProfile = null, selfProfileResult = null }) => {
   const navigate = useNavigate();
@@ -143,6 +129,7 @@ const Home = ({ clientId, client, mode = 'home', selfProfile = null, selfProfile
   const effectiveClientId = getEffectiveClientId({ mode, currentClientId: clientId, selfProfile: selfProfile || selfProfileResult?.profile });
   const effectiveClient = mode === 'my-ifs' ? (selfProfile || selfProfileResult?.profile || client) : client;
   const isMyIFSMode = mode === 'my-ifs';
+  const hasResolvedSelfProfile = isMyIFSMode && Boolean(selfProfile?.id || selfProfileResult?.profile?.id);
   const isAdvisorModeUser = ['ther' + 'apist', 'advisor', 'admin', 'supervisor'].includes(effectiveClient?.user_role);
   const shouldShowWorkspaceChoice = !isMyIFSMode && isAdvisorModeUser;
   const [assessmentSummary, setAssessmentSummary] = useState({
@@ -167,40 +154,41 @@ const Home = ({ clientId, client, mode = 'home', selfProfile = null, selfProfile
       }
       if (effectiveClientId) {
         try {
-          const selfProfileForLoad = selfProfile || selfProfileResult?.profile;
-          const settledResults = await Promise.allSettled([
-            supabase
+          const optionalQueries = [
+            ['ifs_interactive_data', supabase
               .from('ifs_interactive_data')
               .select('id, client_id, module_id, data, created_at, updated_at')
-              .eq('client_id', effectiveClientId),
-            supabase
+              .eq('client_id', effectiveClientId)],
+            ['ifs_assessment_results', supabase
               .from('ifs_assessment_results')
               .select('id, primary_wound, secondary_wound, tertiary_wounds, assessment_date, created_at')
               .eq('client_id', effectiveClientId)
-              .order('created_at', { ascending: false }),
-            supabase
+              .order('created_at', { ascending: false })],
+            ['ifs_parts', supabase
               .from('ifs_parts')
               .select('id', { count: 'exact' })
-              .eq('client_id', effectiveClientId),
-            supabase
+              .eq('client_id', effectiveClientId)],
+            ['ifs_part_relationships', supabase
               .from('ifs_part_relationships')
               .select('id', { count: 'exact' })
-              .eq('client_id', effectiveClientId),
-            loadClientSessionAgendas(effectiveClientId),
-            loadActiveTreatmentPlansForClient(effectiveClientId),
-            loadAssignedHomeworkForClient(effectiveClientId),
-            loadLifeIntegrationReflections({ clientId: effectiveClientId, self: mode === 'my-ifs' }),
-            loadHealingTimeline({ clientId: effectiveClientId, range: 'ALL' }),
-            supabase
+              .eq('client_id', effectiveClientId)],
+            ['ifs_session_agendas', loadClientSessionAgendas(effectiveClientId)],
+            ['ifs_treatment_plans', loadActiveTreatmentPlansForClient(effectiveClientId)],
+            ['ifs_assigned_' + 'home' + 'work', loadAssignedHomeworkForClient(effectiveClientId)],
+            ['ifs_life_integration_reflections', loadLifeIntegrationReflections({ clientId: effectiveClientId, self: mode === 'my-ifs' })],
+            ['healing_timeline', loadHealingTimeline({ clientId: effectiveClientId, range: 'ALL' })],
+            ['ifs_journal_entries', supabase
               .from('ifs_journal_entries')
               .select('id', { count: 'exact' })
-              .eq('client_id', effectiveClientId),
-            supabase
+              .eq('client_id', effectiveClientId)],
+            ['ifs_client_progress', supabase
               .from('ifs_client_progress')
               .select('module_id, completed, current_step, updated_at')
-              .eq('client_id', effectiveClientId),
-            loadCurriculumReflections({ clientId: effectiveClientId, limit: 20 })
-          ]);
+              .eq('client_id', effectiveClientId)],
+            ['curriculum_reflections', loadCurriculumReflections({ clientId: effectiveClientId, limit: 20 })]
+          ];
+
+          const settledResults = await Promise.allSettled(optionalQueries.map(([, query]) => query));
           const [
             interactiveResult,
             formalAssessmentResult,
@@ -214,20 +202,8 @@ const Home = ({ clientId, client, mode = 'home', selfProfile = null, selfProfile
             journalResult,
             progressResult,
             curriculumReflectionsResult
-          ] = [
-            'ifs_interactive_data',
-            'ifs_assessment_results',
-            'ifs_parts',
-            'ifs_part_relationships',
-            'ifs_session_agendas',
-            'ifs_treatment_plans',
-            'ifs_assigned_' + 'home' + 'work',
-            'ifs_life_integration_reflections',
-            'healing_timeline',
-            'ifs_journal_entries',
-            'ifs_client_progress',
-            'curriculum_reflections'
-          ].map((table, index) => unwrapOptionalResult(settledResults[index], table, effectiveClientId, selfProfileForLoad));
+          ] = settledResults.map((settled, index) => settledDataResult(settled, optionalQueries[index][0]));
+
 
           const queryErrors = summarizeQueryErrors({
             ifs_interactive_data: interactiveResult,
@@ -246,22 +222,26 @@ const Home = ({ clientId, client, mode = 'home', selfProfile = null, selfProfile
 
           if (queryErrors.length) {
             setDataLoadError({
-              message: selfProfileForLoad?.id ? PARTIAL_DATA_WARNING_MESSAGE : DATA_LOAD_ERROR_MESSAGE,
-              severity: selfProfileForLoad?.id ? 'partial' : 'global',
+              message: hasResolvedSelfProfile ? PARTIAL_DATA_LOAD_MESSAGE : DATA_LOAD_ERROR_MESSAGE,
               details: queryErrors
             });
             if (import.meta.env.DEV) {
-              console.warn('[MyIFSWork/Home] data query failures', queryErrors);
+              console.warn('[MyIFSWork/Home] data query failures', queryErrors.map((item) => ({
+                table: item.table,
+                status: item.status,
+                effectiveClientId: item.effectiveClientId,
+                selfProfilePresent: item.selfProfilePresent
+              })));
             }
           }
 
-          const interactiveRows = interactiveResult.data || [];
+          const interactiveRows = interactiveResult?.data || [];
           const normalizedInteractive = interactiveRows.map(normalizeInteractiveResult);
           const interactiveAssessments = normalizedInteractive.filter((row) => isInteractiveAssessmentModule(row.moduleId));
           const curriculumModuleRows = normalizedInteractive.filter((row) => isCurriculumInteractiveModule(row.moduleId));
           const partsMapRow = interactiveRows.find((row) => row.module_id === 'parts_map') || null;
           const assessmentWounds = interactiveAssessments.find((row) => row.moduleId === 'assessment_wounds');
-          const latestFormalWound = (formalAssessmentResult.data || [])[0] || null;
+          const latestFormalWound = (formalAssessmentResult?.data || [])[0] || null;
 
           setSavedAssessment(assessmentWounds?.data || latestFormalWound || null);
           setAssessmentSummary({
@@ -277,23 +257,23 @@ const Home = ({ clientId, client, mode = 'home', selfProfile = null, selfProfile
             interactiveDataCount: getSafeCount(interactiveResult)
           });
 
-          const agendas = agendasResult.data || [];
-          setGrowthGoals((goalsResult.data || []).filter((goal) => ['active', 'completed'].includes(goal.status)).slice(0, 3));
+          const agendas = agendasResult?.data || [];
+          setGrowthGoals((goalsResult?.data || []).filter((goal) => ['active', 'completed'].includes(goal.status)).slice(0, 3));
           setAgendaSummary({
             lastSubmitted: agendas.find((agenda) => agenda.status === 'submitted' || agenda.status === 'reviewed')?.created_at || null,
             hasDraft: agendas.some((agenda) => agenda.status === 'draft')
           });
-          const assignedPractices = assignedResult.data || [];
+          const assignedPractices = assignedResult?.data || [];
           setAssignedPracticeCount(assignedPractices.filter((item) => ['assigned', 'in_progress'].includes(item.status)).length);
           setActiveAssignedPractice(assignedPractices.find((item) => ['assigned', 'in_progress'].includes(item.status)) || null);
-          const lifeReflections = reflectionsResult.data || [];
+          const lifeReflections = reflectionsResult?.data || [];
           setLifeReflectionCount(lifeReflections.length);
           setRecentLifeReflection(lifeReflections[0] ? normalizeLifeReflection(lifeReflections[0]) : null);
-          setLatestMilestone((timelineResult.data?.timeline || [])[0] || null);
+          setLatestMilestone((timelineResult?.data?.timeline || [])[0] || null);
 
-          setCurriculumReflections(curriculumReflectionsResult.data || []);
+          setCurriculumReflections(curriculumReflectionsResult?.data || []);
 
-          const progressRows = progressResult.data || [];
+          const progressRows = progressResult?.data || [];
           const completedModuleIds = getCompletedModuleIds(progressRows, curriculumModuleRows);
           setCurriculumSummary(getCurriculumPathSummary({
             completedModuleIds,
@@ -303,27 +283,29 @@ const Home = ({ clientId, client, mode = 'home', selfProfile = null, selfProfile
           try {
             const liveResult = await getActiveLiveSessionForClient();
             if (!liveResult.error) setActiveLiveSession(liveResult.data || null);
+            else if (import.meta.env.DEV) console.warn('[MyIFSWork/Home] live session refresh failed', { message: liveResult.error?.message || 'Request failed' });
           } catch (liveError) {
-            if (import.meta.env.DEV) {
-              console.warn('[Home] active live session could not be refreshed', {
-                message: liveError?.message || 'Request failed',
-                effectiveClientId,
-                selfProfilePresent: Boolean(selfProfileForLoad?.id)
-              });
-            }
+            if (import.meta.env.DEV) console.warn('[MyIFSWork/Home] live session refresh failed', { message: liveError?.message || 'Request failed' });
           }
         } catch (err) {
-          console.error('Error loading home data:', err);
+          if (import.meta.env.DEV) {
+            console.warn('[Home] data load failure', {
+              message: err?.message || 'Request failed',
+              status: err?.status || err?.statusCode || null,
+              effectiveClientId,
+              selfProfilePresent: hasResolvedSelfProfile
+            });
+          }
           setDataLoadError({
-            message: (selfProfile || selfProfileResult?.profile)?.id ? PARTIAL_DATA_WARNING_MESSAGE : DATA_LOAD_ERROR_MESSAGE,
-            severity: (selfProfile || selfProfileResult?.profile)?.id ? 'partial' : 'global',
+            message: hasResolvedSelfProfile ? PARTIAL_DATA_LOAD_MESSAGE : DATA_LOAD_ERROR_MESSAGE,
             details: [{
               table: 'home_data',
               status: err?.status || err?.statusCode || null,
               message: err?.message || 'Request failed',
               effectiveClientId,
               selfProfilePresent: Boolean((selfProfile || selfProfileResult?.profile)?.id)
-            }]
+            }],
+            scope: effectiveClientId ? 'partial' : 'global'
           });
         }
       }
@@ -331,7 +313,7 @@ const Home = ({ clientId, client, mode = 'home', selfProfile = null, selfProfile
     };
 
     loadData();
-  }, [effectiveClientId, mode, shouldShowWorkspaceChoice]);
+  }, [effectiveClientId, mode, shouldShowWorkspaceChoice, hasResolvedSelfProfile]);
 
   const clientFirstName = (effectiveClient?.name || effectiveClient?.full_name || '').split(' ').filter(Boolean)[0];
   const assessmentPrimary = savedAssessment?.primaryWound?.name || savedAssessment?.primaryWound?.id || savedAssessment?.topWound?.name || savedAssessment?.topWound?.id || savedAssessment?.primary_wound || savedAssessment?.primary || null;
@@ -616,9 +598,12 @@ const Home = ({ clientId, client, mode = 'home', selfProfile = null, selfProfile
       </section>
 
       {dataLoadError && (
-        <section className={`mb-8 rounded-3xl border p-5 text-sm ${dataLoadError.severity === 'partial' ? 'border-brand-gold-200 bg-brand-gold-50 text-brand-gold-800 dark:border-brand-gold-900/60 dark:bg-brand-gold-950/20 dark:text-brand-gold-100' : 'border-red-200 bg-red-50 text-red-700 dark:border-red-900/60 dark:bg-red-950/20 dark:text-red-200'}`}>
+        <section className={`mb-8 rounded-3xl border p-5 text-sm ${
+          dataLoadError.scope === 'partial'
+            ? 'border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/20 dark:text-amber-100'
+            : 'border-red-200 bg-red-50 text-red-700 dark:border-red-900/60 dark:bg-red-950/20 dark:text-red-200'
+        }`}>
           <p className="font-semibold">{dataLoadError.message}</p>
-
         </section>
       )}
 

@@ -95,6 +95,7 @@ const Profile = ({ client }) => {
   const [attachmentAssessment, setAttachmentAssessment] = useState(null);
   const [customAssessments, setCustomAssessments] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [profileError, setProfileError] = useState('');
   const [showHistory, setShowHistory] = useState(false);
   const [moodEntries, setMoodEntries] = useState([]);
   const [gamificationData, setGamificationData] = useState({});
@@ -104,13 +105,28 @@ const Profile = ({ client }) => {
 
   const loadAssessmentData = async () => {
     setProfileError('');
+    setAssessment(null);
+    setAllAssessments([]);
+    setPartsAssessment(null);
+    setSelfEnergyAssessment(null);
+    setAttachmentAssessment(null);
+    setCustomAssessments([]);
+
     if (!client?.id) {
+      setProfileError('Your profile could not be loaded right now. Please refresh or return to My IFS Work.');
       setLoading(false);
       setProfileError('Your profile could not be loaded right now. Please refresh or return to My IFS Work.');
       return;
     }
 
     setLoading(true);
+    setProfileError('');
+    setAssessment(null);
+    setAllAssessments([]);
+    setPartsAssessment(null);
+    setSelfEnergyAssessment(null);
+    setAttachmentAssessment(null);
+    setCustomAssessments([]);
     try {
       const interactiveResult = await supabase
         .from('ifs_interactive_data')
@@ -118,18 +134,9 @@ const Profile = ({ client }) => {
         .eq('client_id', client.id)
         .like('module_id', 'assessment_%');
 
-      if (interactiveResult?.error) {
-        setProfileError('Your profile could not be loaded right now. Please refresh or return to My IFS Work.');
-        if (import.meta.env.DEV) {
-          console.warn('[Profile] assessment data could not be refreshed', {
-            message: interactiveResult.error.message || 'Request failed',
-            status: interactiveResult.error.status || interactiveResult.error.statusCode || null,
-            hasClient: Boolean(client?.id)
-          });
-        }
-      }
+      if (interactiveResult?.error) throw interactiveResult.error;
 
-      const interactiveData = interactiveResult?.data || [];
+      const interactiveData = Array.isArray(interactiveResult?.data) ? interactiveResult.data : [];
       setAllAssessments(
         interactiveData
           .filter(d => d.module_id === 'assessment_wounds' && d.data)
@@ -178,52 +185,42 @@ const Profile = ({ client }) => {
         .select('*')
         .eq('client_id', client.id)
         .like('module_id', 'custom_assessment_response_%');
-      if (customError && import.meta.env.DEV) {
-        console.warn('[Profile] custom assessment data could not be refreshed', {
-          message: customError.message || 'Request failed',
-          status: customError.status || customError.statusCode || null,
-          hasClient: Boolean(client?.id)
-        });
-      }
-      if (customData && customData.length > 0) {
+      if (customError) throw customError;
+      if (Array.isArray(customData) && customData.length > 0) {
         setCustomAssessments(customData.map(d => ({ ...(d.data || {}), moduleId: d.module_id, updatedAt: d.updated_at })));
       }
     } catch (error) {
-      setProfileError('Your profile could not be loaded right now. Please refresh or return to My IFS Work.');
       if (import.meta.env.DEV) {
-        console.error('[Profile] assessment loader failed', { message: error?.message || 'Request failed', hasClient: Boolean(client?.id) });
+        console.warn('[Profile] assessment data load failed', { message: error?.message || 'Request failed', status: error?.status || error?.statusCode || null });
       }
+      setProfileError('Your profile could not be loaded right now. Please refresh or return to My IFS Work.');
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const loadSupabaseData = async () => {
     const currentClient = clientAuth.getCurrentClient();
     const clientId = currentClient?.id || client?.id;
     if (!clientId) return;
-    const [moodResult, gamResult, milesResult] = await Promise.allSettled([
-      supabaseHelpers.getMoodEntries(clientId),
-      supabaseHelpers.getGamification(clientId),
-      supabaseHelpers.getMilestones(clientId),
-    ]);
-    const logOptionalFailure = (label, result) => {
-      if (result.status === 'rejected' && import.meta.env.DEV) {
-        console.warn(`[Profile] optional ${label} could not be refreshed`, {
-          message: result.reason?.message || 'Request failed',
-          hasClient: Boolean(clientId)
-        });
+    try {
+      const [moodResult, gamResult, milesResult] = await Promise.allSettled([
+        supabaseHelpers.getMoodEntries(clientId),
+        supabaseHelpers.getGamification(clientId),
+        supabaseHelpers.getMilestones(clientId),
+      ]);
+      if (moodResult.status === 'fulfilled') setMoodEntries(moodResult.value || []);
+      if (gamResult.status === 'fulfilled' && gamResult.value) {
+        const gam = gamResult.value;
+        setGamificationData({ xp: gam.xp, level: gam.level, badges: gam.badges });
+        setStreakData({ currentStreak: gam.streak_current, longestStreak: gam.streak_longest, totalLogins: gam.total_logins });
       }
-    };
-    logOptionalFailure('mood', moodResult);
-    logOptionalFailure('gamification', gamResult);
-    logOptionalFailure('milestones', milesResult);
-    setMoodEntries(moodResult.status === 'fulfilled' ? (moodResult.value || []) : []);
-    const gam = gamResult.status === 'fulfilled' ? gamResult.value : null;
-    if (gam) {
-      setGamificationData({ xp: gam.xp, level: gam.level, badges: gam.badges });
-      setStreakData({ currentStreak: gam.streak_current, longestStreak: gam.streak_longest, totalLogins: gam.total_logins });
+      setTimeline(miles || []);
+    } catch (err) {
+      if (import.meta.env.DEV) {
+        console.warn('[Profile] optional profile data load failed', { message: err?.message || 'Request failed', status: err?.status || err?.statusCode || null });
+      }
     }
-    setTimeline(milesResult.status === 'fulfilled' ? (milesResult.value || []) : []);
   };
 
   useEffect(() => {
@@ -336,16 +333,22 @@ const Profile = ({ client }) => {
   }
 
 
-  if (profileError && !assessment && !partsAssessment && !selfEnergyAssessment && !attachmentAssessment && customAssessments.length === 0) {
+  if (profileError) {
     return (
-      <div className="mx-auto max-w-4xl px-4 py-12">
-        <div className="soft-card p-8 text-center">
-          <AlertCircle className="mx-auto mb-4 h-10 w-10 text-brand-gold-700 dark:text-brand-gold-500" />
-          <h1 className="text-2xl font-serif font-normal text-brand-stone-900 dark:text-slate-100">Your profile could not be loaded right now.</h1>
-          <p className="mx-auto mt-3 max-w-2xl text-sm text-brand-stone-600 dark:text-slate-400">Please refresh or return to My IFS Work.</p>
-          <div className="mt-6 flex flex-wrap justify-center gap-3">
-            <button onClick={() => window.location.reload()} className="btn-sanctuary-primary">Refresh</button>
-            <button onClick={() => navigate('/my-ifs')} className="btn-sanctuary-secondary">Return to My IFS Work</button>
+      <div className="min-h-screen">
+        <div className="max-w-4xl mx-auto px-4 py-12">
+          <div className="soft-card p-8 text-center">
+            <AlertCircle className="mx-auto mb-4 h-10 w-10 text-red-500" />
+            <h1 className="text-2xl font-serif font-normal text-brand-stone-900 dark:text-slate-100">Your profile could not be loaded right now.</h1>
+            <p className="mx-auto mt-3 max-w-xl text-sm text-brand-stone-600 dark:text-slate-400">Please refresh or return to My IFS Work.</p>
+            <div className="mt-6 flex flex-wrap justify-center gap-3">
+              <button type="button" onClick={() => window.location.reload()} className="btn-sanctuary-primary">
+                <RefreshCw className="h-4 w-4" /> Refresh
+              </button>
+              <button type="button" onClick={() => navigate('/my-ifs')} className="btn-sanctuary-secondary">
+                Return to My IFS Work
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -421,7 +424,7 @@ const Profile = ({ client }) => {
                 <div className="text-center py-12 bg-brand-stone-50 dark:bg-slate-800/50 rounded-xl">
                   <AlertCircle className="w-12 h-12 text-brand-stone-400 mx-auto mb-4" />
                   <h3 className="text-lg font-medium text-brand-stone-700 dark:text-slate-300 mb-2">No assessment yet</h3>
-                  <p className="text-brand-stone-500 dark:text-slate-500 mb-4">Your assessments will appear here after you complete them.</p>
+                  <p className="text-brand-stone-500 dark:text-slate-500 mb-4">Your assessments will appear here after you complete them. Start with an assessment when you are ready so the curriculum can personalize support for your parts work.</p>
                   <button
                     onClick={() => navigate('/assessments')}
                     className="no-print px-6 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors"
@@ -542,7 +545,7 @@ const Profile = ({ client }) => {
                                 {percentage >= 66 ? 'High' : percentage >= 33 ? 'Moderate' : 'Low'}
                               </span>
                               <span className="font-bold text-brand-stone-700 dark:text-slate-300">
-                                {level}
+                                {data.label || `${Math.round(percentage)}%`}
                               </span>
                             </div>
                           </div>
@@ -618,9 +621,9 @@ const Profile = ({ client }) => {
                     Completed: {formatDate(selfEnergyAssessment.completedAt)}
                   </div>
                 )}
-                {selfEnergyAssessment.ranked && selfEnergyAssessment.ranked.length > 0 && (
+                {Array.isArray(selfEnergyAssessment.ranked) && selfEnergyAssessment.ranked.length > 0 && (
                   <div className="space-y-4 mb-6">
-                    {selfEnergyAssessment.ranked.map(([category, data], idx) => {
+                    {selfEnergyAssessment.ranked.map(([category, data = {}], idx) => {
                       const colors = ['bg-emerald-500', 'bg-teal-500', 'bg-cyan-500', 'bg-green-500', 'bg-lime-500', 'bg-sky-500', 'bg-brand-emerald-600', 'bg-brand-gold-600'];
                       const percentage = data.maxScale ? (data.average / data.maxScale) * 100 : (data.total / (data.count * 5)) * 100;
                       const level = percentage >= 80 ? 'Strong' : percentage >= 60 ? 'Developing' : 'Growing Edge';
@@ -664,9 +667,9 @@ const Profile = ({ client }) => {
                     Completed: {formatDate(attachmentAssessment.completedAt)}
                   </div>
                 )}
-                {attachmentAssessment.ranked && attachmentAssessment.ranked.length > 0 && (
+                {Array.isArray(attachmentAssessment.ranked) && attachmentAssessment.ranked.length > 0 && (
                   <div className="space-y-4 mb-6">
-                    {attachmentAssessment.ranked.map(([category, data], idx) => {
+                    {attachmentAssessment.ranked.map(([category, data = {}], idx) => {
                       const colors = ['bg-brand-gold-600', 'bg-brand-emerald-600', 'bg-brand-stone-600', 'bg-brand-stone-500'];
                       const styleLabels = { secure: 'Secure', anxious: 'Anxious-Preoccupied', avoidant: 'Dismissive-Avoidant', disorganized: 'Fearful-Avoidant' };
                       const percentage = data.maxScale ? (data.average / data.maxScale) * 100 : (data.total / (data.count * 5)) * 100;
@@ -717,9 +720,9 @@ const Profile = ({ client }) => {
                           </span>
                         )}
                       </div>
-                      {ca.ranked && ca.ranked.length > 0 && (
+                      {Array.isArray(ca.ranked) && ca.ranked.length > 0 && (
                         <div className="space-y-3">
-                          {ca.ranked.map(([category, data], idx) => {
+                          {ca.ranked.map(([category, data = {}], idx) => {
                             const barColors = ['bg-amber-500', 'bg-emerald-500', 'bg-brand-stone-500', 'bg-brand-stone-600', 'bg-rose-500'];
                             const percentage = data.percentage || ((data.average / (data.maxScale || 5)) * 100);
                             return (
