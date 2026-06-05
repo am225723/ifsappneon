@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { 
   MessageSquare, Send, Heart, Shield, Brain, Sparkles, 
   User, Bot, RefreshCw, ChevronDown, Settings,
-  Volume2, Loader, Mic, MicOff, VolumeX
+  Volume2, Loader, Mic, MicOff, VolumeX, AlertCircle
 } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import { supabaseHelpers } from '../lib/supabase';

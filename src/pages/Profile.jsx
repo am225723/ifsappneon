@@ -101,6 +101,7 @@ const Profile = ({ client }) => {
   const [gamificationData, setGamificationData] = useState({});
   const [streakData, setStreakData] = useState({});
   const [timeline, setTimeline] = useState([]);
+  const [profileError, setProfileError] = useState('');
 
   const loadAssessmentData = async () => {
     setProfileError('');
@@ -112,11 +113,19 @@ const Profile = ({ client }) => {
     setCustomAssessments([]);
 
     if (!client?.id) {
+      setProfileError('Your profile could not be loaded right now. Please refresh or return to My IFS Work.');
       setLoading(false);
       return;
     }
 
     setLoading(true);
+    setProfileError('');
+    setAssessment(null);
+    setAllAssessments([]);
+    setPartsAssessment(null);
+    setSelfEnergyAssessment(null);
+    setAttachmentAssessment(null);
+    setCustomAssessments([]);
     try {
       const interactiveResult = await supabase
         .from('ifs_interactive_data')
@@ -194,13 +203,14 @@ const Profile = ({ client }) => {
     const clientId = currentClient?.id || client?.id;
     if (!clientId) return;
     try {
-      const [mood, gam, miles] = await Promise.all([
+      const [moodResult, gamResult, milesResult] = await Promise.allSettled([
         supabaseHelpers.getMoodEntries(clientId),
         supabaseHelpers.getGamification(clientId),
         supabaseHelpers.getMilestones(clientId),
       ]);
-      setMoodEntries(mood || []);
-      if (gam) {
+      if (moodResult.status === 'fulfilled') setMoodEntries(moodResult.value || []);
+      if (gamResult.status === 'fulfilled' && gamResult.value) {
+        const gam = gamResult.value;
         setGamificationData({ xp: gam.xp, level: gam.level, badges: gam.badges });
         setStreakData({ currentStreak: gam.streak_current, longestStreak: gam.streak_longest, totalLogins: gam.total_logins });
       }
@@ -534,7 +544,7 @@ const Profile = ({ client }) => {
                                 {percentage >= 66 ? 'High' : percentage >= 33 ? 'Moderate' : 'Low'}
                               </span>
                               <span className="font-bold text-brand-stone-700 dark:text-slate-300">
-                                {level}
+                                {data.label || `${Math.round(percentage)}%`}
                               </span>
                             </div>
                           </div>
