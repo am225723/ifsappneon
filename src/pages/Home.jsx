@@ -218,7 +218,7 @@ const Home = ({ clientId, client, mode = 'home', selfProfile = null, selfProfile
             ifs_journal_entries: journalResult,
             ifs_client_progress: progressResult,
             curriculum_reflections: curriculumReflectionsResult
-          }, effectiveClientId, selfProfile || selfProfileResult?.profile);
+          }, effectiveClientId, selfProfileForLoad);
 
           if (queryErrors.length) {
             setDataLoadError({

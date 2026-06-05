@@ -90,7 +90,10 @@ import { Lock } from 'lucide-react';
 function LoadingScreen() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-brand-sanctuary dark:bg-brand-midnight">
-      <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-brand-gold-600"></div>
+      <div className="text-center">
+        <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-b-2 border-t-2 border-brand-gold-600"></div>
+        <p className="text-sm text-brand-stone-600 dark:text-slate-400">Loading this page…</p>
+      </div>
     </div>
   );
 }
@@ -552,6 +555,7 @@ function AppContent({ authChecked, clerkLoaded, clerkSignedIn, isAuthenticated, 
                 <Route path="/assessment" element={<Assessment />} />
                 <Route path="/assessments" element={<Assessments />} />
                 <Route path="/resources" element={<Resources />} />
+                <Route path="/resource-library-old" element={<Navigate to="/resource-library" replace />} />
                 <Route path="/resource-library" element={<FeatureGate feature="resourceLibrary"><ResourceLibrary /></FeatureGate>} />
                 <Route path="/inner-library-mockup" element={<InnerLibraryMockup />} />
                 <Route path="/journal" element={<FeatureGate feature="journal"><Journal /></FeatureGate>} />
@@ -574,6 +578,7 @@ function AppContent({ authChecked, clerkLoaded, clerkSignedIn, isAuthenticated, 
                 <Route path="/caseload" element={therapistOnly(<CaseloadManager />)} />
                 <Route path="/advisor-messages" element={therapistOnly(<TherapistMessages />)} />
                 <Route path="/messages" element={therapistOnly(<TherapistMessages />)} />
+                <Route path="/therapist/messages" element={<Navigate to="/messages" replace />} />
                 <Route path="/advisor-homework" element={therapistOnly(<TherapistHomework />)} />
                 <Route path="/advisor-reports" element={therapistOnly(<TherapistReports />)} />
                 <Route path="/advisor/shared-reflections" element={therapistOnly(<AdvisorSharedReflections />)} />
@@ -592,6 +597,7 @@ function AppContent({ authChecked, clerkLoaded, clerkSignedIn, isAuthenticated, 
                 <Route path="/gamification" element={<GamificationHub />} />
                 <Route path="/parts-dialogue" element={<FeatureGate feature="partsDialogue"><PartsDialogue /></FeatureGate>} />
                 <Route path="/parts-relationships" element={<PartsRelationshipMap />} />
+                <Route path="/parts-relationship-map" element={<Navigate to="/parts-relationships" replace />} />
                 <Route path="/life-integration" element={clientOnly(<LifeIntegration />)} />
                 <Route path="/life-integration/reflections/:reflectionId" element={clientOnly(<LifeIntegrationReflectionDetail />)} />
                 <Route path="/life-integration/notice-part" element={clientOnly(<NoticePartPractice />)} />
@@ -603,6 +609,7 @@ function AppContent({ authChecked, clerkLoaded, clerkSignedIn, isAuthenticated, 
                 <Route path="/unburdening" element={<FeatureGate feature="unburdening"><UnburdeningProtocol /></FeatureGate>} />
                 <Route path="/assessment-builder" element={therapistOnly(<AssessmentBuilder />)} />
                 <Route path="/custom-assessment/:assessmentId" element={<CustomAssessment />} />
+                <Route path="/guided-meditation" element={<Navigate to="/meditation" replace />} />
                 <Route path="/meditation" element={<FeatureGate feature="meditations"><GuidedMeditation /></FeatureGate>} />
                 <Route path="/guided-meditation" element={<Navigate to="/meditation" replace />} />
                 <Route path="/medication" element={<MedicationInfo />} />

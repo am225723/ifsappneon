@@ -115,6 +115,7 @@ const Profile = ({ client }) => {
     if (!client?.id) {
       setProfileError('Your profile could not be loaded right now. Please refresh or return to My IFS Work.');
       setLoading(false);
+      setProfileError('Your profile could not be loaded right now. Please refresh or return to My IFS Work.');
       return;
     }
 
