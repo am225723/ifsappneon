@@ -25,7 +25,9 @@ export default function MyIFSWork({ currentClient }) {
         }
         if (!cancelled) setState({ loading: false, result, error: '' });
       } catch (error) {
-        console.error('Error resolving My IFS profile:', error);
+        if (import.meta.env.DEV) {
+          console.warn('[MyIFSWork] profile resolution failed', { message: error?.message || 'Unable to resolve profile' });
+        }
         if (!cancelled) setState({ loading: false, result: null, error: error.message || 'Unable to resolve your personal IFS workspace.' });
       }
     }
@@ -58,7 +60,7 @@ export default function MyIFSWork({ currentClient }) {
           <p className="mb-2 text-xs font-bold uppercase tracking-[0.24em] text-brand-gold-700 dark:text-brand-gold-500">My IFS Work</p>
           <h1 className="text-3xl font-serif font-normal text-brand-stone-900 dark:text-slate-100">Your personal IFS path is not connected yet.</h1>
           <p className="mt-3 max-w-2xl text-sm leading-relaxed text-brand-stone-600 dark:text-slate-400">
-            Your IFS data could not be loaded right now. Please refresh or try again. If this is a new profile, start with the curriculum or an assessment to begin your IFS path.
+            Your personal IFS profile could not be connected right now. Please refresh or try again. If this is a new profile, start with the curriculum or an assessment to begin your IFS path.
           </p>
           <div className="mt-6 flex flex-wrap gap-3">
             <Link to="/curriculum" className="btn-sanctuary-primary"><BookOpen className="h-4 w-4" /> Start Curriculum</Link>
