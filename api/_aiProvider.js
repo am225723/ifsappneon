@@ -47,11 +47,13 @@ export async function callOpenRouterChat({
 
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) {
-    const providerMessage = payload?.error?.message;
-    const message = providerMessage
-      ? `OpenRouter request failed: ${providerMessage}`
-      : `OpenRouter request failed with status ${response.status}.`;
-    throw safeProviderError(message, response.status >= 500 ? 502 : 500, 'openrouter_request_failed');
+    // Keep provider payload details out of API errors so upstream diagnostics cannot
+    // accidentally expose secrets, request metadata, or raw client content.
+    throw safeProviderError(
+      `OpenRouter request failed with status ${response.status}.`,
+      response.status >= 500 ? 502 : 500,
+      'openrouter_request_failed'
+    );
   }
 
   const text = payload?.choices?.[0]?.message?.content?.trim();
