@@ -48,7 +48,8 @@ Return EXACTLY this format:
 TITLE: [Engaging title]
 CATEGORY: [One of: general, journaling, parts-work, meditation, exercise, reading, self-care]
 PRIORITY: [One of: low, normal, high]
-DESCRIPTION: [5-8 sentences with numbered steps, materials if any, time estimate, and reflection questions.]`;
+DESCRIPTION: [Readable sections with spacing, numbered steps, materials if any, time estimate, and reflection questions. Use **bold** sparingly for section labels.]
+ACTIVITY_BLOCKS_JSON: [{"type":"instruction","text":"..."},{"type":"textarea","id":"reflection_1","prompt":"..."},{"type":"virtual_paper","id":"notes","prompt":"Freeform notes"}]`;
 
   return [
     { role: 'system', content: systemPrompt },
@@ -79,7 +80,8 @@ For EACH practice use EXACTLY this format, separated by ---:
 TITLE: [Creative, specific title]
 CATEGORY: [One of: general, journaling, parts-work, meditation, exercise, reading, self-care]
 PRIORITY: [One of: low, normal, high]
-DESCRIPTION: [5-8 sentences with numbered steps. Materials needed, specific prompts/questions, time estimate, reflection.]
+DESCRIPTION: [Readable sections with spacing, numbered steps. Materials needed, specific prompts/questions, time estimate, reflection. Use **bold** sparingly for section labels.]
+ACTIVITY_BLOCKS_JSON: [optional structured blocks using instruction, question, textarea, checklist, rating, virtual_paper]
 
 ---
 
@@ -120,13 +122,25 @@ function normalizePriority(raw) {
   return 'normal';
 }
 
+function extractActivityBlocks(text) {
+  const raw = extractField(text, 'ACTIVITY_BLOCKS_JSON');
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
 function parseSinglePractice(text) {
   const title = extractField(text, 'TITLE');
   const category = normalizeCategory(extractField(text, 'CATEGORY'));
   const priority = normalizePriority(extractField(text, 'PRIORITY'));
   const description = extractField(text, 'DESCRIPTION');
+  const activityBlocks = extractActivityBlocks(text);
   if (!title || !description) throw Object.assign(new Error('AI response was not in the expected format. Please try again.'), { statusCode: 502, code: 'openrouter_parse_failed' });
-  return { title, category, priority, description };
+  return { title, category, priority, description, activityBlocks };
 }
 
 function parseBatchPractice(text) {
@@ -138,7 +152,8 @@ function parseBatchPractice(text) {
       title,
       category: normalizeCategory(extractField(block, 'CATEGORY')),
       priority: normalizePriority(extractField(block, 'PRIORITY')),
-      description
+      description,
+      activityBlocks: extractActivityBlocks(block)
     };
   }).filter(Boolean);
 

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, ArrowRight, Check, Heart, Lock, PenLine, Share2 } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Check, Heart, PenLine, ShieldCheck } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { saveLifeIntegrationReflection } from '../../lib/lifeIntegration';
 import { clientAuth } from '../../lib/supabasePersonalization';
@@ -14,7 +14,7 @@ const emptyForm = {
   need_or_message: '',
   self_energy_response: '',
   next_step: '',
-  shared_with_advisor: false
+  shared_with_advisor: true
 };
 
 function getClientId() {
@@ -94,7 +94,7 @@ export default function LifePracticeShell({ type, config }) {
       need_or_message: form.need_or_message,
       self_energy_response: form.self_energy_response,
       next_step: form.next_step,
-      shared_with_advisor: form.shared_with_advisor
+      shared_with_advisor: true
     };
 
     const result = await saveLifeIntegrationReflection(payload);
@@ -158,7 +158,7 @@ export default function LifePracticeShell({ type, config }) {
             <div className="p-6 sm:p-8">
               <div className="mb-5">
                 <h2 className="text-xl font-semibold text-brand-stone-900 dark:text-slate-100">Optional reflection</h2>
-                <p className="mt-2 text-sm leading-relaxed text-brand-stone-600 dark:text-slate-400">Write only what helps. You can save this as a private Life Integration reflection, or skip writing and keep practicing offline.</p>
+                <p className="mt-2 text-sm leading-relaxed text-brand-stone-600 dark:text-slate-400">Write only what helps. Your Advisor can review your reflections to support your work together, or you can skip writing and keep practicing offline.</p>
               </div>
 
               <div className="space-y-4">
@@ -180,18 +180,13 @@ export default function LifePracticeShell({ type, config }) {
                   </select>
                 </label>
 
-                <label className="flex items-start gap-3 rounded-2xl border border-brand-gold-100 bg-brand-gold-50/70 p-4 dark:border-brand-gold-900/40 dark:bg-brand-gold-950/20">
-                  <input
-                    type="checkbox"
-                    checked={form.shared_with_advisor}
-                    onChange={(event) => updateField('shared_with_advisor', event.target.checked)}
-                    className="mt-1 h-4 w-4 rounded border-brand-gold-300 text-brand-gold-700 focus:ring-brand-gold-500"
-                  />
+                <div className="flex items-start gap-3 rounded-2xl border border-brand-emerald-100 bg-brand-emerald-50/70 p-4 dark:border-brand-emerald-900/40 dark:bg-brand-emerald-950/20">
+                  <Check className="mt-0.5 h-4 w-4 text-brand-emerald-700 dark:text-brand-emerald-100" />
                   <span>
-                    <span className="flex items-center gap-2 text-sm font-semibold text-brand-stone-900 dark:text-slate-100"><Share2 className="h-4 w-4" /> Share with my Advisor</span>
-                    <span className="mt-1 block text-xs leading-relaxed text-brand-stone-600 dark:text-slate-400">Private by default. Choose this only when it feels useful for Advisor-supported reflection.</span>
+                    <span className="flex items-center gap-2 text-sm font-semibold text-brand-stone-900 dark:text-slate-100">Visible to Advisor</span>
+                    <span className="mt-1 block text-xs leading-relaxed text-brand-stone-600 dark:text-slate-400">Your Advisor can review this to support your work together.</span>
                   </span>
-                </label>
+                </div>
 
                 {error && <p className="rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-700 dark:bg-red-950/20 dark:text-red-300">{error}</p>}
                 {saved && <p className="rounded-2xl bg-brand-emerald-50 px-4 py-3 text-sm font-semibold text-brand-emerald-700 dark:bg-brand-emerald-950/30 dark:text-brand-emerald-100"><Check className="mr-2 inline h-4 w-4" />Reflection saved.</p>}
@@ -228,8 +223,8 @@ export default function LifePracticeShell({ type, config }) {
 
         <section className="mt-6 grid gap-4 md:grid-cols-2">
           <div className="rounded-3xl bg-white/70 p-5 text-sm leading-relaxed text-brand-stone-600 shadow-sm dark:bg-slate-900/40 dark:text-slate-400">
-            <Lock className="mb-2 h-5 w-5 text-brand-emerald-700 dark:text-brand-emerald-100" />
-            Your reflections are private unless you choose to share them with your Advisor.
+            <ShieldCheck className="mb-2 h-5 w-5 text-brand-emerald-700 dark:text-brand-emerald-100" />
+            Your Advisor can review your reflections to support your work together.
           </div>
           <div className="rounded-3xl bg-white/70 p-5 text-sm leading-relaxed text-brand-stone-600 shadow-sm dark:bg-slate-900/40 dark:text-slate-400">
             <Heart className="mb-2 h-5 w-5 text-brand-gold-700 dark:text-brand-gold-500" />

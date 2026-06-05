@@ -8,6 +8,8 @@ import { useTheme } from '../contexts/ThemeContext';
 import { supabase } from '../lib/supabase';
 import { clientAuth } from '../lib/supabasePersonalization';
 import { generateHomework, generateHomeworkBatch } from '../lib/homeworkAI';
+import FormattedAIContent from '../components/ai/FormattedAIContent';
+import InteractiveWorksheetRenderer from '../components/ai/InteractiveWorksheetRenderer';
 import { loadAssignedClients } from '../lib/therapistAssignments';
 import { curriculumModules } from '../data/curriculumData';
 import {
@@ -516,7 +518,7 @@ const TherapistHomework = () => {
                     <h4 className={`text-sm font-semibold ${textPrimary} leading-tight`}>{item.title}</h4>
                     <ArrowRight className={`w-4 h-4 flex-shrink-0 mt-0.5 ${isDark ? 'text-purple-400' : 'text-purple-500'}`} />
                   </div>
-                  <p className={`text-xs ${textSecondary} line-clamp-3 mb-2 leading-relaxed`}>{item.description}</p>
+                  <div className={`text-xs ${textSecondary} line-clamp-3 mb-2 leading-relaxed`}><FormattedAIContent content={item.description} /></div>
                   <div className="flex items-center gap-2">
                     <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${catInfo.color}`}>{catInfo.label}</span>
                     <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${
@@ -570,9 +572,15 @@ const TherapistHomework = () => {
                 value={form.description}
                 onChange={e => setForm(prev => ({ ...prev, description: e.target.value }))}
                 placeholder="Detailed instructions for the client..."
-                rows={3}
-                className={`w-full px-3 py-2.5 rounded-lg border ${inputBg} focus:ring-2 focus:ring-amber-500 outline-none resize-none`}
+                rows={5}
+                className={`w-full px-3 py-2.5 rounded-lg border ${inputBg} focus:ring-2 focus:ring-amber-500 outline-none resize-y`}
               />
+              {form.description && (
+                <div className={`mt-3 rounded-xl border ${cardBorder} p-4`}>
+                  <p className={`mb-2 text-xs font-semibold uppercase tracking-wide ${textMuted}`}>Readable preview</p>
+                  <InteractiveWorksheetRenderer fallbackText={form.description} />
+                </div>
+              )}
             </div>
             <div>
               <label className={`block text-sm font-medium ${textSecondary} mb-1.5`}>Category</label>

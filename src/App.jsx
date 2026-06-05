@@ -489,7 +489,6 @@ function AppContent({ authChecked, clerkLoaded, clerkSignedIn, isAuthenticated, 
             unreadCount={unreadMsgCount}
             messagePath={messagePath}
             workspaceLinks={isTherapistRole ? [
-              { path: advisorWorkspacePath, label: isAdminOrSupervisor ? 'Admin Hub' : 'Advisor Dashboard' },
               { path: '/my-ifs', label: 'My IFS Work' }
             ] : []}
             rightSlot={

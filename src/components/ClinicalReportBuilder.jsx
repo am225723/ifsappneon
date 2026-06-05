@@ -15,6 +15,7 @@ const SECTION_OPTIONS = [
   ['includeHealingTimeline', 'Healing Timeline Summary', 'Optional client-safe milestones from goals, assigned IFS practices, and parts status; excludes Advisor notes.'],
   ['includeAnalyticsSummary', 'Insights Summary', 'Optional compact Advisor insights summary without chart libraries.'],
   ['includeAiSessionSummary', 'AI Session Prep Summary', 'Default-off placeholder for existing on-demand AI prep summaries; does not auto-generate AI content.'],
+  ['includeModuleResponses', 'Cleaned Module Responses', 'Meaningful module reflections only; filters placeholders, single letters, timestamps, and answered markers.'],
   ['includeFullNoteText', 'Full Advisor Note Text', 'Default-off full note body excerpts. Use only when appropriate for Advisor documentation.']
 ];
 
@@ -29,6 +30,7 @@ const DEFAULT_SECTIONS = {
   includeHealingTimeline: false,
   includeAnalyticsSummary: false,
   includeAiSessionSummary: false,
+  includeModuleResponses: true,
   includeFullNoteText: false
 };
 

@@ -1,6 +1,7 @@
 /* global process */
 import { isAdminUser, requireTherapist, requireTherapistAssignment, sql } from './_auth.js';
 import { safeCreateInAppNotification } from './_notifications.js';
+import { cleanModuleResponses } from './_moduleResponseCleaning.js';
 
 const REPORT_TYPES = new Set(['clinical_summary', 'client_progress_summary']);
 const DEFAULT_SECTIONS = {
@@ -14,6 +15,7 @@ const DEFAULT_SECTIONS = {
   includeHealingTimeline: false,
   includeAnalyticsSummary: false,
   includeAiSessionSummary: false,
+  includeModuleResponses: true,
   includeFullNoteText: false
 };
 
@@ -21,13 +23,14 @@ const SECTION_LABELS = {
   includeTreatmentPlans: 'Treatment Plan Goals',
   includeTaggedNotes: 'Tagged Clinical Notes',
   includeSessionAgendas: 'Session Agendas',
-  includeAssignedHomework: 'Assigned Homework',
+  includeAssignedHomework: 'Assigned IFS Practices',
   includeParts: 'Parts Summary',
   includeMoodEntries: 'Mood Summary',
   includeJournals: 'Journal Excerpts',
   includeHealingTimeline: 'Healing Timeline Summary',
   includeAnalyticsSummary: 'Analytics Summary',
   includeAiSessionSummary: 'AI Session Prep Summary',
+  includeModuleResponses: 'Cleaned Module Responses',
   includeFullNoteText: 'Full Clinical Note Text'
 };
 
@@ -197,6 +200,13 @@ async function loadReportData({ clientId, therapistId, sections, reportType, dat
         clientId,
         { start: dateRangeStart, end: dateRangeEnd, dateColumn: 'created_at', limit: 20 }
       )
+      : Promise.resolve([]),
+    moduleResponses: sections.includeModuleResponses
+      ? queryRows(
+        `SELECT id, module_id, data, updated_at, created_at FROM ifs_interactive_data`,
+        clientId,
+        { start: dateRangeStart, end: dateRangeEnd, dateColumn: 'COALESCE(updated_at, created_at)', limit: 120 }
+      )
       : Promise.resolve([])
   };
 
@@ -210,7 +220,8 @@ async function loadReportData({ clientId, therapistId, sections, reportType, dat
     assignedHomework: data[3],
     parts: data[4],
     moodEntries: data[5],
-    journals: data[6]
+    journals: data[6],
+    moduleResponses: data[7]
   };
 }
 
@@ -249,11 +260,11 @@ function renderClinicalSections(data, sections) {
   }
 
   if (sections.includeAssignedHomework) {
-    sectionsHtml.push(`<section class="report-section"><h2>Assigned Homework</h2>${renderRows(data.assignedHomework, 'No assigned homework found for this date range.', (homework) => `
+    sectionsHtml.push(`<section class="report-section"><h2>Assigned IFS Practices</h2>${renderRows(data.assignedHomework, 'No assigned IFS practices found for this date range.', (homework) => `
       <article class="item-card">
         <div class="item-heading"><strong>${escapeHtml(homework.title || homework.module_id || 'Assigned module')}</strong><span>${escapeHtml(homework.status || 'assigned')}</span></div>
         <p>Assigned: ${formatDate(homework.assigned_at || homework.created_at)} · Completed: ${formatDate(homework.completed_at)} · Reviewed: ${formatDate(homework.reviewed_at)}</p>
-        ${homework.therapist_feedback ? `<p><strong>Therapist feedback:</strong> ${escapeHtml(truncate(homework.therapist_feedback, 500))}</p>` : ''}
+        ${homework.therapist_feedback ? `<p><strong>Advisor feedback:</strong> ${escapeHtml(truncate(homework.therapist_feedback, 500))}</p>` : ''}
       </article>`)} </section>`);
   }
 
@@ -282,6 +293,23 @@ function renderClinicalSections(data, sections) {
         <div class="item-heading"><strong>${escapeHtml(entry.title || 'Untitled journal entry')}</strong><span>${formatDate(entry.created_at)}</span></div>
         <p>${escapeHtml(truncate(entry.content, 450) || 'No excerpt available.')}</p>
       </article>`)} </section>`);
+  }
+
+
+  if (sections.includeModuleResponses) {
+    const grouped = (data.moduleResponses || []).reduce((acc, row) => {
+      if (!String(row.module_id || '').startsWith('module-')) return acc;
+      let payload = {};
+      try { payload = typeof row.data === 'string' ? JSON.parse(row.data || '{}') : (row.data || {}); } catch { payload = {}; }
+      const answers = payload.answers || payload.responses || payload.reflections || payload;
+      acc[row.module_id] = acc[row.module_id] || [];
+      acc[row.module_id].push({ step_id: 'module', answers });
+      return acc;
+    }, {});
+    const cleaned = cleanModuleResponses(grouped);
+    sectionsHtml.push(`<section class="report-section"><h2>Cleaned Module Responses</h2>${Object.keys(cleaned).length ? Object.entries(cleaned).map(([moduleId, responses]) => `
+      <article class="item-card compact"><div class="item-heading"><strong>${escapeHtml(moduleId)}</strong><span>${responses.reduce((sum, item) => sum + Object.keys(item.answers || {}).length, 0)} responses</span></div>
+      ${responses.map((item) => renderList(Object.entries(item.answers || {}).map(([key, value]) => `${key}: ${truncate(value, 240)}`))).join('')}</article>`).join('') : '<p class="empty">No meaningful module responses found for this date range.</p>'}</section>`);
   }
 
   if (sections.includeHealingTimeline) {
@@ -432,7 +460,7 @@ function buildHtmlReport({ data, sections, reportType, dateRangeStart, dateRange
       <div><span>Generated</span><strong>${formatDate(generatedAt)}</strong></div>
     </div><p class="muted">Report ID: ${escapeHtml(reportId || 'pending')}</p></section>
     ${body}
-    <footer>Generated metadata is stored for audit purposes. Raw report content is not stored by the report audit table.</footer>
+    <footer>Generated metadata is stored for audit purposes. Raw report content is not stored by the report audit table. Module responses are cleaned for display and do not mutate stored data.</footer>
   </main>
 </body></html>`;
 }
@@ -462,7 +490,7 @@ export default async function handler(req, res) {
     }
 
     const currentUser = await requireTherapist(req);
-    if (!isAdminUser(currentUser) && currentUser.user_role === 'therapist') {
+    if (!isAdminUser(currentUser)) {
       await requireTherapistAssignment(currentUser.id, requestedClientId);
     }
 

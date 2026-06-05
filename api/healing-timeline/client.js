@@ -376,7 +376,7 @@ function buildCurriculumReflectionItems(interactiveRows, since) {
         source: 'Curriculum',
         icon: 'pen-line',
         tone: 'reflection',
-        metadata: { moduleId: row.module_id, reflectionType: 'curriculum_module', isPrivate: true, sharedWithAdvisor: false }
+        metadata: { moduleId: row.module_id, reflectionType: 'curriculum_module', isPrivate: false, sharedWithAdvisor: true }
       }));
   });
 }

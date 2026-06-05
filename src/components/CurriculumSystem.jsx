@@ -15,7 +15,7 @@ import { supabase } from '../lib/supabase';
 import { WOUND_MODULE_PRIORITIES, LEVEL_ORDER } from '../lib/woundModulePriorities';
 import { canAccessModule } from '../lib/accessControl';
 import { loadAssignedHomeworkForClient } from '../lib/assignedHomework';
-import { getCurriculumPathSummary, getModuleActionLabel, getModuleSupportLinks } from '../lib/curriculumExperience';
+import { buildSharedCurriculumSummary, getModuleActionLabel, getModuleSupportLinks } from '../lib/curriculumExperience';
 import { countCurriculumReflectionsByModule, loadCurriculumReflections } from '../lib/curriculumReflections';
 
 const CurriculumSystem = ({ onModuleSelect, userProgress = {}, clientId }) => {
@@ -38,17 +38,15 @@ const CurriculumSystem = ({ onModuleSelect, userProgress = {}, clientId }) => {
 
     const loadCurriculum = async () => {
       const client = clientAuth.getCurrentClient();
-      const id = client?.id;
+      const id = clientId || client?.id;
       if (!id) { setLoadingWound(false); return; }
 
       try {
         const [curriculumRes, interactiveRes, progressRes, assignmentsRes] = await Promise.all([
           supabaseHelpers.getPersonalizedCurriculum(id),
           supabase.from('ifs_interactive_data')
-            .select('data')
-            .eq('client_id', id)
-            .eq('module_id', 'assessment_wounds')
-            .maybeSingle(),
+            .select('id, client_id, module_id, data, created_at, updated_at')
+            .eq('client_id', id),
           supabase.from('ifs_client_progress')
             .select('module_id, completed')
             .eq('client_id', id),
@@ -69,18 +67,15 @@ const CurriculumSystem = ({ onModuleSelect, userProgress = {}, clientId }) => {
           .map(item => item.module_id);
         setAssignedHomeworkIds(new Set(assignedModules));
 
-        const dbCompleted = (progressRes.data || [])
-          .filter(p => p.completed)
-          .map(p => p.module_id);
-        if (dbCompleted.length > 0) {
-          setCompletedModules(prev => {
-            const merged = new Set([...prev, ...dbCompleted]);
-            return [...merged];
-          });
-        }
+        const sharedSummary = buildSharedCurriculumSummary({
+          progressRows: progressRes.data || [],
+          interactiveRows: interactiveRes.data || [],
+          assignedPractices: activeAssignments
+        });
+        setCompletedModules(sharedSummary.completedModuleIds);
 
         // Wound comes ONLY from the client's own assessment tab results
-        const wd = interactiveRes.data?.data;
+        const wd = (interactiveRes.data || []).find((row) => row.module_id === 'assessment_wounds')?.data;
         const primaryWound = wd?.primary;
         const secondaryWound = wd?.secondary;
 
@@ -94,7 +89,7 @@ const CurriculumSystem = ({ onModuleSelect, userProgress = {}, clientId }) => {
     };
 
     loadCurriculum();
-  }, [userProgress]);
+  }, [userProgress, clientId]);
 
   const woundConfig = clientWound ? WOUND_MODULE_PRIORITIES[clientWound.primary] : null;
   const secondaryWoundConfig = clientWound?.secondary ? WOUND_MODULE_PRIORITIES[clientWound.secondary] : null;
@@ -217,8 +212,8 @@ const CurriculumSystem = ({ onModuleSelect, userProgress = {}, clientId }) => {
     const m = getModuleById(id);
     return total + (m?.estimatedMinutes || 0);
   }, 0);
-  const pathSummary = getCurriculumPathSummary({
-    completedModuleIds: completedModules,
+  const pathSummary = buildSharedCurriculumSummary({
+    progressRows: completedModules.map(module_id => ({ module_id, completed: true })),
     assignedPractices: [...assignedHomeworkIds].map(module_id => ({ module_id, status: 'assigned' }))
   });
   const currentPathModule = pathSummary.currentModule || nextModule;

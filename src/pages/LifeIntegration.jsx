@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, CalendarDays, Heart, Lock, ShieldCheck, Sparkles } from 'lucide-react';
+import { ArrowRight, CalendarDays, Heart, ShieldCheck, Sparkles } from 'lucide-react';
 import { loadLifeIntegrationReflections } from '../lib/lifeIntegration';
 import { normalizeLifeReflection } from '../lib/lifeIntegrationDisplay';
 import { practiceCards } from '../components/life/practiceConfig';
@@ -110,9 +110,9 @@ export default function LifeIntegration() {
 
           <aside className="space-y-4">
             <div className="soft-card bg-white/85 p-6 dark:bg-brand-cardDark/90">
-              <Lock className="mb-3 h-6 w-6 text-brand-emerald-700 dark:text-brand-emerald-100" />
-              <h3 className="text-xl font-semibold text-brand-stone-900 dark:text-slate-100">Private by default</h3>
-              <p className="mt-2 text-sm leading-relaxed text-brand-stone-600 dark:text-slate-400">Saved reflections stay private unless you choose to share them with your Advisor.</p>
+              <ShieldCheck className="mb-3 h-6 w-6 text-brand-emerald-700 dark:text-brand-emerald-100" />
+              <h3 className="text-xl font-semibold text-brand-stone-900 dark:text-slate-100">Visible to Advisor</h3>
+              <p className="mt-2 text-sm leading-relaxed text-brand-stone-600 dark:text-slate-400">Your Advisor can review saved reflections to support your work together.</p>
             </div>
             <div className="soft-card bg-white/85 p-6 dark:bg-brand-cardDark/90">
               <ShieldCheck className="mb-3 h-6 w-6 text-brand-gold-700 dark:text-brand-gold-500" />

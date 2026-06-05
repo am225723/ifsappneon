@@ -27,6 +27,8 @@ import TreatmentPlanManager from '../components/TreatmentPlanManager';
 import TherapistNoteEditor from '../components/TherapistNoteEditor';
 import AdvisorSessionNoteDraft from '../components/AdvisorSessionNoteDraft';
 import RecentActivityFeed from '../components/RecentActivityFeed';
+import FormattedAIContent from '../components/ai/FormattedAIContent';
+import { cleanModuleResponses, isMeaningfulModuleResponse } from '../lib/moduleResponseCleaning';
 
 const woundColorMap = {
   abandonment: { bg: 'bg-blue-100', text: 'text-blue-700', dot: 'bg-blue-500' },
@@ -525,6 +527,9 @@ const TherapistDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [clientInsights, setClientInsights] = useState(null);
   const [insightsLoading, setInsightsLoading] = useState(false);
+  const [moduleInsightText, setModuleInsightText] = useState('');
+  const [moduleInsightLoading, setModuleInsightLoading] = useState(false);
+  const [moduleInsightError, setModuleInsightError] = useState('');
   const [clientGamification, setClientGamification] = useState({});
 
   const [activeAction, setActiveAction] = useState(null);
@@ -1303,7 +1308,7 @@ const TherapistDashboard = () => {
 
       setClientInsights({
         recentAnswers: recentAnswers.slice(0, 10),
-        moduleResponses,
+        moduleResponses: cleanModuleResponses(moduleResponses),
         activityProgress: activityProgress || [],
         sessionPrep,
         assessment: finalAssessment,
@@ -1333,6 +1338,29 @@ const TherapistDashboard = () => {
       setTimelineFilter('all');
     }
   }, [selectedInsightClient, loadClientInsights]);
+
+
+  const generateModuleResponseInsights = async () => {
+    if (!selectedInsightClient) return;
+    setModuleInsightLoading(true);
+    setModuleInsightError('');
+    setModuleInsightText('');
+    try {
+      const token = await window.Clerk?.session?.getToken?.();
+      const response = await fetch('/api/ai-module-response-insights', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify({ clientId: selectedInsightClient, rangeDays: 60 })
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload?.error?.message || 'Unable to generate module response insights.');
+      setModuleInsightText(payload?.data?.insights || 'AI-generated preparation aid for Advisor review only. Not a diagnosis, risk assessment, or clinical conclusion.');
+    } catch (error) {
+      setModuleInsightError(error.message || 'Unable to generate module response insights.');
+    } finally {
+      setModuleInsightLoading(false);
+    }
+  };
 
   const filteredClients = clients.filter(client => {
     const matchesSearch = client.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -3664,6 +3692,7 @@ const TherapistDashboard = () => {
               { label: 'Longitudinal Insights', desc: 'Open assigned-client trends for mood, parts, journals, practices, and Growth Goals.', icon: TrendingUp, onClick: () => navigate('/analytics') },
               { label: 'Client Progress', desc: 'Review curriculum completion, latest activity, and IFS Path momentum.', icon: BarChart3, onClick: () => setActiveTab('progress') },
               { label: 'Healing Timeline', desc: 'View client journey patterns and major IFS milestones.', icon: Heart, onClick: () => setActiveTab('insights') },
+              { label: 'Module Response Insights', desc: 'Generate AI themes and session-useful patterns from cleaned module responses.', icon: Sparkles, onClick: () => { setActiveTab('insights'); if (selectedWorkspaceClient?.id) setSelectedInsightClient(selectedWorkspaceClient.id); } },
               { label: 'Reports', desc: 'Open generated Advisor reports for assigned clients.', icon: FileText, onClick: () => navigate('/advisor-reports') },
               { label: 'Generate Report', desc: 'Create a current Advisor report from assigned-client progress data.', icon: Download, onClick: () => navigate('/advisor-reports') },
               { label: 'Curriculum progress summaries', desc: 'Summarize IFS Path progress without making analytics the main workspace.', icon: BookOpen, onClick: () => setActiveTab('progress') }
@@ -5761,6 +5790,20 @@ const TherapistDashboard = () => {
                     <BookOpen className="w-5 h-5 text-blue-500" />
                     Module Responses
                   </h3>
+                  <div className="mb-4 rounded-2xl border border-brand-gold-100 bg-brand-gold-50/70 p-4 dark:border-brand-gold-900/40 dark:bg-brand-gold-950/20">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                      <div>
+                        <p className={`text-sm font-semibold ${textPrimary}`}>Advisor Insights</p>
+                        <p className={`text-xs ${textSecondary}`}>Clean low-value entries, then ask AI for themes, session questions, and cautious attention flags.</p>
+                      </div>
+                      <button onClick={generateModuleResponseInsights} disabled={moduleInsightLoading || !selectedInsightClient} className="inline-flex items-center justify-center gap-2 rounded-xl bg-brand-emerald-700 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-emerald-800 disabled:opacity-60">
+                        {moduleInsightLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                        Generate Module Response Insights
+                      </button>
+                    </div>
+                    {moduleInsightError && <p className="mt-3 rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700">{moduleInsightError}</p>}
+                    {moduleInsightText && <div className="mt-3 rounded-xl bg-white/80 p-4 dark:bg-slate-900/60"><FormattedAIContent content={moduleInsightText} /></div>}
+                  </div>
                   {!clientInsights.moduleResponses || Object.keys(clientInsights.moduleResponses).length === 0 ? (
                     <div className="text-center py-6">
                       <MessageSquare className={`w-8 h-8 mx-auto mb-2 ${textMuted}`} />
@@ -5778,10 +5821,7 @@ const TherapistDashboard = () => {
                           const moduleData = curriculumModules.find(m => m.id === moduleId);
                           const moduleName = moduleData?.title || getModuleName(moduleId) || moduleId;
                           const isExpanded = expandedResponseModules[moduleId];
-                          const totalResponses = responses.reduce((sum, r) => sum + Object.keys(r.answers || {}).filter(k => {
-                            const v = r.answers[k];
-                            return typeof v === 'string' && v.trim().length > 0;
-                          }).length, 0);
+                          const totalResponses = responses.reduce((sum, r) => sum + Object.values(r.answers || {}).filter(isMeaningfulModuleResponse).length, 0);
                           const completedModules = clientInsights.moduleProgress?.filter(p => p.completed && p.module_id === moduleId);
                           const isCompleted = completedModules && completedModules.length > 0;
                           const clientWound = clientInsights.assessment?.primary_wound || client?.primaryWound || 'abandonment';
@@ -5811,7 +5851,7 @@ const TherapistDashboard = () => {
                                   ) : (
                                     responses.map((resp, ri) =>
                                       Object.entries(resp.answers || {})
-                                        .filter(([, v]) => typeof v === 'string' && v.trim().length > 0)
+                                        .filter(([, v]) => isMeaningfulModuleResponse(v))
                                         .map(([key, value], qi) => {
                                           const questionText = mapResponseKey(key, moduleData, clientWound);
                                           const badge = getResponseBadge(key);

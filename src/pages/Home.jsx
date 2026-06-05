@@ -38,7 +38,7 @@ import {
   summarizeInteractiveInsights
 } from '../lib/interactiveResults';
 import RecentActivityFeed from '../components/RecentActivityFeed';
-import { getCurriculumPathSummary, getCompletedModuleIds } from '../lib/curriculumExperience';
+import { buildSharedCurriculumSummary } from '../lib/curriculumExperience';
 import { loadCurriculumReflections } from '../lib/curriculumReflections';
 
 const iconTones = {
@@ -274,9 +274,9 @@ const Home = ({ clientId, client, mode = 'home', selfProfile = null, selfProfile
           setCurriculumReflections(curriculumReflectionsResult?.data || []);
 
           const progressRows = progressResult?.data || [];
-          const completedModuleIds = getCompletedModuleIds(progressRows, curriculumModuleRows);
-          setCurriculumSummary(getCurriculumPathSummary({
-            completedModuleIds,
+          setCurriculumSummary(buildSharedCurriculumSummary({
+            progressRows,
+            interactiveRows,
             assignedPractices
           }));
 
