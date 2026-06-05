@@ -113,12 +113,7 @@ export default function Affirmations() {
   const [favorites, setFavorites] = useState([]);
   const [showAllWound, setShowAllWound] = useState(false);
 
-  useEffect(() => {
-    loadAssessment();
-    loadFavorites();
-  }, []);
-
-  const loadFavorites = async () => {
+  async function loadFavorites() {
     const client = clientAuth.getCurrentClient();
     const clientId = client?.id;
     if (!clientId) return;
@@ -128,17 +123,9 @@ export default function Affirmations() {
         setFavorites(prefs.favorite_affirmations);
       }
     } catch { /* ignore */ }
-  };
+  }
 
-  useEffect(() => {
-    if (savedAssessment?.primary_wound) {
-      generateAffirmation();
-    } else {
-      setCurrentAffirmation(generalAffirmations[Math.floor(Math.random() * generalAffirmations.length)]);
-    }
-  }, [savedAssessment]);
-
-  const loadAssessment = async () => {
+  async function loadAssessment() {
     const client = clientAuth.getCurrentClient();
     if (client) {
       const { data } = await supabase
@@ -156,9 +143,14 @@ export default function Affirmations() {
         });
       }
     }
-  };
+  }
+  useEffect(() => {
+    loadAssessment();
+    loadFavorites();
+  }, []);
 
-  const generateAffirmation = () => {
+
+  function generateAffirmation() {
     if (savedAssessment?.primary_wound) {
       const woundData = woundAffirmations[savedAssessment.primary_wound];
       const allAffirmations = [...woundData.core, ...woundData.healing];
@@ -167,7 +159,15 @@ export default function Affirmations() {
     } else {
       setCurrentAffirmation(generalAffirmations[Math.floor(Math.random() * generalAffirmations.length)]);
     }
-  };
+  }
+  useEffect(() => {
+    if (savedAssessment?.primary_wound) {
+      generateAffirmation();
+    } else {
+      setCurrentAffirmation(generalAffirmations[Math.floor(Math.random() * generalAffirmations.length)]);
+    }
+  }, [savedAssessment]);
+
 
   const copyAffirmation = () => {
     navigator.clipboard.writeText(currentAffirmation);

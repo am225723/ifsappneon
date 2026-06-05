@@ -1,4 +1,3 @@
-/* global process */
 import { requireTherapist, requireTherapistAssignment, sql } from './_auth.js';
 import { callOpenRouterChat } from './_aiProvider.js';
 

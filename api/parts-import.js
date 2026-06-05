@@ -1,4 +1,3 @@
-/* global process */
 import { getCurrentAppUserFromClerk, sql } from './_auth.js';
 
 const LEGACY_MODULE_ID = 'parts_map';

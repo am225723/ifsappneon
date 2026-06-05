@@ -106,12 +106,7 @@ export default function DailyCheckin() {
   const client = clientAuth.getCurrentClient();
   const clientId = client?.id;
 
-  useEffect(() => {
-    if (!clientId) { setLoading(false); return; }
-    loadData();
-  }, [clientId]);
-
-  const loadData = async () => {
+  async function loadData() {
     const today = new Date().toISOString().split('T')[0];
     try {
       const [partsRes, checkinRes, historyRes] = await Promise.all([
@@ -151,7 +146,12 @@ export default function DailyCheckin() {
       setClientParts(DEFAULT_PARTS);
     }
     setLoading(false);
-  };
+  }
+  useEffect(() => {
+    if (!clientId) { setLoading(false); return; }
+    loadData();
+  }, [clientId]);
+
 
   const togglePart = (partId) => {
     setActiveParts(prev => prev.includes(partId) ? prev.filter(id => id !== partId) : [...prev, partId]);

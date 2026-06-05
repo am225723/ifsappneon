@@ -1,4 +1,3 @@
-/* global process */
 import { sql, isAdminUser, isTherapistUser, getCurrentAppUserFromClerk } from './_auth.js';
 import { safeCreateInAppNotification } from './_notifications.js';
 

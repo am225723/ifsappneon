@@ -1,4 +1,3 @@
-/* global process */
 import { sql, getCurrentAppUserFromClerk, isAdminUser, isTherapistUser, requireTherapistAssignment } from '../_auth.js';
 
 const SUPPORTED_RANGES = new Set(['1M', '3M', '6M', '1Y', 'ALL']);

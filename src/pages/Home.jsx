@@ -96,6 +96,14 @@ function getEffectiveClientId({ mode, currentClientId, selfProfile }) {
   return currentClientId || null;
 }
 
+function settledDataResult(settled, table) {
+  if (settled.status === 'fulfilled') {
+    const value = settled.value || {};
+    return value?.error ? { ...value, table } : { ...value, table, error: null };
+  }
+  return { data: null, count: 0, table, error: settled.reason || new Error('Request failed') };
+}
+
 function summarizeQueryErrors(resultsByTable, effectiveClientId, selfProfile) {
   return Object.entries(resultsByTable)
     .filter(([, result]) => result?.error)
@@ -126,8 +134,9 @@ const Home = ({ clientId, client, mode = 'home', selfProfile = null, selfProfile
   const [curriculumReflections, setCurriculumReflections] = useState([]);
   const [assignedPracticeCount, setAssignedPracticeCount] = useState(0);
   const [dataLoadError, setDataLoadError] = useState(null);
-  const effectiveClientId = getEffectiveClientId({ mode, currentClientId: clientId, selfProfile: selfProfile || selfProfileResult?.profile });
-  const effectiveClient = mode === 'my-ifs' ? (selfProfile || selfProfileResult?.profile || client) : client;
+  const selfProfileForLoad = selfProfile || selfProfileResult?.profile || null;
+  const effectiveClientId = getEffectiveClientId({ mode, currentClientId: clientId, selfProfile: selfProfileForLoad });
+  const effectiveClient = mode === 'my-ifs' ? (selfProfileForLoad || client) : client;
   const isMyIFSMode = mode === 'my-ifs';
   const hasResolvedSelfProfile = isMyIFSMode && Boolean(selfProfile?.id || selfProfileResult?.profile?.id);
   const isAdvisorModeUser = ['ther' + 'apist', 'advisor', 'admin', 'supervisor'].includes(effectiveClient?.user_role);
