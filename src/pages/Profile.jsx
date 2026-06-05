@@ -101,7 +101,6 @@ const Profile = ({ client }) => {
   const [gamificationData, setGamificationData] = useState({});
   const [streakData, setStreakData] = useState({});
   const [timeline, setTimeline] = useState([]);
-  const [profileError, setProfileError] = useState('');
 
   const loadAssessmentData = async () => {
     setProfileError('');
