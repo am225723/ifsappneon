@@ -109,6 +109,21 @@ function summarizeQueryErrors(resultsByTable, effectiveClientId, selfProfile) {
 }
 
 const DATA_LOAD_ERROR_MESSAGE = 'Your IFS data could not be loaded right now. Please refresh or try again.';
+const PARTIAL_DATA_WARNING_MESSAGE = 'Some parts of your IFS path could not be refreshed. The rest of your information is still shown.';
+
+function unwrapOptionalResult(settledResult, table, effectiveClientId, selfProfile, fallbackData = []) {
+  if (settledResult.status === 'fulfilled') return settledResult.value || { data: fallbackData, error: null };
+  return {
+    data: fallbackData,
+    error: {
+      message: settledResult.reason?.message || 'Request failed',
+      status: settledResult.reason?.status || settledResult.reason?.statusCode || null,
+      table,
+      effectiveClientId,
+      selfProfilePresent: Boolean(selfProfile?.id)
+    }
+  };
+}
 
 const Home = ({ clientId, client, mode = 'home', selfProfile = null, selfProfileResult = null }) => {
   const navigate = useNavigate();
@@ -152,20 +167,8 @@ const Home = ({ clientId, client, mode = 'home', selfProfile = null, selfProfile
       }
       if (effectiveClientId) {
         try {
-          const [
-            interactiveResult,
-            formalAssessmentResult,
-            partsCountResult,
-            relationshipsCountResult,
-            agendasResult,
-            goalsResult,
-            assignedResult,
-            reflectionsResult,
-            timelineResult,
-            journalResult,
-            progressResult,
-            curriculumReflectionsResult
-          ] = await Promise.all([
+          const selfProfileForLoad = selfProfile || selfProfileResult?.profile;
+          const settledResults = await Promise.allSettled([
             supabase
               .from('ifs_interactive_data')
               .select('id, client_id, module_id, data, created_at, updated_at')
@@ -198,6 +201,33 @@ const Home = ({ clientId, client, mode = 'home', selfProfile = null, selfProfile
               .eq('client_id', effectiveClientId),
             loadCurriculumReflections({ clientId: effectiveClientId, limit: 20 })
           ]);
+          const [
+            interactiveResult,
+            formalAssessmentResult,
+            partsCountResult,
+            relationshipsCountResult,
+            agendasResult,
+            goalsResult,
+            assignedResult,
+            reflectionsResult,
+            timelineResult,
+            journalResult,
+            progressResult,
+            curriculumReflectionsResult
+          ] = [
+            'ifs_interactive_data',
+            'ifs_assessment_results',
+            'ifs_parts',
+            'ifs_part_relationships',
+            'ifs_session_agendas',
+            'ifs_treatment_plans',
+            'ifs_assigned_' + 'home' + 'work',
+            'ifs_life_integration_reflections',
+            'healing_timeline',
+            'ifs_journal_entries',
+            'ifs_client_progress',
+            'curriculum_reflections'
+          ].map((table, index) => unwrapOptionalResult(settledResults[index], table, effectiveClientId, selfProfileForLoad));
 
           const queryErrors = summarizeQueryErrors({
             ifs_interactive_data: interactiveResult,
@@ -212,10 +242,14 @@ const Home = ({ clientId, client, mode = 'home', selfProfile = null, selfProfile
             ifs_journal_entries: journalResult,
             ifs_client_progress: progressResult,
             curriculum_reflections: curriculumReflectionsResult
-          }, effectiveClientId, selfProfile || selfProfileResult?.profile);
+          }, effectiveClientId, selfProfileForLoad);
 
           if (queryErrors.length) {
-            setDataLoadError({ message: DATA_LOAD_ERROR_MESSAGE, details: queryErrors });
+            setDataLoadError({
+              message: selfProfileForLoad?.id ? PARTIAL_DATA_WARNING_MESSAGE : DATA_LOAD_ERROR_MESSAGE,
+              severity: selfProfileForLoad?.id ? 'partial' : 'global',
+              details: queryErrors
+            });
             if (import.meta.env.DEV) {
               console.warn('[MyIFSWork/Home] data query failures', queryErrors);
             }
@@ -266,12 +300,23 @@ const Home = ({ clientId, client, mode = 'home', selfProfile = null, selfProfile
             assignedPractices
           }));
 
-          const liveResult = await getActiveLiveSessionForClient();
-          if (!liveResult.error) setActiveLiveSession(liveResult.data || null);
+          try {
+            const liveResult = await getActiveLiveSessionForClient();
+            if (!liveResult.error) setActiveLiveSession(liveResult.data || null);
+          } catch (liveError) {
+            if (import.meta.env.DEV) {
+              console.warn('[Home] active live session could not be refreshed', {
+                message: liveError?.message || 'Request failed',
+                effectiveClientId,
+                selfProfilePresent: Boolean(selfProfileForLoad?.id)
+              });
+            }
+          }
         } catch (err) {
           console.error('Error loading home data:', err);
           setDataLoadError({
-            message: DATA_LOAD_ERROR_MESSAGE,
+            message: (selfProfile || selfProfileResult?.profile)?.id ? PARTIAL_DATA_WARNING_MESSAGE : DATA_LOAD_ERROR_MESSAGE,
+            severity: (selfProfile || selfProfileResult?.profile)?.id ? 'partial' : 'global',
             details: [{
               table: 'home_data',
               status: err?.status || err?.statusCode || null,
@@ -571,7 +616,7 @@ const Home = ({ clientId, client, mode = 'home', selfProfile = null, selfProfile
       </section>
 
       {dataLoadError && (
-        <section className="mb-8 rounded-3xl border border-red-200 bg-red-50 p-5 text-sm text-red-700 dark:border-red-900/60 dark:bg-red-950/20 dark:text-red-200">
+        <section className={`mb-8 rounded-3xl border p-5 text-sm ${dataLoadError.severity === 'partial' ? 'border-brand-gold-200 bg-brand-gold-50 text-brand-gold-800 dark:border-brand-gold-900/60 dark:bg-brand-gold-950/20 dark:text-brand-gold-100' : 'border-red-200 bg-red-50 text-red-700 dark:border-red-900/60 dark:bg-red-950/20 dark:text-red-200'}`}>
           <p className="font-semibold">{dataLoadError.message}</p>
 
         </section>

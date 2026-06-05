@@ -191,7 +191,7 @@ export async function loadMyIFSProfile(currentAppUser = null) {
       journalCount
     },
     needsManualLink: false,
-    message: queryErrors.length ? 'Your IFS data could not be loaded right now. Please refresh or try again.' : null,
+    message: queryErrors.length ? 'Some parts of your IFS path could not be refreshed. The rest of your information is still shown.' : null,
     queryErrors
   };
 }
