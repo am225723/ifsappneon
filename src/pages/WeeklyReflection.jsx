@@ -118,11 +118,7 @@ export default function WeeklyReflection() {
   const moduleId = `weekly_reflection_${weekId}`;
   const { start: weekStart, end: weekEnd } = getWeekRange();
 
-  useEffect(() => {
-    loadWeekData();
-  }, []);
-
-  const loadWeekData = async () => {
+  async function loadWeekData() {
     const client = clientAuth.getCurrentClient();
     if (!client?.id) {
       setLoading(false);
@@ -257,7 +253,11 @@ export default function WeeklyReflection() {
       console.error('Error loading weekly data:', err);
     }
     setLoading(false);
-  };
+  }
+  useEffect(() => {
+    loadWeekData();
+  }, []);
+
 
   const saveReflection = async () => {
     const client = clientAuth.getCurrentClient();

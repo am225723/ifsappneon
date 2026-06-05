@@ -39,7 +39,7 @@ const ClientPINLogin = ({ onLogin }) => {
       console.error('💥 Login error:', err);
       
       // Show more detailed error in development, generic message in production
-      const errorMessage = process.env.NODE_ENV === 'development' 
+      const errorMessage = import.meta.env.DEV
         ? `Login error: ${err.message}` 
         : 'An error occurred. Please try again.';
       
@@ -50,7 +50,7 @@ const ClientPINLogin = ({ onLogin }) => {
     }
   };
 
-  const handlePinBoxClick = (index) => {
+  const handlePinBoxClick = () => {
     // Focus on the input when clicking on any PIN box
     document.getElementById('pin-input').focus();
   };

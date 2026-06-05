@@ -1,4 +1,3 @@
-/* global process */
 import { isAdminUser, requireTherapist, requireTherapistAssignment, sql } from './_auth.js';
 import { safeCreateInAppNotification } from './_notifications.js';
 import { cleanModuleResponses } from './_moduleResponseCleaning.js';

@@ -349,6 +349,21 @@ export default function GuidedMeditation() {
     }
   }, [currentStepIdx, isPlaying, selectedMeditation, voiceEnabled, speakText, hasAudio]);
 
+  const saveCompletion = useCallback(async (medId) => {
+    const client = clientAuth.getCurrentClient();
+    if (!client?.id) return;
+    const updated = [...new Set([...completedMeditations, medId])];
+    setCompletedMeditations(updated);
+    try {
+      await supabaseHelpers.saveInteractiveData(client.id, 'meditation_history', {
+        completed: updated,
+        lastCompleted: medId,
+        lastCompletedAt: new Date().toISOString()
+      });
+      awardXP(15);
+    } catch (e) { console.error(e); }
+  }, [completedMeditations, awardXP]);
+
   useEffect(() => {
     if (!selectedMeditation?.audioSrc) {
       setAudioLoaded(false);
@@ -381,20 +396,7 @@ export default function GuidedMeditation() {
     }
   }, [audioVolume]);
 
-  const saveCompletion = useCallback(async (medId) => {
-    const client = clientAuth.getCurrentClient();
-    if (!client?.id) return;
-    const updated = [...new Set([...completedMeditations, medId])];
-    setCompletedMeditations(updated);
-    try {
-      await supabaseHelpers.saveInteractiveData(client.id, 'meditation_history', {
-        completed: updated,
-        lastCompleted: medId,
-        lastCompletedAt: new Date().toISOString()
-      });
-      awardXP(15);
-    } catch (e) { console.error(e); }
-  }, [completedMeditations, awardXP]);
+
 
   useEffect(() => {
     if (!isPlaying || !selectedMeditation) return;

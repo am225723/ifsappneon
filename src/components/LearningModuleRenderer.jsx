@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { ChevronLeft } from 'lucide-react';
 import LearningModuleEnhanced from './LearningModuleEnhanced';
-import { useData } from '../contexts/DataContext';
 import { supabaseHelpers, supabase } from '../lib/supabase';
 import { clientAuth } from '../lib/supabasePersonalization';
 import { WOUND_MODULE_PRIORITIES, getWoundPriority } from '../lib/woundModulePriorities';
@@ -17,26 +16,6 @@ const LearningModuleRenderer = ({ userProgress = {} }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [woundContext, setWoundContext] = useState(null);
 
-  if (moduleId && !canAccessModule(moduleId)) {
-    return (
-      <div className={`min-h-screen flex items-center justify-center ${theme?.isDark ? 'text-slate-100' : ''}`}>
-        <div className="text-center px-6 max-w-md">
-          <div className={`w-16 h-16 rounded-2xl mx-auto mb-4 flex items-center justify-center ${theme?.isDark ? 'bg-slate-800' : 'bg-gray-100'}`}>
-            <ChevronLeft className={`w-8 h-8 ${theme?.isDark ? 'text-slate-500' : 'text-gray-400'}`} />
-          </div>
-          <h2 className={`text-xl font-bold mb-2 ${theme?.isDark ? 'text-white' : 'text-gray-900'}`}>
-            Module Coming Up
-          </h2>
-          <p className={`text-sm mb-4 ${theme?.isDark ? 'text-slate-400' : 'text-gray-500'}`}>
-            This module will open as you continue your IFS path.
-          </p>
-          <button onClick={() => navigate('/curriculum')} className="text-amber-600 hover:text-amber-700 font-medium text-sm">
-Return to Curriculum
-          </button>
-        </div>
-      </div>
-    );
-  }
 
   const generateDefaultStepsForPersonalizedModule = (mod) => {
     const baseSteps = [];
@@ -84,10 +63,35 @@ Return to Curriculum
   };
 
   useEffect(() => {
+    if (moduleId && !canAccessModule(moduleId)) {
+      setIsLoading(false);
+      return;
+    }
     loadModule();
   }, [moduleId]);
 
-  const loadModule = async () => {
+  if (moduleId && !canAccessModule(moduleId)) {
+    return (
+      <div className={`min-h-screen flex items-center justify-center ${theme?.isDark ? 'text-slate-100' : ''}`}>
+        <div className="text-center px-6 max-w-md">
+          <div className={`w-16 h-16 rounded-2xl mx-auto mb-4 flex items-center justify-center ${theme?.isDark ? 'bg-slate-800' : 'bg-gray-100'}`}>
+            <ChevronLeft className={`w-8 h-8 ${theme?.isDark ? 'text-slate-500' : 'text-gray-400'}`} />
+          </div>
+          <h2 className={`text-xl font-bold mb-2 ${theme?.isDark ? 'text-white' : 'text-gray-900'}`}>
+            Module Coming Up
+          </h2>
+          <p className={`text-sm mb-4 ${theme?.isDark ? 'text-slate-400' : 'text-gray-500'}`}>
+            This module will open as you continue your IFS path.
+          </p>
+          <button onClick={() => navigate('/curriculum')} className="text-amber-600 hover:text-amber-700 font-medium text-sm">
+Return to Curriculum
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  async function loadModule() {
     try {
       setIsLoading(true);
       const client = clientAuth.getCurrentClient();
@@ -208,7 +212,7 @@ Return to Curriculum
     } finally {
       setIsLoading(false);
     }
-  };
+  }
 
   const handleComplete = () => {
     navigate('/curriculum');

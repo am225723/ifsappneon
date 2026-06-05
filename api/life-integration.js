@@ -268,8 +268,8 @@ async function handleShare(appUser, body, shared) {
   if (!reflectionId) throw Object.assign(new Error('Reflection id is required'), { statusCode: 400 });
   const rows = await sql`
     UPDATE ifs_life_integration_reflections
-    SET is_private = false,
-        shared_with_advisor = true,
+    SET is_private = ${!shared},
+        shared_with_advisor = ${shared},
         updated_at = CURRENT_TIMESTAMP
     WHERE id = ${reflectionId}
       AND client_id = ${appUser.id}

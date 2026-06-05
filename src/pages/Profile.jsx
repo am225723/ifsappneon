@@ -227,7 +227,7 @@ const Profile = ({ client }) => {
         setGamificationData({ xp: gam.xp, level: gam.level, badges: gam.badges });
         setStreakData({ currentStreak: gam.streak_current, longestStreak: gam.streak_longest, totalLogins: gam.total_logins });
       }
-      setTimeline(miles || []);
+      setTimeline(milesResult.status === 'fulfilled' ? (milesResult.value || []) : []);
     } catch (err) {
       if (import.meta.env.DEV) {
         console.warn('[Profile] optional profile data load failed', { message: err?.message || 'Request failed', status: err?.status || err?.statusCode || null });

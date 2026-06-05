@@ -1,4 +1,3 @@
-/* global process */
 import { requireTherapist, sql } from './_auth.js';
 
 export default async function handler(req, res) {

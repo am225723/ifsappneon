@@ -90,7 +90,7 @@ function normalizeTimezone(value) {
   try {
     new Intl.DateTimeFormat('en-US', { timeZone: timezone }).format(new Date());
     return timezone;
-  } catch (_error) {
+  } catch {
     return DEFAULT_NOTIFICATION_TIMEZONE;
   }
 }

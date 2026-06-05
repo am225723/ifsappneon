@@ -6,13 +6,8 @@ import { supabaseHelpers } from '../lib/supabase';
 const AuthDebug = () => {
   const navigate = useNavigate();
   const [authStatus, setAuthStatus] = useState({});
-  const [personalizedCurriculum, setPersonalizedCurriculum] = useState(null);
 
-  useEffect(() => {
-    checkAuthStatus();
-  }, []);
-
-  const checkAuthStatus = async () => {
+  async function checkAuthStatus() {
     const client = clientAuth.getCurrentClientValidated();
     const clientId = client?.id;
     
@@ -36,10 +31,11 @@ const AuthDebug = () => {
       hasAssessment: !!assessment
     });
 
-    if (curriculum) {
-      setPersonalizedCurriculum(curriculum);
-    }
-  };
+  }
+
+  useEffect(() => {
+    checkAuthStatus();
+  }, []);
 
   return (
     <div className="min-h-screen bg-gray-100 p-8">

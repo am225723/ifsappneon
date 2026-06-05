@@ -49,15 +49,7 @@ export default function AssessmentBuilder() {
   const therapist = clientAuth.getCurrentClient();
   const therapistId = therapist?.id;
 
-  useEffect(() => {
-    if (therapistId) {
-      loadAssessments();
-    } else {
-      setLoading(false);
-    }
-  }, [therapistId]);
-
-  const loadAssessments = async () => {
+  async function loadAssessments() {
     setLoadError(null);
     setLoading(true);
     try {
@@ -81,7 +73,15 @@ export default function AssessmentBuilder() {
       setLoadError(`Unexpected error: ${e.message}`);
     }
     setLoading(false);
-  };
+  }
+  useEffect(() => {
+    if (therapistId) {
+      loadAssessments();
+    } else {
+      setLoading(false);
+    }
+  }, [therapistId]);
+
 
   const saveAssessment = async (assessment) => {
     setSaving(true);

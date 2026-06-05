@@ -131,6 +131,30 @@ export default function MicroLearning() {
     loadCompleted();
   }, []);
 
+  const startExercise = (exercise) => {
+    setActiveExercise(exercise);
+    setCurrentStep(0);
+    setTimer(0);
+    setIsPlaying(true);
+  };
+
+  async function completeExercise() {
+    setIsPlaying(false);
+    if (activeExercise && !completedToday.includes(activeExercise.id)) {
+      const newCompleted = [...completedToday, activeExercise.id];
+      setCompletedToday(newCompleted);
+      const client = clientAuth.getCurrentClient();
+      const clientId = client?.id;
+      if (clientId) {
+        await supabaseHelpers.saveExerciseProgress(clientId, `micro-${activeExercise.id}`, {
+          completed: true,
+          completionTime: new Date().toISOString(),
+          data: { completedAt: new Date().toISOString() }
+        });
+      }
+      if (awardXP) awardXP('exercise_complete', 30);
+    }
+  }
   useEffect(() => {
     if (isPlaying && activeExercise) {
       const step = activeExercise.steps[currentStep];
@@ -148,30 +172,6 @@ export default function MicroLearning() {
     }
   }, [isPlaying, timer, currentStep, activeExercise]);
 
-  const startExercise = (exercise) => {
-    setActiveExercise(exercise);
-    setCurrentStep(0);
-    setTimer(0);
-    setIsPlaying(true);
-  };
-
-  const completeExercise = async () => {
-    setIsPlaying(false);
-    if (activeExercise && !completedToday.includes(activeExercise.id)) {
-      const newCompleted = [...completedToday, activeExercise.id];
-      setCompletedToday(newCompleted);
-      const client = clientAuth.getCurrentClient();
-      const clientId = client?.id;
-      if (clientId) {
-        await supabaseHelpers.saveExerciseProgress(clientId, `micro-${activeExercise.id}`, {
-          completed: true,
-          completionTime: new Date().toISOString(),
-          data: { completedAt: new Date().toISOString() }
-        });
-      }
-      if (awardXP) awardXP('exercise_complete', 30);
-    }
-  };
 
   const closeExercise = () => {
     setActiveExercise(null);
