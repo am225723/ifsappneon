@@ -711,28 +711,22 @@ const Profile = ({ client }) => {
                   </p>
                   {(() => {
                     const { primary, secondary } = getAttachmentPrimarySecondary(attachmentAssessment);
-                    const primaryCopy = attachmentPatternDescriptions[String(primary || '').toLowerCase()];
-                    const secondaryCopy = attachmentPatternDescriptions[String(secondary || '').toLowerCase()];
+                    const primaryKey = String(primary || '').toLowerCase();
+                    const secondaryKey = String(secondary || '').toLowerCase();
                     return (
                       <div className="mt-4 grid gap-3 md:grid-cols-2">
-                        {primaryCopy && (
-                          <div className="rounded-xl bg-white/75 p-4">
-                            <p className="text-xs font-bold uppercase tracking-wide text-brand-gold-700">Primary Pattern · {String(primary).replace(/_/g, ' ')}</p>
-                            <p className="mt-2 text-sm leading-relaxed text-brand-stone-700">{primaryCopy}</p>
-                          </div>
-                        )}
-                        {secondaryCopy && (
-                          <div className="rounded-xl bg-white/75 p-4">
-                            <p className="text-xs font-bold uppercase tracking-wide text-brand-emerald-700">Secondary Pattern · {String(secondary).replace(/_/g, ' ')}</p>
-                            <p className="mt-2 text-sm leading-relaxed text-brand-stone-700">{secondaryCopy}</p>
-                          </div>
-                        )}
-                        {!primaryCopy && Object.entries(attachmentPatternDescriptions).map(([key, description]) => (
-                          <div key={key} className="rounded-xl bg-white/75 p-4">
-                            <p className="text-xs font-bold uppercase tracking-wide text-brand-stone-600">{key}</p>
-                            <p className="mt-2 text-sm leading-relaxed text-brand-stone-700">{description}</p>
-                          </div>
-                        ))}
+                        {Object.entries(attachmentPatternDescriptions).map(([key, description]) => {
+                          const isPrimary = key === primaryKey;
+                          const isSecondary = key === secondaryKey;
+                          return (
+                            <div key={key} className={`rounded-xl bg-white/75 p-4 ${isPrimary ? 'ring-2 ring-brand-gold-200' : isSecondary ? 'ring-2 ring-brand-emerald-100' : ''}`}>
+                              <p className={`text-xs font-bold uppercase tracking-wide ${isPrimary ? 'text-brand-gold-700' : isSecondary ? 'text-brand-emerald-700' : 'text-brand-stone-600'}`}>
+                                {isPrimary ? 'Primary Pattern · ' : isSecondary ? 'Secondary Pattern · ' : ''}{key}
+                              </p>
+                              <p className="mt-2 text-sm leading-relaxed text-brand-stone-700">{description}</p>
+                            </div>
+                          );
+                        })}
                       </div>
                     );
                   })()}
