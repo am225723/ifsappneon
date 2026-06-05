@@ -79,6 +79,7 @@ VITE_PERPLEXITY_API_KEY
 ```
 
 Also do not expose server secrets through any other `VITE_*` alias, including `DATABASE_URL`, `CLERK_SECRET_KEY`, `OPENROUTER_API_KEY`, UploadThing server secrets, or any real JWT signing/verifying secret.
+Also do not expose server secrets through any other `VITE_*` alias, including `DATABASE_URL`, `CLERK_SECRET_KEY`, `OPENROUTER_API_KEY`, or UploadThing server secrets.
 
 ## 5. Production build commands
 
