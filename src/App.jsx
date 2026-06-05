@@ -69,6 +69,9 @@ import LetterWriting from './pages/LetterWriting';
 import PartsCards from './pages/PartsCards';
 import HealingTracker from './pages/HealingTracker';
 import ToolsDirectory from './pages/ToolsDirectory';
+import NotFound from './pages/NotFound';
+import MedicationInfo from './pages/MedicationInfo';
+import RouteErrorBoundary from './components/RouteErrorBoundary';
 import OnboardingFlow from './components/OnboardingFlow';
 import { initializePushNotifications } from './lib/pushNotifications';
 import ResourceLibrary from './pages/ResourceLibrary';
@@ -87,7 +90,10 @@ import { Lock } from 'lucide-react';
 function LoadingScreen() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-brand-sanctuary dark:bg-brand-midnight">
-      <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-brand-gold-600"></div>
+      <div className="text-center">
+        <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-b-2 border-t-2 border-brand-gold-600"></div>
+        <p className="text-sm text-brand-stone-600 dark:text-slate-400">Loading this page…</p>
+      </div>
     </div>
   );
 }
@@ -531,11 +537,13 @@ function AppContent({ authChecked, clerkLoaded, clerkSignedIn, isAuthenticated, 
           />
               
               <div className="pb-20">
+              <RouteErrorBoundary resetKey={location.pathname}>
               <Routes>
                 <Route path="/" element={homeElement} />
                 <Route path="/home" element={clientOnly(homeElement)} />
                 <Route path="/my-ifs" element={myIFSWorkElement} />
                 <Route path="/my-ifs-path" element={<Navigate to="/my-ifs" replace />} />
+                <Route path="/my-ifs-work" element={<Navigate to="/my-ifs" replace />} />
                 <Route path="/curriculum" element={<CurriculumSystem clientId={currentClient?.id} userProgress={{}} />} />
                 <Route path="/curriculum/module/:moduleId" element={<LearningModuleRenderer userProgress={{}} />} />
                 <Route path="/cheat-sheet" element={<CheatSheet />} />
@@ -546,6 +554,7 @@ function AppContent({ authChecked, clerkLoaded, clerkSignedIn, isAuthenticated, 
                 <Route path="/assessment" element={<Assessment />} />
                 <Route path="/assessments" element={<Assessments />} />
                 <Route path="/resources" element={<Resources />} />
+                <Route path="/resource-library-old" element={<Navigate to="/resource-library" replace />} />
                 <Route path="/resource-library" element={<FeatureGate feature="resourceLibrary"><ResourceLibrary /></FeatureGate>} />
                 <Route path="/inner-library-mockup" element={<InnerLibraryMockup />} />
                 <Route path="/journal" element={<FeatureGate feature="journal"><Journal /></FeatureGate>} />
@@ -568,6 +577,7 @@ function AppContent({ authChecked, clerkLoaded, clerkSignedIn, isAuthenticated, 
                 <Route path="/caseload" element={therapistOnly(<CaseloadManager />)} />
                 <Route path="/advisor-messages" element={therapistOnly(<TherapistMessages />)} />
                 <Route path="/messages" element={therapistOnly(<TherapistMessages />)} />
+                <Route path="/therapist/messages" element={<Navigate to="/messages" replace />} />
                 <Route path="/advisor-homework" element={therapistOnly(<TherapistHomework />)} />
                 <Route path="/advisor-reports" element={therapistOnly(<TherapistReports />)} />
                 <Route path="/advisor/shared-reflections" element={therapistOnly(<AdvisorSharedReflections />)} />
@@ -586,6 +596,7 @@ function AppContent({ authChecked, clerkLoaded, clerkSignedIn, isAuthenticated, 
                 <Route path="/gamification" element={<GamificationHub />} />
                 <Route path="/parts-dialogue" element={<FeatureGate feature="partsDialogue"><PartsDialogue /></FeatureGate>} />
                 <Route path="/parts-relationships" element={<PartsRelationshipMap />} />
+                <Route path="/parts-relationship-map" element={<Navigate to="/parts-relationships" replace />} />
                 <Route path="/life-integration" element={clientOnly(<LifeIntegration />)} />
                 <Route path="/life-integration/reflections/:reflectionId" element={clientOnly(<LifeIntegrationReflectionDetail />)} />
                 <Route path="/life-integration/notice-part" element={clientOnly(<NoticePartPractice />)} />
@@ -597,7 +608,11 @@ function AppContent({ authChecked, clerkLoaded, clerkSignedIn, isAuthenticated, 
                 <Route path="/unburdening" element={<FeatureGate feature="unburdening"><UnburdeningProtocol /></FeatureGate>} />
                 <Route path="/assessment-builder" element={therapistOnly(<AssessmentBuilder />)} />
                 <Route path="/custom-assessment/:assessmentId" element={<CustomAssessment />} />
+                <Route path="/guided-meditation" element={<Navigate to="/meditation" replace />} />
                 <Route path="/meditation" element={<FeatureGate feature="meditations"><GuidedMeditation /></FeatureGate>} />
+                <Route path="/medication" element={<MedicationInfo />} />
+                <Route path="/medications" element={<MedicationInfo />} />
+                <Route path="/medication-management" element={<MedicationInfo />} />
                 <Route path="/daily-checkin" element={<FeatureGate feature="dailyCheckin"><DailyCheckin /></FeatureGate>} />
                 <Route path="/mood-analytics" element={clientOnly(<FeatureGate feature="moodAnalytics"><MoodAnalytics /></FeatureGate>)} />
                 <Route path="/milestones" element={<FeatureGate feature="milestones"><Milestones /></FeatureGate>} />
@@ -611,8 +626,9 @@ function AppContent({ authChecked, clerkLoaded, clerkSignedIn, isAuthenticated, 
                 <Route path="/sign-in/*" element={<Navigate to="/" replace />} />
                 <Route path="/sign-up/*" element={<Navigate to="/" replace />} />
                 <Route path="/claim-account" element={<Navigate to="/" replace />} />
-                <Route path="*" element={<Home clientId={currentClient?.id} />} />
+                <Route path="*" element={<NotFound currentClient={currentClient} />} />
               </Routes>
+              </RouteErrorBoundary>
               </div>
 
               <BottomNav messagePath={messagePath} advisorWorkspacePath={advisorWorkspacePath} isTherapistRole={isTherapistRole} isAdminOrSupervisor={isAdminOrSupervisor} />
