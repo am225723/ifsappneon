@@ -290,3 +290,16 @@ Tools Directory
 - Assessment-informed cues remain light and use existing assessment/personalization data already loaded in the curriculum experience; raw scores and clinical interpretations are not shown.
 - No new SQL, migrations, schema changes, new AI workflows, or backend expansion were added for Phase 17A.
 - Existing security wrappers, role gating, feature gates, and self-owned data access patterns are preserved.
+
+## Phase 17B Curriculum Reflection Integration Notes
+
+- Curriculum module completion can optionally capture a private Module Reflection after the module is already marked complete.
+- Module Reflections are optional and never block completion; users can save a private reflection, skip writing, continue to the next module, or return to Curriculum.
+- Curriculum reflections are stored with module interactive data in `ifs_interactive_data.data.curriculumReflections`, preserving existing module answers/content and avoiding new SQL migrations.
+- Home and My IFS summarize curriculum reflections as a secondary signal beneath the Curriculum / IFS Path card.
+- Journal shows a Curriculum Reflections section with module title, date, short summary, privacy badge, and a route back to the module.
+- Healing Timeline and Progress Timeline include safe curriculum milestones for module completion and saved Module Reflection activity without displaying raw reflection text.
+- Reflections are private by default and use `sharedWithAdvisor: false`; this phase does not add sharing controls or automatic Advisor sharing.
+- Advisor/Admin views should not see private curriculum reflection content by default, and reflections are not treated as Advisor notes or report content.
+- No SQL migrations were added for this phase.
+- Existing role/security wrappers and self-owned access patterns were preserved; no global client loading or name matching was introduced.

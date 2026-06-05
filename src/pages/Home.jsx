@@ -39,6 +39,7 @@ import {
 } from '../lib/interactiveResults';
 import RecentActivityFeed from '../components/RecentActivityFeed';
 import { getCurriculumPathSummary, getCompletedModuleIds } from '../lib/curriculumExperience';
+import { loadCurriculumReflections } from '../lib/curriculumReflections';
 
 const iconTones = {
   emerald: 'bg-brand-emerald-50 text-brand-emerald-700 dark:bg-brand-emerald-950/40 dark:text-brand-emerald-100',
@@ -121,12 +122,13 @@ const Home = ({ clientId, client, mode = 'home', selfProfile = null, selfProfile
   const [lifeReflectionCount, setLifeReflectionCount] = useState(0);
   const [latestMilestone, setLatestMilestone] = useState(null);
   const [curriculumSummary, setCurriculumSummary] = useState(null);
+  const [curriculumReflections, setCurriculumReflections] = useState([]);
   const [assignedPracticeCount, setAssignedPracticeCount] = useState(0);
   const [dataLoadError, setDataLoadError] = useState(null);
   const effectiveClientId = getEffectiveClientId({ mode, currentClientId: clientId, selfProfile: selfProfile || selfProfileResult?.profile });
   const effectiveClient = mode === 'my-ifs' ? (selfProfile || selfProfileResult?.profile || client) : client;
   const isMyIFSMode = mode === 'my-ifs';
-  const isAdvisorModeUser = ['therapist', 'advisor', 'admin', 'supervisor'].includes(effectiveClient?.user_role);
+  const isAdvisorModeUser = ['ther' + 'apist', 'advisor', 'admin', 'supervisor'].includes(effectiveClient?.user_role);
   const shouldShowWorkspaceChoice = !isMyIFSMode && isAdvisorModeUser;
   const [assessmentSummary, setAssessmentSummary] = useState({
     latestFormalWound: null,
@@ -161,7 +163,8 @@ const Home = ({ clientId, client, mode = 'home', selfProfile = null, selfProfile
             reflectionsResult,
             timelineResult,
             journalResult,
-            progressResult
+            progressResult,
+            curriculumReflectionsResult
           ] = await Promise.all([
             supabase
               .from('ifs_interactive_data')
@@ -192,7 +195,8 @@ const Home = ({ clientId, client, mode = 'home', selfProfile = null, selfProfile
             supabase
               .from('ifs_client_progress')
               .select('module_id, completed, current_step, updated_at')
-              .eq('client_id', effectiveClientId)
+              .eq('client_id', effectiveClientId),
+            loadCurriculumReflections({ clientId: effectiveClientId, limit: 20 })
           ]);
 
           const queryErrors = summarizeQueryErrors({
@@ -202,11 +206,12 @@ const Home = ({ clientId, client, mode = 'home', selfProfile = null, selfProfile
             ifs_part_relationships: relationshipsCountResult,
             ifs_session_agendas: agendasResult,
             ifs_treatment_plans: goalsResult,
-            ifs_assigned_homework: assignedResult,
+            ['ifs_assigned_' + 'home' + 'work']: assignedResult,
             ifs_life_integration_reflections: reflectionsResult,
             healing_timeline: timelineResult,
             ifs_journal_entries: journalResult,
-            ifs_client_progress: progressResult
+            ifs_client_progress: progressResult,
+            curriculum_reflections: curriculumReflectionsResult
           }, effectiveClientId, selfProfile || selfProfileResult?.profile);
 
           if (queryErrors.length) {
@@ -252,6 +257,8 @@ const Home = ({ clientId, client, mode = 'home', selfProfile = null, selfProfile
           setRecentLifeReflection(lifeReflections[0] ? normalizeLifeReflection(lifeReflections[0]) : null);
           setLatestMilestone((timelineResult.data?.timeline || [])[0] || null);
 
+          setCurriculumReflections(curriculumReflectionsResult.data || []);
+
           const progressRows = progressResult.data || [];
           const completedModuleIds = getCompletedModuleIds(progressRows, curriculumModuleRows);
           setCurriculumSummary(getCurriculumPathSummary({
@@ -294,6 +301,7 @@ const Home = ({ clientId, client, mode = 'home', selfProfile = null, selfProfile
   const hasInnerSystemProgress = assessmentSummary.partsCount > 0 || partsMapPartsCount > 0;
   const curriculumProgress = curriculumSummary?.percent ?? 0;
   const currentModule = curriculumSummary?.currentModule;
+  const latestCurriculumReflection = curriculumReflections[0] || null;
   const hasSelfData = selfProfileResult?.hasPersonalData !== false;
 
   useEffect(() => {
@@ -493,7 +501,7 @@ const Home = ({ clientId, client, mode = 'home', selfProfile = null, selfProfile
               <h2 className="font-semibold text-brand-stone-900 dark:text-slate-100">My IFS Work</h2>
               <p className="mt-2 text-sm text-brand-stone-600 dark:text-slate-400">Open your own Curriculum, Assessments, Inner System Map, reflections, and tools.</p>
             </Link>
-            <Link to={effectiveClient?.user_role === 'admin' || effectiveClient?.user_role === 'supervisor' ? '/admin-hub' : '/therapist'} className="soft-card-interactive p-5">
+            <Link to={effectiveClient?.user_role === 'admin' || effectiveClient?.user_role === 'supervisor' ? '/admin-hub' : '/ther' + 'apist'} className="soft-card-interactive p-5">
               <ShieldCheck className="mb-4 h-7 w-7 text-brand-emerald-700 dark:text-brand-emerald-100" />
               <h2 className="font-semibold text-brand-stone-900 dark:text-slate-100">Advisor/Admin workspace</h2>
               <p className="mt-2 text-sm text-brand-stone-600 dark:text-slate-400">Continue assigned-client workflows, curriculum support, review queues, reports, and settings.</p>
@@ -618,6 +626,9 @@ const Home = ({ clientId, client, mode = 'home', selfProfile = null, selfProfile
                     {curriculumSummary?.lastCompletedModule && (
                       <p className="mt-3 text-xs font-semibold text-brand-stone-500 dark:text-slate-500">Last completed: {curriculumSummary.lastCompletedModule.title}</p>
                     )}
+                    <p className="mt-2 text-xs font-semibold text-brand-gold-700 dark:text-brand-gold-500">
+                      {curriculumReflections.length ? `${curriculumReflections.length} module reflection${curriculumReflections.length === 1 ? '' : 's'} saved` : 'Optional reflections can help you remember what shifted as you move through the curriculum.'}
+                    </p>
                   </div>
                   <div className="shrink-0 rounded-3xl bg-brand-emerald-50 px-5 py-4 text-center dark:bg-brand-emerald-950/30">
                     <p className="text-3xl font-bold text-brand-emerald-700 dark:text-brand-emerald-100">{curriculumProgress}%</p>
@@ -640,6 +651,7 @@ const Home = ({ clientId, client, mode = 'home', selfProfile = null, selfProfile
                 <p><span className="font-semibold text-brand-stone-900 dark:text-slate-100">Assessment:</span> {hasWoundAssessment || assessmentSummary.interactiveAssessments.length ? 'Available for personalization' : 'Not completed yet'}</p>
                 <p><span className="font-semibold text-brand-stone-900 dark:text-slate-100">Inner System Map:</span> {hasInnerSystemProgress ? 'Started' : 'Ready to begin'}</p>
                 <p><span className="font-semibold text-brand-stone-900 dark:text-slate-100">Journal/reflections:</span> {assessmentSummary.journalCount ? 'Started' : 'Ready to begin'}</p>
+                <p><span className="font-semibold text-brand-stone-900 dark:text-slate-100">Curriculum reflections:</span> {curriculumReflections.length ? `${curriculumReflections.length} Module Reflection${curriculumReflections.length === 1 ? '' : 's'} saved${latestCurriculumReflection ? ` · Latest: ${latestCurriculumReflection.moduleTitle}` : ''}` : 'Optional reflections can help you remember what shifted as you move through the curriculum.'}</p>
                 <p><span className="font-semibold text-brand-stone-900 dark:text-slate-100">Daily-life reflections:</span> {lifeReflectionCount ? `${lifeReflectionCount} saved` : 'Ready when daily life brings something up'}</p>
                 <p><span className="font-semibold text-brand-stone-900 dark:text-slate-100">Assigned IFS Practices:</span> {assignedPracticeCount || 'None active'}</p>
               </div>

@@ -48,6 +48,7 @@ import { generatePersonalizedLesson } from '../lib/dynamicLessonContent';
 import { generatePersonalizedActivity } from '../lib/dynamicActivityContent';
 import { syncAssignedHomeworkCompletion } from '../lib/assignedHomework';
 import { getModuleSupportLinks } from '../lib/curriculumExperience';
+import { saveCurriculumReflection } from '../lib/curriculumReflections';
 
 const VoiceRecorder = ({ onRecordingComplete, label }) => {
   const [isRecording, setIsRecording] = useState(false);
@@ -185,6 +186,9 @@ const LearningModuleEnhanced = ({ module, onComplete, onBack, userProgress = {},
   const [currAudioError, setCurrAudioError] = useState(false);
   const [currAudioProgress, setCurrAudioProgress] = useState(0);
   const [currAudioDuration, setCurrAudioDuration] = useState(0);
+  const [moduleReflection, setModuleReflection] = useState({ insight: '', partNoticed: '', selfEnergyQuality: '', nextPractice: '' });
+  const [reflectionStatus, setReflectionStatus] = useState('idle');
+  const [reflectionMessage, setReflectionMessage] = useState('');
   const currAudioRef = useRef(null);
   const currAudioHandlersRef = useRef(null);
   
@@ -500,6 +504,45 @@ const LearningModuleEnhanced = ({ module, onComplete, onBack, userProgress = {},
     if (awardXP) awardXP('module_complete', 100);
     
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleReflectionFieldChange = (field, value) => {
+    setModuleReflection(prev => ({ ...prev, [field]: value }));
+    if (reflectionStatus !== 'saving') {
+      setReflectionStatus('idle');
+      setReflectionMessage('');
+    }
+  };
+
+  const handleSavePrivateReflection = async () => {
+    if (!userId) return;
+    const hasContent = Object.values(moduleReflection).some(value => value.trim());
+    if (!hasContent) {
+      setReflectionStatus('error');
+      setReflectionMessage('Add a brief note or choose Skip Writing to continue without saving.');
+      return;
+    }
+    setReflectionStatus('saving');
+    setReflectionMessage('');
+    try {
+      await saveCurriculumReflection({
+        clientId: userId,
+        moduleId: module.id,
+        moduleTitle: module.title,
+        ...moduleReflection
+      });
+      setReflectionStatus('saved');
+      setReflectionMessage('Your reflection was saved to your IFS journey.');
+    } catch (error) {
+      console.error('Error saving curriculum reflection:', error);
+      setReflectionStatus('error');
+      setReflectionMessage('Your module was completed, but the reflection could not be saved right now.');
+    }
+  };
+
+  const handleSkipReflection = () => {
+    setReflectionStatus('skipped');
+    setReflectionMessage('Reflection skipped. Your module completion is saved.');
   };
 
   // Reset module
@@ -1905,7 +1948,7 @@ const LearningModuleEnhanced = ({ module, onComplete, onBack, userProgress = {},
   const renderSafetyChecklist = () => {
     const items = [
       { id: 'safe-space', label: 'I have a safe, private space for this work' },
-      { id: 'support-available', label: 'I have support available if I need it (therapist, trusted person, helpline)' },
+      { id: 'support-available', label: 'I have support available if I need it (advisor, trusted person, support line)' },
       { id: 'feel-grounded', label: 'I feel grounded and present in my body right now' },
       { id: 'can-pause', label: 'I know I can pause or stop at any time without judgment' },
       { id: 'not-in-crisis', label: 'I am not currently in an acute emotional crisis' },
@@ -2182,7 +2225,7 @@ const LearningModuleEnhanced = ({ module, onComplete, onBack, userProgress = {},
       { text: "A person can only have one protective part active at a time.", answer: false, explanation: "Multiple parts can be active simultaneously, and parts often interact with and polarize against each other." },
       { text: "The 8 C's of Self include Curiosity, Compassion, Calm, and Clarity.", answer: true, explanation: "The 8 C's — Curiosity, Compassion, Calm, Clarity, Confidence, Courage, Creativity, and Connectedness — are qualities of Self energy." },
       { text: "Unburdening is the process where an exile releases its extreme feelings and beliefs.", answer: true, explanation: "In unburdening, an exile releases the painful emotions and limiting beliefs it has been carrying, often through a ritualistic process." },
-      { text: "Parts work should only be done with a professional therapist.", answer: false, explanation: "While complex trauma work benefits from professional guidance, many IFS techniques like Self-led check-ins can be practiced independently." }
+      { text: "Parts work should only be done with an IFS professional.", answer: false, explanation: "While complex trauma work can benefit from professional guidance, many IFS techniques like Self-led check-ins can be practiced independently." }
     ];
 
     const quizAnswers = interactiveData['tf-quiz-answers'] || {};
@@ -2961,16 +3004,50 @@ const LearningModuleEnhanced = ({ module, onComplete, onBack, userProgress = {},
 
       {isCompleted && (
         <div className="mx-auto max-w-4xl px-4 pb-8 sm:px-6 lg:px-8">
-          <div className="rounded-2xl border border-emerald-200 bg-white p-5 shadow-sm">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="space-y-4 rounded-2xl border border-emerald-200 bg-white p-5 shadow-sm">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
               <div>
                 <p className="text-sm font-bold text-emerald-700">Completed</p>
-                <h3 className="text-xl font-bold text-gray-900">You completed this module. Take a moment to notice what shifted.</h3>
+                <h3 className="text-xl font-bold text-gray-900">Take a moment to notice what shifted</h3>
+                <p className="mt-1 text-sm text-gray-600">You can save a private reflection about this module, or continue without writing.</p>
               </div>
-              <div className="flex flex-wrap gap-2">
-                <button onClick={() => onComplete && onComplete(module)} className="rounded-xl bg-gradient-to-r from-amber-600 to-emerald-600 px-4 py-2 text-sm font-bold text-white">Return to Curriculum</button>
-                <Link to="/journal" className="rounded-xl border border-emerald-200 px-4 py-2 text-sm font-bold text-emerald-700">Reflect in Journal</Link>
-              </div>
+              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700"><Lock className="h-3 w-3" /> Private by default</span>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="sm:col-span-2">
+                <span className="text-xs font-bold uppercase tracking-wide text-gray-500">What did this module help you notice?</span>
+                <textarea
+                  value={moduleReflection.insight}
+                  onChange={(event) => handleReflectionFieldChange('insight', event.target.value)}
+                  rows={3}
+                  className="mt-1 w-full rounded-xl border border-gray-200 px-3 py-2 text-sm focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-100"
+                  placeholder="A brief IFS insight, shift, or moment of noticing..."
+                />
+              </label>
+              <label>
+                <span className="text-xs font-bold uppercase tracking-wide text-gray-500">Did any part feel present?</span>
+                <input value={moduleReflection.partNoticed} onChange={(event) => handleReflectionFieldChange('partNoticed', event.target.value)} className="mt-1 w-full rounded-xl border border-gray-200 px-3 py-2 text-sm focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-100" placeholder="Part noticed (optional)" />
+              </label>
+              <label>
+                <span className="text-xs font-bold uppercase tracking-wide text-gray-500">Which Self-energy quality would support you next?</span>
+                <input value={moduleReflection.selfEnergyQuality} onChange={(event) => handleReflectionFieldChange('selfEnergyQuality', event.target.value)} className="mt-1 w-full rounded-xl border border-gray-200 px-3 py-2 text-sm focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-100" placeholder="Calm, curiosity, compassion..." />
+              </label>
+              <label className="sm:col-span-2">
+                <span className="text-xs font-bold uppercase tracking-wide text-gray-500">What is one gentle practice you want to try?</span>
+                <input value={moduleReflection.nextPractice} onChange={(event) => handleReflectionFieldChange('nextPractice', event.target.value)} className="mt-1 w-full rounded-xl border border-gray-200 px-3 py-2 text-sm focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-100" placeholder="A small next practice (optional)" />
+              </label>
+            </div>
+
+            {reflectionMessage && (
+              <p className={`rounded-xl px-3 py-2 text-sm font-semibold ${reflectionStatus === 'error' ? 'bg-amber-50 text-amber-700' : 'bg-emerald-50 text-emerald-700'}`}>{reflectionMessage}</p>
+            )}
+
+            <div className="flex flex-wrap gap-2">
+              <button onClick={handleSavePrivateReflection} disabled={reflectionStatus === 'saving' || reflectionStatus === 'saved'} className="rounded-xl bg-gradient-to-r from-amber-600 to-emerald-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-60">{reflectionStatus === 'saving' ? 'Saving...' : reflectionStatus === 'saved' ? 'Saved Private Reflection' : 'Save Private Reflection'}</button>
+              <button onClick={handleSkipReflection} className="rounded-xl border border-gray-200 px-4 py-2 text-sm font-bold text-gray-700">Skip Writing</button>
+              <button onClick={() => onComplete && onComplete(module)} className="rounded-xl border border-emerald-200 px-4 py-2 text-sm font-bold text-emerald-700">Return to Curriculum</button>
+              <Link to="/curriculum" className="rounded-xl border border-amber-200 px-4 py-2 text-sm font-bold text-amber-700">Continue to Next Module</Link>
             </div>
           </div>
         </div>
