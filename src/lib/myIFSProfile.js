@@ -127,6 +127,18 @@ export async function loadMyIFSProfile(currentAppUser = null) {
 
   const queryErrors = [];
 
+  const signalLoaders = [
+    ['ifs_assessment_results', countRows('ifs_assessment_results', profile.id, null, queryErrors), 0],
+    ['ifs_interactive_data', loadInteractiveSignals(profile.id, queryErrors), { rows: [], assessments: [], curriculumModules: [], partsMap: null, hasPartsMap: false, partsMapCount: 0 }],
+    ['ifs_client_progress', countRows('ifs_client_progress', profile.id, null, queryErrors), 0],
+    ['ifs_parts', countRows('ifs_parts', profile.id, null, queryErrors), 0],
+    ['ifs_part_relationships', countRows('ifs_part_relationships', profile.id, null, queryErrors), 0],
+    ['ifs_assigned_' + 'home' + 'work', hasRows('ifs_assigned_homework', 'id', profile.id, null, queryErrors), false],
+    ['ifs_healing_timeline_events', hasRows('ifs_healing_timeline_events', 'id', profile.id, null, queryErrors), false],
+    ['ifs_journal_entries', countRows('ifs_journal_entries', profile.id, null, queryErrors), 0]
+  ];
+
+  const settledSignals = await Promise.allSettled(signalLoaders.map(([, loader]) => loader));
   const [
     formalWoundCount,
     interactiveSignals,
@@ -136,16 +148,17 @@ export async function loadMyIFSProfile(currentAppUser = null) {
     assignedPractices,
     healingTimeline,
     journalCount
-  ] = await Promise.all([
-    countRows('ifs_assessment_results', profile.id, null, queryErrors),
-    loadInteractiveSignals(profile.id, queryErrors),
-    countRows('ifs_client_progress', profile.id, null, queryErrors),
-    countRows('ifs_parts', profile.id, null, queryErrors),
-    countRows('ifs_part_relationships', profile.id, null, queryErrors),
-    hasRows('ifs_assigned_homework', 'id', profile.id, null, queryErrors),
-    hasRows('ifs_healing_timeline_events', 'id', profile.id),
-    countRows('ifs_journal_entries', profile.id, null, queryErrors)
-  ]);
+  ] = settledSignals.map((result, index) => {
+    if (result.status === 'fulfilled') return result.value;
+    const [table, , fallback] = signalLoaders[index];
+    queryErrors.push({
+      table,
+      status: result.reason?.status || result.reason?.statusCode || null,
+      message: result.reason?.message || 'Request failed',
+      effectiveClientId: profile.id
+    });
+    return fallback;
+  });
 
   const connectedData = {
     formalWoundResults: formalWoundCount > 0,
@@ -191,7 +204,7 @@ export async function loadMyIFSProfile(currentAppUser = null) {
       journalCount
     },
     needsManualLink: false,
-    message: queryErrors.length ? 'Your IFS data could not be loaded right now. Please refresh or try again.' : null,
+    message: queryErrors.length ? 'Some parts of your IFS path could not be refreshed. The rest of your information is still shown.' : null,
     queryErrors
   };
 }

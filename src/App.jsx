@@ -8,6 +8,7 @@ import SSOCallback from './components/SSOCallback';
 import PINAuthDiagnostic from './components/PINAuthDiagnostic';
 import TestClientCreator from './components/TestClientCreator';
 import Navbar from './components/Navbar';
+import RouteErrorBoundary from './components/RouteErrorBoundary';
 import Home from './pages/Home';
 import MyIFSWork from './pages/MyIFSWork';
 import CurriculumSystem from './components/CurriculumSystem';
@@ -69,6 +70,8 @@ import LetterWriting from './pages/LetterWriting';
 import PartsCards from './pages/PartsCards';
 import HealingTracker from './pages/HealingTracker';
 import ToolsDirectory from './pages/ToolsDirectory';
+import NotFound from './pages/NotFound';
+import MedicationInfo from './pages/MedicationInfo';
 import OnboardingFlow from './components/OnboardingFlow';
 import { initializePushNotifications } from './lib/pushNotifications';
 import ResourceLibrary from './pages/ResourceLibrary';
@@ -531,17 +534,20 @@ function AppContent({ authChecked, clerkLoaded, clerkSignedIn, isAuthenticated, 
           />
               
               <div className="pb-20">
+              <RouteErrorBoundary resetKey={location.pathname}>
               <Routes>
                 <Route path="/" element={homeElement} />
                 <Route path="/home" element={clientOnly(homeElement)} />
                 <Route path="/my-ifs" element={myIFSWorkElement} />
                 <Route path="/my-ifs-path" element={<Navigate to="/my-ifs" replace />} />
+                <Route path="/my-ifs-work" element={<Navigate to="/my-ifs" replace />} />
                 <Route path="/curriculum" element={<CurriculumSystem clientId={currentClient?.id} userProgress={{}} />} />
                 <Route path="/curriculum/module/:moduleId" element={<LearningModuleRenderer userProgress={{}} />} />
                 <Route path="/cheat-sheet" element={<CheatSheet />} />
                 <Route path="/wounds" element={<Wounds />} />
                 <Route path="/qualities" element={<Qualities />} />
                 <Route path="/parts-mapping" element={<PartsMapping />} />
+                <Route path="/parts-map" element={<Navigate to="/parts-mapping" replace />} />
                 <Route path="/exercises" element={<FeatureGate feature="exercises"><Exercises /></FeatureGate>} />
                 <Route path="/assessment" element={<Assessment />} />
                 <Route path="/assessments" element={<Assessments />} />
@@ -598,6 +604,10 @@ function AppContent({ authChecked, clerkLoaded, clerkSignedIn, isAuthenticated, 
                 <Route path="/assessment-builder" element={therapistOnly(<AssessmentBuilder />)} />
                 <Route path="/custom-assessment/:assessmentId" element={<CustomAssessment />} />
                 <Route path="/meditation" element={<FeatureGate feature="meditations"><GuidedMeditation /></FeatureGate>} />
+                <Route path="/guided-meditation" element={<Navigate to="/meditation" replace />} />
+                <Route path="/medication" element={<MedicationInfo />} />
+                <Route path="/medications" element={<MedicationInfo />} />
+                <Route path="/medication-management" element={<MedicationInfo />} />
                 <Route path="/daily-checkin" element={<FeatureGate feature="dailyCheckin"><DailyCheckin /></FeatureGate>} />
                 <Route path="/mood-analytics" element={clientOnly(<FeatureGate feature="moodAnalytics"><MoodAnalytics /></FeatureGate>)} />
                 <Route path="/milestones" element={<FeatureGate feature="milestones"><Milestones /></FeatureGate>} />
@@ -611,8 +621,9 @@ function AppContent({ authChecked, clerkLoaded, clerkSignedIn, isAuthenticated, 
                 <Route path="/sign-in/*" element={<Navigate to="/" replace />} />
                 <Route path="/sign-up/*" element={<Navigate to="/" replace />} />
                 <Route path="/claim-account" element={<Navigate to="/" replace />} />
-                <Route path="*" element={<Home clientId={currentClient?.id} />} />
+                <Route path="*" element={<NotFound canAccessAdvisor={isTherapistRole} canAccessAdmin={isAdminOrSupervisor} />} />
               </Routes>
+              </RouteErrorBoundary>
               </div>
 
               <BottomNav messagePath={messagePath} advisorWorkspacePath={advisorWorkspacePath} isTherapistRole={isTherapistRole} isAdminOrSupervisor={isAdminOrSupervisor} />

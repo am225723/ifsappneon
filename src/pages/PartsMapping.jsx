@@ -724,7 +724,16 @@ const PartsMapping = () => {
     );
   }
 
-  return null;
+  return (
+    <div className="min-h-screen flex items-center justify-center px-4">
+      <div className="soft-card max-w-xl p-8 text-center">
+        <Brain className="mx-auto mb-4 h-10 w-10 text-brand-gold-700" />
+        <h1 className="text-2xl font-semibold text-brand-stone-900 dark:text-slate-100">Loading your Inner System Map…</h1>
+        <p className="mt-3 text-sm text-brand-stone-600 dark:text-slate-400">If this page does not continue, return to the first step and reopen Parts Mapping.</p>
+        <button type="button" onClick={() => setStep(1)} className="btn-sanctuary-primary mt-6">Return to Parts Mapping</button>
+      </div>
+    </div>
+  );
 };
 
 export default PartsMapping;

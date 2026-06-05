@@ -109,6 +109,18 @@ function summarizeQueryErrors(resultsByTable, effectiveClientId, selfProfile) {
 }
 
 const DATA_LOAD_ERROR_MESSAGE = 'Your IFS data could not be loaded right now. Please refresh or try again.';
+const PARTIAL_DATA_LOAD_WARNING = 'Some parts of your IFS path could not be refreshed. The rest of your information is still shown.';
+
+function settledDataResult(settled, table) {
+  if (settled.status === 'fulfilled') return settled.value || { data: null, error: null };
+  return {
+    data: null,
+    error: {
+      message: settled.reason?.message || `${table} request failed`,
+      status: settled.reason?.status || settled.reason?.statusCode || null
+    }
+  };
+}
 
 const Home = ({ clientId, client, mode = 'home', selfProfile = null, selfProfileResult = null }) => {
   const navigate = useNavigate();
@@ -152,6 +164,41 @@ const Home = ({ clientId, client, mode = 'home', selfProfile = null, selfProfile
       }
       if (effectiveClientId) {
         try {
+          const optionalQueries = [
+            ['ifs_interactive_data', supabase
+              .from('ifs_interactive_data')
+              .select('id, client_id, module_id, data, created_at, updated_at')
+              .eq('client_id', effectiveClientId)],
+            ['ifs_assessment_results', supabase
+              .from('ifs_assessment_results')
+              .select('id, primary_wound, secondary_wound, tertiary_wounds, assessment_date, created_at')
+              .eq('client_id', effectiveClientId)
+              .order('created_at', { ascending: false })],
+            ['ifs_parts', supabase
+              .from('ifs_parts')
+              .select('id', { count: 'exact' })
+              .eq('client_id', effectiveClientId)],
+            ['ifs_part_relationships', supabase
+              .from('ifs_part_relationships')
+              .select('id', { count: 'exact' })
+              .eq('client_id', effectiveClientId)],
+            ['ifs_session_agendas', loadClientSessionAgendas(effectiveClientId)],
+            ['ifs_treatment_plans', loadActiveTreatmentPlansForClient(effectiveClientId)],
+            ['ifs_assigned_' + 'home' + 'work', loadAssignedHomeworkForClient(effectiveClientId)],
+            ['ifs_life_integration_reflections', loadLifeIntegrationReflections({ clientId: effectiveClientId, self: mode === 'my-ifs' })],
+            ['healing_timeline', loadHealingTimeline({ clientId: effectiveClientId, range: 'ALL' })],
+            ['ifs_journal_entries', supabase
+              .from('ifs_journal_entries')
+              .select('id', { count: 'exact' })
+              .eq('client_id', effectiveClientId)],
+            ['ifs_client_progress', supabase
+              .from('ifs_client_progress')
+              .select('module_id, completed, current_step, updated_at')
+              .eq('client_id', effectiveClientId)],
+            ['curriculum_reflections', loadCurriculumReflections({ clientId: effectiveClientId, limit: 20 })]
+          ];
+
+          const settledResults = await Promise.allSettled(optionalQueries.map(([, query]) => query));
           const [
             interactiveResult,
             formalAssessmentResult,
@@ -165,39 +212,8 @@ const Home = ({ clientId, client, mode = 'home', selfProfile = null, selfProfile
             journalResult,
             progressResult,
             curriculumReflectionsResult
-          ] = await Promise.all([
-            supabase
-              .from('ifs_interactive_data')
-              .select('id, client_id, module_id, data, created_at, updated_at')
-              .eq('client_id', effectiveClientId),
-            supabase
-              .from('ifs_assessment_results')
-              .select('id, primary_wound, secondary_wound, tertiary_wounds, assessment_date, created_at')
-              .eq('client_id', effectiveClientId)
-              .order('created_at', { ascending: false }),
-            supabase
-              .from('ifs_parts')
-              .select('id', { count: 'exact' })
-              .eq('client_id', effectiveClientId),
-            supabase
-              .from('ifs_part_relationships')
-              .select('id', { count: 'exact' })
-              .eq('client_id', effectiveClientId),
-            loadClientSessionAgendas(effectiveClientId),
-            loadActiveTreatmentPlansForClient(effectiveClientId),
-            loadAssignedHomeworkForClient(effectiveClientId),
-            loadLifeIntegrationReflections({ clientId: effectiveClientId, self: mode === 'my-ifs' }),
-            loadHealingTimeline({ clientId: effectiveClientId, range: 'ALL' }),
-            supabase
-              .from('ifs_journal_entries')
-              .select('id', { count: 'exact' })
-              .eq('client_id', effectiveClientId),
-            supabase
-              .from('ifs_client_progress')
-              .select('module_id, completed, current_step, updated_at')
-              .eq('client_id', effectiveClientId),
-            loadCurriculumReflections({ clientId: effectiveClientId, limit: 20 })
-          ]);
+          ] = settledResults.map((settled, index) => settledDataResult(settled, optionalQueries[index][0]));
+
 
           const queryErrors = summarizeQueryErrors({
             ifs_interactive_data: interactiveResult,
@@ -215,7 +231,11 @@ const Home = ({ clientId, client, mode = 'home', selfProfile = null, selfProfile
           }, effectiveClientId, selfProfile || selfProfileResult?.profile);
 
           if (queryErrors.length) {
-            setDataLoadError({ message: DATA_LOAD_ERROR_MESSAGE, details: queryErrors });
+            setDataLoadError({
+              message: effectiveClientId ? PARTIAL_DATA_LOAD_WARNING : DATA_LOAD_ERROR_MESSAGE,
+              details: queryErrors,
+              scope: effectiveClientId ? 'partial' : 'global'
+            });
             if (import.meta.env.DEV) {
               console.warn('[MyIFSWork/Home] data query failures', queryErrors);
             }
@@ -266,19 +286,25 @@ const Home = ({ clientId, client, mode = 'home', selfProfile = null, selfProfile
             assignedPractices
           }));
 
-          const liveResult = await getActiveLiveSessionForClient();
-          if (!liveResult.error) setActiveLiveSession(liveResult.data || null);
+          try {
+            const liveResult = await getActiveLiveSessionForClient();
+            if (!liveResult.error) setActiveLiveSession(liveResult.data || null);
+            else if (import.meta.env.DEV) console.warn('[MyIFSWork/Home] live session refresh failed', { message: liveResult.error?.message || 'Request failed' });
+          } catch (liveError) {
+            if (import.meta.env.DEV) console.warn('[MyIFSWork/Home] live session refresh failed', { message: liveError?.message || 'Request failed' });
+          }
         } catch (err) {
           console.error('Error loading home data:', err);
           setDataLoadError({
-            message: DATA_LOAD_ERROR_MESSAGE,
+            message: effectiveClientId ? PARTIAL_DATA_LOAD_WARNING : DATA_LOAD_ERROR_MESSAGE,
             details: [{
               table: 'home_data',
               status: err?.status || err?.statusCode || null,
               message: err?.message || 'Request failed',
               effectiveClientId,
               selfProfilePresent: Boolean((selfProfile || selfProfileResult?.profile)?.id)
-            }]
+            }],
+            scope: effectiveClientId ? 'partial' : 'global'
           });
         }
       }
@@ -571,9 +597,12 @@ const Home = ({ clientId, client, mode = 'home', selfProfile = null, selfProfile
       </section>
 
       {dataLoadError && (
-        <section className="mb-8 rounded-3xl border border-red-200 bg-red-50 p-5 text-sm text-red-700 dark:border-red-900/60 dark:bg-red-950/20 dark:text-red-200">
+        <section className={`mb-8 rounded-3xl border p-5 text-sm ${
+          dataLoadError.scope === 'partial'
+            ? 'border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/20 dark:text-amber-100'
+            : 'border-red-200 bg-red-50 text-red-700 dark:border-red-900/60 dark:bg-red-950/20 dark:text-red-200'
+        }`}>
           <p className="font-semibold">{dataLoadError.message}</p>
-
         </section>
       )}
 

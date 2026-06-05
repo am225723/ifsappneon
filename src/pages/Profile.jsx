@@ -100,14 +100,23 @@ const Profile = ({ client }) => {
   const [gamificationData, setGamificationData] = useState({});
   const [streakData, setStreakData] = useState({});
   const [timeline, setTimeline] = useState([]);
+  const [profileError, setProfileError] = useState('');
 
   const loadAssessmentData = async () => {
     if (!client?.id) {
+      setProfileError('Your profile could not be loaded right now. Please refresh or return to My IFS Work.');
       setLoading(false);
       return;
     }
 
     setLoading(true);
+    setProfileError('');
+    setAssessment(null);
+    setAllAssessments([]);
+    setPartsAssessment(null);
+    setSelfEnergyAssessment(null);
+    setAttachmentAssessment(null);
+    setCustomAssessments([]);
     try {
       const interactiveResult = await supabase
         .from('ifs_interactive_data')
@@ -115,6 +124,7 @@ const Profile = ({ client }) => {
         .eq('client_id', client.id)
         .like('module_id', 'assessment_%');
 
+      if (interactiveResult?.error) throw interactiveResult.error;
       const interactiveData = interactiveResult?.data || [];
       setAllAssessments(
         interactiveData
@@ -159,16 +169,18 @@ const Profile = ({ client }) => {
       if (selfEnergyEntry?.data) setSelfEnergyAssessment(selfEnergyEntry.data);
       if (attachmentEntry?.data) setAttachmentAssessment(attachmentEntry.data);
 
-      const { data: customData } = await supabase
+      const { data: customData, error: customError } = await supabase
         .from('ifs_interactive_data')
         .select('*')
         .eq('client_id', client.id)
         .like('module_id', 'custom_assessment_response_%');
+      if (customError) throw customError;
       if (customData && customData.length > 0) {
         setCustomAssessments(customData.map(d => ({ ...d.data, moduleId: d.module_id, updatedAt: d.updated_at })));
       }
     } catch (error) {
-      console.error('Error loading assessment:', error);
+      console.error('Error loading assessment:', { message: error?.message || 'Request failed', status: error?.status || error?.statusCode || null });
+      setProfileError('Your profile could not be loaded right now. Please refresh or return to My IFS Work.');
     }
     setLoading(false);
   };
@@ -178,18 +190,25 @@ const Profile = ({ client }) => {
     const clientId = currentClient?.id || client?.id;
     if (!clientId) return;
     try {
-      const [mood, gam, miles] = await Promise.all([
+      const [moodResult, gamResult, milesResult] = await Promise.allSettled([
         supabaseHelpers.getMoodEntries(clientId),
         supabaseHelpers.getGamification(clientId),
         supabaseHelpers.getMilestones(clientId),
       ]);
-      setMoodEntries(mood || []);
-      if (gam) {
+      if (moodResult.status === 'fulfilled') setMoodEntries(moodResult.value || []);
+      if (gamResult.status === 'fulfilled' && gamResult.value) {
+        const gam = gamResult.value;
         setGamificationData({ xp: gam.xp, level: gam.level, badges: gam.badges });
         setStreakData({ currentStreak: gam.streak_current, longestStreak: gam.streak_longest, totalLogins: gam.total_logins });
       }
-      setTimeline(miles || []);
-    } catch (err) { console.error('Error loading profile data:', err); }
+      if (milesResult.status === 'fulfilled') setTimeline(milesResult.value || []);
+      const failures = [moodResult, gamResult, milesResult].filter((result) => result.status === 'rejected');
+      if (failures.length && import.meta.env.DEV) {
+        console.warn('[Profile] optional progress widgets failed', failures.map((result) => ({ message: result.reason?.message || 'Request failed' })));
+      }
+    } catch (err) {
+      console.error('Error loading profile data:', { message: err?.message || 'Request failed' });
+    }
   };
 
   useEffect(() => {
@@ -301,6 +320,22 @@ const Profile = ({ client }) => {
     );
   }
 
+  if (profileError) {
+    return (
+      <div className="min-h-screen flex items-center justify-center px-4">
+        <div className="soft-card max-w-xl p-8 text-center">
+          <AlertCircle className="mx-auto mb-4 h-10 w-10 text-red-500" />
+          <h1 className="text-2xl font-semibold text-brand-stone-900 dark:text-slate-100">Your profile could not be loaded right now.</h1>
+          <p className="mt-3 text-sm text-brand-stone-600 dark:text-slate-400">Please refresh or return to My IFS Work.</p>
+          <div className="mt-6 flex flex-wrap justify-center gap-3">
+            <button type="button" onClick={() => window.location.reload()} className="btn-sanctuary-primary">Refresh</button>
+            <button type="button" onClick={() => navigate('/my-ifs')} className="btn-sanctuary-secondary">Return to My IFS Work</button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen">
       <style>{`
@@ -370,7 +405,7 @@ const Profile = ({ client }) => {
                 <div className="text-center py-12 bg-brand-stone-50 dark:bg-slate-800/50 rounded-xl">
                   <AlertCircle className="w-12 h-12 text-brand-stone-400 mx-auto mb-4" />
                   <h3 className="text-lg font-medium text-brand-stone-700 dark:text-slate-300 mb-2">No assessment yet</h3>
-                  <p className="text-brand-stone-500 dark:text-slate-500 mb-4">Start with an assessment when you are ready. Your assessments help personalize how the curriculum supports your parts work.</p>
+                  <p className="text-brand-stone-500 dark:text-slate-500 mb-4">Start with an assessment when you are ready. Your assessments will appear here after you complete them. They help personalize how the curriculum supports your parts work.</p>
                   <button
                     onClick={() => navigate('/assessments')}
                     className="no-print px-6 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors"
@@ -491,7 +526,7 @@ const Profile = ({ client }) => {
                                 {percentage >= 66 ? 'High' : percentage >= 33 ? 'Moderate' : 'Low'}
                               </span>
                               <span className="font-bold text-brand-stone-700 dark:text-slate-300">
-                                {level}
+                                {data.label || `${Math.round(percentage)}%`}
                               </span>
                             </div>
                           </div>
