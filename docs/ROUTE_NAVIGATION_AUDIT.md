@@ -278,3 +278,15 @@ Tools Directory
 - Advisor shared-reflection surfaces continue to require explicit `shared_with_advisor = true` and active Advisor assignment; private reflections are not listed for Advisors/Admins.
 - Dashboard, journal summary, progress, and timeline cards avoid raw reflection text and show only display labels, dates, short summaries, linked part names when safe, and sharing badges.
 - No SQL, migrations, broad backend refactors, or automatic migrations were added for Phase 16B.
+
+## Phase 17A Curriculum Experience Polish Notes
+
+- Curriculum remains the primary app spine: Home, My IFS Work, Tools Directory, and module pages describe the Curriculum / IFS Path as the main guided path.
+- Home/My IFS and `/curriculum` share the same progress-summary helper so completed count, current/next module, latest completed module, and Advisor-assigned module state stay aligned.
+- Module cards use warm state labels: Completed, Available, Coming up, and Assigned by Advisor, with “This module will open as you continue your IFS path.” for modules not yet available.
+- Advisor-assigned module bypass is preserved; assigned modules remain open even when normal sequence prerequisites would otherwise make them later in the path.
+- Modules link only to existing support tools such as Journal, Inner System Map, Parts Dialogue, Life Integration, Guided Meditation, Assessments, and Tools Directory.
+- Completion polish is front-end only: users are invited to reflect, notice parts in daily life, open the Inner System Map, or return to Curriculum without auto-generating notes or sharing anything with an Advisor.
+- Assessment-informed cues remain light and use existing assessment/personalization data already loaded in the curriculum experience; raw scores and clinical interpretations are not shown.
+- No new SQL, migrations, schema changes, new AI workflows, or backend expansion were added for Phase 17A.
+- Existing security wrappers, role gating, feature gates, and self-owned data access patterns are preserved.

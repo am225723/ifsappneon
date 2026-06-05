@@ -38,7 +38,7 @@ import {
   summarizeInteractiveInsights
 } from '../lib/interactiveResults';
 import RecentActivityFeed from '../components/RecentActivityFeed';
-import { curriculumModules, getNextModule } from '../data/curriculumData';
+import { getCurriculumPathSummary, getCompletedModuleIds } from '../lib/curriculumExperience';
 
 const iconTones = {
   emerald: 'bg-brand-emerald-50 text-brand-emerald-700 dark:bg-brand-emerald-950/40 dark:text-brand-emerald-100',
@@ -253,27 +253,11 @@ const Home = ({ clientId, client, mode = 'home', selfProfile = null, selfProfile
           setLatestMilestone((timelineResult.data?.timeline || [])[0] || null);
 
           const progressRows = progressResult.data || [];
-          const completedModuleIds = Array.from(new Set([
-            ...progressRows.filter((row) => row.completed).map((row) => row.module_id),
-            ...curriculumModuleRows.map((row) => row.moduleId)
-          ]));
-          const completedCount = completedModuleIds.length;
-          const totalModules = curriculumModules.length || 1;
-          const nextModule = getNextModule(completedModuleIds) || curriculumModules.find((module) => !completedModuleIds.includes(module.id)) || curriculumModules[0];
-          const lastCompletedId = [...progressRows]
-            .filter((row) => row.completed)
-            .sort((a, b) => new Date(b.updated_at || 0) - new Date(a.updated_at || 0))[0]?.module_id;
-          const lastCompletedModule = curriculumModules.find((module) => module.id === lastCompletedId);
-          const activeAssignedModuleId = assignedPractices.find((item) => ['assigned', 'in_progress'].includes(item.status) && item.module_id)?.module_id;
-          const assignedModule = curriculumModules.find((module) => module.id === activeAssignedModuleId);
-          setCurriculumSummary({
-            completedCount,
-            totalModules,
-            percent: Math.round((completedCount / totalModules) * 100),
-            nextModule,
-            lastCompletedModule,
-            assignedModule
-          });
+          const completedModuleIds = getCompletedModuleIds(progressRows, curriculumModuleRows);
+          setCurriculumSummary(getCurriculumPathSummary({
+            completedModuleIds,
+            assignedPractices
+          }));
 
           const liveResult = await getActiveLiveSessionForClient();
           if (!liveResult.error) setActiveLiveSession(liveResult.data || null);
@@ -309,7 +293,7 @@ const Home = ({ clientId, client, mode = 'home', selfProfile = null, selfProfile
   const hasLegacyPartsMapOnly = assessmentSummary.partsCount === 0 && partsMapPartsCount > 0;
   const hasInnerSystemProgress = assessmentSummary.partsCount > 0 || partsMapPartsCount > 0;
   const curriculumProgress = curriculumSummary?.percent ?? 0;
-  const currentModule = curriculumSummary?.assignedModule || curriculumSummary?.nextModule;
+  const currentModule = curriculumSummary?.currentModule;
   const hasSelfData = selfProfileResult?.hasPersonalData !== false;
 
   useEffect(() => {
@@ -623,7 +607,7 @@ const Home = ({ clientId, client, mode = 'home', selfProfile = null, selfProfile
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                   <div>
                     <p className="text-xs font-bold uppercase tracking-wide text-brand-emerald-700 dark:text-brand-emerald-100">
-                      {curriculumSummary?.assignedModule ? 'Assigned by your Advisor' : curriculumSummary ? 'Next lesson' : 'Warm beginning'}
+                      {curriculumSummary?.assignedModule ? 'Assigned by Advisor' : curriculumSummary ? 'Available' : 'Warm beginning'}
                     </p>
                     <h3 className="mt-1 text-2xl font-semibold text-brand-stone-900 dark:text-slate-100">
                       {currentModule?.title || 'Start with the first module'}
@@ -644,7 +628,7 @@ const Home = ({ clientId, client, mode = 'home', selfProfile = null, selfProfile
                   <div className="h-full rounded-full bg-gradient-to-r from-brand-gold-500 to-brand-emerald-600" style={{ width: `${curriculumProgress}%` }} />
                 </div>
                 <div className="mt-5 flex flex-wrap gap-3">
-                  <Link to={currentModule?.id ? `/curriculum/module/${currentModule.id}` : '/curriculum'} className="btn-sanctuary-primary">Resume Module <ArrowRight className="h-4 w-4" /></Link>
+                  <Link to={currentModule?.id ? `/curriculum/module/${currentModule.id}` : '/curriculum'} className="btn-sanctuary-primary">{curriculumSummary?.assignedModule ? 'Open Assigned Module' : currentModule?.id ? 'Continue Module' : 'Start Module'} <ArrowRight className="h-4 w-4" /></Link>
                   <Link to="/curriculum" className="btn-sanctuary-secondary">View Full Curriculum</Link>
                 </div>
               </div>

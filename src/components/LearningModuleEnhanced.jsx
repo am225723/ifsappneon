@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { Link } from 'react-router-dom';
 import { 
   ArrowLeft, 
   ArrowRight, 
@@ -46,6 +47,7 @@ import { progressTracker } from '../lib/supabasePersonalization';
 import { generatePersonalizedLesson } from '../lib/dynamicLessonContent';
 import { generatePersonalizedActivity } from '../lib/dynamicActivityContent';
 import { syncAssignedHomeworkCompletion } from '../lib/assignedHomework';
+import { getModuleSupportLinks } from '../lib/curriculumExperience';
 
 const VoiceRecorder = ({ onRecordingComplete, label }) => {
   const [isRecording, setIsRecording] = useState(false);
@@ -497,9 +499,7 @@ const LearningModuleEnhanced = ({ module, onComplete, onBack, userProgress = {},
     
     if (awardXP) awardXP('module_complete', 100);
     
-    if (onComplete) {
-      onComplete(module);
-    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   // Reset module
@@ -1805,7 +1805,7 @@ const LearningModuleEnhanced = ({ module, onComplete, onBack, userProgress = {},
             className="flex items-center space-x-1 px-4 py-2 rounded-lg bg-white border border-violet-200 text-violet-700 hover:bg-violet-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
           >
             <ChevronLeft className="w-4 h-4" />
-            <span>Previous</span>
+            <span>Back</span>
           </button>
           <button
             onClick={() => handleInteractiveChange('viz-current-step', Math.min(steps.length - 1, currentVizStep + 1))}
@@ -2632,6 +2632,7 @@ const LearningModuleEnhanced = ({ module, onComplete, onBack, userProgress = {},
   // Render Result section
   const renderResultSection = (step) => {
     const data = step.data;
+    const supportLinks = getModuleSupportLinks(module);
     
     return (
       <div className="space-y-6">
@@ -2641,7 +2642,7 @@ const LearningModuleEnhanced = ({ module, onComplete, onBack, userProgress = {},
           </div>
           <div>
             <h2 className="text-2xl font-bold text-gray-900">{data.title}</h2>
-            <p className="text-gray-600">Module Completion</p>
+            <p className="text-gray-600">You completed this step of your IFS Path.</p>
           </div>
         </div>
 
@@ -2649,23 +2650,37 @@ const LearningModuleEnhanced = ({ module, onComplete, onBack, userProgress = {},
           <div className="w-20 h-20 bg-gradient-to-r from-yellow-500 to-orange-500 rounded-full flex items-center justify-center mx-auto mb-4">
             <Award className="w-10 h-10 text-white" />
           </div>
-          <h3 className="text-2xl font-bold text-gray-900 mb-4">Congratulations! 🎉</h3>
-          <p className="text-lg text-gray-700 mb-6">{data.completionMessage}</p>
-          <div className="flex justify-center space-x-4">
+          <h3 className="text-2xl font-bold text-gray-900 mb-4">You completed this module.</h3>
+          <p className="text-lg text-gray-700 mb-2">{data.completionMessage}</p>
+          <p className="text-sm text-gray-600 mb-6">Take a moment to notice what changed inside as you completed this module.</p>
+          <div className="flex flex-wrap justify-center gap-3">
             <button
               onClick={() => setShowCertificate(true)}
               className="bg-orange-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-orange-700 transition-colors flex items-center space-x-2"
             >
               <Download className="w-5 h-5" />
-              <span>Download Certificate</span>
+              <span>Completion Certificate</span>
             </button>
             <button
               onClick={() => window.print()}
               className="bg-white text-orange-600 px-6 py-3 rounded-lg font-medium border border-orange-300 hover:bg-orange-50 transition-colors flex items-center space-x-2"
             >
               <Share className="w-5 h-5" />
-              <span>Share Progress</span>
+              <span>Print Reflection</span>
             </button>
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-emerald-100 bg-emerald-50/70 p-5">
+          <h3 className="text-lg font-semibold text-gray-900">Helpful next practice</h3>
+          <p className="mt-1 text-sm text-gray-600">Use this tool to support what you are learning in this module.</p>
+          <div className="mt-4 flex flex-wrap gap-3">
+            <Link to="/journal" className="rounded-xl bg-white px-4 py-2 text-sm font-bold text-emerald-700 ring-1 ring-emerald-200 hover:bg-emerald-50">Reflect in Journal</Link>
+            <Link to="/life-integration/notice-part" className="rounded-xl bg-white px-4 py-2 text-sm font-bold text-emerald-700 ring-1 ring-emerald-200 hover:bg-emerald-50">Notice a Part in Daily Life</Link>
+            <Link to="/parts-relationships" className="rounded-xl bg-white px-4 py-2 text-sm font-bold text-emerald-700 ring-1 ring-emerald-200 hover:bg-emerald-50">Open Inner System Map</Link>
+            {supportLinks.slice(0, 1).map((link) => (
+              <Link key={link.to} to={link.to} className="rounded-xl bg-white px-4 py-2 text-sm font-bold text-amber-700 ring-1 ring-amber-200 hover:bg-amber-50">{link.label}</Link>
+            ))}
           </div>
         </div>
 
@@ -2799,23 +2814,26 @@ const LearningModuleEnhanced = ({ module, onComplete, onBack, userProgress = {},
     );
   }
 
+  const moduleSupportLinks = getModuleSupportLinks(module);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-amber-50 via-emerald-50 to-blue-50">
       {/* Header */}
       <div className="bg-white shadow-sm border-b border-gray-100">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start space-x-4">
               <button
                 onClick={onBack}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold text-amber-700 hover:bg-amber-50 transition-colors"
               >
-                <ArrowLeft className="w-5 h-5 text-gray-600" />
+                <ArrowLeft className="w-5 h-5" />
+                <span className="hidden sm:inline">Return to Curriculum</span>
               </button>
               <div>
                 <h1 className="text-xl font-bold text-gray-900">{module.title}</h1>
                 <p className="text-sm text-gray-600">
-                  Step {currentStepIndex + 1} of {steps.length} • {currentStep.type}
+                  Lesson progress: Step {currentStepIndex + 1} of {steps.length} • {Math.round(((currentStepIndex + 1) / steps.length) * 100)}% complete
                 </p>
                 {woundContext && (
                   <div className="flex flex-wrap gap-1 mt-1">
@@ -2834,7 +2852,7 @@ const LearningModuleEnhanced = ({ module, onComplete, onBack, userProgress = {},
               </div>
             </div>
             
-            <div className="flex items-center space-x-3">
+            <div className="flex flex-wrap items-center gap-3">
               <button
                 onClick={saveProgress}
                 className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
@@ -2868,9 +2886,23 @@ const LearningModuleEnhanced = ({ module, onComplete, onBack, userProgress = {},
 
       {/* Content */}
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 sm:p-8">
           {renderStepContent()}
         </div>
+
+        {!isCompleted && moduleSupportLinks.length > 0 && (
+          <div className="mt-4 rounded-2xl border border-amber-100 bg-white/85 p-4">
+            <p className="text-sm font-bold text-gray-900">Support this module</p>
+            <p className="mt-1 text-xs text-gray-600">Use this tool to support what you are learning in this module.</p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {moduleSupportLinks.map((link) => (
+                <Link key={link.to} to={link.to} className="rounded-full bg-amber-50 px-3 py-1.5 text-xs font-bold text-amber-700 ring-1 ring-amber-200 hover:bg-amber-100">
+                  {link.label}
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
 
         {showIncompleteWarning && incompleteItems.length > 0 && (
           <div className="mt-6 bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3 animate-pulse">
@@ -2889,7 +2921,7 @@ const LearningModuleEnhanced = ({ module, onComplete, onBack, userProgress = {},
         )}
 
         {/* Navigation */}
-        <div className="mt-4 flex items-center justify-between">
+        <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <button
             onClick={previousStep}
             disabled={isFirstStep}
@@ -2900,7 +2932,7 @@ const LearningModuleEnhanced = ({ module, onComplete, onBack, userProgress = {},
             }`}
           >
             <ArrowLeft className="w-5 h-5" />
-            <span>Previous</span>
+            <span>Back</span>
           </button>
 
           <div className="flex items-center space-x-4">
@@ -2926,6 +2958,23 @@ const LearningModuleEnhanced = ({ module, onComplete, onBack, userProgress = {},
           </button>
         </div>
       </div>
+
+      {isCompleted && (
+        <div className="mx-auto max-w-4xl px-4 pb-8 sm:px-6 lg:px-8">
+          <div className="rounded-2xl border border-emerald-200 bg-white p-5 shadow-sm">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-sm font-bold text-emerald-700">Completed</p>
+                <h3 className="text-xl font-bold text-gray-900">You completed this module. Take a moment to notice what shifted.</h3>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button onClick={() => onComplete && onComplete(module)} className="rounded-xl bg-gradient-to-r from-amber-600 to-emerald-600 px-4 py-2 text-sm font-bold text-white">Return to Curriculum</button>
+                <Link to="/journal" className="rounded-xl border border-emerald-200 px-4 py-2 text-sm font-bold text-emerald-700">Reflect in Journal</Link>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Certificate Modal */}
       {renderCertificate()}

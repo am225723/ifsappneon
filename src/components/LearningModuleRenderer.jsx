@@ -31,7 +31,7 @@ const LearningModuleRenderer = ({ userProgress = {} }) => {
             This module will open as you continue your IFS path.
           </p>
           <button onClick={() => navigate('/curriculum')} className="text-amber-600 hover:text-amber-700 font-medium text-sm">
-            Back to Curriculum
+Return to Curriculum
           </button>
         </div>
       </div>
@@ -223,7 +223,7 @@ const LearningModuleRenderer = ({ userProgress = {} }) => {
       <div className="min-h-screen bg-gradient-to-br from-amber-50 to-emerald-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading your learning module...</p>
+          <p className="text-gray-600">Loading your IFS Path module...</p>
         </div>
       </div>
     );
@@ -235,7 +235,7 @@ const LearningModuleRenderer = ({ userProgress = {} }) => {
         <div className="text-center">
           <h2 className="text-2xl font-bold text-gray-900 mb-4">Module Not Found</h2>
           <Link to="/curriculum" className="text-amber-600 hover:text-amber-700">
-            <ChevronLeft className="w-4 h-4 inline" /> Back to Curriculum
+            <ChevronLeft className="w-4 h-4 inline" /> Return to Curriculum
           </Link>
         </div>
       </div>
