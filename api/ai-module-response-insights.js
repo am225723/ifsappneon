@@ -22,11 +22,30 @@ function truncateText(value, max = 700) {
   return text.length > max ? `${text.slice(0, max)}…` : text;
 }
 
+function parseDataPayload(value) {
+  if (!value) return {};
+  if (typeof value !== 'string') return value || {};
+  try {
+    return JSON.parse(value || '{}');
+  } catch {
+    return {};
+  }
+}
+
+function mergeModuleResponseGroups(...groups) {
+  return groups.reduce((acc, group = {}) => {
+    Object.entries(group || {}).forEach(([moduleId, responses]) => {
+      acc[moduleId] = [...(acc[moduleId] || []), ...(Array.isArray(responses) ? responses : [responses])];
+    });
+    return acc;
+  }, {});
+}
+
 function sanitizeResponses(rows = []) {
   const grouped = {};
   rows.forEach((row) => {
     const moduleId = row.module_id || 'unknown_module';
-    const data = typeof row.data === 'string' ? JSON.parse(row.data || '{}') : (row.data || {});
+    const data = parseDataPayload(row.data);
     const answers = data.answers || data.responses || data.reflections || data;
     if (!grouped[moduleId]) grouped[moduleId] = [];
     grouped[moduleId].push({ step_id: row.step_id || 'module', answers });
@@ -88,7 +107,7 @@ async function loadScopedData(clientId, since, moduleIds = []) {
   }, {}));
 
   return {
-    moduleResponses: { ...cleanedInteractive, ...cleanedProgress },
+    moduleResponses: mergeModuleResponseGroups(cleanedInteractive, cleanedProgress),
     curriculumProgress: progressRows.map((row) => ({ module_id: row.module_id, completed: row.completed, current_step: row.current_step })),
     curriculumReflections: (Array.isArray(reflectionRows) ? reflectionRows : []).map((row) => ({ module_id: row.module_id, prompt: truncateText(row.prompt, 160), response: truncateText(row.response, 500) }))
   };

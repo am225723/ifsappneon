@@ -97,7 +97,7 @@ DESCRIPTION: [different approach and activity type]`;
 }
 
 function extractField(text, fieldName) {
-  const regex = new RegExp(`${fieldName}:\\s*(.+?)(?=\\n(?:TITLE|CATEGORY|PRIORITY|DESCRIPTION):|$)`, 'is');
+  const regex = new RegExp(`${fieldName}:\\s*(.+?)(?=\\n(?:TITLE|CATEGORY|PRIORITY|DESCRIPTION|ACTIVITY_BLOCKS_JSON):|$)`, 'is');
   const match = text.match(regex);
   if (!match) return '';
   return match[1].trim().replace(/^\*\*|\*\*$/g, '').replace(/^["']|["']$/g, '').replace(/\*\*/g, '').trim();

@@ -123,6 +123,7 @@ function buildMessages({ client, currentUser, rangeDays, since, clinicalData }) 
         'If information is missing, say so. Avoid invented details.',
         'If available data is limited, include the exact phrase: Available data is limited for this range.',
         'For sparse data, still provide session-opening questions and what the Advisor may want to clarify.',
+        'Use the exact label session-opening questions in the suggested opener section so sparse summaries remain easy to verify.',
         'Use concise bullets under exactly the requested numbered section headings.'
       ].join(' ')
     },
@@ -139,7 +140,7 @@ function buildMessages({ client, currentUser, rangeDays, since, clinicalData }) 
           '4. Mood, Stress, and Pattern Shifts',
           '5. Assigned IFS Practice / Between-Session Follow-Through',
           '6. Safety-Related Content',
-          '7. Suggested Session Openers',
+          '7. Suggested Session Openers / session-opening questions',
           '8. Documentation Considerations'
         ],
         safety_instruction: safetyText,

@@ -158,7 +158,7 @@ export default function LifePracticeShell({ type, config }) {
             <div className="p-6 sm:p-8">
               <div className="mb-5">
                 <h2 className="text-xl font-semibold text-brand-stone-900 dark:text-slate-100">Optional reflection</h2>
-                <p className="mt-2 text-sm leading-relaxed text-brand-stone-600 dark:text-slate-400">Write only what helps. Your Advisor can review your reflections to support your work together, or you can skip writing and keep practicing offline.</p>
+                <p className="mt-2 text-sm leading-relaxed text-brand-stone-600 dark:text-slate-400">Write only what helps. Your Advisor can review this to support your work together, or you can skip writing and keep practicing offline.</p>
               </div>
 
               <div className="space-y-4">
@@ -224,7 +224,7 @@ export default function LifePracticeShell({ type, config }) {
         <section className="mt-6 grid gap-4 md:grid-cols-2">
           <div className="rounded-3xl bg-white/70 p-5 text-sm leading-relaxed text-brand-stone-600 shadow-sm dark:bg-slate-900/40 dark:text-slate-400">
             <ShieldCheck className="mb-2 h-5 w-5 text-brand-emerald-700 dark:text-brand-emerald-100" />
-            Your Advisor can review your reflections to support your work together.
+            Your Advisor can review this to support your work together.
           </div>
           <div className="rounded-3xl bg-white/70 p-5 text-sm leading-relaxed text-brand-stone-600 shadow-sm dark:bg-slate-900/40 dark:text-slate-400">
             <Heart className="mb-2 h-5 w-5 text-brand-gold-700 dark:text-brand-gold-500" />
