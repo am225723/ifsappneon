@@ -318,3 +318,18 @@ Tools Directory
 - Phase 17B curriculum reflection support is present and preserved through `src/lib/curriculumReflections.js` and existing private `ifs_interactive_data.data.curriculumReflections` storage. No Advisor-facing sharing behavior was added.
 - No SQL, migrations, or Neon backfills were added or run for Phase 17C.
 - Existing authenticated flow, `clientOnly` / Advisor/Admin wrappers, Admin/Supervisor checks, `FeatureGate` wrappers, self-owned access patterns, and Advisor notes protections were preserved.
+
+## Phase 17E Runtime Route Smoke QA + Post-Cleanup Verification Notes
+
+- The authenticated route table was re-verified after the route cleanup pass. Core client/self-work routes remain present for `/`, `/home`, `/my-ifs`, `/my-ifs-path`, `/profile`, `/tools`, `/curriculum`, `/curriculum/module/:moduleId`, `/assessments`, `/journal`, Parts tools, Life Integration practices, timeline views, and `/meditation`.
+- Advisor/Admin route gates remain present for `/therapist`, `/admin`, `/advisor-homework`, `/assessment-builder`, reporting, analytics, live co-therapy, caseload, and shared-reflection review routes.
+- Runtime recovery remains intact: authenticated routes are wrapped in `RouteErrorBoundary`, and the wildcard route renders the warm Not Found recovery page instead of falling through to a blank screen.
+- Import and component paths for the main route files were checked for stale relative imports, duplicate route import shadowing, and casing/path mismatches. No stale removed-feature route imports were found.
+- Route-level blank-screen risk was reviewed with the null-return search. Remaining null returns are helper/modal/conditional rendering cases or guarded subviews; main route pages retain visible loading, error, or empty-state UI.
+- My IFS Work and Home preserve non-contradictory data states: a connected self profile can show the connected banner, optional query failures show partial refresh warnings, and full-load failures show only the global recovery state.
+- Profile preserves visible loading, error, and empty assessment states with warm copy, avoids raw assessment payload display in overview cards, and keeps overview language focused on patterns/progress rather than score-heavy summaries.
+- Phase 17B private Curriculum Reflection behavior remains preserved in existing interactive data storage, with optional reflection capture, safe dashboard/timeline summaries, Journal visibility, and no Advisor sharing expansion.
+- Life Integration remains preserved with the landing route, six practice routes, private-by-default saved reflections, explicit Advisor sharing only, and safe Journal/Timeline/Progress summaries.
+- Tools Directory and navigation remain role-aware: Curriculum / IFS Path stays first in Core IFS Path, Life Integration appears as daily practice support, and Admin/Advisor tools remain role-limited and hidden from client-only navigation.
+- Security wrappers and API authorization patterns remain preserved, including client-only route wrappers, Advisor/Admin role wrappers, admin/supervisor checks, feature gates, self-owned data access, assigned-client authorization, and protected Advisor notes.
+- No SQL, migrations, or backfill scripts were added or run for Phase 17E.
