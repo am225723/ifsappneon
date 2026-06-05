@@ -181,7 +181,7 @@ async function loadSessionNoteContext(clientId, sessionDate, includeFlags) {
              need_or_message, self_energy_response, next_step, created_at
       FROM ifs_life_integration_reflections
       WHERE client_id = ${clientId}
-        AND shared_with_advisor IS TRUE
+        AND (shared_with_advisor IS TRUE OR is_private IS FALSE)
         AND archived_at IS NULL
       ORDER BY created_at DESC
       LIMIT 10

@@ -76,7 +76,7 @@ const sections = [
   },
   {
     title: 'Reflection & Journaling',
-    description: 'Private places to write, notice patterns, and honor milestones.',
+    description: 'Reflective places to write, notice patterns, and honor milestones with Advisor-visible support where appropriate.',
     items: [
       { label: 'Journal', to: '/journal', icon: PenLine, roles: clientRoles, feature: 'journal' },
       { label: 'Letters', to: '/letters', icon: Mail, roles: clientRoles, feature: 'letters' },

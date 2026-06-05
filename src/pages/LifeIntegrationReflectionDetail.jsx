@@ -1,12 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Archive, CalendarDays, Check, Edit2, Lock, Save, Share2, ShieldCheck, X } from 'lucide-react';
+import { ArrowLeft, Archive, CalendarDays, Check, Edit2, Save, ShieldCheck, X } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import {
   LIFE_REFLECTION_TYPES,
   archiveLifeIntegrationReflection,
   getLifeIntegrationReflection,
-  shareReflectionWithAdvisor,
   updateLifeIntegrationReflection
 } from '../lib/lifeIntegration';
 
@@ -29,7 +28,7 @@ const emptyForm = {
   need_or_message: '',
   self_energy_response: '',
   next_step: '',
-  shared_with_advisor: false
+  shared_with_advisor: true
 };
 
 function getClientId() {
@@ -57,7 +56,6 @@ export default function LifeIntegrationReflectionDetail() {
   const [parts, setParts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [sharing, setSharing] = useState(false);
   const [archiving, setArchiving] = useState(false);
   const [editing, setEditing] = useState(false);
   const [error, setError] = useState('');
@@ -88,7 +86,7 @@ export default function LifeIntegrationReflectionDetail() {
         need_or_message: data?.need_or_message || '',
         self_energy_response: data?.self_energy_response || '',
         next_step: data?.next_step || '',
-        shared_with_advisor: data?.shared_with_advisor === true
+        shared_with_advisor: true
       });
       setLoading(false);
     };
@@ -125,7 +123,7 @@ export default function LifeIntegrationReflectionDetail() {
       need_or_message: form.need_or_message,
       self_energy_response: form.self_energy_response,
       next_step: form.next_step,
-      shared_with_advisor: form.shared_with_advisor
+      shared_with_advisor: true
     };
     const { data, error: saveError } = await updateLifeIntegrationReflection(reflectionId, updates);
     setSaving(false);
@@ -138,21 +136,7 @@ export default function LifeIntegrationReflectionDetail() {
     setNotice('Reflection saved.');
   };
 
-  const handleShareToggle = async () => {
-    const nextShared = !reflection.shared_with_advisor;
-    setSharing(true);
-    setError('');
-    setNotice('');
-    const { data, error: shareError } = await shareReflectionWithAdvisor(reflectionId, nextShared);
-    setSharing(false);
-    if (shareError) {
-      setError(shareError.message || 'Unable to update Advisor sharing.');
-      return;
-    }
-    setReflection(data);
-    setForm((current) => ({ ...current, shared_with_advisor: data.shared_with_advisor === true }));
-    setNotice(nextShared ? 'Shared with your Advisor. You can stop sharing any time.' : 'This reflection is private again.');
-  };
+
 
   const handleArchive = async () => {
     if (!window.confirm('Archive this Life Integration reflection? It will no longer appear in your recent reflections.')) return;
@@ -196,9 +180,9 @@ export default function LifeIntegrationReflectionDetail() {
                   {reflection.archived_at && <span className="rounded-full bg-brand-stone-100 px-3 py-1.5 text-brand-stone-600 dark:bg-slate-800 dark:text-slate-300">Archived</span>}
                 </div>
               </div>
-              <span className={`inline-flex w-fit items-center gap-2 rounded-full px-4 py-2 text-xs font-bold uppercase tracking-wide ${reflection.shared_with_advisor ? 'bg-brand-emerald-50 text-brand-emerald-700 dark:bg-brand-emerald-950/30 dark:text-brand-emerald-100' : 'bg-brand-stone-100 text-brand-stone-600 dark:bg-slate-800 dark:text-slate-300'}`}>
-                {reflection.shared_with_advisor ? <Share2 className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
-                {reflection.shared_with_advisor ? 'Shared with Advisor' : 'Private'}
+              <span className={`inline-flex w-fit items-center gap-2 rounded-full px-4 py-2 text-xs font-bold uppercase tracking-wide bg-brand-emerald-50 text-brand-emerald-700 dark:bg-brand-emerald-950/30 dark:text-brand-emerald-100`}>
+                <ShieldCheck className="h-4 w-4" />
+                Visible to Advisor
               </span>
             </div>
           </div>
@@ -223,13 +207,9 @@ export default function LifeIntegrationReflectionDetail() {
                       <textarea value={form[name]} onChange={(event) => updateField(name, event.target.value)} rows={3} className="mt-2 w-full resize-none rounded-2xl border border-brand-stone-200 bg-white/80 px-4 py-3 text-sm leading-relaxed text-brand-stone-800 outline-none transition focus:border-brand-gold-400 focus:ring-2 focus:ring-brand-gold-100 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100" />
                     </label>
                   ))}
-                  <label className="flex items-start gap-3 rounded-2xl border border-brand-emerald-100 bg-brand-emerald-50/60 p-4 dark:border-brand-emerald-900/50 dark:bg-brand-emerald-950/20">
-                    <input type="checkbox" checked={form.shared_with_advisor} onChange={(event) => updateField('shared_with_advisor', event.target.checked)} className="mt-1 h-4 w-4 rounded border-brand-stone-300 text-brand-emerald-700 focus:ring-brand-emerald-600" />
-                    <span>
-                      <span className="block text-sm font-semibold text-brand-stone-800 dark:text-slate-200">Share with my Advisor</span>
-                      <span className="mt-1 block text-xs leading-relaxed text-brand-stone-600 dark:text-slate-400">Sharing is optional. You can unshare this reflection later from this detail page.</span>
-                    </span>
-                  </label>
+                  <div className="rounded-2xl border border-brand-emerald-100 bg-brand-emerald-50/60 p-4 text-sm text-brand-stone-700 dark:border-brand-emerald-900/50 dark:bg-brand-emerald-950/20 dark:text-slate-300">
+                    <span className="font-semibold text-brand-stone-900 dark:text-slate-100">Visible to Advisor.</span> Your Advisor can review this to support your work together.
+                  </div>
                 </div>
               ) : (
                 <div className="grid gap-4 md:grid-cols-2">
@@ -249,11 +229,11 @@ export default function LifeIntegrationReflectionDetail() {
                 <div className="rounded-3xl bg-brand-emerald-50/70 p-5 dark:bg-brand-emerald-950/20">
                   <ShieldCheck className="mb-3 h-6 w-6 text-brand-emerald-700 dark:text-brand-emerald-100" />
                   <p className="text-sm leading-relaxed text-brand-stone-700 dark:text-slate-300">
-                    {reflection.shared_with_advisor ? 'Shared with your Advisor. You can stop sharing this reflection at any time.' : 'This reflection is private unless you choose to share it with your Advisor.'}
+                    Your Advisor can review this to support your work together.
                   </p>
                 </div>
                 <div className="rounded-3xl bg-white/75 p-5 text-sm leading-relaxed text-brand-stone-600 dark:bg-slate-900/50 dark:text-slate-400">
-                  Your Life Integration reflections are private by default. You can choose to share specific reflections with your Advisor when you want support connecting daily-life moments to your IFS work.
+                  Your Life Integration reflections are visible to your assigned Advisor where Advisor review exists. This app supports reflection and IFS practice between sessions. It is not monitored for emergencies.
                 </div>
                 <div className="rounded-3xl bg-brand-gold-50/70 p-5 text-xs leading-relaxed text-brand-stone-600 dark:bg-brand-gold-950/20 dark:text-slate-400">
                   This space supports reflection and IFS practice between sessions. It is not monitored for emergencies. If you are in immediate danger or may harm yourself or someone else, call 911 or your local crisis line now.
@@ -264,15 +244,12 @@ export default function LifeIntegrationReflectionDetail() {
                 {editing ? (
                   <>
                     <button onClick={handleSave} disabled={saving} className="inline-flex items-center justify-center gap-2 rounded-full bg-brand-emerald-700 px-5 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-brand-emerald-800 disabled:opacity-60"><Save className="h-4 w-4" /> {saving ? 'Saving…' : 'Save reflection'}</button>
-                    <button onClick={() => { setEditing(false); setForm({ situation: reflection.situation || '', part_noticed: reflection.part_noticed || '', part_id: reflection.part_id || '', body_sensation: reflection.body_sensation || '', emotion: reflection.emotion || '', need_or_message: reflection.need_or_message || '', self_energy_response: reflection.self_energy_response || '', next_step: reflection.next_step || '', shared_with_advisor: reflection.shared_with_advisor === true }); }} className="inline-flex items-center justify-center gap-2 rounded-full border border-brand-stone-200 px-5 py-3 text-sm font-bold text-brand-stone-700 transition hover:bg-brand-stone-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"><X className="h-4 w-4" /> Cancel</button>
+                    <button onClick={() => { setEditing(false); setForm({ situation: reflection.situation || '', part_noticed: reflection.part_noticed || '', part_id: reflection.part_id || '', body_sensation: reflection.body_sensation || '', emotion: reflection.emotion || '', need_or_message: reflection.need_or_message || '', self_energy_response: reflection.self_energy_response || '', next_step: reflection.next_step || '', shared_with_advisor: true }); }} className="inline-flex items-center justify-center gap-2 rounded-full border border-brand-stone-200 px-5 py-3 text-sm font-bold text-brand-stone-700 transition hover:bg-brand-stone-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"><X className="h-4 w-4" /> Cancel</button>
                   </>
                 ) : (
                   <button onClick={() => setEditing(true)} className="inline-flex items-center justify-center gap-2 rounded-full bg-brand-stone-900 px-5 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-brand-stone-700 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white"><Edit2 className="h-4 w-4" /> Edit reflection</button>
                 )}
-                <button onClick={handleShareToggle} disabled={sharing} className="inline-flex items-center justify-center gap-2 rounded-full border border-brand-emerald-200 px-5 py-3 text-sm font-bold text-brand-emerald-700 transition hover:bg-brand-emerald-50 disabled:opacity-60 dark:border-brand-emerald-900/60 dark:text-brand-emerald-100 dark:hover:bg-brand-emerald-950/20">
-                  {reflection.shared_with_advisor ? <Lock className="h-4 w-4" /> : <Share2 className="h-4 w-4" />}
-                  {sharing ? 'Updating…' : reflection.shared_with_advisor ? 'Stop sharing with Advisor' : 'Share with my Advisor'}
-                </button>
+
                 <button onClick={handleArchive} disabled={archiving} className="inline-flex items-center justify-center gap-2 rounded-full border border-red-200 px-5 py-3 text-sm font-bold text-red-700 transition hover:bg-red-50 disabled:opacity-60 dark:border-red-900/60 dark:text-red-300 dark:hover:bg-red-950/20"><Archive className="h-4 w-4" /> {archiving ? 'Archiving…' : 'Archive reflection'}</button>
               </div>
 

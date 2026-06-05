@@ -1,4 +1,5 @@
 import { curriculumModules, getNextModule } from '../data/curriculumData';
+import { isCurriculumInteractiveModule, normalizeInteractiveResult } from './interactiveResults';
 
 const ACTIVE_ASSIGNMENT_STATUSES = ['assigned', 'in_progress'];
 const VISIBLE_ASSIGNMENT_STATUSES = ['assigned', 'in_progress', 'completed', 'reviewed'];
@@ -39,6 +40,23 @@ export function getCurriculumPathSummary({ completedModuleIds = [], assignedPrac
         .filter((item) => VISIBLE_ASSIGNMENT_STATUSES.includes(item.status) && item.module_id)
         .map((item) => item.module_id)
     )
+  };
+}
+
+
+export function getCurriculumSummaryInputs({ progressRows = [], interactiveRows = [], assignedPractices = [] } = {}) {
+  const normalizedInteractive = (interactiveRows || []).map((row) => row?.moduleId ? row : normalizeInteractiveResult(row));
+  const curriculumModuleRows = normalizedInteractive.filter((row) => isCurriculumInteractiveModule(row.moduleId));
+  const completedModuleIds = getCompletedModuleIds(progressRows, curriculumModuleRows);
+  return { progressRows, curriculumModuleRows, completedModuleIds, assignedPractices };
+}
+
+export function buildSharedCurriculumSummary({ progressRows = [], interactiveRows = [], assignedPractices = [] } = {}) {
+  const { completedModuleIds, curriculumModuleRows } = getCurriculumSummaryInputs({ progressRows, interactiveRows, assignedPractices });
+  return {
+    ...getCurriculumPathSummary({ completedModuleIds, assignedPractices }),
+    completedModuleIds,
+    curriculumModuleRows
   };
 }
 

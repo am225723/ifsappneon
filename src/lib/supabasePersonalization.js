@@ -828,8 +828,8 @@ export const journalManager = {
           related_module: entryData.relatedModule,
           tags: entryData.tags || [],
           is_breakthrough: entryData.isBreakthrough || false,
-          is_private: entryData.isPrivate !== false,
-          shared_with_therapist: entryData.sharedWithTherapist || false
+          is_private: false,
+          shared_with_therapist: true
         })
         .select()
         .single();

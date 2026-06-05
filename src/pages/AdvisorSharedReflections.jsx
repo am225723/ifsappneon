@@ -58,7 +58,7 @@ export default function AdvisorSharedReflections() {
       setReflections([]);
       setSelectedReflection(null);
     } else {
-      setReflections((data || []).filter((reflection) => reflection.shared_with_advisor === true).map(normalizeLifeReflection));
+      setReflections((data || []).map(normalizeLifeReflection));
       setSelectedReflection((current) => (data || []).find((item) => item.id === current?.id) || (data || [])[0] || null);
     }
     setLoadingReflections(false);
@@ -89,7 +89,7 @@ export default function AdvisorSharedReflections() {
           <p className="text-xs font-bold uppercase tracking-[0.28em] text-brand-emerald-700 dark:text-brand-emerald-100">Advisor review</p>
           <h1 className="mt-3 text-4xl font-serif font-normal text-brand-stone-900 dark:text-slate-100">Shared Life Integration Reflections</h1>
           <p className="mt-3 max-w-3xl text-base leading-relaxed text-brand-stone-600 dark:text-slate-400">Reflections clients have chosen to share from their IFS in Daily Life practices.</p>
-          <p className="mt-4 inline-flex items-start gap-2 rounded-2xl bg-white/80 px-4 py-3 text-sm leading-relaxed text-brand-stone-600 shadow-sm dark:bg-slate-900/60 dark:text-slate-400"><Lock className="mt-0.5 h-4 w-4 shrink-0" /> This view only includes client-chosen shared reflections for actively assigned clients. Private reflections and archived reflections are not shown here.</p>
+          <p className="mt-4 inline-flex items-start gap-2 rounded-2xl bg-white/80 px-4 py-3 text-sm leading-relaxed text-brand-stone-600 shadow-sm dark:bg-slate-900/60 dark:text-slate-400"><Lock className="mt-0.5 h-4 w-4 shrink-0" /> This view includes Advisor-visible Life Integration reflections for actively assigned clients. Archived reflections, other clients' data, and Advisor notes are not shown here.</p>
         </section>
 
         <section className="mt-8 grid gap-6 lg:grid-cols-[0.8fr_1.2fr]">
@@ -115,7 +115,7 @@ export default function AdvisorSharedReflections() {
                 <div className="soft-card p-8 text-center">
                   <ShieldCheck className="mx-auto mb-3 h-8 w-8 text-brand-emerald-700 dark:text-brand-emerald-100" />
                   <h2 className="text-lg font-semibold text-brand-stone-900 dark:text-slate-100">No shared reflections for this client</h2>
-                  <p className="mt-2 text-sm text-brand-stone-600 dark:text-slate-400">Clients choose whether to share specific Life Integration reflections. This does not imply there are no private reflections.</p>
+                  <p className="mt-2 text-sm text-brand-stone-600 dark:text-slate-400">Client reflections are visible to the assigned Advisor where Advisor review exists so you can support the work together.</p>
                 </div>
               )}
               {reflections.map((reflection) => {
@@ -160,7 +160,7 @@ export default function AdvisorSharedReflections() {
                   {fieldLabels.map(([name, label]) => <DetailField key={name} label={label} value={selectedReflection[name]} />)}
                 </div>
                 <div className="mt-5 rounded-3xl bg-brand-gold-50/70 p-5 text-sm leading-relaxed text-brand-stone-600 dark:bg-brand-gold-950/20 dark:text-slate-400">
-                  Shared reflections are client-chosen support material for IFS conversation. This view does not include private reflections, archived reflections, Advisor notes, or clinical interpretations.
+                  Advisor-visible reflections are support material for IFS conversation. This view does not include archived reflections, Advisor notes, clients outside your assignments, or clinical interpretations.
                 </div>
               </div>
             )}

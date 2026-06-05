@@ -997,7 +997,7 @@ const Journal = () => {
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.22em] text-brand-gold-700 dark:text-brand-gold-500">Curriculum Reflections</p>
               <h2 className={`text-2xl font-bold ${textPrimary}`}>Module Reflections</h2>
-              <p className={`mt-2 text-sm ${textSecondary}`}>Private IFS Path reflections you save after modules appear here without becoming notes for anyone else.</p>
+              <p className={`mt-2 text-sm ${textSecondary}`}>IFS Path reflections you save after modules appear here. Your Advisor can review reflections to support your work together.</p>
             </div>
             <Link to="/curriculum" className="btn-sanctuary-secondary inline-flex items-center justify-center">
               Open Curriculum <ArrowRight className="ml-2 h-4 w-4" />
@@ -1016,7 +1016,7 @@ const Journal = () => {
                       <p className="text-xs font-bold uppercase tracking-[0.18em] text-brand-gold-700 dark:text-brand-gold-500">{reflection.moduleTitle}</p>
                       <p className={`mt-2 text-sm font-semibold ${textPrimary}`}>{summarizeCurriculumReflection(reflection)}</p>
                     </div>
-                    <span className="shrink-0 rounded-full bg-brand-stone-100 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-brand-stone-600 dark:bg-slate-800 dark:text-slate-300">Private</span>
+                    <span className="shrink-0 rounded-full bg-brand-stone-100 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-brand-stone-600 dark:bg-slate-800 dark:text-slate-300">Visible to Advisor</span>
                   </div>
                   <div className={`mt-3 flex flex-wrap gap-2 text-xs ${textTertiary}`}>
                     <span>{new Date(reflection.createdAt).toLocaleDateString()}</span>
@@ -1033,7 +1033,7 @@ const Journal = () => {
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.22em] text-brand-gold-700 dark:text-brand-gold-500">IFS in Daily Life</p>
               <h2 className={`text-2xl font-bold ${textPrimary}`}>Life Integration Reflections</h2>
-              <p className={`mt-2 text-sm ${textSecondary}`}>These saved reflections sit alongside your journal as private daily-life IFS moments.</p>
+              <p className={`mt-2 text-sm ${textSecondary}`}>These saved reflections sit alongside your journal as daily-life IFS moments your Advisor can review where Advisor support exists.</p>
             </div>
             <Link to="/life-integration" className="btn-sanctuary-secondary inline-flex items-center justify-center">
               Open Life Integration <ArrowRight className="ml-2 h-4 w-4" />

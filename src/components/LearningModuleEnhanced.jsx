@@ -524,7 +524,7 @@ const LearningModuleEnhanced = ({ module, onComplete, onBack, userProgress = {},
     }
   };
 
-  const handleSavePrivateReflection = async () => {
+  const handleSaveAdvisorVisibleReflection = async () => {
     if (!userId) return;
     const hasContent = Object.values(moduleReflection).some(value => value.trim());
     if (!hasContent) {
@@ -3019,9 +3019,9 @@ const LearningModuleEnhanced = ({ module, onComplete, onBack, userProgress = {},
               <div>
                 <p className="text-sm font-bold text-emerald-700">Completed</p>
                 <h3 className="text-xl font-bold text-gray-900">Take a moment to notice what shifted</h3>
-                <p className="mt-1 text-sm text-gray-600">You can save a private reflection about this module, or continue without writing.</p>
+                <p className="mt-1 text-sm text-gray-600">You can save a module reflection. Your Advisor can review it to support your work together, or you can continue without writing.</p>
               </div>
-              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700"><Lock className="h-3 w-3" /> Private by default</span>
+              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700"><Shield className="h-3 w-3" /> Visible to Advisor</span>
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2">
@@ -3054,7 +3054,7 @@ const LearningModuleEnhanced = ({ module, onComplete, onBack, userProgress = {},
             )}
 
             <div className="flex flex-wrap gap-2">
-              <button onClick={handleSavePrivateReflection} disabled={reflectionStatus === 'saving' || reflectionStatus === 'saved'} className="rounded-xl bg-gradient-to-r from-amber-600 to-emerald-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-60">{reflectionStatus === 'saving' ? 'Saving...' : reflectionStatus === 'saved' ? 'Saved Private Reflection' : 'Save Private Reflection'}</button>
+              <button onClick={handleSaveAdvisorVisibleReflection} disabled={reflectionStatus === 'saving' || reflectionStatus === 'saved'} className="rounded-xl bg-gradient-to-r from-amber-600 to-emerald-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-60">{reflectionStatus === 'saving' ? 'Saving...' : reflectionStatus === 'saved' ? 'Saved Reflection' : 'Save Reflection'}</button>
               <button onClick={handleSkipReflection} className="rounded-xl border border-gray-200 px-4 py-2 text-sm font-bold text-gray-700">Skip Writing</button>
               <button onClick={() => onComplete && onComplete(module)} className="rounded-xl border border-emerald-200 px-4 py-2 text-sm font-bold text-emerald-700">Return to Curriculum</button>
               <Link to={nextCurriculumRoute} className="rounded-xl border border-amber-200 px-4 py-2 text-sm font-bold text-amber-700">{nextCurriculumModule ? 'Continue to Next Module' : 'Return to Curriculum'}</Link>

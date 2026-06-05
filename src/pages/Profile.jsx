@@ -77,6 +77,19 @@ const woundColors = {
   helplessness: { bg: 'bg-rose-100', border: 'border-rose-400', text: 'text-rose-700', fill: 'bg-rose-500' }
 };
 
+const attachmentPatternDescriptions = {
+  secure: 'Secure patterns often reflect comfort with closeness, repair, and asking for support.',
+  anxious: 'Anxious patterns may show a part that seeks reassurance, closeness, or signs that the relationship is okay.',
+  avoidant: 'Avoidant patterns may show protective parts that create distance, self-reliance, or emotional space to feel safe.',
+  disorganized: 'Disorganized patterns may show parts with mixed needs: wanting closeness while also feeling unsure, guarded, or overwhelmed.'
+};
+
+function getAttachmentPrimarySecondary(assessment) {
+  const primary = assessment?.primary || assessment?.primaryPattern || assessment?.style || assessment?.ranked?.[0]?.[0] || null;
+  const secondary = assessment?.secondary || assessment?.secondaryPattern || assessment?.ranked?.[1]?.[0] || null;
+  return { primary, secondary };
+}
+
 const woundDescriptions = {
   abandonment: "A deep fear of being left alone or rejected. This wound often develops when caregivers were physically or emotionally unavailable.",
   shame: "A core belief of being fundamentally flawed or unworthy. This wound develops from criticism, humiliation, or conditional love.",
@@ -696,6 +709,33 @@ const Profile = ({ client }) => {
                   <p className="text-brand-stone-700 dark:text-slate-300 leading-relaxed">
                     Your attachment patterns reflect learned ways of seeking closeness, safety, and independence. Most people have a blend of patterns. Understanding them can support more compassionate parts work and more secure connection over time.
                   </p>
+                  {(() => {
+                    const { primary, secondary } = getAttachmentPrimarySecondary(attachmentAssessment);
+                    const primaryCopy = attachmentPatternDescriptions[String(primary || '').toLowerCase()];
+                    const secondaryCopy = attachmentPatternDescriptions[String(secondary || '').toLowerCase()];
+                    return (
+                      <div className="mt-4 grid gap-3 md:grid-cols-2">
+                        {primaryCopy && (
+                          <div className="rounded-xl bg-white/75 p-4">
+                            <p className="text-xs font-bold uppercase tracking-wide text-brand-gold-700">Primary Pattern · {String(primary).replace(/_/g, ' ')}</p>
+                            <p className="mt-2 text-sm leading-relaxed text-brand-stone-700">{primaryCopy}</p>
+                          </div>
+                        )}
+                        {secondaryCopy && (
+                          <div className="rounded-xl bg-white/75 p-4">
+                            <p className="text-xs font-bold uppercase tracking-wide text-brand-emerald-700">Secondary Pattern · {String(secondary).replace(/_/g, ' ')}</p>
+                            <p className="mt-2 text-sm leading-relaxed text-brand-stone-700">{secondaryCopy}</p>
+                          </div>
+                        )}
+                        {!primaryCopy && Object.entries(attachmentPatternDescriptions).map(([key, description]) => (
+                          <div key={key} className="rounded-xl bg-white/75 p-4">
+                            <p className="text-xs font-bold uppercase tracking-wide text-brand-stone-600">{key}</p>
+                            <p className="mt-2 text-sm leading-relaxed text-brand-stone-700">{description}</p>
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })()}
                 </div>
               </div>
             </div>

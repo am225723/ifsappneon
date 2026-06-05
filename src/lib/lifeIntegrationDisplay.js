@@ -76,8 +76,8 @@ export function normalizeLifeReflection(row = {}) {
     practiceRoute: getLifeReflectionRoute(type),
     detailRoute: row.id ? `/life-integration/reflections/${row.id}` : getLifeReflectionRoute(type),
     linkedPartName,
-    privacyLabel: row.shared_with_advisor ? 'Shared with Advisor' : 'Private',
-    isSharedWithAdvisor: row.shared_with_advisor === true,
-    isPrivate: row.shared_with_advisor !== true
+    privacyLabel: 'Visible to Advisor',
+    isSharedWithAdvisor: true,
+    isPrivate: false
   };
 }

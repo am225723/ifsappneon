@@ -173,7 +173,7 @@ export const LIVE_ACTIVITY_DEFINITIONS = {
       { title: 'Notice where you sense this part', prompt: 'Notice where you sense this part in or around your body.', helper: 'Stay curious and respectful, without forcing contact.' },
       { title: 'Ask what it wants you to know', prompt: 'Ask: “What does this part want me to know?”', helper: 'It is okay if the part says a lot, a little, or nothing yet.' },
       { title: 'Thank the part for showing up', prompt: 'Thank the part for showing up.', helper: 'Appreciation can be quiet and simple.' },
-      { title: 'Choose one gentle next step', prompt: 'Choose one gentle next step.', helper: 'You can keep it private and simply carry it with you.' }
+      { title: 'Choose one gentle next step', prompt: 'Choose one gentle next step.', helper: 'You can simply carry it with you after practice.' }
     ]
   },
   [LIVE_ACTIVITY_TYPES.SHARED_PARTS_MAP]: {

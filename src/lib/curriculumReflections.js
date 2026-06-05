@@ -35,8 +35,8 @@ export function normalizeCurriculumReflection(row = {}, reflection = null) {
     nextPractice: compactText(sourceReflection.nextPractice || sourceReflection.next_practice),
     linkedPartId: sourceReflection.linkedPartId || sourceReflection.linked_part_id || null,
     linkedPracticeRoute: sourceReflection.linkedPracticeRoute || sourceReflection.linked_practice_route || null,
-    isPrivate: sourceReflection.isPrivate ?? sourceReflection.is_private ?? true,
-    sharedWithAdvisor: sourceReflection.sharedWithAdvisor ?? sourceReflection.shared_with_advisor ?? false,
+    isPrivate: false,
+    sharedWithAdvisor: true,
     createdAt,
     updatedAt: sourceReflection.updatedAt || sourceReflection.updated_at || row.updated_at || createdAt,
     source: sourceReflection.source || SOURCE
@@ -65,8 +65,8 @@ export async function saveCurriculumReflection({ clientId, moduleId, moduleTitle
     selfEnergyQuality: compactText(selfEnergyQuality),
     nextPractice: compactText(nextPractice),
     linkedPartId: linkedPartId || null,
-    isPrivate: true,
-    sharedWithAdvisor: false,
+    isPrivate: false,
+    sharedWithAdvisor: true,
     source: SOURCE,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()
@@ -137,12 +137,12 @@ export async function loadCurriculumReflectionsForModule({ clientId, moduleId } 
 }
 
 export function summarizeCurriculumReflection(reflection) {
-  if (!reflection) return 'Private curriculum reflection';
+  if (!reflection) return 'Visible to Advisor curriculum reflection';
   if (reflection.insight) return reflection.insight.length > 120 ? `${reflection.insight.slice(0, 117)}...` : reflection.insight;
   if (reflection.partNoticed) return `Part noticed: ${reflection.partNoticed}`;
   if (reflection.selfEnergyQuality) return `Self-energy quality: ${reflection.selfEnergyQuality}`;
   if (reflection.nextPractice) return `Next practice: ${reflection.nextPractice}`;
-  return 'Private curriculum reflection';
+  return 'Visible to Advisor curriculum reflection';
 }
 
 export function countCurriculumReflectionsByModule(reflections = []) {

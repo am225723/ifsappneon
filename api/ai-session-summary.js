@@ -1,5 +1,5 @@
 /* global process */
-import { requireTherapist, requireTherapistAssignment, sql } from './_auth.js';
+import { isAdminUser, requireTherapist, requireTherapistAssignment, sql } from './_auth.js';
 import { callOpenRouterChat } from './_aiProvider.js';
 
 const DEFAULT_RANGE_DAYS = 7;
@@ -121,6 +121,8 @@ function buildMessages({ client, currentUser, rangeDays, since, clinicalData }) 
         'Do not say the client is safe. Do not say low risk unless explicit Advisor-reviewed risk data is supplied.',
         'Clearly distinguish client-submitted language from cautious AI interpretation.',
         'If information is missing, say so. Avoid invented details.',
+        'If available data is limited, include the exact phrase: Available data is limited for this range.',
+        'For sparse data, still provide session-opening questions and what the Advisor may want to clarify.',
         'Use concise bullets under exactly the requested numbered section headings.'
       ].join(' ')
     },
@@ -129,6 +131,7 @@ function buildMessages({ client, currentUser, rangeDays, since, clinicalData }) 
       content: JSON.stringify({
         task: 'Generate an on-demand AI Session Prep Summary for Advisor review only.',
         required_disclaimer: DISCLAIMER,
+        sparse_data_instruction: hasAnyClinicalData(clinicalData) ? null : 'Available data is limited for this range. Summarize what is available, list missing areas, suggest session-opening questions, and suggest what the Advisor may want to clarify.',
         required_sections: [
           '1. Quick Clinical Snapshot',
           '2. What the Client Wants to Focus On',
@@ -232,7 +235,7 @@ export default async function handler(req, res) {
     if (!requestedClientId) return sendError(res, 400, 'clientId is required', 'missing_client_id');
 
     const currentUser = await requireTherapist(req);
-    if (currentUser.user_role === 'therapist') {
+    if (!isAdminUser(currentUser)) {
       await requireTherapistAssignment(currentUser.id, requestedClientId);
     }
 
@@ -248,10 +251,6 @@ export default async function handler(req, res) {
     const rangeDays = clampRangeDays(requestedRangeDays);
     const since = new Date(Date.now() - rangeDays * 86400000).toISOString();
     const clinicalData = await loadClinicalData(client.id, since);
-    if (!hasAnyClinicalData(clinicalData)) {
-      return sendError(res, 404, 'No recent session prep data is available for this client.', 'no_recent_data');
-    }
-
     const messages = buildMessages({ client, currentUser, rangeDays, since, clinicalData });
     const summary = await callSessionSummaryAI(messages);
 
@@ -267,7 +266,8 @@ export default async function handler(req, res) {
           journalEntries: clinicalData.journalEntries.length,
           parts: clinicalData.parts.length,
           assignedHomework: clinicalData.assignedHomework.length,
-          progressSummary: clinicalData.progressSummary.length
+          progressSummary: clinicalData.progressSummary.length,
+          sparse: !hasAnyClinicalData(clinicalData)
         }
       },
       error: null

@@ -50,8 +50,8 @@ function pickPayload(payload = {}, appUser) {
     need_or_message: cleanString(payload.need_or_message),
     self_energy_response: cleanString(payload.self_energy_response),
     next_step: cleanString(payload.next_step),
-    is_private: true,
-    shared_with_advisor: payload.shared_with_advisor === true
+    is_private: false,
+    shared_with_advisor: true
   };
 }
 
@@ -65,7 +65,7 @@ function pickUpdates(updates = {}) {
   const normalized = {};
   for (const [key, value] of Object.entries(updates)) {
     if (key === 'shared_with_advisor') {
-      normalized.shared_with_advisor = value === true;
+      normalized.shared_with_advisor = true;
     } else {
       normalized[key] = cleanString(value);
     }
@@ -128,7 +128,6 @@ async function loadSharedReflectionForAdvisor(id, advisorId) {
     FROM ifs_life_integration_reflections r
     LEFT JOIN ifs_parts p ON p.id = r.part_id
     WHERE r.id = ${id}
-      AND r.shared_with_advisor IS TRUE
       AND r.archived_at IS NULL
     LIMIT 1
   `;
@@ -171,7 +170,6 @@ async function handleList(appUser, body) {
       FROM ifs_life_integration_reflections r
       LEFT JOIN ifs_parts p ON p.id = r.part_id
       WHERE r.client_id = $1
-        AND r.shared_with_advisor IS TRUE
         AND r.archived_at IS NULL
         AND ($2::text IS NULL OR r.reflection_type = $2)
       ORDER BY r.created_at DESC
@@ -240,7 +238,8 @@ async function handleUpdate(appUser, body) {
         need_or_message = ${merged.need_or_message},
         self_energy_response = ${merged.self_energy_response},
         next_step = ${merged.next_step},
-        shared_with_advisor = ${merged.shared_with_advisor === true},
+        is_private = false,
+        shared_with_advisor = true,
         updated_at = CURRENT_TIMESTAMP
     WHERE id = ${reflectionId}
       AND client_id = ${appUser.id}
@@ -269,7 +268,8 @@ async function handleShare(appUser, body, shared) {
   if (!reflectionId) throw Object.assign(new Error('Reflection id is required'), { statusCode: 400 });
   const rows = await sql`
     UPDATE ifs_life_integration_reflections
-    SET shared_with_advisor = ${shared},
+    SET is_private = false,
+        shared_with_advisor = true,
         updated_at = CURRENT_TIMESTAMP
     WHERE id = ${reflectionId}
       AND client_id = ${appUser.id}
@@ -291,7 +291,6 @@ async function handleListSharedForAdvisor(appUser, body) {
     FROM ifs_life_integration_reflections r
     LEFT JOIN ifs_parts p ON p.id = r.part_id
     WHERE r.client_id = $1
-      AND r.shared_with_advisor IS TRUE
       AND r.archived_at IS NULL
     ORDER BY r.created_at DESC
     LIMIT 50

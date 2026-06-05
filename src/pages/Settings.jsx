@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Palette, Sparkles, Zap, Moon, Sun, Check, Play } from 'lucide-react';
+import { ArrowLeft, Palette, Sparkles, Zap, Moon, Sun, Check, Play, DatabaseBackup, Link2, Map, ClipboardList } from 'lucide-react';
 import { useTheme, themePresets } from '../contexts/ThemeContext';
 import NotificationSettings from '../components/NotificationSettings';
 
@@ -144,6 +144,36 @@ export default function Settings() {
                 </div>
               </div>
             )}
+          </div>
+        </div>
+
+
+        <div className={`${theme.cardBg} backdrop-blur-sm rounded-2xl shadow-lg border ${theme.isDark ? 'border-slate-700' : 'border-gray-100'} p-6 mb-8 ${getAnimationClass('transition')}`}>
+          <div className="flex items-center gap-3 mb-6">
+            <div className={`p-2 rounded-xl ${theme.isDark ? 'bg-slate-800' : 'bg-brand-gold-50'}`}>
+              <DatabaseBackup className={`w-6 h-6 ${theme.isDark ? 'text-brand-gold-500' : 'text-brand-gold-700'}`} />
+            </div>
+            <div>
+              <h2 className={`text-xl font-semibold ${theme.isDark ? 'text-white' : 'text-gray-900'}`}>Data Recovery Tools</h2>
+              <p className={`text-sm ${theme.isDark ? 'text-slate-400' : 'text-gray-500'}`}>Legacy linking and import tools live here so your main IFS Path stays focused.</p>
+            </div>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {[
+              { label: 'Connect My IFS Profile', desc: 'Recover or verify a personal IFS profile connection without name matching.', icon: Link2, to: '/my-ifs' },
+              { label: 'Import Existing Parts Map', desc: 'Open Inner System Map to preview and confirm legacy parts-map import.', icon: Map, to: '/parts-relationships' },
+              { label: 'Review Legacy Assessment Data', desc: 'Review older assessment/progress data from your profile before using it.', icon: ClipboardList, to: '/profile' },
+              { label: 'Data Recovery Tools', desc: 'Legacy progress/import actions are contextual and require safe confirmation.', icon: DatabaseBackup, to: '/settings' }
+            ].map((item) => {
+              const Icon = item.icon;
+              return (
+                <Link key={item.label} to={item.to} className={`rounded-xl border p-4 ${theme.isDark ? 'border-slate-700 bg-slate-900/50 hover:bg-slate-800 text-slate-200' : 'border-brand-stone-200 bg-white/80 hover:bg-brand-gold-50 text-brand-stone-800'} ${getAnimationClass('transition')}`}>
+                  <Icon className="mb-3 h-5 w-5" />
+                  <p className="font-semibold">{item.label}</p>
+                  <p className={`mt-1 text-xs ${theme.isDark ? 'text-slate-400' : 'text-brand-stone-600'}`}>{item.desc}</p>
+                </Link>
+              );
+            })}
           </div>
         </div>
 

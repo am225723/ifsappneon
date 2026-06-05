@@ -8,6 +8,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { supabase } from '../lib/supabase';
 import { clientAuth } from '../lib/supabasePersonalization';
 import { curriculumModules } from '../data/curriculumData';
+import InteractiveWorksheetRenderer from '../components/ai/InteractiveWorksheetRenderer';
 import {
   loadAssignedHomeworkForClient,
   markAssignedHomeworkStarted,
@@ -294,7 +295,7 @@ const ClientHomework = () => {
                     {item.description && (
                       <div className="mt-3">
                         <p className={`text-xs font-semibold ${textMuted} uppercase tracking-wider mb-1`}>Instructions</p>
-                        <p className={`text-sm ${textSecondary} leading-relaxed whitespace-pre-wrap`}>{item.description}</p>
+                        <InteractiveWorksheetRenderer blocks={item.activity_blocks || item.activityBlocks} fallbackText={item.description} />
                       </div>
                     )}
 
