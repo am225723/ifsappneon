@@ -766,6 +766,15 @@ const CurriculumSystem = ({ onModuleSelect, userProgress = {}, clientId }) => {
                                   >
                                     Review Module
                                   </Link>
+                                  {reflectionCount > 0 && (
+                                    <Link
+                                      to="/journal"
+                                      onClick={(event) => event.stopPropagation()}
+                                      className="inline-flex justify-center rounded-lg border border-amber-200 px-4 py-2 text-sm font-medium text-amber-700 transition hover:bg-amber-50"
+                                    >
+                                      View Reflection
+                                    </Link>
+                                  )}
                                   <Link
                                     to={`/curriculum/module/${module.id}`}
                                     onClick={() => handleModuleSelect(module)}

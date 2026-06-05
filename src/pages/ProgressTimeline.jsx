@@ -84,7 +84,7 @@ export default function ProgressTimeline() {
             id: `curriculum-completed-${row.id || row.module_id}`,
             date: row.completed_at || row.updated_at || row.created_at || new Date().toISOString(),
             type: 'curriculum_practice',
-            title: 'Module completed',
+            title: 'Completed Module',
             description: 'Continued the IFS Path through curriculum practice.',
             details: 'These moments show how you are moving through your IFS Path.'
           })),
@@ -92,7 +92,7 @@ export default function ProgressTimeline() {
             id: `curriculum-reflection-${reflection.id}`,
             date: reflection.createdAt,
             type: 'curriculum_practice',
-            title: 'Module reflection saved',
+            title: 'Saved a Module Reflection',
             description: reflection.moduleTitle ? `Reflected on ${reflection.moduleTitle}.` : 'Saved a Module Reflection.',
             details: 'These moments show how you are moving through your IFS Path.'
           }))
@@ -132,7 +132,7 @@ export default function ProgressTimeline() {
 
   const stats = {
     daysOnJourney: milestones.length > 0 ? Math.ceil((new Date() - new Date(Math.min(...milestones.map(m => new Date(m.date))))) / 86400000) : 0,
-    modulesCompleted: milestones.filter(m => m.type === 'module').length,
+    modulesCompleted: curriculumProgressRows.filter((row) => row.completed || row.is_completed || row.completed_at).length || milestones.filter(m => m.type === 'module').length,
     exercisesDone: milestones.filter(m => m.type === 'exercise').length,
     journalEntries: milestones.filter(m => m.type === 'journal').length,
     dailyLifeReflections: lifeReflections.length,

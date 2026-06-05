@@ -888,7 +888,7 @@ export default function GuidedMeditation() {
 
       {categories.map(cat => {
         const CatIcon = cat.icon;
-        const meds = MEDITATIONS.filter(m => m.category === cat.id);
+        const meditationItems = MEDITATIONS.filter(m => m.category === cat.id);
         return (
           <div key={cat.id} className="mb-6">
             <h2 className={`text-sm font-semibold mb-3 flex items-center gap-2 ${isDark ? 'text-slate-300' : 'text-gray-700'}`}>
@@ -896,12 +896,12 @@ export default function GuidedMeditation() {
               {cat.label}
             </h2>
             <div className="space-y-3">
-              {meds.map(med => {
-                const MedIcon = med.icon;
-                const colors = colorMap[med.color];
-                const isCompleted = completedMeditations.includes(med.id);
+              {meditationItems.map(meditation => {
+                const MedIcon = meditation.icon;
+                const colors = colorMap[meditation.color];
+                const isCompleted = completedMeditations.includes(meditation.id);
                 return (
-                  <button key={med.id} onClick={() => startMeditation(med)}
+                  <button key={meditation.id} onClick={() => startMeditation(meditation)}
                     className={`w-full flex items-center gap-3 p-4 rounded-xl border transition-all text-left ${
                       isDark ? 'bg-slate-800/80 border-slate-700 hover:bg-slate-700' : 'bg-white border-gray-200 hover:border-amber-200 hover:shadow-sm'
                     }`}>
@@ -910,14 +910,14 @@ export default function GuidedMeditation() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <span className="text-sm font-semibold">{med.title}</span>
+                        <span className="text-sm font-semibold">{meditation.title}</span>
                         {isCompleted && <CheckCircle className="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" />}
                       </div>
                       <div className={`flex items-center gap-2 text-xs ${isDark ? 'text-slate-400' : 'text-gray-500'}`}>
                         <Clock className="w-3 h-3" />
-                        {formatTime(med.duration)}
+                        {formatTime(meditation.duration)}
                         <span className="mx-1">&middot;</span>
-                        {med.steps.length} steps
+                        {meditation.steps.length} steps
                       </div>
                     </div>
                     <ChevronRight className={`w-4 h-4 flex-shrink-0 ${isDark ? 'text-slate-500' : 'text-gray-400'}`} />

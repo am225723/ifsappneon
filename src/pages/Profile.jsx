@@ -95,6 +95,7 @@ const Profile = ({ client }) => {
   const [attachmentAssessment, setAttachmentAssessment] = useState(null);
   const [customAssessments, setCustomAssessments] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [profileError, setProfileError] = useState('');
   const [showHistory, setShowHistory] = useState(false);
   const [moodEntries, setMoodEntries] = useState([]);
   const [gamificationData, setGamificationData] = useState({});
@@ -103,6 +104,14 @@ const Profile = ({ client }) => {
   const [profileError, setProfileError] = useState('');
 
   const loadAssessmentData = async () => {
+    setProfileError('');
+    setAssessment(null);
+    setAllAssessments([]);
+    setPartsAssessment(null);
+    setSelfEnergyAssessment(null);
+    setAttachmentAssessment(null);
+    setCustomAssessments([]);
+
     if (!client?.id) {
       setProfileError('Your profile could not be loaded right now. Please refresh or return to My IFS Work.');
       setLoading(false);
@@ -125,7 +134,8 @@ const Profile = ({ client }) => {
         .like('module_id', 'assessment_%');
 
       if (interactiveResult?.error) throw interactiveResult.error;
-      const interactiveData = interactiveResult?.data || [];
+
+      const interactiveData = Array.isArray(interactiveResult?.data) ? interactiveResult.data : [];
       setAllAssessments(
         interactiveData
           .filter(d => d.module_id === 'assessment_wounds' && d.data)
@@ -175,14 +185,17 @@ const Profile = ({ client }) => {
         .eq('client_id', client.id)
         .like('module_id', 'custom_assessment_response_%');
       if (customError) throw customError;
-      if (customData && customData.length > 0) {
-        setCustomAssessments(customData.map(d => ({ ...d.data, moduleId: d.module_id, updatedAt: d.updated_at })));
+      if (Array.isArray(customData) && customData.length > 0) {
+        setCustomAssessments(customData.map(d => ({ ...(d.data || {}), moduleId: d.module_id, updatedAt: d.updated_at })));
       }
     } catch (error) {
-      console.error('Error loading assessment:', { message: error?.message || 'Request failed', status: error?.status || error?.statusCode || null });
+      if (import.meta.env.DEV) {
+        console.warn('[Profile] assessment data load failed', { message: error?.message || 'Request failed', status: error?.status || error?.statusCode || null });
+      }
       setProfileError('Your profile could not be loaded right now. Please refresh or return to My IFS Work.');
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const loadSupabaseData = async () => {
@@ -201,13 +214,11 @@ const Profile = ({ client }) => {
         setGamificationData({ xp: gam.xp, level: gam.level, badges: gam.badges });
         setStreakData({ currentStreak: gam.streak_current, longestStreak: gam.streak_longest, totalLogins: gam.total_logins });
       }
-      if (milesResult.status === 'fulfilled') setTimeline(milesResult.value || []);
-      const failures = [moodResult, gamResult, milesResult].filter((result) => result.status === 'rejected');
-      if (failures.length && import.meta.env.DEV) {
-        console.warn('[Profile] optional progress widgets failed', failures.map((result) => ({ message: result.reason?.message || 'Request failed' })));
-      }
+      setTimeline(miles || []);
     } catch (err) {
-      console.error('Error loading profile data:', { message: err?.message || 'Request failed' });
+      if (import.meta.env.DEV) {
+        console.warn('[Profile] optional profile data load failed', { message: err?.message || 'Request failed', status: err?.status || err?.statusCode || null });
+      }
     }
   };
 
@@ -320,16 +331,23 @@ const Profile = ({ client }) => {
     );
   }
 
+
   if (profileError) {
     return (
-      <div className="min-h-screen flex items-center justify-center px-4">
-        <div className="soft-card max-w-xl p-8 text-center">
-          <AlertCircle className="mx-auto mb-4 h-10 w-10 text-red-500" />
-          <h1 className="text-2xl font-semibold text-brand-stone-900 dark:text-slate-100">Your profile could not be loaded right now.</h1>
-          <p className="mt-3 text-sm text-brand-stone-600 dark:text-slate-400">Please refresh or return to My IFS Work.</p>
-          <div className="mt-6 flex flex-wrap justify-center gap-3">
-            <button type="button" onClick={() => window.location.reload()} className="btn-sanctuary-primary">Refresh</button>
-            <button type="button" onClick={() => navigate('/my-ifs')} className="btn-sanctuary-secondary">Return to My IFS Work</button>
+      <div className="min-h-screen">
+        <div className="max-w-4xl mx-auto px-4 py-12">
+          <div className="soft-card p-8 text-center">
+            <AlertCircle className="mx-auto mb-4 h-10 w-10 text-red-500" />
+            <h1 className="text-2xl font-serif font-normal text-brand-stone-900 dark:text-slate-100">Your profile could not be loaded right now.</h1>
+            <p className="mx-auto mt-3 max-w-xl text-sm text-brand-stone-600 dark:text-slate-400">Please refresh or return to My IFS Work.</p>
+            <div className="mt-6 flex flex-wrap justify-center gap-3">
+              <button type="button" onClick={() => window.location.reload()} className="btn-sanctuary-primary">
+                <RefreshCw className="h-4 w-4" /> Refresh
+              </button>
+              <button type="button" onClick={() => navigate('/my-ifs')} className="btn-sanctuary-secondary">
+                Return to My IFS Work
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -405,7 +423,7 @@ const Profile = ({ client }) => {
                 <div className="text-center py-12 bg-brand-stone-50 dark:bg-slate-800/50 rounded-xl">
                   <AlertCircle className="w-12 h-12 text-brand-stone-400 mx-auto mb-4" />
                   <h3 className="text-lg font-medium text-brand-stone-700 dark:text-slate-300 mb-2">No assessment yet</h3>
-                  <p className="text-brand-stone-500 dark:text-slate-500 mb-4">Start with an assessment when you are ready. Your assessments will appear here after you complete them. They help personalize how the curriculum supports your parts work.</p>
+                  <p className="text-brand-stone-500 dark:text-slate-500 mb-4">Your assessments will appear here after you complete them. Start with an assessment when you are ready so the curriculum can personalize support for your parts work.</p>
                   <button
                     onClick={() => navigate('/assessments')}
                     className="no-print px-6 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors"
@@ -602,9 +620,9 @@ const Profile = ({ client }) => {
                     Completed: {formatDate(selfEnergyAssessment.completedAt)}
                   </div>
                 )}
-                {selfEnergyAssessment.ranked && selfEnergyAssessment.ranked.length > 0 && (
+                {Array.isArray(selfEnergyAssessment.ranked) && selfEnergyAssessment.ranked.length > 0 && (
                   <div className="space-y-4 mb-6">
-                    {selfEnergyAssessment.ranked.map(([category, data], idx) => {
+                    {selfEnergyAssessment.ranked.map(([category, data = {}], idx) => {
                       const colors = ['bg-emerald-500', 'bg-teal-500', 'bg-cyan-500', 'bg-green-500', 'bg-lime-500', 'bg-sky-500', 'bg-brand-emerald-600', 'bg-brand-gold-600'];
                       const percentage = data.maxScale ? (data.average / data.maxScale) * 100 : (data.total / (data.count * 5)) * 100;
                       const level = percentage >= 80 ? 'Strong' : percentage >= 60 ? 'Developing' : 'Growing Edge';
@@ -648,9 +666,9 @@ const Profile = ({ client }) => {
                     Completed: {formatDate(attachmentAssessment.completedAt)}
                   </div>
                 )}
-                {attachmentAssessment.ranked && attachmentAssessment.ranked.length > 0 && (
+                {Array.isArray(attachmentAssessment.ranked) && attachmentAssessment.ranked.length > 0 && (
                   <div className="space-y-4 mb-6">
-                    {attachmentAssessment.ranked.map(([category, data], idx) => {
+                    {attachmentAssessment.ranked.map(([category, data = {}], idx) => {
                       const colors = ['bg-brand-gold-600', 'bg-brand-emerald-600', 'bg-brand-stone-600', 'bg-brand-stone-500'];
                       const styleLabels = { secure: 'Secure', anxious: 'Anxious-Preoccupied', avoidant: 'Dismissive-Avoidant', disorganized: 'Fearful-Avoidant' };
                       const percentage = data.maxScale ? (data.average / data.maxScale) * 100 : (data.total / (data.count * 5)) * 100;
@@ -701,9 +719,9 @@ const Profile = ({ client }) => {
                           </span>
                         )}
                       </div>
-                      {ca.ranked && ca.ranked.length > 0 && (
+                      {Array.isArray(ca.ranked) && ca.ranked.length > 0 && (
                         <div className="space-y-3">
-                          {ca.ranked.map(([category, data], idx) => {
+                          {ca.ranked.map(([category, data = {}], idx) => {
                             const barColors = ['bg-amber-500', 'bg-emerald-500', 'bg-brand-stone-500', 'bg-brand-stone-600', 'bg-rose-500'];
                             const percentage = data.percentage || ((data.average / (data.maxScale || 5)) * 100);
                             return (

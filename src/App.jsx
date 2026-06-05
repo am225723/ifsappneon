@@ -71,7 +71,7 @@ import PartsCards from './pages/PartsCards';
 import HealingTracker from './pages/HealingTracker';
 import ToolsDirectory from './pages/ToolsDirectory';
 import NotFound from './pages/NotFound';
-import MedicationInfo from './pages/MedicationInfo';
+import RouteErrorBoundary from './components/RouteErrorBoundary';
 import OnboardingFlow from './components/OnboardingFlow';
 import { initializePushNotifications } from './lib/pushNotifications';
 import ResourceLibrary from './pages/ResourceLibrary';
@@ -537,7 +537,7 @@ function AppContent({ authChecked, clerkLoaded, clerkSignedIn, isAuthenticated, 
               <RouteErrorBoundary resetKey={location.pathname}>
               <Routes>
                 <Route path="/" element={homeElement} />
-                <Route path="/home" element={clientOnly(homeElement)} />
+                <Route path="/home" element={<Navigate to="/" replace />} />
                 <Route path="/my-ifs" element={myIFSWorkElement} />
                 <Route path="/my-ifs-path" element={<Navigate to="/my-ifs" replace />} />
                 <Route path="/my-ifs-work" element={<Navigate to="/my-ifs" replace />} />
@@ -564,8 +564,8 @@ function AppContent({ authChecked, clerkLoaded, clerkSignedIn, isAuthenticated, 
                 <Route path="/micro-learning" element={<MicroLearning />} />
                 <Route path="/affirmations" element={<Affirmations />} />
                 <Route path="/therapy" element={<TherapyIntegration />} />
-                <Route path="/admin" element={therapistOnly(<TherapistDashboard />)} />
-                <Route path="/therapist" element={therapistOnly(<TherapistDashboard />)} />
+                <Route path="/admin" element={<Navigate to={isAdminOrSupervisor ? "/admin-hub" : "/therapist-dashboard"} replace />} />
+                <Route path="/therapist" element={<Navigate to="/therapist-dashboard" replace />} />
                 <Route path="/therapist-dashboard" element={therapistOnly(<TherapistDashboard />)} />
                 <Route path="/treatment-plans" element={therapistOnly(<TreatmentPlans />)} />
                 <Route path="/admin-hub" element={isAdminOrSupervisor ? <AdminHub /> : <UnauthorizedRedirect currentClient={currentClient} message="Admin or supervisor access is required for this page." />} />
@@ -582,8 +582,8 @@ function AppContent({ authChecked, clerkLoaded, clerkSignedIn, isAuthenticated, 
                 <Route path="/longitudinal-analytics" element={therapistOnly(<LongitudinalAnalytics />)} />
                 <Route path="/inbox" element={clientOnly(<ClientInbox />)} />
                 <Route path="/assigned-practices" element={clientOnly(<ClientHomework />)} />
-                <Route path="/my-homework" element={clientOnly(<ClientHomework />)} />
-                <Route path="/homework" element={clientOnly(<ClientHomework />)} />
+                <Route path="/my-homework" element={<Navigate to="/assigned-practices" replace />} />
+                <Route path="/homework" element={<Navigate to="/assigned-practices" replace />} />
                 <Route path="/pre-session-checkin" element={clientOnly(<PreSessionCheckin />)} />
                 <Route path="/live-session" element={clientOnly(<ClientLiveSession />)} />
                 <Route path="/progress-timeline" element={<ProgressTimeline />} />

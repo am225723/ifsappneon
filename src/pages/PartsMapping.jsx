@@ -725,12 +725,14 @@ const PartsMapping = () => {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4">
-      <div className="soft-card max-w-xl p-8 text-center">
-        <Brain className="mx-auto mb-4 h-10 w-10 text-brand-gold-700" />
-        <h1 className="text-2xl font-semibold text-brand-stone-900 dark:text-slate-100">Loading your Inner System Map…</h1>
-        <p className="mt-3 text-sm text-brand-stone-600 dark:text-slate-400">If this page does not continue, return to the first step and reopen Parts Mapping.</p>
-        <button type="button" onClick={() => setStep(1)} className="btn-sanctuary-primary mt-6">Return to Parts Mapping</button>
+    <div className="min-h-screen bg-gradient-to-br from-amber-50 via-orange-50 to-emerald-50 flex items-center justify-center p-6">
+      <div className="bg-white rounded-2xl shadow-lg p-8 text-center max-w-md">
+        <Brain className="w-10 h-10 text-amber-600 mx-auto mb-4" />
+        <h1 className="text-2xl font-bold text-gray-900 mb-2">Loading your Inner System Map…</h1>
+        <p className="text-gray-600 mb-5">We are preparing your parts mapping space.</p>
+        <button onClick={() => setStep(1)} className="px-5 py-2.5 bg-amber-600 text-white rounded-xl font-semibold hover:bg-amber-700 transition-colors">
+          Return to the beginning
+        </button>
       </div>
     </div>
   );
