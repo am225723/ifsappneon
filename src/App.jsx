@@ -71,7 +71,6 @@ import PartsCards from './pages/PartsCards';
 import HealingTracker from './pages/HealingTracker';
 import ToolsDirectory from './pages/ToolsDirectory';
 import NotFound from './pages/NotFound';
-import RouteErrorBoundary from './components/RouteErrorBoundary';
 import OnboardingFlow from './components/OnboardingFlow';
 import { initializePushNotifications } from './lib/pushNotifications';
 import ResourceLibrary from './pages/ResourceLibrary';
