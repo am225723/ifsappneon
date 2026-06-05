@@ -60,6 +60,14 @@ VITE_DATA_API_PATH
 
 This is non-secret and defaults to `/api/db` when unset.
 
+A legacy SSO callback path currently reads one additional frontend variable:
+
+```text
+VITE_JWT_SECRET
+```
+
+Because every `VITE_*` value is bundled into frontend code, do not place a real production secret in `VITE_JWT_SECRET`. Leave it unset unless the legacy SSO callback is deliberately used with a non-secret compatibility value; prefer Clerk/server-side verification for production SSO.
+
 ## 4. Variables that must never be frontend `VITE_*` secrets
 
 Do not create or expose any of these variables:
@@ -70,6 +78,7 @@ VITE_OPENAI_API_KEY
 VITE_PERPLEXITY_API_KEY
 ```
 
+Also do not expose server secrets through any other `VITE_*` alias, including `DATABASE_URL`, `CLERK_SECRET_KEY`, `OPENROUTER_API_KEY`, UploadThing server secrets, or any real JWT signing/verifying secret.
 Also do not expose server secrets through any other `VITE_*` alias, including `DATABASE_URL`, `CLERK_SECRET_KEY`, `OPENROUTER_API_KEY`, or UploadThing server secrets.
 
 ## 5. Production build commands
