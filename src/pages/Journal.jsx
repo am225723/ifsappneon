@@ -37,53 +37,8 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useParts } from '../contexts/PartsContext';
 import { loadLifeIntegrationReflections } from '../lib/lifeIntegration';
 import { normalizeLifeReflection } from '../lib/lifeIntegrationDisplay';
+import { loadCurriculumReflections, summarizeCurriculumReflection } from '../lib/curriculumReflections';
 
-const CONCERNING_KEYWORDS = [
-  'suicide', 'suicidal', 'kill myself', 'end my life', 'want to die', 'better off dead',
-  'self-harm', 'self harm', 'cutting', 'hurt myself', 'harming myself',
-  'hopeless', 'no reason to live', 'can\'t go on', 'give up on life',
-  'overdose', 'pills', 'jump off', 'hang myself',
-  'abuse', 'abused', 'being hit', 'hitting me', 'hurting me',
-  'dangerous', 'unsafe', 'scared for my life', 'threatening',
-  'relapse', 'using again', 'drinking again', 'started using',
-  'panic attack', 'can\'t breathe', 'dissociating', 'blacking out',
-  'nobody cares', 'all alone', 'no one would notice', 'disappear'
-];
-
-function scanForConcerningContent(text) {
-  if (!text) return [];
-  const lower = text.toLowerCase();
-  return CONCERNING_KEYWORDS.filter(kw => lower.includes(kw));
-}
-
-async function createTherapistAlert(clientId, clientName, journalTitle, matchedKeywords) {
-  try {
-    const { data: advisors } = await supabase
-      .from('ifs_clients')
-      .select('id')
-      .eq('user_role', 'therapist')
-      .eq('status', 'active');
-
-    if (!advisors || advisors.length === 0) return;
-
-    const alertMessage = `Journal entry from ${clientName} contains concerning language: "${matchedKeywords.slice(0, 3).join('", "')}"${matchedKeywords.length > 3 ? ` (+${matchedKeywords.length - 3} more)` : ''}. Entry title: "${journalTitle}"`;
-
-    for (const therapist of advisors) {
-      await supabase
-        .from('ifs_messages')
-        .insert({
-          client_id: clientId,
-          therapist_id: therapist.id,
-          sender_role: 'system',
-          content: alertMessage,
-          created_at: new Date().toISOString(),
-          read: false
-        });
-    }
-  } catch (err) {
-    console.error('Error creating advisor alert:', err);
-  }
-}
 
 const calculateStreak = (entries) => {
   if (!entries || entries.length === 0) return 0;
@@ -170,6 +125,7 @@ const Journal = () => {
   const [entries, setEntries] = useState([]);
   const [selectedEntry, setSelectedEntry] = useState(null);
   const [lifeReflections, setLifeReflections] = useState([]);
+  const [curriculumReflections, setCurriculumReflections] = useState([]);
   const [isWriting, setIsWriting] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedMood, setSelectedMood] = useState('all');
@@ -342,6 +298,16 @@ const Journal = () => {
   }, []);
 
   useEffect(() => {
+    const loadCurriculumReflectionRows = async () => {
+      const client = clientAuth.getCurrentClientValidated();
+      if (!client?.id) return;
+      const { data, error } = await loadCurriculumReflections({ clientId: client.id, limit: 6 });
+      if (!error) setCurriculumReflections(data || []);
+    };
+    loadCurriculumReflectionRows();
+  }, []);
+
+  useEffect(() => {
     const loadLifeReflections = async () => {
       const client = clientAuth.getCurrentClientValidated();
       if (!client?.id) return;
@@ -408,10 +374,6 @@ const Journal = () => {
           newEntry.id = data.id;
         }
 
-        const concerningMatches = scanForConcerningContent(entryContent);
-        if (concerningMatches.length > 0) {
-          createTherapistAlert(client.id, client.name || 'Client', entryTitle, concerningMatches);
-        }
       }
     } catch (err) {
       console.error('Error saving entry to Supabase:', err);
@@ -1028,6 +990,43 @@ const Journal = () => {
             </button>
           </div>
         </div>
+
+
+        <section className={`${cardBg} p-6 mb-8`}>
+          <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[0.22em] text-brand-gold-700 dark:text-brand-gold-500">Curriculum Reflections</p>
+              <h2 className={`text-2xl font-bold ${textPrimary}`}>Module Reflections</h2>
+              <p className={`mt-2 text-sm ${textSecondary}`}>Private IFS Path reflections you save after modules appear here without becoming notes for anyone else.</p>
+            </div>
+            <Link to="/curriculum" className="btn-sanctuary-secondary inline-flex items-center justify-center">
+              Open Curriculum <ArrowRight className="ml-2 h-4 w-4" />
+            </Link>
+          </div>
+          {curriculumReflections.length === 0 ? (
+            <div className={`rounded-2xl border border-dashed border-brand-stone-200 p-5 text-sm ${textSecondary} dark:border-slate-700`}>
+              Curriculum reflections you save after modules will appear here.
+            </div>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {curriculumReflections.map((reflection) => (
+                <Link key={reflection.id} to={reflection.moduleId ? `/curriculum/module/${reflection.moduleId}` : '/curriculum'} className="rounded-2xl border border-brand-stone-100 bg-white/70 p-4 transition hover:-translate-y-0.5 hover:shadow-sm dark:border-slate-800 dark:bg-slate-900/45">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-xs font-bold uppercase tracking-[0.18em] text-brand-gold-700 dark:text-brand-gold-500">{reflection.moduleTitle}</p>
+                      <p className={`mt-2 text-sm font-semibold ${textPrimary}`}>{summarizeCurriculumReflection(reflection)}</p>
+                    </div>
+                    <span className="shrink-0 rounded-full bg-brand-stone-100 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-brand-stone-600 dark:bg-slate-800 dark:text-slate-300">Private</span>
+                  </div>
+                  <div className={`mt-3 flex flex-wrap gap-2 text-xs ${textTertiary}`}>
+                    <span>{new Date(reflection.createdAt).toLocaleDateString()}</span>
+                    {reflection.partNoticed && <span>Part noticed: {reflection.partNoticed}</span>}
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
+        </section>
 
         <section className={`${cardBg} p-6 mb-8`}>
           <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

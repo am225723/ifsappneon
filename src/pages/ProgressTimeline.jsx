@@ -11,6 +11,7 @@ import { supabaseHelpers } from '../lib/supabase';
 import { clientAuth } from '../lib/supabasePersonalization';
 import { loadLifeIntegrationReflections } from '../lib/lifeIntegration';
 import { formatLifeReflectionType, normalizeLifeReflection, summarizeLifeReflection } from '../lib/lifeIntegrationDisplay';
+import { loadCurriculumReflections } from '../lib/curriculumReflections';
 
 const milestoneTypes = {
   module: { label: 'Module', color: 'amber', icon: BookOpen, bg: 'bg-amber-100', text: 'text-amber-700', border: 'border-amber-300', dot: 'bg-amber-500', darkBg: 'bg-amber-900/30', darkText: 'text-amber-300', darkBorder: 'border-amber-700' },
@@ -18,6 +19,7 @@ const milestoneTypes = {
   journal: { label: 'Journal', color: 'blue', icon: Heart, bg: 'bg-blue-100', text: 'text-blue-700', border: 'border-blue-300', dot: 'bg-blue-500', darkBg: 'bg-blue-900/30', darkText: 'text-blue-300', darkBorder: 'border-blue-700' },
   exercise: { label: 'Exercise', color: 'green', icon: Activity, bg: 'bg-green-100', text: 'text-green-700', border: 'border-green-300', dot: 'bg-green-500', darkBg: 'bg-green-900/30', darkText: 'text-green-300', darkBorder: 'border-green-700' },
   badge: { label: 'Badge', color: 'gold', icon: Award, bg: 'bg-yellow-100', text: 'text-yellow-700', border: 'border-yellow-300', dot: 'bg-yellow-500', darkBg: 'bg-yellow-900/30', darkText: 'text-yellow-300', darkBorder: 'border-yellow-700' },
+  curriculum_practice: { label: 'Curriculum Practice', color: 'amber', icon: BookOpen, bg: 'bg-amber-100', text: 'text-amber-700', border: 'border-amber-300', dot: 'bg-amber-500', darkBg: 'bg-amber-900/30', darkText: 'text-amber-300', darkBorder: 'border-amber-700' },
   daily_life: { label: 'Daily Life Practice', color: 'emerald', icon: Sparkles, bg: 'bg-emerald-100', text: 'text-emerald-700', border: 'border-emerald-300', dot: 'bg-emerald-500', darkBg: 'bg-emerald-900/30', darkText: 'text-emerald-300', darkBorder: 'border-emerald-700' },
 };
 
@@ -50,8 +52,10 @@ export default function ProgressTimeline() {
   const isDark = theme.isDark;
   const [milestones, setMilestones] = useState([]);
   const [lifeReflections, setLifeReflections] = useState([]);
+  const [curriculumReflections, setCurriculumReflections] = useState([]);
+  const [curriculumProgressRows, setCurriculumProgressRows] = useState([]);
   const [expandedId, setExpandedId] = useState(null);
-  const [activeFilters, setActiveFilters] = useState(new Set(['module', 'assessment', 'journal', 'exercise', 'badge', 'daily_life']));
+  const [activeFilters, setActiveFilters] = useState(new Set(['module', 'curriculum_practice', 'assessment', 'journal', 'exercise', 'badge', 'daily_life']));
 
   useEffect(() => {
     const loadMilestones = async () => {
@@ -61,8 +65,12 @@ export default function ProgressTimeline() {
       try {
         const data = await supabaseHelpers.getMilestones(clientId);
         const { data: reflectionRows } = await loadLifeIntegrationReflections({ clientId, self: true });
+        const { data: curriculumReflectionRows } = await loadCurriculumReflections({ clientId, limit: 40 });
+        const progressRows = await supabaseHelpers.getAllModuleProgress(clientId);
         const normalizedLifeReflections = (reflectionRows || []).map(normalizeLifeReflection);
         setLifeReflections(normalizedLifeReflections);
+        setCurriculumReflections(curriculumReflectionRows || []);
+        setCurriculumProgressRows(progressRows || []);
         const lifeMilestones = normalizedLifeReflections.map((reflection) => ({
           id: `life-${reflection.id}`,
           date: reflection.created_at,
@@ -71,11 +79,29 @@ export default function ProgressTimeline() {
           description: summarizeLifeReflection(reflection),
           details: 'These reflections show moments when you practiced IFS outside the app.'
         }));
+        const curriculumPracticeMilestones = [
+          ...(progressRows || []).filter((row) => row.completed || row.is_completed || row.completed_at).map((row) => ({
+            id: `curriculum-completed-${row.id || row.module_id}`,
+            date: row.completed_at || row.updated_at || row.created_at || new Date().toISOString(),
+            type: 'curriculum_practice',
+            title: 'Module completed',
+            description: 'Continued the IFS Path through curriculum practice.',
+            details: 'These moments show how you are moving through your IFS Path.'
+          })),
+          ...(curriculumReflectionRows || []).map((reflection) => ({
+            id: `curriculum-reflection-${reflection.id}`,
+            date: reflection.createdAt,
+            type: 'curriculum_practice',
+            title: 'Module reflection saved',
+            description: reflection.moduleTitle ? `Reflected on ${reflection.moduleTitle}.` : 'Saved a Module Reflection.',
+            details: 'These moments show how you are moving through your IFS Path.'
+          }))
+        ];
         if (data && data.length > 0) {
-          setMilestones([...data, ...lifeMilestones]);
+          setMilestones([...data, ...curriculumPracticeMilestones, ...lifeMilestones]);
         } else {
           const sample = generateSampleMilestones();
-          setMilestones([...sample, ...lifeMilestones]);
+          setMilestones([...sample, ...curriculumPracticeMilestones, ...lifeMilestones]);
           for (const milestone of sample) {
             await supabaseHelpers.saveMilestone(clientId, milestone);
           }
@@ -110,6 +136,7 @@ export default function ProgressTimeline() {
     exercisesDone: milestones.filter(m => m.type === 'exercise').length,
     journalEntries: milestones.filter(m => m.type === 'journal').length,
     dailyLifeReflections: lifeReflections.length,
+    curriculumReflections: curriculumReflections.length,
   };
 
   const formatDate = (dateStr) => {
@@ -123,6 +150,7 @@ export default function ProgressTimeline() {
     { label: 'Exercises Done', value: stats.exercisesDone, icon: Activity, color: 'from-green-500 to-emerald-500' },
     { label: 'Journal Entries', value: stats.journalEntries, icon: Heart, color: 'from-blue-500 to-cyan-500' },
     { label: 'Daily-life reflections', value: stats.dailyLifeReflections, icon: Sparkles, color: 'from-emerald-500 to-teal-500' },
+    { label: 'Module reflections', value: stats.curriculumReflections, icon: BookOpen, color: 'from-amber-500 to-emerald-500' },
   ];
 
   return (
@@ -167,6 +195,25 @@ export default function ProgressTimeline() {
           );
         })}
       </div>
+
+
+      <section className={`mb-6 rounded-2xl border p-4 ${isDark ? 'border-amber-900/50 bg-amber-950/20' : 'border-amber-100 bg-amber-50/70'}`}>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <p className={`text-xs font-bold uppercase tracking-[0.2em] ${isDark ? 'text-amber-300' : 'text-amber-700'}`}>Curriculum Practice</p>
+            <h2 className={`mt-1 font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>IFS Path progress</h2>
+            <p className={`mt-2 text-sm ${isDark ? 'text-slate-400' : 'text-gray-600'}`}>These moments show how you are moving through your IFS Path.</p>
+          </div>
+          <Link to="/curriculum" className="inline-flex items-center justify-center rounded-xl bg-amber-600 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-700">
+            Open Curriculum
+          </Link>
+        </div>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <span className={`rounded-full px-3 py-1 text-xs font-semibold ${isDark ? 'bg-slate-800 text-slate-200' : 'bg-white text-gray-700'}`}>{curriculumProgressRows.filter((row) => row.completed || row.is_completed || row.completed_at).length} module{curriculumProgressRows.filter((row) => row.completed || row.is_completed || row.completed_at).length === 1 ? '' : 's'} completed</span>
+          <span className={`rounded-full px-3 py-1 text-xs font-semibold ${isDark ? 'bg-amber-900/40 text-amber-200' : 'bg-amber-100 text-amber-700'}`}>{curriculumReflections.length} reflection{curriculumReflections.length === 1 ? '' : 's'} saved</span>
+          {curriculumReflections[0]?.createdAt && <span className={`rounded-full px-3 py-1 text-xs font-semibold ${isDark ? 'bg-slate-800 text-slate-200' : 'bg-white text-gray-700'}`}>Latest reflection {formatDate(curriculumReflections[0].createdAt)}</span>}
+        </div>
+      </section>
 
       <section className={`mb-6 rounded-2xl border p-4 ${isDark ? 'border-emerald-900/50 bg-emerald-950/20' : 'border-emerald-100 bg-emerald-50/70'}`}>
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">

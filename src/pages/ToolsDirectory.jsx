@@ -36,7 +36,7 @@ const sections = [
     title: 'Core IFS Path',
     description: 'Start with Curriculum / IFS Path, then use assessments and progress views to support the journey.',
     items: [
-      { label: 'Curriculum / IFS Path', description: 'Follow the main guided path through IFS, then use the tools below to support what you are learning.', to: '/curriculum', icon: BookOpen, roles: ['client', 'therapist', 'advisor', 'admin', 'supervisor'] },
+      { label: 'Curriculum / IFS Path', description: 'Follow the main guided path through IFS, then use reflections and tools to support what you are learning.', to: '/curriculum', icon: BookOpen, roles: ['client', 'therapist', 'advisor', 'admin', 'supervisor'] },
       { label: 'Interactive Assessments', description: 'Wound Patterns, Parts System, Self-Energy, and Attachment Pattern reflections.', to: '/assessments', icon: Brain, roles: ['client', 'therapist', 'advisor', 'admin', 'supervisor'] },
       { label: 'My IFS Work', description: 'Your personal self-work home for curriculum, parts, and reflections.', to: '/my-ifs', icon: Sparkles, roles: ['client', 'therapist', 'advisor', 'admin', 'supervisor'] },
       { label: 'My Assessments & Progress', description: 'Review assessment insights and progress summaries.', to: '/profile', icon: ClipboardCheck, roles: ['client', 'therapist', 'advisor', 'admin', 'supervisor'] },

@@ -16,6 +16,7 @@ import { WOUND_MODULE_PRIORITIES, LEVEL_ORDER } from '../lib/woundModulePrioriti
 import { canAccessModule } from '../lib/accessControl';
 import { loadAssignedHomeworkForClient } from '../lib/assignedHomework';
 import { getCurriculumPathSummary, getModuleActionLabel, getModuleSupportLinks } from '../lib/curriculumExperience';
+import { countCurriculumReflectionsByModule, loadCurriculumReflections } from '../lib/curriculumReflections';
 
 const CurriculumSystem = ({ onModuleSelect, userProgress = {}, clientId }) => {
   const [completedModules, setCompletedModules] = useState([]);
@@ -28,6 +29,7 @@ const CurriculumSystem = ({ onModuleSelect, userProgress = {}, clientId }) => {
   const [woundFocus, setWoundFocus] = useState('primary');
   const [restartingModule, setRestartingModule] = useState(null);
   const [assignedHomeworkIds, setAssignedHomeworkIds] = useState(new Set());
+  const [curriculumReflectionCounts, setCurriculumReflectionCounts] = useState({});
 
   useEffect(() => {
     if (userProgress.completedModules) {
@@ -52,6 +54,9 @@ const CurriculumSystem = ({ onModuleSelect, userProgress = {}, clientId }) => {
             .eq('client_id', id),
           loadAssignedHomeworkForClient(id)
         ]);
+
+        const { data: curriculumReflections } = await loadCurriculumReflections({ clientId: id, limit: 200 });
+        setCurriculumReflectionCounts(countCurriculumReflectionsByModule(curriculumReflections || []));
 
         if (curriculumRes) {
           setPersonalizedCurriculum(curriculumRes);
@@ -610,6 +615,7 @@ const CurriculumSystem = ({ onModuleSelect, userProgress = {}, clientId }) => {
                       const isHigh = priority?.level === 'high';
                       const supportLinks = getModuleSupportLinks(module);
                       const moduleAvailable = status !== 'locked' && status !== 'restricted';
+                      const reflectionCount = curriculumReflectionCounts[module.id] || 0;
 
                       return (
                         <div
@@ -705,6 +711,18 @@ const CurriculumSystem = ({ onModuleSelect, userProgress = {}, clientId }) => {
                                         <span>Builds on earlier modules</span>
                                       </span>
                                     )}
+                                    {status === 'completed' && reflectionCount > 0 && (
+                                      <span className="flex items-center space-x-1 text-emerald-600">
+                                        <Sparkles className="w-3 h-3" />
+                                        <span>{reflectionCount} Module Reflection{reflectionCount === 1 ? '' : 's'}</span>
+                                      </span>
+                                    )}
+                                    {status !== 'completed' && moduleAvailable && (
+                                      <span className="flex items-center space-x-1 text-amber-600">
+                                        <Sparkles className="w-3 h-3" />
+                                        <span>You can save a reflection when you complete this module.</span>
+                                      </span>
+                                    )}
                                   </div>
 
                                   {moduleAvailable && supportLinks.length > 0 && (
@@ -747,6 +765,13 @@ const CurriculumSystem = ({ onModuleSelect, userProgress = {}, clientId }) => {
                                     className="inline-flex justify-center rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-emerald-700"
                                   >
                                     Review Module
+                                  </Link>
+                                  <Link
+                                    to={`/curriculum/module/${module.id}`}
+                                    onClick={() => handleModuleSelect(module)}
+                                    className="inline-flex justify-center rounded-lg border border-emerald-200 px-4 py-2 text-sm font-medium text-emerald-700 transition hover:bg-emerald-50"
+                                  >
+                                    {reflectionCount > 0 ? 'Reflect Again' : 'Add Reflection'}
                                   </Link>
                                   <button
                                     onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleRestartModule(module); }}

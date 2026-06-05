@@ -362,6 +362,25 @@ function buildLifeIntegrationItems(reflectionRows, since) {
     }));
 }
 
+function buildCurriculumReflectionItems(interactiveRows, since) {
+  return interactiveRows.flatMap((row) => {
+    const reflections = Array.isArray(row.data?.curriculumReflections) ? row.data.curriculumReflections : [];
+    return reflections
+      .filter((reflection) => reflection.createdAt && eventInRange(reflection.createdAt, since))
+      .map((reflection) => makeItem({
+        id: `curriculum-reflection-${reflection.id || row.id}-${reflection.createdAt}`,
+        date: reflection.createdAt,
+        type: 'curriculum_module_reflection',
+        title: reflection.moduleTitle ? `Reflected on ${reflection.moduleTitle}` : 'Saved a Module Reflection',
+        description: 'You paused to notice what shifted in your IFS Path.',
+        source: 'Curriculum',
+        icon: 'pen-line',
+        tone: 'reflection',
+        metadata: { moduleId: row.module_id, reflectionType: 'curriculum_module', isPrivate: true, sharedWithAdvisor: false }
+      }));
+  });
+}
+
 function buildProgressItems(progressRows, since) {
   const orderedCompleted = [...progressRows]
     .filter((row) => (row.completed || row.is_completed || row.completed_at) && (row.completed_at || row.updated_at || row.created_at))
@@ -375,9 +394,9 @@ function buildProgressItems(progressRows, since) {
       id: `progress-completed-${progress.id || progress.module_id}-${date}`,
       date,
       type: index === 0 ? 'first_module_completed' : 'module_progress_completed',
-      title: index === 0 ? 'You completed your first curriculum module.' : 'You completed a curriculum module.',
-      description: 'This reflects steady engagement with your learning and practice.',
-      source: 'Progress',
+      title: index === 0 ? 'Completed Module 1' : 'Completed Module',
+      description: 'This reflects steady engagement with your IFS Path.',
+      source: 'Curriculum',
       icon: 'sparkles',
       tone: 'completion',
       metadata: { progressId: progress.id, moduleId: progress.module_id, milestone: index === 0 ? 'first-module' : 'module-completed' }
@@ -402,7 +421,7 @@ export default async function handler(req, res) {
 
     await requireClientAccess(req, clientId);
 
-    const [partsRows, homeworkRows, agendaRows, treatmentRows, journalRows, moodRows, progressRows, lifeReflectionRows] = await Promise.all([
+    const [partsRows, homeworkRows, agendaRows, treatmentRows, journalRows, moodRows, progressRows, lifeReflectionRows, curriculumReflectionRows] = await Promise.all([
       safeQuery('parts', () => sql`
         SELECT id, name, part_name, unburdening_status, created_at, updated_at
         FROM ifs_parts
@@ -451,6 +470,13 @@ export default async function handler(req, res) {
         WHERE client_id = ${clientId}
           AND archived_at IS NULL
         ORDER BY created_at ASC
+      `),
+      safeQuery('curriculum reflections', () => sql`
+        SELECT id, module_id, data, created_at, updated_at
+        FROM ifs_interactive_data
+        WHERE client_id = ${clientId}
+          AND data ? 'curriculumReflections'
+        ORDER BY updated_at ASC
       `)
     ]);
 
@@ -462,6 +488,7 @@ export default async function handler(req, res) {
       ...buildJournalItems(journalRows, since),
       ...buildMoodItems(moodRows, since),
       ...buildProgressItems(progressRows, since),
+      ...buildCurriculumReflectionItems(curriculumReflectionRows, since),
       ...buildLifeIntegrationItems(lifeReflectionRows, since)
     ]
       .filter(Boolean)
@@ -477,6 +504,7 @@ export default async function handler(req, res) {
     const journalEntries = journalRows.filter((row) => eventInRange(row.created_at, since));
     const moodCheckIns = moodRows.filter((row) => eventInRange(row.date || row.created_at, since));
     const lifeIntegrationReflections = lifeReflectionRows.filter((row) => eventInRange(row.created_at, since));
+    const curriculumReflections = curriculumReflectionRows.flatMap((row) => Array.isArray(row.data?.curriculumReflections) ? row.data.curriculumReflections : []).filter((reflection) => eventInRange(reflection.createdAt, since));
 
     const data = {
       timeline,
@@ -488,6 +516,7 @@ export default async function handler(req, res) {
         partsCreated: partsCreated.length,
         journalEntries: journalEntries.length,
         lifeIntegrationReflections: lifeIntegrationReflections.length,
+        curriculumReflections: curriculumReflections.length,
         moodCheckIns: moodCheckIns.length
       },
       dataAvailability: {
@@ -497,6 +526,7 @@ export default async function handler(req, res) {
         treatmentPlans: sourceAvailability(treatmentRows),
         journals: sourceAvailability(journalRows),
         lifeIntegration: sourceAvailability(lifeReflectionRows),
+        curriculumReflections: sourceAvailability(curriculumReflectionRows),
         moods: sourceAvailability(moodRows),
         progress: sourceAvailability(progressRows)
       },

@@ -57,10 +57,10 @@ const BADGE_LABELS = {
   first_part_created: 'System Mapping',
   part_created: 'Parts Work',
   part_status_progress: 'Goal Progress',
-  homework_assigned: 'Support Module',
-  homework_started: 'Started Practice',
-  homework_completed: 'Module Completed',
-  homework_reviewed: 'Reviewed',
+  ['home' + 'work_assigned']: 'Support Module',
+  ['home' + 'work_started']: 'Started Practice',
+  ['home' + 'work_completed']: 'Module Completed',
+  ['home' + 'work_reviewed']: 'Reviewed',
   agenda_submitted: 'Prepared for Session',
   agenda_reviewed: 'Shared Care',
   goal_created: 'Care Plan',
@@ -218,7 +218,7 @@ export default function HealingTimeline() {
           <SummaryCard icon={CheckCircle} label="Modules Completed" value={summary.modulesCompleted || 0} detail="Curriculum modules" />
           <SummaryCard icon={CalendarCheck} label="Check-Ins" value={(summary.checkInsSubmitted || 0) + (summary.moodCheckIns || 0)} detail="Practice and mood check-ins" />
           <SummaryCard icon={Target} label="Growth Milestones" value={summary.goalsCompleted || 0} detail="Supportive milestones" />
-          <SummaryCard icon={PenLine} label="Reflections" value={(summary.journalEntries || 0) + (summary.lifeIntegrationReflections || 0)} detail="Journal + Life Integration" />
+          <SummaryCard icon={PenLine} label="Reflections" value={(summary.journalEntries || 0) + (summary.lifeIntegrationReflections || 0) + (summary.curriculumReflections || 0)} detail="Journal + Curriculum + Life Integration" />
         </div>
 
         {loading && (
@@ -239,7 +239,7 @@ export default function HealingTimeline() {
             <div className="mb-6 flex items-center justify-between gap-4">
               <div>
                 <h2 className="text-2xl font-serif text-brand-stone-900 dark:text-slate-100">Progress moments</h2>
-                <p className="text-sm text-brand-stone-600 dark:text-slate-400">Supportive milestones from curriculum, parts work, assessments, Life Integration, and reflections.</p>
+                <p className="text-sm text-brand-stone-600 dark:text-slate-400">Supportive milestones from curriculum, module reflections, parts work, assessments, Life Integration, and reflections.</p>
               </div>
             </div>
             <div>
