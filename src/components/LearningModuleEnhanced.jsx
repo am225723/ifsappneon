@@ -48,6 +48,7 @@ import { generatePersonalizedLesson } from '../lib/dynamicLessonContent';
 import { generatePersonalizedActivity } from '../lib/dynamicActivityContent';
 import { syncAssignedHomeworkCompletion } from '../lib/assignedHomework';
 import { getModuleSupportLinks } from '../lib/curriculumExperience';
+import { getNextModule } from '../data/curriculumData';
 import { saveCurriculumReflection } from '../lib/curriculumReflections';
 
 const VoiceRecorder = ({ onRecordingComplete, label }) => {
@@ -206,6 +207,15 @@ const LearningModuleEnhanced = ({ module, onComplete, onBack, userProgress = {},
   const currentStep = steps[currentStepIndex];
   const isLastStep = currentStepIndex === steps.length - 1;
   const isFirstStep = currentStepIndex === 0;
+  const completedModuleIds = Array.from(new Set([
+    ...(Array.isArray(userProgress.completedModules) ? userProgress.completedModules : []),
+    ...Object.entries(userProgress || {})
+      .filter(([, progress]) => progress?.completed || progress?.is_completed)
+      .map(([id]) => id),
+    module.id
+  ].filter(Boolean)));
+  const nextCurriculumModule = getNextModule(completedModuleIds);
+  const nextCurriculumRoute = nextCurriculumModule ? `/curriculum/module/${nextCurriculumModule.id}` : '/curriculum';
 
   const migrateResponseKeys = (responses, moduleSteps) => {
     if (!responses || Object.keys(responses).length === 0) return responses;
@@ -3047,7 +3057,7 @@ const LearningModuleEnhanced = ({ module, onComplete, onBack, userProgress = {},
               <button onClick={handleSavePrivateReflection} disabled={reflectionStatus === 'saving' || reflectionStatus === 'saved'} className="rounded-xl bg-gradient-to-r from-amber-600 to-emerald-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-60">{reflectionStatus === 'saving' ? 'Saving...' : reflectionStatus === 'saved' ? 'Saved Private Reflection' : 'Save Private Reflection'}</button>
               <button onClick={handleSkipReflection} className="rounded-xl border border-gray-200 px-4 py-2 text-sm font-bold text-gray-700">Skip Writing</button>
               <button onClick={() => onComplete && onComplete(module)} className="rounded-xl border border-emerald-200 px-4 py-2 text-sm font-bold text-emerald-700">Return to Curriculum</button>
-              <Link to="/curriculum" className="rounded-xl border border-amber-200 px-4 py-2 text-sm font-bold text-amber-700">Continue to Next Module</Link>
+              <Link to={nextCurriculumRoute} className="rounded-xl border border-amber-200 px-4 py-2 text-sm font-bold text-amber-700">{nextCurriculumModule ? 'Continue to Next Module' : 'Return to Curriculum'}</Link>
             </div>
           </div>
         </div>
