@@ -15,13 +15,14 @@ export function normalizeWidgetType(type = 'textarea') {
 
 export function normalizeResponseEntry(entry, fallbackId = '', fallbackType = 'textarea') {
   if (!entry || typeof entry !== 'object') {
-    return { widgetId: fallbackId, widgetType: normalizeWidgetType(fallbackType), value: safeJsonValue(entry, {}), updatedAt: new Date().toISOString() };
+    return { widgetId: fallbackId, widgetType: normalizeWidgetType(fallbackType), value: safeJsonValue(entry, {}), updatedAt: new Date().toISOString(), version: '1.0' };
   }
   return {
     widgetId: String(entry.widgetId || entry.id || fallbackId),
     widgetType: normalizeWidgetType(entry.widgetType || entry.type || fallbackType),
     value: safeJsonValue(Object.prototype.hasOwnProperty.call(entry, 'value') ? entry.value : entry, {}),
-    updatedAt: entry.updatedAt || new Date().toISOString()
+    updatedAt: entry.updatedAt || new Date().toISOString(),
+    version: entry.version || '1.0'
   };
 }
 
@@ -46,7 +47,7 @@ export function initializeWorksheetState(blocksOrWidgets = [], existingResponses
   flattenBlocks(blocksOrWidgets).forEach((block, index) => {
     const widgetId = String(block?.id || `block_${index}`);
     if (!state[widgetId]) {
-      state[widgetId] = { widgetId, widgetType: normalizeWidgetType(block?.type), value: {}, updatedAt: new Date().toISOString() };
+      state[widgetId] = { widgetId, widgetType: normalizeWidgetType(block?.type), value: {}, updatedAt: new Date().toISOString(), version: '1.0' };
     }
   });
   return state;
@@ -60,13 +61,31 @@ export function updateWidgetResponse(state = {}, widgetId, widgetType, value) {
       widgetId: String(widgetId),
       widgetType: normalizeWidgetType(widgetType),
       value: safeJsonValue(value, {}),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
+      version: '1.0'
     }
   };
 }
 
 export function serializeWorksheetResponses(state = {}) {
   return Object.fromEntries(Object.entries(initializeWorksheetState([], state)).map(([id, entry]) => [id, normalizeResponseEntry(entry, id)]));
+}
+
+export function serializeStructuredWorksheetResponses(state = {}, summary = []) {
+  const responses = Object.values(serializeWorksheetResponses(state))
+    .filter((entry) => entry.widgetId)
+    .map((entry) => ({
+      widgetId: entry.widgetId,
+      widgetType: entry.widgetType,
+      value: safeJsonValue(entry.value, {}),
+      updatedAt: entry.updatedAt || new Date().toISOString(),
+      version: entry.version || '1.0'
+    }));
+  return {
+    version: '1.0',
+    responses,
+    summary: Array.isArray(summary) ? summary.filter(Boolean) : []
+  };
 }
 
 export function summarizeWorksheetResponses(state = {}) {

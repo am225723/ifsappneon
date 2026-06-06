@@ -8,6 +8,7 @@ import {
 import { useTheme } from '../contexts/ThemeContext';
 import { supabase } from '../lib/supabase';
 import { clientAuth } from '../lib/supabasePersonalization';
+import FormattedAIContent from '../components/ai/FormattedAIContent';
 
 const assessmentTypes = [
   { value: 'wound-focused', label: 'Wound-Focused', icon: Target, color: 'text-rose-500' },
@@ -268,7 +269,7 @@ export default function AssessmentBuilder() {
                     <div className="flex-1 min-w-0">
                       <h3 className={`font-semibold truncate ${theme.isDark ? 'text-slate-100' : 'text-gray-900'}`}>{assessment.title || 'Untitled Assessment'}</h3>
                       {assessment.description && (
-                        <p className={`text-sm mt-1 line-clamp-2 ${theme.isDark ? 'text-slate-400' : 'text-gray-500'}`}>{assessment.description}</p>
+                        <FormattedAIContent content={assessment.description} className={`mt-1 line-clamp-3 ${theme.isDark ? 'text-slate-400' : 'text-gray-500'}`} />
                       )}
                       <div className={`flex items-center gap-3 mt-2 text-xs ${theme.isDark ? 'text-slate-500' : 'text-gray-400'}`}>
                         <span>{assessment.questions?.length || 0} question{(assessment.questions?.length || 0) !== 1 ? 's' : ''}</span>

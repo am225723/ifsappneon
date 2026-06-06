@@ -120,6 +120,7 @@ function buildMessages({ client, currentUser, rangeDays, data }) {
         'You create Advisor-facing IFS preparation insights from cleaned module responses.',
         'Do not diagnose, do not assign risk scores, do not make safety conclusions, and do not write a treatment plan or final clinical note.',
         'Use cautious language. Distinguish observed client language from tentative patterns.',
+        'For plain text sections, markdown-lite formatting is allowed: **bold labels**, bullets, numbered lists, and blank lines. Do not use raw HTML or markdown tables.',
         'Include the required disclaimer verbatim at the top. If data is sparse, say so and explain what not to over-interpret.'
       ].join(' ')
     },

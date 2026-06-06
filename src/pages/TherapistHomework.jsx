@@ -10,6 +10,7 @@ import { clientAuth } from '../lib/supabasePersonalization';
 import { generateHomework, generateHomeworkBatch } from '../lib/homeworkAI';
 import FormattedAIContent from '../components/ai/FormattedAIContent';
 import InteractiveWorksheetRenderer from '../components/ai/InteractiveWorksheetRenderer';
+import { summarizeInteractiveResponses } from '../lib/interactiveWorksheetSummary';
 import { loadAssignedClients } from '../lib/therapistAssignments';
 import { curriculumModules } from '../data/curriculumData';
 import {
@@ -50,7 +51,7 @@ const TherapistHomework = () => {
   const [expandedItems, setExpandedItems] = useState({});
   const [form, setForm] = useState({
     clientId: '', title: '', description: '', category: 'general',
-    priority: 'normal', dueDate: ''
+    priority: 'normal', dueDate: '', activityBlocks: []
   });
   const [showAIPanel, setShowAIPanel] = useState(false);
   const [aiGenerating, setAiGenerating] = useState(false);
@@ -140,6 +141,7 @@ const TherapistHomework = () => {
         description: result.description,
         category: result.category || prev.category,
         priority: result.priority || prev.priority,
+        activityBlocks: result.activityBlocks || result.activity_blocks || []
       }));
       setShowAIPanel(false);
       setShowForm(true);
@@ -180,6 +182,7 @@ const TherapistHomework = () => {
       description: item.description,
       category: item.category || prev.category,
       priority: item.priority || prev.priority,
+      activityBlocks: item.activityBlocks || item.activity_blocks || []
     }));
     setShowBatchResults(false);
     setAiBatchResults([]);
@@ -196,6 +199,7 @@ const TherapistHomework = () => {
       category: form.category,
       priority: form.priority,
       due_date: form.dueDate || null,
+      activity_blocks: form.activityBlocks?.length ? form.activityBlocks : null,
       status: 'assigned',
       completed: false,
     };
@@ -223,14 +227,15 @@ const TherapistHomework = () => {
       description: item.description || '',
       category: item.category || 'general',
       priority: item.priority || 'normal',
-      dueDate: item.due_date || ''
+      dueDate: item.due_date || '',
+      activityBlocks: item.activity_blocks || item.activityBlocks || []
     });
     setEditingId(item.id);
     setShowForm(true);
   };
 
   const resetForm = () => {
-    setForm({ clientId: '', title: '', description: '', category: 'general', priority: 'normal', dueDate: '' });
+    setForm({ clientId: '', title: '', description: '', category: 'general', priority: 'normal', dueDate: '', activityBlocks: [] });
     setEditingId(null);
     setShowForm(false);
   };
@@ -578,7 +583,7 @@ const TherapistHomework = () => {
               {form.description && (
                 <div className={`mt-3 rounded-xl border ${cardBorder} p-4`}>
                   <p className={`mb-2 text-xs font-semibold uppercase tracking-wide ${textMuted}`}>Readable preview</p>
-                  <InteractiveWorksheetRenderer fallbackText={form.description} readOnly mode="advisor_preview" />
+                  <InteractiveWorksheetRenderer blocks={form.activityBlocks} fallbackText={form.description} readOnly mode="advisor_preview" />
                 </div>
               )}
             </div>
@@ -810,15 +815,36 @@ const TherapistHomework = () => {
                     {item.description && (
                       <div className="mt-3">
                         <p className={`text-xs font-semibold ${textMuted} uppercase tracking-wider mb-1`}>Instructions</p>
-                        <p className={`text-sm ${textSecondary} leading-relaxed whitespace-pre-wrap`}>{item.description}</p>
+                        <FormattedAIContent content={item.description} className={textSecondary} />
                       </div>
                     )}
-                    {item.completion_notes && (
-                      <div className={`mt-3 p-3 rounded-lg ${isDark ? 'bg-emerald-900/20 border border-emerald-800/30' : 'bg-emerald-50 border border-emerald-200'}`}>
-                        <p className={`text-xs font-semibold ${isDark ? 'text-emerald-400' : 'text-emerald-600'} mb-1 flex items-center gap-1`}>
-                          <MessageSquare className="w-3 h-3" /> Client's Response
-                        </p>
-                        <p className={`text-sm ${isDark ? 'text-emerald-200' : 'text-emerald-700'} leading-relaxed whitespace-pre-wrap`}>{item.completion_notes}</p>
+                    {(item.interactive_responses || item.completion_notes) && (
+                      <div className={`mt-3 space-y-3 rounded-lg ${isDark ? 'bg-emerald-900/20 border border-emerald-800/30' : 'bg-emerald-50 border border-emerald-200'} p-3`}>
+                        {summarizeInteractiveResponses(item.interactive_responses || {}).length > 0 && (
+                          <div>
+                            <p className={`text-xs font-semibold ${isDark ? 'text-emerald-400' : 'text-emerald-600'} mb-2 flex items-center gap-1`}>
+                              <MessageSquare className="w-3 h-3" /> Structured Interactive Responses
+                            </p>
+                            <div className="space-y-2">
+                              {summarizeInteractiveResponses(item.interactive_responses || {}).map(section => (
+                                <div key={section.widgetId} className="text-sm">
+                                  <p className={`${isDark ? 'text-emerald-100' : 'text-emerald-800'} font-medium`}>{section.title}</p>
+                                  <ul className={`${isDark ? 'text-emerald-200' : 'text-emerald-700'} mt-1 list-disc space-y-1 pl-5`}>
+                                    {section.lines.map((line, index) => <li key={`${section.widgetId}-${index}`} className="whitespace-pre-wrap">{line}</li>)}
+                                  </ul>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        {item.completion_notes && (
+                          <div>
+                            <p className={`text-xs font-semibold ${isDark ? 'text-emerald-400' : 'text-emerald-600'} mb-1 flex items-center gap-1`}>
+                              <MessageSquare className="w-3 h-3" /> Client's Reflection
+                            </p>
+                            <FormattedAIContent content={item.completion_notes} className={isDark ? 'text-emerald-200' : 'text-emerald-700'} />
+                          </div>
+                        )}
                       </div>
                     )}
                     {item.completed_at && (

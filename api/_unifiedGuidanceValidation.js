@@ -1,4 +1,5 @@
 import { UNIFIED_GUIDANCE_DISCLAIMER } from './_unifiedGuidancePrompt.js';
+import { safeParseAIJson, normalizeActivityBlocks } from './_safeAIJson.js';
 
 export const ALLOWED_ACTION_ROUTES = [
   '/curriculum',
@@ -96,19 +97,7 @@ export function fallbackAdvisorSnapshot(clientId, reason = 'Available data is li
 }
 
 function parseJson(text) {
-  if (!text) return null;
-  if (typeof text === 'object') return text;
-  const source = String(text).trim();
-  const fenced = source.match(/```(?:json)?\s*([\s\S]*?)```/i)?.[1];
-  const candidate = (fenced || source).trim();
-  try { return JSON.parse(candidate); } catch {
-    const firstBrace = candidate.indexOf('{');
-    const lastBrace = candidate.lastIndexOf('}');
-    if (firstBrace >= 0 && lastBrace > firstBrace) {
-      try { return JSON.parse(candidate.slice(firstBrace, lastBrace + 1)); } catch { return null; }
-    }
-    return null;
-  }
+  return safeParseAIJson(text, null);
 }
 
 function containsProhibited(value) {
@@ -123,15 +112,10 @@ function containsProhibited(value) {
 }
 
 function normalizeBlocks(value) {
-  let blocks = value;
-  if (typeof blocks === 'string') {
-    try { blocks = JSON.parse(blocks); } catch { blocks = []; }
-  }
-  if (!Array.isArray(blocks)) return [];
-  return blocks
-    .filter((block) => block && typeof block === 'object')
-    .slice(0, 20)
-    .map((block, index) => ({ ...block, id: capString(block.id || `block_${index + 1}`, 80) }));
+  return normalizeActivityBlocks(value).slice(0, 20).map((block, index) => ({
+    ...block,
+    id: capString(block.id || `block_${index + 1}`, 80)
+  }));
 }
 
 function normalizeInteractivePayload(payload = {}) {
