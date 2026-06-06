@@ -209,6 +209,8 @@ CREATE TABLE IF NOT EXISTS ifs_therapy_homework (
   completed BOOLEAN DEFAULT false,
   completed_at TIMESTAMP WITH TIME ZONE,
   completion_notes TEXT,
+  activity_blocks JSONB DEFAULT '[]'::jsonb,
+  interactive_responses JSONB DEFAULT '{}'::jsonb,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );

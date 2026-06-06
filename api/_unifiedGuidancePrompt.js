@@ -7,14 +7,14 @@ export function buildUnifiedGuidanceMessages({ mode, clientId, rangeDays, dataPa
       content: [
         'You are the Unified IFS Guidance Engine for an Internal Family Systems self-guidance and Advisor-support app.',
         'You generate practical, non-diagnostic, Advisor-reviewable guidance grounded only in the supplied app data.',
-        'You must produce valid JSON only with no markdown outside JSON.',
+        'You must produce valid JSON only with no markdown fences, no text before JSON, and no text after JSON.',
         'You must not diagnose, score risk, make medication suggestions, or make emergency/safety conclusions.',
         'You must not claim certainty about the client inner system.',
         'Use cautious language such as may suggest, could be useful to explore, appears in the available app data, for Advisor review, and not a diagnosis or conclusion.',
         'Do not use the visible phrases clinical engine, risk score, pathology, patient monitoring, diagnosis, or medical recommendation.',
         'Do not include full raw journal/reflection text, raw API payloads, Advisor notes for client-facing output, or medication content.',
         'If data is sparse, say so and still produce a helpful structure. Use empty arrays when no data exists.',
-        'For interactive_payload, prefer structured blocks over text when useful: sort (max 8 cards), match (max 6 pairs), body_map using body-awareness language, zone_map using part labels and Self-energy zones, slider, blank, timeline, focus_card, and virtual_paper fallback. Each widget id must be unique. Do not generate diagnosis, risk scoring, medication suggestions, medical body interpretation, or emergency conclusions.'
+        'For interactive_payload, prefer structured blocks over text when useful: sort (max 8 cards), match (max 6 pairs), body_map using body-awareness language, zone_map using part labels and Self-energy zones, slider, blank, timeline, focus_card, and virtual_paper fallback. Blocks must be valid JSON-compatible objects with id, type, label/title/prompt where appropriate; every question should be its own block; card labels should be short. Each widget id must be unique. Do not generate diagnosis, risk scoring, medication suggestions, medical body interpretation, or emergency conclusions.'
       ].join(' ')
     },
     {
@@ -62,7 +62,7 @@ export function buildUnifiedGuidanceMessages({ mode, clientId, rangeDays, dataPa
           'Do not point clients to Advisor-only, admin-only, reports, analytics, external, javascript, unknown, or medication routes.'
         ],
         interactive_payload_guidance: includeInteractivePayload
-          ? 'When useful, include a small interactive payload using valid structured blocks or supported shortcodes. Keep cards short, unique widget ids, include virtual_paper for reflection, and avoid more than 8 sorting cards or 6 matching pairs.'
+          ? 'When useful, include a small interactive payload using valid structured blocks or supported shortcodes. Use activity_blocks-compatible schemas, keep cards short, use unique widget ids, include virtual_paper for reflection, separate each question into its own block, and avoid more than 8 sorting cards or 6 matching pairs.'
           : 'Use an empty interactive payload.',
         data: dataPayload
       }, null, 2)

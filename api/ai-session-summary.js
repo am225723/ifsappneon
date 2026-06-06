@@ -123,7 +123,8 @@ function buildMessages({ client, currentUser, rangeDays, since, clinicalData }) 
         'If available data is limited, include the exact phrase: Available data is limited for this range.',
         'For sparse data, still provide session-opening questions and what the Advisor may want to clarify.',
         'Use the exact label session-opening questions in the suggested opener section so sparse summaries remain easy to verify.',
-        'Use concise bullets under exactly the requested numbered section headings.'
+        'Use concise bullets under exactly the requested numbered section headings.',
+        'For plain text sections, markdown-lite formatting is allowed: **bold labels**, bullets, numbered lists, and blank lines. Do not use raw HTML or markdown tables.'
       ].join(' ')
     },
     {

@@ -1,5 +1,6 @@
 import { requireTherapist, requireTherapistAssignment } from './_auth.js';
 import { callOpenRouterChat } from './_aiProvider.js';
+import { normalizeActivityBlocks, splitDescriptionAndActivityBlocks } from './_safeAIJson.js';
 
 const CATEGORY_LABELS = {
   general: 'General',
@@ -50,8 +51,10 @@ Return EXACTLY this format:
 TITLE: [Engaging title]
 CATEGORY: [One of: general, journaling, parts-work, meditation, exercise, reading, self-care]
 PRIORITY: [One of: low, normal, high]
-DESCRIPTION: [Readable sections with spacing, numbered steps, materials if any, time estimate, and reflection questions. Use **bold** sparingly for section labels.]
-ACTIVITY_BLOCKS_JSON: [{"type":"instruction","text":"..."},{"type":"sort","id":"sort_parts_1","label":"Sort what you notice","columns":["Needs attention","Feels protective","Feels close to Self"],"items":[{"id":"card_1","label":"..."}]},{"type":"virtual_paper","id":"notes_1","prompt":"Use this space as your virtual piece of paper."}]`;
+DESCRIPTION: [Readable sections with spacing, numbered steps, materials if any, time estimate, and reflection questions. Use **bold** sparingly for section labels. Do not include ACTIVITY_BLOCKS_JSON in this field.]
+ACTIVITY_BLOCKS_JSON: [{"type":"instruction","id":"intro_1","text":"..."},{"type":"sort","id":"sort_parts_1","label":"Sort what you notice","columns":["Needs attention","Feels protective","Feels close to Self"],"items":[{"id":"card_1","label":"Short label"}]},{"type":"virtual_paper","id":"notes_1","prompt":"Use this space as your virtual piece of paper."}]
+
+Rules for ACTIVITY_BLOCKS_JSON: return valid JSON only, no markdown fence, no text before or after the JSON value, every block needs id and type, every question should be its own question or virtual_paper block, keep card labels short, and include virtual_paper for reflective writing.`;
 
   return [
     { role: 'system', content: systemPrompt },
@@ -85,7 +88,7 @@ TITLE: [Creative, specific title]
 CATEGORY: [One of: general, journaling, parts-work, meditation, exercise, reading, self-care]
 PRIORITY: [One of: low, normal, high]
 DESCRIPTION: [Readable sections with spacing, numbered steps. Materials needed, specific prompts/questions, time estimate, reflection. Use **bold** sparingly for section labels.]
-ACTIVITY_BLOCKS_JSON: [optional structured blocks using instruction, sort, match, body_map, zone_map, blank, slider, timeline, focus_card, virtual_paper; unique ids; include virtual_paper fallback]
+ACTIVITY_BLOCKS_JSON: [valid JSON array only; no markdown fence; no text before/after JSON; use activity block objects with id, type, title/label/prompt where appropriate; one question per block; include virtual_paper fallback]
 
 ---
 
@@ -128,21 +131,16 @@ function normalizePriority(raw) {
 
 function extractActivityBlocks(text) {
   const raw = extractField(text, 'ACTIVITY_BLOCKS_JSON');
-  if (!raw) return null;
-  try {
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : null;
-  } catch {
-    return null;
-  }
+  return normalizeActivityBlocks(raw);
 }
 
 function parseSinglePractice(text) {
   const title = extractField(text, 'TITLE');
   const category = normalizeCategory(extractField(text, 'CATEGORY'));
   const priority = normalizePriority(extractField(text, 'PRIORITY'));
-  const description = extractField(text, 'DESCRIPTION');
-  const activityBlocks = extractActivityBlocks(text);
+  const split = splitDescriptionAndActivityBlocks(extractField(text, 'DESCRIPTION'));
+  const description = split.description;
+  const activityBlocks = extractActivityBlocks(text).length ? extractActivityBlocks(text) : split.activityBlocks;
   if (!title || !description) throw Object.assign(new Error('AI response was not in the expected format. Please try again.'), { statusCode: 502, code: 'openrouter_parse_failed' });
   return { title, category, priority, description, activityBlocks };
 }
@@ -150,14 +148,15 @@ function parseSinglePractice(text) {
 function parseBatchPractice(text) {
   const results = text.split(/---+/).filter(Boolean).map((block) => {
     const title = extractField(block, 'TITLE');
-    const description = extractField(block, 'DESCRIPTION');
+    const split = splitDescriptionAndActivityBlocks(extractField(block, 'DESCRIPTION'));
+    const description = split.description;
     if (!title || !description) return null;
     return {
       title,
       category: normalizeCategory(extractField(block, 'CATEGORY')),
       priority: normalizePriority(extractField(block, 'PRIORITY')),
       description,
-      activityBlocks: extractActivityBlocks(block)
+      activityBlocks: extractActivityBlocks(block).length ? extractActivityBlocks(block) : split.activityBlocks
     };
   }).filter(Boolean);
 
@@ -184,7 +183,7 @@ export default async function handler(req, res) {
     const result = await callOpenRouterChat({
       messages,
       temperature: mode === 'batch' ? 0.85 : 0.8,
-      maxTokens: mode === 'batch' ? 2000 : 600
+      maxTokens: mode === 'batch' ? 2600 : 1000
     });
 
     const practice = mode === 'batch' ? parseBatchPractice(result.text) : parseSinglePractice(result.text);

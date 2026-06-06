@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import FormattedAIContent from './FormattedAIContent';
 import { parseInteractiveShortcodes } from '../../lib/interactiveShortcodeParser';
+import { normalizeActivityBlocks, splitDescriptionAndActivityBlocks } from '../../lib/safeAIJson';
 import { initializeWorksheetState, updateWidgetResponse } from '../../lib/interactiveWorksheetState';
 import SortingWidget from './widgets/SortingWidget';
 import MatchingWidget from './widgets/MatchingWidget';
@@ -11,21 +12,9 @@ import VirtualPaper from './widgets/VirtualPaper';
 const ACTIVITY_BLOCK_TYPES = ['instruction', 'question', 'textarea', 'checklist', 'rating', 'virtual_paper', 'sort', 'sorting', 'match', 'matching', 'body_map', 'zone_map', 'blank', 'slider', 'timeline', 'focus_card'];
 
 function parseActivityBlocks(source) {
-  if (!source) return [];
-  if (Array.isArray(source)) return source;
-  if (typeof source === 'object' && Array.isArray(source.blocks)) return source.blocks;
-  if (typeof source !== 'string') return [];
-  const shortcodeBlocks = parseInteractiveShortcodes(source);
+  const shortcodeBlocks = typeof source === 'string' ? parseInteractiveShortcodes(source) : [];
   if (shortcodeBlocks.length) return shortcodeBlocks;
-  const fenced = source.match(/```json\s*([\s\S]*?)```/i)?.[1];
-  const marker = source.match(/ACTIVITY_BLOCKS_JSON:\s*(\[[\s\S]*\])/i)?.[1];
-  const candidate = fenced || marker || source;
-  try {
-    const parsed = JSON.parse(candidate);
-    return Array.isArray(parsed) ? parsed : Array.isArray(parsed?.blocks) ? parsed.blocks : [];
-  } catch {
-    return [];
-  }
+  return normalizeActivityBlocks(source);
 }
 
 function ensureArray(value) {
@@ -42,7 +31,12 @@ function valueOf(entry, fallback) { return entry?.value ?? fallback; }
 
 export default function InteractiveWorksheetRenderer({ payload, blocks, fallbackText = '', value, initialResponses, onChange, onResponsesChange, readOnly = false, mode = 'client' }) {
   const source = payload ?? blocks;
-  const parsedBlocks = useMemo(() => parseActivityBlocks(source), [source]);
+  const cleanedFallback = useMemo(() => splitDescriptionAndActivityBlocks(fallbackText).description, [fallbackText]);
+  const parsedBlocks = useMemo(() => {
+    const sourceBlocks = parseActivityBlocks(source);
+    if (sourceBlocks.length) return sourceBlocks;
+    return splitDescriptionAndActivityBlocks(fallbackText).activityBlocks;
+  }, [source, fallbackText]);
   const incomingResponses = initialResponses ?? value ?? {};
   const [localState, setLocalState] = useState(() => initializeWorksheetState(parsedBlocks, incomingResponses));
   const controlled = Boolean(onResponsesChange || onChange);
@@ -58,7 +52,7 @@ export default function InteractiveWorksheetRenderer({ payload, blocks, fallback
 
   const renderFallbackPaper = () => (
     <div className="space-y-4">
-      {fallbackText && <FormattedAIContent content={fallbackText} />}
+      {cleanedFallback && <FormattedAIContent content={cleanedFallback} />}
       <VirtualPaper id="virtual_paper" value={valueOf(currentState.virtual_paper, {})} onChange={(next) => update('virtual_paper', 'virtual_paper', next)} readOnly={readOnly} />
     </div>
   );
@@ -79,8 +73,8 @@ export default function InteractiveWorksheetRenderer({ payload, blocks, fallback
     if (type === 'virtual_paper' || type === 'textarea' || type === 'question') return <VirtualPaper key={id} id={id} prompt={blockLabel(block, type === 'question' ? 'Reflection prompt' : 'Use this space as your virtual piece of paper.')} value={current} onChange={(next) => update(id, type === 'virtual_paper' ? 'virtual_paper' : 'textarea', next)} readOnly={readOnly} />;
 
     if (type === 'checklist') {
-      const selected = Array.isArray(current.selected) ? current.selected : [];
-      return <fieldset key={id} className="rounded-2xl border border-brand-stone-200 p-4 dark:border-slate-700"><legend className="px-1 text-sm font-semibold">{blockLabel(block, 'Checklist')}</legend>{normalizeOptions(block).map((item) => { const itemText = typeof item === 'string' ? item : item.label || item.text || String(item.value || 'Option'); return <label key={itemText} className="mt-2 flex items-center gap-2 text-sm"><input disabled={readOnly} type="checkbox" checked={selected.includes(itemText)} onChange={(event) => update(id, 'checklist', { selected: event.target.checked ? [...selected, itemText] : selected.filter((x) => x !== itemText) })} />{itemText}</label>; })}</fieldset>;
+      const selected = Array.isArray(current.selected) ? current.selected : Array.isArray(current.checked) ? current.checked : [];
+      return <fieldset key={id} className="rounded-2xl border border-brand-stone-200 p-4 dark:border-slate-700"><legend className="px-1 text-sm font-semibold">{blockLabel(block, 'Checklist')}</legend>{normalizeOptions(block).map((item) => { const itemText = typeof item === 'string' ? item : item.label || item.text || String(item.value || 'Option'); return <label key={itemText} className="mt-2 flex items-center gap-2 text-sm"><input disabled={readOnly} type="checkbox" checked={selected.includes(itemText)} onChange={(event) => update(id, 'checklist', { selected: event.target.checked ? [...selected, itemText] : selected.filter((x) => x !== itemText), checked: event.target.checked ? [...selected, itemText] : selected.filter((x) => x !== itemText) })} />{itemText}</label>; })}</fieldset>;
     }
     if (type === 'rating') return <label key={id} className="block rounded-2xl border border-brand-stone-200 p-4 dark:border-slate-700"><span className="text-sm font-semibold">{blockLabel(block, 'Rating')}</span><input disabled={readOnly} type="range" min={block.min || 1} max={block.max || 10} value={current.value || block.min || 1} onChange={(event) => update(id, 'rating', { value: Number(event.target.value) })} className="mt-3 w-full" /><span className="text-xs">{current.value || block.min || 1}</span></label>;
     if (type === 'blank') { const template = ensureArray(block.template); return <fieldset key={id} className="rounded-2xl border border-brand-stone-200 p-4 dark:border-slate-700"><legend className="px-1 text-sm font-semibold">{blockLabel(block, 'Fill in the blanks')}</legend><div className="mt-3 flex flex-wrap items-center gap-2 text-sm">{template.map((segment, segmentIndex) => segment.type === 'input' ? <input key={segmentIndex} disabled={readOnly} value={current.answers?.[segmentIndex] || ''} onChange={(event) => update(id, 'blank', { answers: { ...(current.answers || {}), [segmentIndex]: event.target.value } })} placeholder={segment.placeholder} className="min-w-40 rounded-lg border border-brand-stone-200 px-2 py-1 dark:border-slate-700 dark:bg-slate-950" /> : <span key={segmentIndex}>{segment.text}</span>)}</div></fieldset>; }
