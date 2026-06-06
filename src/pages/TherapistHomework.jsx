@@ -11,6 +11,7 @@ import { generateHomework, generateHomeworkBatch } from '../lib/homeworkAI';
 import FormattedAIContent from '../components/ai/FormattedAIContent';
 import InteractiveWorksheetRenderer from '../components/ai/InteractiveWorksheetRenderer';
 import { summarizeInteractiveResponses } from '../lib/interactiveWorksheetSummary';
+import { isMissingWorksheetPersistenceColumn, WORKSHEET_MIGRATION_ADMIN_WARNING } from '../lib/worksheetPersistenceFallback';
 import { loadAssignedClients } from '../lib/therapistAssignments';
 import { curriculumModules } from '../data/curriculumData';
 import {
@@ -69,6 +70,7 @@ const TherapistHomework = () => {
   const [assignedMessage, setAssignedMessage] = useState('');
   const [assignedSaving, setAssignedSaving] = useState(false);
   const [reviewFeedback, setReviewFeedback] = useState({});
+  const [worksheetPersistenceWarning, setWorksheetPersistenceWarning] = useState('');
 
   const textPrimary = isDark ? 'text-white' : 'text-gray-900';
   const textSecondary = isDark ? 'text-slate-300' : 'text-gray-600';
@@ -191,7 +193,8 @@ const TherapistHomework = () => {
 
   const handleSubmit = async () => {
     if (!form.clientId || !form.title.trim()) return;
-    const payload = {
+    setWorksheetPersistenceWarning('');
+    const basePayload = {
       client_id: form.clientId,
       therapist_id: therapist?.id || null,
       title: form.title.trim(),
@@ -199,16 +202,33 @@ const TherapistHomework = () => {
       category: form.category,
       priority: form.priority,
       due_date: form.dueDate || null,
-      activity_blocks: form.activityBlocks?.length ? form.activityBlocks : null,
       status: 'assigned',
       completed: false,
     };
+    const hasActivityBlocks = Boolean(form.activityBlocks?.length);
+    const payload = hasActivityBlocks ? { ...basePayload, activity_blocks: form.activityBlocks } : basePayload;
+    const saveHomework = (nextPayload) => editingId
+      ? supabase.from('ifs_therapy_homework').update({ ...nextPayload, updated_at: new Date().toISOString() }).eq('id', editingId)
+      : supabase.from('ifs_therapy_homework').insert(nextPayload);
 
-    if (editingId) {
-      payload.updated_at = new Date().toISOString();
-      await supabase.from('ifs_therapy_homework').update(payload).eq('id', editingId);
-    } else {
-      await supabase.from('ifs_therapy_homework').insert(payload);
+    const { error: saveError } = await saveHomework(payload);
+    if (saveError) {
+      if (hasActivityBlocks && isMissingWorksheetPersistenceColumn(saveError, ['activity_blocks'])) {
+        const { error: fallbackError } = await saveHomework(basePayload);
+        if (fallbackError) {
+          console.warn('Unable to save assigned practice fallback.');
+          setWorksheetPersistenceWarning('Unable to save the assigned practice right now. Please try again.');
+          return;
+        }
+        setWorksheetPersistenceWarning(`${WORKSHEET_MIGRATION_ADMIN_WARNING} The assignment was saved without structured activity blocks.`);
+        resetForm();
+        await loadData();
+        return;
+      }
+
+      console.warn('Unable to save assigned practice.');
+      setWorksheetPersistenceWarning('Unable to save the assigned practice right now. Please try again.');
+      return;
     }
 
     resetForm();
@@ -536,6 +556,12 @@ const TherapistHomework = () => {
               );
             })}
           </div>
+        </div>
+      )}
+
+      {worksheetPersistenceWarning && (
+        <div className={`mb-4 rounded-xl border p-4 text-sm ${worksheetPersistenceWarning.startsWith('Structured worksheet persistence') ? (isDark ? 'border-amber-800/60 bg-amber-950/30 text-amber-200' : 'border-amber-200 bg-amber-50 text-amber-700') : (isDark ? 'border-red-800/60 bg-red-950/30 text-red-200' : 'border-red-200 bg-red-50 text-red-700')}`}>
+          {worksheetPersistenceWarning}
         </div>
       )}
 

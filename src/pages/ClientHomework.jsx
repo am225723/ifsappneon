@@ -12,6 +12,7 @@ import InteractiveWorksheetRenderer from '../components/ai/InteractiveWorksheetR
 import FormattedAIContent from '../components/ai/FormattedAIContent';
 import { serializeStructuredWorksheetResponses } from '../lib/interactiveWorksheetState';
 import { renderInteractiveResponseSummaryLines, summarizeInteractiveResponses } from '../lib/interactiveWorksheetSummary';
+import { isMissingWorksheetPersistenceColumn, WORKSHEET_MIGRATION_CLIENT_WARNING } from '../lib/worksheetPersistenceFallback';
 import {
   loadAssignedHomeworkForClient,
   markAssignedHomeworkStarted,
@@ -39,6 +40,7 @@ const ClientHomework = () => {
   const [expandedItems, setExpandedItems] = useState({});
   const [completionNotes, setCompletionNotes] = useState({});
   const [worksheetResponses, setWorksheetResponses] = useState({});
+  const [completionMessages, setCompletionMessages] = useState({});
   const [filter, setFilter] = useState('active');
 
   const textPrimary = isDark ? 'text-white' : 'text-gray-900';
@@ -107,17 +109,47 @@ const ClientHomework = () => {
     const summaryLines = renderInteractiveResponseSummaryLines(worksheetResponses[item.id] || {});
     const structuredResponses = serializeStructuredWorksheetResponses(worksheetResponses[item.id] || {}, summaryLines);
     const completionText = notes.trim();
-    await supabase
+    const completedAt = new Date().toISOString();
+    const basePayload = {
+      completed: true,
+      status: 'completed',
+      completed_at: completedAt,
+      completion_notes: completionText || item.completion_notes || null,
+      updated_at: completedAt
+    };
+
+    setCompletionMessages(prev => ({ ...prev, [item.id]: null }));
+    const { error: structuredError } = await supabase
       .from('ifs_therapy_homework')
       .update({
-        completed: true,
-        status: 'completed',
-        completed_at: new Date().toISOString(),
-        completion_notes: completionText || item.completion_notes || null,
-        interactive_responses: structuredResponses,
-        updated_at: new Date().toISOString()
+        ...basePayload,
+        interactive_responses: structuredResponses
       })
       .eq('id', item.id);
+
+    if (structuredError) {
+      if (isMissingWorksheetPersistenceColumn(structuredError, ['interactive_responses'])) {
+        const { error: fallbackError } = await supabase
+          .from('ifs_therapy_homework')
+          .update(basePayload)
+          .eq('id', item.id);
+
+        if (fallbackError) {
+          console.warn('Unable to save worksheet completion fallback.');
+          setCompletionMessages(prev => ({ ...prev, [item.id]: 'We could not save this completion right now. Please try again.' }));
+          return;
+        }
+
+        setCompletionMessages(prev => ({ ...prev, [item.id]: WORKSHEET_MIGRATION_CLIENT_WARNING }));
+        await loadHomework();
+        return;
+      }
+
+      console.warn('Unable to save worksheet completion.');
+      setCompletionMessages(prev => ({ ...prev, [item.id]: 'We could not save this completion right now. Please try again.' }));
+      return;
+    }
+
     await loadHomework();
   };
 
@@ -304,6 +336,12 @@ const ClientHomework = () => {
                       <div className="mt-3">
                         <p className={`text-xs font-semibold ${textMuted} uppercase tracking-wider mb-1`}>Instructions</p>
                         <InteractiveWorksheetRenderer blocks={item.activity_blocks || item.activityBlocks} fallbackText={item.description} initialResponses={item.completed ? (item.interactive_responses || worksheetResponses[item.id]) : worksheetResponses[item.id]} onResponsesChange={(responses) => setWorksheetResponses(prev => ({ ...prev, [item.id]: responses }))} mode="client" readOnly={item.completed} />
+                      </div>
+                    )}
+
+                    {completionMessages[item.id] && (
+                      <div className={`mt-3 rounded-lg border p-3 text-sm ${completionMessages[item.id] === WORKSHEET_MIGRATION_CLIENT_WARNING ? (isDark ? 'border-amber-800/60 bg-amber-950/30 text-amber-200' : 'border-amber-200 bg-amber-50 text-amber-700') : (isDark ? 'border-red-800/60 bg-red-950/30 text-red-200' : 'border-red-200 bg-red-50 text-red-700')}`}>
+                        {completionMessages[item.id]}
                       </div>
                     )}
 
