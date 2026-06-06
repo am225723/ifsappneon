@@ -26,7 +26,9 @@ The practice must be INTERACTIVE and ENGAGING — not passive reading or generic
 
 Ground everything in IFS concepts: Parts Work, Self-energy, exiles, protectors, managers, firefighters, unburdening, blending/unblending.
 Write in a warm, direct second-person tone ("You will..." / "Notice how...").
-Do not diagnose, give medical advice, infer risk, or finalize assignment. Advisor review is required.`;
+Do not diagnose, give medical advice, infer risk, or finalize assignment. Advisor review is required.
+
+Interactive widget rules: prefer ACTIVITY_BLOCKS_JSON structured blocks when useful. Every widget must have a unique id. Use type sort with columns/items for true drag-and-drop sorting (max 8 cards), type match with left/right for pairing (max 6 pairs), type body_map with body-awareness presets only, type zone_map with part-label nodes and Self-energy rings, and always include one virtual_paper fallback for reflective writing. Do not create diagnosis, risk score, medication suggestions, medical body interpretations, or emergency conclusions.`;
 
   const categoryInstruction = category && category !== 'general'
     ? `The practice should be in the "${CATEGORY_LABELS[category] || category}" category.`
@@ -49,7 +51,7 @@ TITLE: [Engaging title]
 CATEGORY: [One of: general, journaling, parts-work, meditation, exercise, reading, self-care]
 PRIORITY: [One of: low, normal, high]
 DESCRIPTION: [Readable sections with spacing, numbered steps, materials if any, time estimate, and reflection questions. Use **bold** sparingly for section labels.]
-ACTIVITY_BLOCKS_JSON: [{"type":"instruction","text":"..."},{"type":"textarea","id":"reflection_1","prompt":"..."},{"type":"virtual_paper","id":"notes","prompt":"Freeform notes"}]`;
+ACTIVITY_BLOCKS_JSON: [{"type":"instruction","text":"..."},{"type":"sort","id":"sort_parts_1","label":"Sort what you notice","columns":["Needs attention","Feels protective","Feels close to Self"],"items":[{"id":"card_1","label":"..."}]},{"type":"virtual_paper","id":"notes_1","prompt":"Use this space as your virtual piece of paper."}]`;
 
   return [
     { role: 'system', content: systemPrompt },
@@ -62,7 +64,9 @@ function buildBatchMessages({ woundType, secondaryWound, guidance, clientName, c
 
 Each practice must be INTERACTIVE and ENGAGING. Include hands-on activity, clear steps, 10-30 minute estimate, and reflection. Use diverse approaches such as letter-writing, body-based practice, parts dialogue, creative/art activity, or Self-energy practice.
 
-Ground everything in IFS: parts, Self-energy, exiles, protectors, unburdening, blending/unblending. Write warmly in second person. Do not diagnose, infer risk, give medical advice, or finalize assignment. Advisor review is required.`;
+Ground everything in IFS: parts, Self-energy, exiles, protectors, unburdening, blending/unblending. Write warmly in second person. Do not diagnose, infer risk, give medical advice, or finalize assignment. Advisor review is required.
+
+Interactive widget rules: when returning ACTIVITY_BLOCKS_JSON, prefer structured blocks the app can render: sort (columns/items, max 8 cards), match (left/right, max 6 pairs), body_map (body-awareness phrases only), zone_map (part labels in Self-energy rings), slider, blank, timeline, focus_card, and virtual_paper. Each widget id must be unique and every reflective task should include a virtual_paper fallback. Never generate diagnosis, risk score, medication suggestions, medical body interpretation, or emergency conclusions.`;
 
   const woundContext = woundType
     ? `${clientName || 'This client'}'s primary wound is "${woundType}"${secondaryWound ? ` with a secondary wound of "${secondaryWound}"` : ''}. Each practice should directly address this wound with specific feelings, triggers, and healing strategies.`
@@ -81,7 +85,7 @@ TITLE: [Creative, specific title]
 CATEGORY: [One of: general, journaling, parts-work, meditation, exercise, reading, self-care]
 PRIORITY: [One of: low, normal, high]
 DESCRIPTION: [Readable sections with spacing, numbered steps. Materials needed, specific prompts/questions, time estimate, reflection. Use **bold** sparingly for section labels.]
-ACTIVITY_BLOCKS_JSON: [optional structured blocks using instruction, question, textarea, checklist, rating, virtual_paper]
+ACTIVITY_BLOCKS_JSON: [optional structured blocks using instruction, sort, match, body_map, zone_map, blank, slider, timeline, focus_card, virtual_paper; unique ids; include virtual_paper fallback]
 
 ---
 
