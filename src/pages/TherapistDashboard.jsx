@@ -29,6 +29,7 @@ import AdvisorSessionNoteDraft from '../components/AdvisorSessionNoteDraft';
 import RecentActivityFeed from '../components/RecentActivityFeed';
 import FormattedAIContent from '../components/ai/FormattedAIContent';
 import { cleanModuleResponses, isMeaningfulModuleResponse } from '../lib/moduleResponseCleaning';
+import { loadAdvisorSessionSnapshot } from '../lib/unifiedGuidance';
 
 const woundColorMap = {
   abandonment: { bg: 'bg-blue-100', text: 'text-blue-700', dot: 'bg-blue-500' },
@@ -530,6 +531,7 @@ const TherapistDashboard = () => {
   const [moduleInsightText, setModuleInsightText] = useState('');
   const [moduleInsightLoading, setModuleInsightLoading] = useState(false);
   const [moduleInsightError, setModuleInsightError] = useState('');
+  const [sessionSnapshotState, setSessionSnapshotState] = useState({ loading: false, data: null, error: '' });
   const [clientGamification, setClientGamification] = useState({});
 
   const [activeAction, setActiveAction] = useState(null);
@@ -1336,6 +1338,7 @@ const TherapistDashboard = () => {
     if (selectedInsightClient) {
       loadClientInsights(selectedInsightClient);
       setTimelineFilter('all');
+      setSessionSnapshotState({ loading: false, data: null, error: '' });
     }
   }, [selectedInsightClient, loadClientInsights]);
 
@@ -1360,6 +1363,34 @@ const TherapistDashboard = () => {
     } finally {
       setModuleInsightLoading(false);
     }
+  };
+
+
+  const generateAdvisorSessionSnapshot = async () => {
+    if (!selectedInsightClient) return;
+    setSessionSnapshotState({ loading: true, data: null, error: '' });
+    try {
+      const data = await loadAdvisorSessionSnapshot({ clientId: selectedInsightClient, rangeDays: 30 });
+      setSessionSnapshotState({ loading: false, data: data?.advisor_session_snapshot || null, error: '' });
+    } catch (error) {
+      setSessionSnapshotState({ loading: false, data: null, error: error.message || 'Unable to generate Advisor Session Snapshot.' });
+    }
+  };
+
+  const copyAdvisorSessionSnapshot = async () => {
+    if (!sessionSnapshotState.data) return;
+    const snapshot = sessionSnapshotState.data;
+    const text = [
+      snapshot.snapshot_title,
+      snapshot.advisor_review_disclaimer,
+      `Curriculum: ${snapshot.curriculum_trajectory?.active_module || 'Not available'} (${snapshot.curriculum_trajectory?.percent_complete || 0}% complete)`,
+      snapshot.curriculum_trajectory?.recent_response_synthesis,
+      `Review themes: ${(snapshot.ai_generated_review_themes || []).join('; ')}`,
+      `Suggested questions: ${(snapshot.suggested_session_questions || []).join('; ')}`,
+      `Attention items: ${(snapshot.attention_items_for_advisor || []).join('; ')}`,
+      `Do not over-interpret: ${(snapshot.what_not_to_overinterpret || []).join('; ')}`
+    ].filter(Boolean).join("\n\n");
+    await navigator.clipboard?.writeText(text);
   };
 
   const filteredClients = clients.filter(client => {
@@ -5784,6 +5815,56 @@ const TherapistDashboard = () => {
                     </div>
                   </div>
                 )}
+
+                <div className={`${cardBg} rounded-2xl border ${glowStyles.emerald} p-5`}>
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                      <h3 className={`text-lg font-bold ${textPrimary} flex items-center gap-2 tracking-tight`}>
+                        <Sparkles className="w-5 h-5 text-brand-emerald-600" />
+                        Advisor Session Snapshot
+                      </h3>
+                      <p className={`mt-1 text-sm ${textSecondary}`}>Generate a single-screen pre-session summary for Advisor review. It is not saved as a note and is not shown to clients.</p>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {sessionSnapshotState.data && <button type="button" onClick={copyAdvisorSessionSnapshot} className="inline-flex items-center gap-2 rounded-xl border border-brand-stone-200 px-4 py-2 text-sm font-semibold hover:bg-brand-stone-50 dark:border-slate-700 dark:hover:bg-slate-800"><Copy className="h-4 w-4" /> Copy Snapshot</button>}
+                      <button type="button" onClick={generateAdvisorSessionSnapshot} disabled={sessionSnapshotState.loading || !selectedInsightClient} className="inline-flex items-center justify-center gap-2 rounded-xl bg-brand-emerald-700 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-emerald-800 disabled:opacity-60">
+                        {sessionSnapshotState.loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                        Generate Session Snapshot
+                      </button>
+                    </div>
+                  </div>
+                  {sessionSnapshotState.error && <p className="mt-3 rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700">{sessionSnapshotState.error}</p>}
+                  {sessionSnapshotState.data && (() => {
+                    const snapshot = sessionSnapshotState.data;
+                    const renderList = (items) => items?.length ? <ul className="mt-2 list-disc space-y-1 pl-5 text-sm">{items.map((item) => <li key={item}>{item}</li>)}</ul> : <p className={`mt-2 text-sm ${textMuted}`}>No clear pattern in available app data.</p>;
+                    return (
+                      <div className="mt-4 space-y-4 rounded-2xl bg-white/80 p-4 dark:bg-slate-900/60">
+                        <div>
+                          <p className="text-xs font-bold uppercase tracking-wide text-brand-gold-700 dark:text-brand-gold-500">Advisor Review</p>
+                          <h4 className={`mt-1 text-xl font-semibold ${textPrimary}`}>{snapshot.snapshot_title}</h4>
+                          <p className={`mt-2 rounded-xl bg-brand-stone-100 px-3 py-2 text-xs ${textSecondary} dark:bg-slate-950/60`}>{snapshot.advisor_review_disclaimer}</p>
+                        </div>
+                        <div className="grid gap-4 lg:grid-cols-2">
+                          <section className="rounded-xl border border-brand-stone-100 p-4 dark:border-slate-800">
+                            <h5 className={`font-semibold ${textPrimary}`}>Curriculum trajectory</h5>
+                            <p className={`mt-2 text-sm ${textSecondary}`}>{snapshot.curriculum_trajectory?.active_module || 'Available data is limited'} · {snapshot.curriculum_trajectory?.percent_complete || 0}% complete</p>
+                            <p className={`mt-2 text-sm ${textSecondary}`}>{snapshot.curriculum_trajectory?.recent_response_synthesis}</p>
+                          </section>
+                          <section className="rounded-xl border border-brand-stone-100 p-4 dark:border-slate-800">
+                            <h5 className={`font-semibold ${textPrimary}`}>Assigned practice status</h5>
+                            <p className={`mt-2 text-sm ${textSecondary}`}>{snapshot.assigned_practice_status || 'Review current assigned IFS practices.'}</p>
+                          </section>
+                          <section className="rounded-xl border border-brand-stone-100 p-4 dark:border-slate-800"><h5 className={`font-semibold ${textPrimary}`}>Parts / Inner System themes</h5>{renderList([...(snapshot.parts_and_inner_system_themes?.active_parts_or_protectors || []), ...(snapshot.parts_and_inner_system_themes?.relationship_patterns || []), ...(snapshot.parts_and_inner_system_themes?.possible_polarizations_to_explore || [])])}</section>
+                          <section className="rounded-xl border border-brand-stone-100 p-4 dark:border-slate-800"><h5 className={`font-semibold ${textPrimary}`}>Assessment / Self-energy themes</h5>{renderList([...(snapshot.assessment_and_self_energy_themes?.assessment_patterns || []), ...(snapshot.assessment_and_self_energy_themes?.self_energy_strengths || []), ...(snapshot.assessment_and_self_energy_themes?.self_energy_growth_edges || [])])}</section>
+                          <section className="rounded-xl border border-brand-stone-100 p-4 dark:border-slate-800"><h5 className={`font-semibold ${textPrimary}`}>Life Integration themes</h5>{renderList([...(snapshot.life_integration_themes?.recent_daily_life_patterns || []), ...(snapshot.life_integration_themes?.triggers_needs_or_boundaries || [])])}</section>
+                          <section className="rounded-xl border border-brand-stone-100 p-4 dark:border-slate-800"><h5 className={`font-semibold ${textPrimary}`}>Suggested session questions</h5>{renderList(snapshot.suggested_session_questions)}</section>
+                          <section className="rounded-xl border border-brand-stone-100 p-4 dark:border-slate-800"><h5 className={`font-semibold ${textPrimary}`}>Attention items for Advisor</h5>{renderList(snapshot.attention_items_for_advisor)}</section>
+                          <section className="rounded-xl border border-brand-stone-100 p-4 dark:border-slate-800"><h5 className={`font-semibold ${textPrimary}`}>What not to over-interpret</h5>{renderList(snapshot.what_not_to_overinterpret)}</section>
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
 
                 <div className={`${cardBg} rounded-2xl border ${glowStyles.blue} p-5`}>
                   <h3 className={`text-lg font-bold ${textPrimary} mb-4 flex items-center gap-2 tracking-tight`}>
