@@ -9,6 +9,8 @@ import { supabase } from '../lib/supabase';
 import { clientAuth } from '../lib/supabasePersonalization';
 import { curriculumModules } from '../data/curriculumData';
 import InteractiveWorksheetRenderer from '../components/ai/InteractiveWorksheetRenderer';
+import { serializeWorksheetResponses } from '../lib/interactiveWorksheetState';
+import { renderInteractiveResponseSummary } from '../lib/interactiveWorksheetSummary';
 import {
   loadAssignedHomeworkForClient,
   markAssignedHomeworkStarted,
@@ -35,6 +37,7 @@ const ClientHomework = () => {
   const [error, setError] = useState('');
   const [expandedItems, setExpandedItems] = useState({});
   const [completionNotes, setCompletionNotes] = useState({});
+  const [worksheetResponses, setWorksheetResponses] = useState({});
   const [filter, setFilter] = useState('active');
 
   const textPrimary = isDark ? 'text-white' : 'text-gray-900';
@@ -100,13 +103,19 @@ const ClientHomework = () => {
 
   const handleComplete = async (item) => {
     const notes = completionNotes[item.id] || '';
+    const responses = serializeWorksheetResponses(worksheetResponses[item.id] || {});
+    const responseSummary = renderInteractiveResponseSummary(responses);
+    const completionText = [
+      notes.trim(),
+      responseSummary ? `Interactive Practice Responses:\n${responseSummary}` : ''
+    ].filter(Boolean).join('\n\n');
     await supabase
       .from('ifs_therapy_homework')
       .update({
         completed: true,
         status: 'completed',
         completed_at: new Date().toISOString(),
-        completion_notes: notes || null,
+        completion_notes: completionText || null,
         updated_at: new Date().toISOString()
       })
       .eq('id', item.id);
@@ -295,7 +304,7 @@ const ClientHomework = () => {
                     {item.description && (
                       <div className="mt-3">
                         <p className={`text-xs font-semibold ${textMuted} uppercase tracking-wider mb-1`}>Instructions</p>
-                        <InteractiveWorksheetRenderer blocks={item.activity_blocks || item.activityBlocks} fallbackText={item.description} />
+                        <InteractiveWorksheetRenderer blocks={item.activity_blocks || item.activityBlocks} fallbackText={item.description} initialResponses={worksheetResponses[item.id]} onResponsesChange={(responses) => setWorksheetResponses(prev => ({ ...prev, [item.id]: responses }))} mode="client" readOnly={item.completed} />
                       </div>
                     )}
 
@@ -326,7 +335,7 @@ const ClientHomework = () => {
                         <p className={`text-xs font-semibold ${isDark ? 'text-emerald-400' : 'text-emerald-600'} mb-1 flex items-center gap-1`}>
                           <MessageSquare className="w-3 h-3" /> My Reflection
                         </p>
-                        <p className={`text-sm ${isDark ? 'text-emerald-200' : 'text-emerald-700'} leading-relaxed`}>{item.completion_notes}</p>
+                        <p className={`text-sm ${isDark ? 'text-emerald-200' : 'text-emerald-700'} leading-relaxed whitespace-pre-wrap`}>{item.completion_notes}</p>
                       </div>
                     )}
 

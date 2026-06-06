@@ -578,7 +578,7 @@ const TherapistHomework = () => {
               {form.description && (
                 <div className={`mt-3 rounded-xl border ${cardBorder} p-4`}>
                   <p className={`mb-2 text-xs font-semibold uppercase tracking-wide ${textMuted}`}>Readable preview</p>
-                  <InteractiveWorksheetRenderer fallbackText={form.description} />
+                  <InteractiveWorksheetRenderer fallbackText={form.description} readOnly mode="advisor_preview" />
                 </div>
               )}
             </div>
@@ -818,7 +818,7 @@ const TherapistHomework = () => {
                         <p className={`text-xs font-semibold ${isDark ? 'text-emerald-400' : 'text-emerald-600'} mb-1 flex items-center gap-1`}>
                           <MessageSquare className="w-3 h-3" /> Client's Response
                         </p>
-                        <p className={`text-sm ${isDark ? 'text-emerald-200' : 'text-emerald-700'} leading-relaxed`}>{item.completion_notes}</p>
+                        <p className={`text-sm ${isDark ? 'text-emerald-200' : 'text-emerald-700'} leading-relaxed whitespace-pre-wrap`}>{item.completion_notes}</p>
                       </div>
                     )}
                     {item.completed_at && (
