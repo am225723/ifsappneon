@@ -21,8 +21,21 @@ export function parseActivityBlocks(source) {
   }
 }
 
+function ensureArray(value) {
+  if (Array.isArray(value)) return value.slice(0, 30);
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value);
+      if (Array.isArray(parsed)) return parsed.slice(0, 30);
+    } catch {
+      return value.split(/[;\n]/).map((item) => item.trim()).filter(Boolean).slice(0, 30);
+    }
+  }
+  return [];
+}
+
 function normalizeOptions(block) {
-  return block.options || block.items || block.prompts || [];
+  return ensureArray(block.options || block.items || block.prompts);
 }
 
 function blockLabel(block, fallback) {
@@ -75,7 +88,7 @@ export default function InteractiveWorksheetRenderer({ blocks, fallbackText = ''
     }
 
     if (type === 'sort') {
-      const columns = block.columns || [];
+      const columns = ensureArray(block.columns);
       return (
         <fieldset key={id} className="rounded-2xl border border-brand-stone-200 p-4 dark:border-slate-700">
           <legend className="px-1 text-sm font-semibold">{blockLabel(block, 'Sort these items')}</legend>
@@ -93,8 +106,8 @@ export default function InteractiveWorksheetRenderer({ blocks, fallbackText = ''
     }
 
     if (type === 'match') {
-      const leftItems = block.left || block.items || [];
-      const rightItems = block.right || block.options || [];
+      const leftItems = ensureArray(block.left || block.items);
+      const rightItems = ensureArray(block.right || block.options);
       return (
         <fieldset key={id} className="rounded-2xl border border-brand-stone-200 p-4 dark:border-slate-700">
           <legend className="px-1 text-sm font-semibold">{blockLabel(block, 'Match the pairs')}</legend>
@@ -120,7 +133,8 @@ export default function InteractiveWorksheetRenderer({ blocks, fallbackText = ''
     }
 
     if (type === 'body_map') {
-      const areas = block.presets?.length ? block.presets : ['Head/face', 'Throat', 'Chest/heart', 'Belly', 'Shoulders', 'Hands', 'Back', 'Legs/feet'];
+      const presetAreas = ensureArray(block.presets);
+      const areas = presetAreas.length ? presetAreas : ['Head/face', 'Throat', 'Chest/heart', 'Belly', 'Shoulders', 'Hands', 'Back', 'Legs/feet'];
       return (
         <fieldset key={id} className="rounded-2xl border border-brand-stone-200 p-4 dark:border-slate-700">
           <legend className="px-1 text-sm font-semibold">{blockLabel(block, 'Body map')}</legend>
@@ -132,17 +146,21 @@ export default function InteractiveWorksheetRenderer({ blocks, fallbackText = ''
     }
 
     if (type === 'zone_map') {
-      const rings = block.rings?.length ? block.rings : ['Close to Self', 'Nearby', 'Protective edge', 'Deeply blended'];
-      const nodes = block.nodes?.length ? block.nodes : ['Part or pattern'];
+      const parsedRings = ensureArray(block.rings);
+      const parsedNodes = ensureArray(block.nodes);
+      const rings = parsedRings.length ? parsedRings : ['Close to Self', 'Nearby', 'Protective edge', 'Deeply blended'];
+      const nodes = parsedNodes.length ? parsedNodes : ['Part or pattern'];
       return <fieldset key={id} className="rounded-2xl border border-brand-stone-200 p-4 dark:border-slate-700"><legend className="px-1 text-sm font-semibold">{blockLabel(block, 'Zone map')}</legend><p className="mt-1 text-xs text-brand-stone-500 dark:text-slate-400">Core: {block.core || 'Self-energy'}</p><div className="mt-3 space-y-3">{nodes.map((node) => <label key={node} className="block text-sm"><span className="font-medium">{node}</span><select className="mt-1 w-full rounded-xl border border-brand-stone-200 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-950" value={current[id]?.[node] || ''} onChange={(event) => update(id, { ...(current[id] || {}), [node]: event.target.value })}><option value="">Choose proximity...</option>{rings.map((ring) => <option key={ring} value={ring}>{ring}</option>)}</select></label>)}</div></fieldset>;
     }
 
     if (type === 'blank') {
-      return <fieldset key={id} className="rounded-2xl border border-brand-stone-200 p-4 dark:border-slate-700"><legend className="px-1 text-sm font-semibold">{blockLabel(block, 'Fill in the blanks')}</legend><div className="mt-3 flex flex-wrap items-center gap-2 text-sm">{(block.template || []).map((segment, segmentIndex) => segment.type === 'input' ? <input key={segmentIndex} value={current[id]?.[segmentIndex] || ''} onChange={(event) => update(id, { ...(current[id] || {}), [segmentIndex]: event.target.value })} placeholder={segment.placeholder} className="min-w-40 rounded-lg border border-brand-stone-200 px-2 py-1 dark:border-slate-700 dark:bg-slate-950" /> : <span key={segmentIndex}>{segment.text}</span>)}</div></fieldset>;
+      const template = ensureArray(block.template);
+      return <fieldset key={id} className="rounded-2xl border border-brand-stone-200 p-4 dark:border-slate-700"><legend className="px-1 text-sm font-semibold">{blockLabel(block, 'Fill in the blanks')}</legend><div className="mt-3 flex flex-wrap items-center gap-2 text-sm">{template.map((segment, segmentIndex) => segment.type === 'input' ? <input key={segmentIndex} value={current[id]?.[segmentIndex] || ''} onChange={(event) => update(id, { ...(current[id] || {}), [segmentIndex]: event.target.value })} placeholder={segment.placeholder} className="min-w-40 rounded-lg border border-brand-stone-200 px-2 py-1 dark:border-slate-700 dark:bg-slate-950" /> : <span key={segmentIndex}>{segment.text}</span>)}</div></fieldset>;
     }
 
     if (type === 'slider') {
-      const metrics = block.metrics?.length ? block.metrics : [{ id: 'rating', label: blockLabel(block, 'Rating') }];
+      const parsedMetrics = ensureArray(block.metrics);
+      const metrics = parsedMetrics.length ? parsedMetrics : [{ id: 'rating', label: blockLabel(block, 'Rating') }];
       return <fieldset key={id} className="rounded-2xl border border-brand-stone-200 p-4 dark:border-slate-700"><legend className="px-1 text-sm font-semibold">{blockLabel(block, 'Sliders')}</legend><div className="mt-3 space-y-3">{metrics.map((metric) => { const metricId = metric.id || metric.label; return <label key={metricId} className="block text-sm"><span className="font-medium">{metric.label || metricId}</span><input type="range" min={block.min ?? 0} max={block.max ?? 10} value={current[id]?.[metricId] || block.min || 0} onChange={(event) => update(id, { ...(current[id] || {}), [metricId]: event.target.value })} className="mt-2 w-full" /><span className="text-xs text-brand-stone-500">{current[id]?.[metricId] || block.min || 0}</span></label>; })}</div></fieldset>;
     }
 

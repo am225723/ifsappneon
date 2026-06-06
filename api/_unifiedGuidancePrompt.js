@@ -58,7 +58,7 @@ export function buildUnifiedGuidanceMessages({ mode, clientId, rangeDays, dataPa
         route_rules: [
           'action_route must be an internal client-safe route from the allowed list in the data payload.',
           'Prefer the Curriculum/IFS Path when sparse or unclear.',
-          'Do not point clients to Advisor-only, admin-only, external, or medication routes.'
+          'Do not point clients to Advisor-only, admin-only, reports, analytics, external, javascript, unknown, or medication routes.'
         ],
         interactive_payload_guidance: includeInteractivePayload
           ? 'When useful, include a small interactive payload using valid blocks or supported shortcodes. Keep it brief and safe.'
