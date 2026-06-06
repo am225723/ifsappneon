@@ -2,9 +2,13 @@ import { sql } from './_auth.js';
 import { cleanModuleResponses } from './_moduleResponseCleaning.js';
 import { ALLOWED_ACTION_ROUTES } from './_unifiedGuidanceValidation.js';
 
+function safeStringify(value) {
+  try { return JSON.stringify(value); } catch { return ''; }
+}
+
 function truncateText(value, max = 500) {
   if (value === null || value === undefined) return null;
-  const text = typeof value === 'string' ? value : JSON.stringify(value);
+  const text = typeof value === 'string' ? value : safeStringify(value);
   const compact = text.replace(/\s+/g, ' ').trim();
   if (!compact) return null;
   return compact.length > max ? `${compact.slice(0, max)}…` : compact;
@@ -14,6 +18,24 @@ function parseJson(value) {
   if (!value) return {};
   if (typeof value === 'object') return value;
   try { return JSON.parse(value); } catch { return {}; }
+}
+
+
+function capCleanedResponses(cleaned = {}) {
+  return Object.entries(cleaned).slice(0, 20).reduce((acc, [moduleId, responses]) => {
+    acc[truncateText(moduleId, 120) || 'module'] = (Array.isArray(responses) ? responses : []).slice(0, 5).map((response) => ({
+      step_id: truncateText(response.step_id || 'module', 120),
+      answers: Object.entries(response.answers || {}).slice(0, 12).reduce((answerAcc, [key, value]) => {
+        answerAcc[truncateText(key, 120) || 'answer'] = truncateText(value, 500);
+        return answerAcc;
+      }, {})
+    }));
+    return acc;
+  }, {});
+}
+
+function capArray(values, max, mapper) {
+  return (Array.isArray(values) ? values : []).slice(0, max).map(mapper).filter(Boolean);
 }
 
 async function optionalQuery(label, queryPromise, fallback = []) {
@@ -28,7 +50,7 @@ function normalizeInteractiveRows(rows = []) {
   const grouped = {};
   const curriculumReflections = [];
   const assessmentSummaries = [];
-  rows.forEach((row) => {
+  rows.slice(0, 120).forEach((row) => {
     const moduleId = row.module_id || 'unknown';
     const data = parseJson(row.data);
     if (String(moduleId).includes('curriculum-reflection') || data.moduleTitle || data.reflection) {
@@ -44,10 +66,10 @@ function normalizeInteractiveRows(rows = []) {
     }
     const answers = data.answers || data.responses || data.reflections || data;
     if (!grouped[moduleId]) grouped[moduleId] = [];
-    grouped[moduleId].push({ step_id: row.step_id || 'module', answers });
+    if (grouped[moduleId].length < 5) grouped[moduleId].push({ step_id: row.step_id || 'module', answers });
   });
   return {
-    cleaned_module_responses: cleanModuleResponses(grouped),
+    cleaned_module_responses: capCleanedResponses(cleanModuleResponses(grouped)),
     curriculum_reflections: curriculumReflections.slice(0, 10),
     interactive_assessments: assessmentSummaries.slice(0, 10)
   };
@@ -62,7 +84,7 @@ function summarizeProgress(rows = []) {
     completed_modules: completed,
     percent_complete: total ? Math.round((completed / total) * 100) : 0,
     active_module: active?.module_id || null,
-    recent: rows.slice(0, 12).map((row) => ({
+    recent: capArray(rows, 12, (row) => ({
       module_id: row.module_id,
       completed: Boolean(row.completed || row.is_completed),
       current_step: row.current_step,
@@ -72,7 +94,7 @@ function summarizeProgress(rows = []) {
 }
 
 function normalizeParts(rows = []) {
-  return rows.slice(0, 20).map((part) => ({
+  return capArray(rows, 20, (part) => ({
     id: part.id,
     name: truncateText(part.part_name || part.name || 'Unnamed part', 120),
     type: truncateText(part.part_type || part.type || part.role, 120),
@@ -83,7 +105,7 @@ function normalizeParts(rows = []) {
 }
 
 function normalizeRelationships(rows = []) {
-  return rows.slice(0, 30).map((rel) => ({
+  return capArray(rows, 30, (rel) => ({
     source_part_id: rel.source_part_id || rel.part_a_id,
     target_part_id: rel.target_part_id || rel.part_b_id,
     relationship_type: truncateText(rel.relationship_type || rel.type, 140),
@@ -92,7 +114,7 @@ function normalizeRelationships(rows = []) {
 }
 
 function normalizeLifeRows(rows = []) {
-  return rows.slice(0, 10).map((row) => ({
+  return capArray(rows, 10, (row) => ({
     type: truncateText(row.reflection_type || row.type || row.practice_type, 120),
     prompt: truncateText(row.prompt || row.title, 160),
     response_excerpt: truncateText(row.response || row.reflection || row.notes || row.data, 300),
@@ -101,7 +123,7 @@ function normalizeLifeRows(rows = []) {
 }
 
 function normalizeAssessmentRows(rows = []) {
-  return rows.slice(0, 8).map((row) => ({
+  return capArray(rows, 8, (row) => ({
     primary_wound: truncateText(row.primary_wound, 120),
     secondary_wound: truncateText(row.secondary_wound, 120),
     tertiary_wounds: Array.isArray(row.tertiary_wounds) ? row.tertiary_wounds.slice(0, 3) : [],
@@ -111,7 +133,7 @@ function normalizeAssessmentRows(rows = []) {
 }
 
 function normalizeAssigned(rows = []) {
-  return rows.slice(0, 10).map((row) => ({
+  return capArray(rows, 10, (row) => ({
     title: truncateText(row.title || row.module_id || row.category, 160),
     status: truncateText(row.status, 80),
     assigned_at: row.assigned_at || row.created_at,
@@ -121,7 +143,7 @@ function normalizeAssigned(rows = []) {
 }
 
 function normalizeMood(rows = []) {
-  return rows.slice(0, 20).map((row) => ({
+  return capArray(rows, 20, (row) => ({
     mood: truncateText(row.mood || row.mood_label, 100),
     energy: row.energy ?? row.energy_level ?? null,
     stress: row.stress ?? row.stress_level ?? null,
@@ -132,7 +154,7 @@ function normalizeMood(rows = []) {
 }
 
 function capPayload(payload, max = 14000) {
-  const serialized = JSON.stringify(payload);
+  const serialized = safeStringify(payload);
   if (serialized.length <= max) return payload;
   return { ...payload, compacted: true, cleaned_module_responses: {}, notes: ['Payload was compacted server-side to control prompt size.'] };
 }

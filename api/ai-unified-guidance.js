@@ -2,7 +2,7 @@ import { getCurrentAppUserFromClerk, isAdminUser, isTherapistUser, requireTherap
 import { callOpenRouterChat } from './_aiProvider.js';
 import { buildUnifiedGuidanceData } from './_unifiedGuidanceData.js';
 import { buildUnifiedGuidanceMessages } from './_unifiedGuidancePrompt.js';
-import { validateUnifiedGuidance } from './_unifiedGuidanceValidation.js';
+import { fallbackAdvisorSnapshot, fallbackNextBestStep, validateUnifiedGuidance } from './_unifiedGuidanceValidation.js';
 
 function sendError(res, status, message, code = 'server_error') {
   return res.status(status).json({ error: { code, message } });
@@ -14,8 +14,14 @@ function clampRangeDays(value) {
   return Math.min(parsed, 90);
 }
 
+const VALID_GUIDANCE_MODES = new Set(['client_next_step', 'advisor_snapshot', 'combined']);
+
 function normalizeMode(value) {
-  return ['client_next_step', 'advisor_snapshot', 'combined'].includes(value) ? value : 'client_next_step';
+  const mode = value || 'client_next_step';
+  if (!VALID_GUIDANCE_MODES.has(mode)) {
+    throw Object.assign(new Error('Invalid unified guidance mode'), { statusCode: 400, code: 'invalid_mode' });
+  }
+  return mode;
 }
 
 async function assertClientRecord(clientId) {
@@ -33,6 +39,9 @@ async function authorizeUnifiedGuidance(req, { clientId, mode }) {
   await assertClientRecord(clientId);
 
   if (mode === 'client_next_step') {
+    if (currentUser.user_role !== 'client') {
+      throw Object.assign(new Error('Client Next Best Step requires a client workspace'), { statusCode: 403, code: 'client_mode_required' });
+    }
     if (String(currentUser.id) !== String(clientId)) {
       throw Object.assign(new Error('Clients may request only their own Next Best Step'), { statusCode: 403, code: 'client_scope_required' });
     }
@@ -62,8 +71,20 @@ export default async function handler(req, res) {
     const authContext = await authorizeUnifiedGuidance(req, { clientId, mode });
     const dataPayload = await buildUnifiedGuidanceData({ clientId, mode, rangeDays });
     const messages = buildUnifiedGuidanceMessages({ mode, clientId, rangeDays, dataPayload, includeInteractivePayload });
-    const result = await callOpenRouterChat({ messages, temperature: 0.25, maxTokens: mode === 'client_next_step' ? 1100 : 2200 });
-    const validated = validateUnifiedGuidance({ rawText: result.text, mode, clientId });
+    let result = null;
+    let validated;
+    let providerWarning = null;
+    try {
+      result = await callOpenRouterChat({ messages, temperature: 0.25, maxTokens: mode === 'client_next_step' ? 1100 : 2200 });
+      validated = validateUnifiedGuidance({ rawText: result.text, mode, clientId });
+    } catch (providerError) {
+      providerWarning = providerError?.code || 'provider_unavailable';
+      validated = {
+        next_best_step: mode !== 'advisor_snapshot' ? fallbackNextBestStep() : undefined,
+        advisor_session_snapshot: mode !== 'client_next_step' ? fallbackAdvisorSnapshot(clientId, 'The generated snapshot could not be produced right now.') : undefined,
+        validation_fallback: true
+      };
+    }
 
     return res.status(200).json({
       data: {
@@ -71,8 +92,9 @@ export default async function handler(req, res) {
         mode,
         generatedAt: new Date().toISOString(),
         rangeDays,
-        provider: result.provider,
-        model: result.model,
+        provider: result?.provider || 'fallback',
+        model: result?.model || null,
+        validationWarnings: [providerWarning, validated.validation_fallback ? 'safe_fallback_used' : null].filter(Boolean),
         dataSources: dataPayload.data_sources,
         authorization: {
           requestedByRole: authContext.role,

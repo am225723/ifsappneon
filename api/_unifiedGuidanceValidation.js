@@ -6,17 +6,29 @@ export const ALLOWED_ACTION_ROUTES = [
   '/life-integration/notice-part',
   '/life-integration/return-to-self',
   '/life-integration/trigger-reflection',
+  '/life-integration/repair-after-conflict',
+  '/life-integration/protector-check-in',
+  '/life-integration/needs-boundaries',
   '/parts-relationships',
   '/parts-dialogue',
   '/journal',
   '/tools',
   '/meditation',
-  '/assigned-practices'
+  '/assigned-practices',
+  '/homework'
 ];
 
 const PRIORITY_LOOPS = new Set(['momentum', 'reactive', 'relational', 'collaborative', 'integration']);
 const PAYLOAD_FORMATS = new Set(['shortcode', 'blocks', 'text']);
-const PROHIBITED_PATTERNS = [/risk score:\s*\d/i, /medication recommendation/i, /emergency conclusion/i, /diagnosis:\s*[^,}"]+/i];
+const PROHIBITED_PATTERNS = [
+  /risk score\s*:?\s*\d*/i,
+  /medication recommendation/i,
+  /emergency conclusion/i,
+  /clinical conclusion/i,
+  /diagnosis\s*:?\s*[^,}"]*/i,
+  /patient monitoring/i,
+  /treatment compliance/i
+];
 
 function capString(value, max = 700) {
   const text = value === null || value === undefined ? '' : String(value).replace(/\s+/g, ' ').trim();
@@ -24,32 +36,44 @@ function capString(value, max = 700) {
 }
 
 function safeArray(value, max = 8) {
-  return Array.isArray(value) ? value.map((item) => capString(item, 260)).filter(Boolean).slice(0, max) : [];
+  let items = value;
+  if (typeof items === 'string') {
+    try {
+      const parsed = JSON.parse(items);
+      items = Array.isArray(parsed) ? parsed : items.split(/[;\n]/);
+    } catch {
+      items = items.split(/[;\n]/);
+    }
+  }
+  return Array.isArray(items) ? items.map((item) => capString(item, 260)).filter(Boolean).slice(0, max) : [];
 }
 
 function isAllowedRoute(route) {
   if (!route || typeof route !== 'string') return false;
-  if (/^https?:\/\//i.test(route) || route.includes('/medication') || route.includes('/admin') || route.includes('/therapist')) return false;
-  if (ALLOWED_ACTION_ROUTES.includes(route)) return true;
-  return /^\/curriculum\/module\/[A-Za-z0-9_-]+$/.test(route);
+  const normalized = route.trim();
+  const lower = normalized.toLowerCase();
+  if (!normalized.startsWith('/') || normalized.startsWith('//')) return false;
+  if (/^(https?:|javascript:|data:|vbscript:)/i.test(normalized)) return false;
+  if (lower.includes('/medication') || lower.includes('/medications') || lower.includes('/medication-management')) return false;
+  if (lower.startsWith('/admin') || lower.startsWith('/therapist') || lower.startsWith('/advisor')) return false;
+  if (lower.startsWith('/reports') || lower.startsWith('/analytics') || lower.startsWith('/longitudinal-analytics')) return false;
+  if (ALLOWED_ACTION_ROUTES.includes(normalized)) return true;
+  return /^\/curriculum\/module\/[A-Za-z0-9_-]+$/.test(normalized);
 }
 
-export function fallbackNextBestStep(reason = 'Continue your curriculum to unlock more personalized guidance.') {
+export function fallbackNextBestStep(reason = 'The guidance engine could not generate a personalized step right now, so the curriculum is the safest place to continue.') {
   return {
-    title: 'Continue Your IFS Path',
-    description: 'The curriculum is the main spine of your IFS path. Continuing with the next module may be the most helpful step right now.',
+    title: 'Continue Your IFS Curriculum',
+    description: 'Return to the main guided path and continue from your current module.',
     reason,
     action_route: '/curriculum',
     priority_loop: 'momentum',
     estimated_time: '10–20 minutes',
-    supporting_signals: ['Safe fallback when personalized guidance is unavailable.'],
+    supporting_signals: ['Curriculum remains the main IFS path.'],
     interactive_payload: {
-      format: 'blocks',
-      content: '',
-      blocks: [
-        { type: 'instruction', text: 'Before you continue, take one slow breath and notice which part of you is most present.' },
-        { type: 'textarea', id: 'next_step_reflection', prompt: 'What would feel like a kind next step in your IFS Path today?' }
-      ]
+      format: 'text',
+      content: 'Take one slow breath, open your current module, and notice one part that responds to today’s lesson.',
+      blocks: []
     }
   };
 }
@@ -74,22 +98,48 @@ export function fallbackAdvisorSnapshot(clientId, reason = 'Available data is li
 function parseJson(text) {
   if (!text) return null;
   if (typeof text === 'object') return text;
-  const fenced = String(text).match(/```json\s*([\s\S]*?)```/i)?.[1];
-  const candidate = fenced || String(text).trim();
-  try { return JSON.parse(candidate); } catch { return null; }
+  const source = String(text).trim();
+  const fenced = source.match(/```(?:json)?\s*([\s\S]*?)```/i)?.[1];
+  const candidate = (fenced || source).trim();
+  try { return JSON.parse(candidate); } catch {
+    const firstBrace = candidate.indexOf('{');
+    const lastBrace = candidate.lastIndexOf('}');
+    if (firstBrace >= 0 && lastBrace > firstBrace) {
+      try { return JSON.parse(candidate.slice(firstBrace, lastBrace + 1)); } catch { return null; }
+    }
+    return null;
+  }
 }
 
 function containsProhibited(value) {
-  const serialized = JSON.stringify(value || {});
+  let serialized = JSON.stringify(value || {});
+  serialized = serialized
+    .replaceAll(UNIFIED_GUIDANCE_DISCLAIMER, '')
+    .replace(/not a diagnosis(?:, risk assessment,)? or clinical conclusion/gi, '')
+    .replace(/not a diagnosis or conclusion/gi, '')
+    .replace(/not a clinical conclusion/gi, '')
+    .replace(/not a diagnosis/gi, '');
   return PROHIBITED_PATTERNS.some((pattern) => pattern.test(serialized));
 }
 
+function normalizeBlocks(value) {
+  let blocks = value;
+  if (typeof blocks === 'string') {
+    try { blocks = JSON.parse(blocks); } catch { blocks = []; }
+  }
+  if (!Array.isArray(blocks)) return [];
+  return blocks
+    .filter((block) => block && typeof block === 'object')
+    .slice(0, 20)
+    .map((block, index) => ({ ...block, id: capString(block.id || `block_${index + 1}`, 80) }));
+}
+
 function normalizeInteractivePayload(payload = {}) {
-  const format = PAYLOAD_FORMATS.has(payload?.format) ? payload.format : 'blocks';
+  const format = PAYLOAD_FORMATS.has(payload?.format) ? payload.format : 'text';
   return {
     format,
     content: capString(payload?.content, 2500),
-    blocks: Array.isArray(payload?.blocks) ? payload.blocks.slice(0, 20) : []
+    blocks: normalizeBlocks(payload?.blocks)
   };
 }
 
