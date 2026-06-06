@@ -40,6 +40,8 @@ import {
 import RecentActivityFeed from '../components/RecentActivityFeed';
 import { buildSharedCurriculumSummary } from '../lib/curriculumExperience';
 import { loadCurriculumReflections } from '../lib/curriculumReflections';
+import { loadNextBestStep } from '../lib/unifiedGuidance';
+import InteractiveWorksheetRenderer from '../components/ai/InteractiveWorksheetRenderer';
 
 const iconTones = {
   emerald: 'bg-brand-emerald-50 text-brand-emerald-700 dark:bg-brand-emerald-950/40 dark:text-brand-emerald-100',
@@ -134,6 +136,7 @@ const Home = ({ clientId, client, mode = 'home', selfProfile = null, selfProfile
   const [curriculumReflections, setCurriculumReflections] = useState([]);
   const [assignedPracticeCount, setAssignedPracticeCount] = useState(0);
   const [dataLoadError, setDataLoadError] = useState(null);
+  const [nextStepState, setNextStepState] = useState({ loading: false, data: null, error: '' });
   const selfProfileForLoad = selfProfile || selfProfileResult?.profile || null;
   const effectiveClientId = getEffectiveClientId({ mode, currentClientId: clientId, selfProfile: selfProfileForLoad });
   const effectiveClient = mode === 'my-ifs' ? (selfProfileForLoad || client) : client;
@@ -511,6 +514,17 @@ const Home = ({ clientId, client, mode = 'home', selfProfile = null, selfProfile
     { to: '/inbox', icon: MessageSquare, title: 'Advisor Messages', description: 'View supportive messages and updates from your Advisor.', buttonLabel: 'Open Messages', tone: 'gold' }
   ];
 
+  const handleLoadNextStep = async (force = false) => {
+    if (!effectiveClientId || nextStepState.loading) return;
+    setNextStepState((current) => ({ ...current, loading: true, error: '' }));
+    try {
+      const data = await loadNextBestStep({ clientId: effectiveClientId, force });
+      setNextStepState({ loading: false, data, error: '' });
+    } catch (error) {
+      setNextStepState({ loading: false, data: null, error: error.message || 'Your next guided step could not be generated right now. You can continue with your curriculum.' });
+    }
+  };
+
   if (loading) {
     return (
       <div className="mx-auto max-w-6xl px-6 py-12 lg:py-20">
@@ -640,6 +654,43 @@ const Home = ({ clientId, client, mode = 'home', selfProfile = null, selfProfile
           </div>
         </section>
       )}
+
+      <section className="mb-8">
+        <div className="rounded-[2rem] border border-brand-emerald-100 bg-white/85 p-5 shadow-premium dark:border-brand-emerald-900/40 dark:bg-slate-900/60">
+          <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[0.24em] text-brand-emerald-700 dark:text-brand-emerald-100">Next Best Step</p>
+              <h2 className="mt-1 text-2xl font-serif font-normal text-brand-stone-900 dark:text-slate-100">Your Next Guided Step</h2>
+              <p className="mt-2 max-w-2xl text-sm text-brand-stone-600 dark:text-slate-400">Based on your current IFS Path and recent app activity, this may be a helpful next step.</p>
+            </div>
+            <button type="button" onClick={() => handleLoadNextStep(Boolean(nextStepState.data))} disabled={nextStepState.loading || !effectiveClientId} className="btn-sanctuary-secondary shrink-0 disabled:opacity-60">
+              {nextStepState.loading ? 'Finding your next guided step…' : nextStepState.data ? 'Refresh Step' : 'Find My Next Step'}
+            </button>
+          </div>
+          {nextStepState.error && <p className="mt-4 rounded-2xl bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:bg-amber-950/20 dark:text-amber-100">Your next guided step could not be generated right now. You can continue with your curriculum.</p>}
+          {!nextStepState.data && !nextStepState.loading && !nextStepState.error && <p className="mt-4 text-sm text-brand-stone-500 dark:text-slate-500">Continue your curriculum to unlock more personalized guidance.</p>}
+          {nextStepState.data?.next_best_step && (
+            <div className="mt-5 rounded-3xl border border-brand-stone-100 bg-brand-sanctuary/70 p-5 dark:border-slate-800 dark:bg-slate-950/40">
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                <div>
+                  <h3 className="text-xl font-semibold text-brand-stone-900 dark:text-slate-100">{nextStepState.data.next_best_step.title}</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-brand-stone-600 dark:text-slate-400">{nextStepState.data.next_best_step.description}</p>
+                  <p className="mt-3 text-sm text-brand-stone-600 dark:text-slate-400"><span className="font-semibold text-brand-stone-900 dark:text-slate-100">Why this may help:</span> {nextStepState.data.next_best_step.reason}</p>
+                  <p className="mt-2 text-xs font-semibold uppercase tracking-wide text-brand-gold-700 dark:text-brand-gold-500">Estimated time: {nextStepState.data.next_best_step.estimated_time}</p>
+                </div>
+                <Link to={nextStepState.data.next_best_step.action_route || '/curriculum'} className="btn-sanctuary-primary shrink-0">Open Step <ArrowRight className="h-4 w-4" /></Link>
+              </div>
+              {Boolean(nextStepState.data.next_best_step.supporting_signals?.length) && <div className="mt-4 flex flex-wrap gap-2">{nextStepState.data.next_best_step.supporting_signals.map((signal) => <span key={signal} className="rounded-full bg-white px-3 py-1 text-xs text-brand-stone-600 dark:bg-slate-900 dark:text-slate-300">{signal}</span>)}</div>}
+              {(nextStepState.data.next_best_step.interactive_payload?.content || nextStepState.data.next_best_step.interactive_payload?.blocks?.length) && (
+                <div className="mt-5 rounded-2xl bg-white/80 p-4 dark:bg-slate-900/60">
+                  <p className="mb-3 text-sm font-semibold text-brand-stone-900 dark:text-slate-100">Guided Practice Preview</p>
+                  <InteractiveWorksheetRenderer blocks={nextStepState.data.next_best_step.interactive_payload.blocks?.length ? nextStepState.data.next_best_step.interactive_payload.blocks : nextStepState.data.next_best_step.interactive_payload.content} fallbackText={nextStepState.data.next_best_step.interactive_payload.content} />
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </section>
 
       <section className="mb-14">
         <div className="rounded-[2rem] border border-brand-gold-100 bg-gradient-to-br from-white via-brand-gold-50/70 to-brand-emerald-50 p-6 shadow-premium dark:border-slate-800 dark:from-brand-cardDark dark:via-brand-gold-950/20 dark:to-brand-emerald-950/20 lg:p-8">
