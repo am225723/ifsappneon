@@ -58,13 +58,15 @@ export function buildUnifiedGuidanceMessages({ mode, clientId, rangeDays, dataPa
         },
         route_rules: [
           'action_route must be an internal client-safe route from the allowed list in the data payload.',
+          'Use data.nextBestStep as the deterministic route/priority decision; write the warm explanation around it rather than choosing a conflicting route.',
           'Prefer the Curriculum/IFS Path when sparse or unclear.',
           'Do not point clients to Advisor-only, admin-only, reports, analytics, external, javascript, unknown, or medication routes.'
         ],
         interactive_payload_guidance: includeInteractivePayload
           ? 'When useful, include a small interactive payload using valid structured blocks or supported shortcodes. Use activity_blocks-compatible schemas, keep cards short, use unique widget ids, include virtual_paper for reflection, separate each question into its own block, and avoid more than 8 sorting cards or 6 matching pairs.'
           : 'Use an empty interactive payload.',
-        data: dataPayload
+        data: dataPayload,
+        deterministic_priority_instruction: 'The nextBestStep object in data was chosen by server-side deterministic nextBestStep priority logic. Preserve its action_route and priority_loop in next_best_step unless validation forbids the route.'
       }, null, 2)
     }
   ];

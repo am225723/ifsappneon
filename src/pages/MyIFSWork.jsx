@@ -15,8 +15,8 @@ export default function MyIFSWork({ currentClient }) {
       setState({ loading: true, result: null, error: '' });
       try {
         const result = await loadMyIFSProfile(currentClient);
-        if (import.meta.env.DEV && result?.queryErrors?.length) {
-          console.warn('[MyIFSWork] self profile query failures', result.queryErrors.map((item) => ({
+        if (import.meta.env.DEV && result?.optionalQueryFailures?.length) {
+          console.warn('[MyIFSWork] self profile query failures', result.optionalQueryFailures.map((item) => ({
             table: item.table,
             status: item.status,
             effectiveClientId: item.effectiveClientId,

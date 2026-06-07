@@ -1,9 +1,6 @@
 import { curriculumModules, getNextModule } from '../data/curriculumData';
 import { isCurriculumInteractiveModule, normalizeInteractiveResult } from './interactiveResults';
 
-const ACTIVE_ASSIGNMENT_STATUSES = ['assigned', 'in_progress'];
-const VISIBLE_ASSIGNMENT_STATUSES = ['assigned', 'in_progress', 'completed', 'reviewed'];
-
 export function getCompletedModuleIds(progressRows = [], curriculumModuleRows = []) {
   return Array.from(new Set([
     ...progressRows.filter((row) => row.completed).map((row) => row.module_id),
@@ -11,7 +8,7 @@ export function getCompletedModuleIds(progressRows = [], curriculumModuleRows = 
   ].filter(Boolean)));
 }
 
-export function getCurriculumPathSummary({ completedModuleIds = [], assignedPractices = [] } = {}) {
+export function getCurriculumPathSummary({ completedModuleIds = [] } = {}) {
   const completedSet = new Set(completedModuleIds);
   const totalModules = curriculumModules.length || 1;
   const completedCount = completedSet.size;
@@ -22,39 +19,30 @@ export function getCurriculumPathSummary({ completedModuleIds = [], assignedPrac
   const lastCompletedModule = [...curriculumModules]
     .filter((module) => completedSet.has(module.id))
     .sort((a, b) => (b.order || 0) - (a.order || 0))[0] || null;
-  const activeAssignedModuleId = assignedPractices
-    .find((item) => ACTIVE_ASSIGNMENT_STATUSES.includes(item.status) && item.module_id)
-    ?.module_id;
-  const assignedModule = curriculumModules.find((module) => module.id === activeAssignedModuleId) || null;
-
   return {
     completedCount,
     totalModules,
     percent: Math.round((completedCount / totalModules) * 100),
     nextModule,
-    currentModule: assignedModule || nextModule,
+    currentModule: nextModule,
     lastCompletedModule,
-    assignedModule,
-    assignedModuleIds: new Set(
-      assignedPractices
-        .filter((item) => VISIBLE_ASSIGNMENT_STATUSES.includes(item.status) && item.module_id)
-        .map((item) => item.module_id)
-    )
+    assignedModule: null,
+    assignedModuleIds: new Set()
   };
 }
 
 
-export function getCurriculumSummaryInputs({ progressRows = [], interactiveRows = [], assignedPractices = [] } = {}) {
+export function getCurriculumSummaryInputs({ progressRows = [], interactiveRows = [] } = {}) {
   const normalizedInteractive = (interactiveRows || []).map((row) => row?.moduleId ? row : normalizeInteractiveResult(row));
   const curriculumModuleRows = normalizedInteractive.filter((row) => isCurriculumInteractiveModule(row.moduleId));
   const completedModuleIds = getCompletedModuleIds(progressRows, curriculumModuleRows);
-  return { progressRows, curriculumModuleRows, completedModuleIds, assignedPractices };
+  return { progressRows, curriculumModuleRows, completedModuleIds, assignedPractices: [] };
 }
 
 export function buildSharedCurriculumSummary({ progressRows = [], interactiveRows = [], assignedPractices = [] } = {}) {
-  const { completedModuleIds, curriculumModuleRows } = getCurriculumSummaryInputs({ progressRows, interactiveRows, assignedPractices });
+  const { completedModuleIds, curriculumModuleRows } = getCurriculumSummaryInputs({ progressRows, interactiveRows });
   return {
-    ...getCurriculumPathSummary({ completedModuleIds, assignedPractices }),
+    ...getCurriculumPathSummary({ completedModuleIds }),
     completedModuleIds,
     curriculumModuleRows
   };
@@ -62,7 +50,6 @@ export function buildSharedCurriculumSummary({ progressRows = [], interactiveRow
 
 export function getModuleActionLabel(status, moduleOrder = 1) {
   if (status === 'completed') return 'Review Module';
-  if (status === 'assigned') return 'Open Assigned Module';
   if (moduleOrder <= 1) return 'Start Module';
   return 'Continue Module';
 }

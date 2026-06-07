@@ -3,6 +3,7 @@ import { callOpenRouterChat } from './_aiProvider.js';
 import { buildUnifiedGuidanceData } from './_unifiedGuidanceData.js';
 import { buildUnifiedGuidanceMessages } from './_unifiedGuidancePrompt.js';
 import { fallbackAdvisorSnapshot, fallbackNextBestStep, validateUnifiedGuidance } from './_unifiedGuidanceValidation.js';
+import { applyDeterministicNextBestStep, determineNextBestStep } from './_nextBestStepLogic.js';
 
 function sendError(res, status, message, code = 'server_error') {
   return res.status(status).json({ error: { code, message } });
@@ -70,17 +71,19 @@ export default async function handler(req, res) {
     const rangeDays = clampRangeDays(body.rangeDays);
     const authContext = await authorizeUnifiedGuidance(req, { clientId, mode });
     const dataPayload = await buildUnifiedGuidanceData({ clientId, mode, rangeDays });
-    const messages = buildUnifiedGuidanceMessages({ mode, clientId, rangeDays, dataPayload, includeInteractivePayload });
+    const deterministicNextBestStep = determineNextBestStep(dataPayload);
+    const messages = buildUnifiedGuidanceMessages({ mode, clientId, rangeDays, dataPayload: { ...dataPayload, nextBestStep: deterministicNextBestStep }, includeInteractivePayload });
     let result = null;
     let validated;
     let providerWarning = null;
     try {
       result = await callOpenRouterChat({ messages, temperature: 0.25, maxTokens: mode === 'client_next_step' ? 1100 : 2200 });
       validated = validateUnifiedGuidance({ rawText: result.text, mode, clientId });
+      if (validated.next_best_step) validated.next_best_step = applyDeterministicNextBestStep(validated.next_best_step, deterministicNextBestStep);
     } catch (providerError) {
       providerWarning = providerError?.code || 'provider_unavailable';
       validated = {
-        next_best_step: mode !== 'advisor_snapshot' ? fallbackNextBestStep() : undefined,
+        next_best_step: mode !== 'advisor_snapshot' ? applyDeterministicNextBestStep(fallbackNextBestStep(), deterministicNextBestStep) : undefined,
         advisor_session_snapshot: mode !== 'client_next_step' ? fallbackAdvisorSnapshot(clientId, 'The generated snapshot could not be produced right now.') : undefined,
         validation_fallback: true
       };
@@ -96,6 +99,7 @@ export default async function handler(req, res) {
         model: result?.model || null,
         validationWarnings: [providerWarning, validated.validation_fallback ? 'safe_fallback_used' : null].filter(Boolean),
         dataSources: dataPayload.data_sources,
+        deterministicNextBestStep,
         authorization: {
           requestedByRole: authContext.role,
           advisorSnapshotIncluded: mode !== 'client_next_step',

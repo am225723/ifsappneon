@@ -14,21 +14,15 @@ import { clientAuth } from '../lib/supabasePersonalization';
 import { supabase } from '../lib/supabase';
 import { WOUND_MODULE_PRIORITIES, LEVEL_ORDER } from '../lib/woundModulePriorities';
 import { canAccessModule } from '../lib/accessControl';
-import { loadAssignedHomeworkForClient } from '../lib/assignedHomework';
 import { buildSharedCurriculumSummary, getModuleActionLabel, getModuleSupportLinks } from '../lib/curriculumExperience';
 import { countCurriculumReflectionsByModule, loadCurriculumReflections } from '../lib/curriculumReflections';
 
 const CurriculumSystem = ({ onModuleSelect, userProgress = {}, clientId }) => {
   const [completedModules, setCompletedModules] = useState([]);
-  const [currentModule, setCurrentModule] = useState(null);
   const [expandedCategories, setExpandedCategories] = useState(new Set(['introduction', 'parts_system']));
-  const [personalizedCurriculum, setPersonalizedCurriculum] = useState(null);
-  const [isPersonalized, setIsPersonalized] = useState(false);
   const [clientWound, setClientWound] = useState(null);
-  const [loadingWound, setLoadingWound] = useState(true);
   const [woundFocus, setWoundFocus] = useState('primary');
   const [restartingModule, setRestartingModule] = useState(null);
-  const [assignedHomeworkIds, setAssignedHomeworkIds] = useState(new Set());
   const [curriculumReflectionCounts, setCurriculumReflectionCounts] = useState({});
 
   useEffect(() => {
@@ -39,33 +33,25 @@ const CurriculumSystem = ({ onModuleSelect, userProgress = {}, clientId }) => {
     const loadCurriculum = async () => {
       const client = clientAuth.getCurrentClient();
       const id = clientId || client?.id;
-      if (!id) { setLoadingWound(false); return; }
+      if (!id) return;
 
       try {
-        const [curriculumRes, interactiveRes, progressRes, assignmentsRes] = await Promise.all([
+        const [curriculumRes, interactiveRes, progressRes] = await Promise.all([
           supabaseHelpers.getPersonalizedCurriculum(id),
           supabase.from('ifs_interactive_data')
             .select('id, client_id, module_id, data, created_at, updated_at')
             .eq('client_id', id),
           supabase.from('ifs_client_progress')
             .select('module_id, completed')
-            .eq('client_id', id),
-          loadAssignedHomeworkForClient(id)
+            .eq('client_id', id)
         ]);
 
         const { data: curriculumReflections } = await loadCurriculumReflections({ clientId: id, limit: 200 });
         setCurriculumReflectionCounts(countCurriculumReflectionsByModule(curriculumReflections || []));
 
-        if (curriculumRes) {
-          setPersonalizedCurriculum(curriculumRes);
-          setIsPersonalized(true);
-        }
+        void curriculumRes;
 
-        const activeAssignments = (assignmentsRes.data || []);
-        const assignedModules = (activeAssignments.length ? activeAssignments : [])
-          .filter(item => ['assigned', 'in_progress', 'completed', 'reviewed'].includes(item.status))
-          .map(item => item.module_id);
-        setAssignedHomeworkIds(new Set(assignedModules));
+        const activeAssignments = [];
 
         const sharedSummary = buildSharedCurriculumSummary({
           progressRows: progressRes.data || [],
@@ -85,7 +71,6 @@ const CurriculumSystem = ({ onModuleSelect, userProgress = {}, clientId }) => {
       } catch (error) {
         console.error('Error loading curriculum personalization:', error);
       }
-      setLoadingWound(false);
     };
 
     loadCurriculum();
@@ -104,7 +89,6 @@ const CurriculumSystem = ({ onModuleSelect, userProgress = {}, clientId }) => {
     return secondaryWoundConfig.modules[moduleId] || { level: 'standard', badge: null, message: null };
   };
 
-  const activeWoundConfig = woundFocus === 'secondary' && secondaryWoundConfig ? secondaryWoundConfig : woundConfig;
 
   const enrichAndSort = (modules) => {
     return [...modules]
@@ -174,17 +158,13 @@ const CurriculumSystem = ({ onModuleSelect, userProgress = {}, clientId }) => {
 
   const getModuleStatus = (module) => {
     if (completedModules.includes(module.id)) return 'completed';
-    if (assignedHomeworkIds.has(module.id)) return 'assigned';
     if (!canAccessModule(module.id)) return 'restricted';
     if (module.prerequisites?.length && !checkPrerequisites(module.id, completedModules)) return 'locked';
     return 'available';
   };
 
-  const isAdvisorAssigned = (moduleId) => assignedHomeworkIds.has(moduleId);
-
   const getModuleStatusLabel = (status) => {
     if (status === 'completed') return 'Completed';
-    if (status === 'assigned') return 'Assigned by Advisor';
     if (status === 'available') return 'Available';
     return 'Coming up';
   };
@@ -214,11 +194,10 @@ const CurriculumSystem = ({ onModuleSelect, userProgress = {}, clientId }) => {
   }, 0);
   const pathSummary = buildSharedCurriculumSummary({
     progressRows: completedModules.map(module_id => ({ module_id, completed: true })),
-    assignedPractices: [...assignedHomeworkIds].map(module_id => ({ module_id, status: 'assigned' }))
+    assignedPractices: []
   });
   const currentPathModule = pathSummary.currentModule || nextModule;
   const latestCompletedModule = pathSummary.lastCompletedModule;
-  const activeAssignedModule = pathSummary.assignedModule;
 
   const toggleCategory = (id) => {
     const next = new Set(expandedCategories);
@@ -229,7 +208,6 @@ const CurriculumSystem = ({ onModuleSelect, userProgress = {}, clientId }) => {
   const handleModuleSelect = (module) => {
     const status = getModuleStatus(module);
     if (status === 'available' || status === 'assigned' || status === 'completed' || status === 'reviewed') {
-      setCurrentModule(module);
       if (onModuleSelect) onModuleSelect(module);
     }
   };
@@ -288,9 +266,7 @@ const CurriculumSystem = ({ onModuleSelect, userProgress = {}, clientId }) => {
             <div>
               <div className="mb-3 flex flex-wrap items-center gap-2">
                 <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold uppercase tracking-wide text-amber-700">IFS Path</span>
-                {activeAssignedModule && (
-                  <span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-bold uppercase tracking-wide text-blue-700">Assigned by Advisor</span>
-                )}
+
               </div>
               <h2 className="text-2xl font-bold text-gray-900 sm:text-3xl">
                 {currentPathModule ? `Continue with ${currentPathModule.title}` : 'Your IFS Path is ready'}
@@ -321,7 +297,7 @@ const CurriculumSystem = ({ onModuleSelect, userProgress = {}, clientId }) => {
                     className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-amber-600 to-emerald-600 px-5 py-3 text-sm font-bold text-white shadow-lg transition hover:from-amber-700 hover:to-emerald-700"
                   >
                     <Play className="h-4 w-4" />
-                    {activeAssignedModule ? 'Open Assigned Module' : 'Continue Module'}
+                    Continue Module
                   </Link>
                 )}
                 <Link to="/tools" className="inline-flex items-center justify-center rounded-xl border border-amber-200 bg-white px-5 py-3 text-sm font-bold text-amber-700 transition hover:bg-amber-50">
@@ -647,11 +623,6 @@ const CurriculumSystem = ({ onModuleSelect, userProgress = {}, clientId }) => {
                                         {priority.badge}
                                       </span>
                                     )}
-                                    {isAdvisorAssigned(module.id) && (
-                                      <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 flex-shrink-0">
-                                        Assigned by Advisor
-                                      </span>
-                                    )}
                                     {module._secondaryPriority && secondaryWoundConfig && (module._secondaryPriority.level === 'core' || module._secondaryPriority.level === 'high') && (
                                       <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full flex-shrink-0 ${secondaryWoundConfig.darkBg} ${secondaryWoundConfig.textColor}`}>
                                         {module._secondaryPriority.level === 'core' ? `Also core for ${secondaryWoundConfig.childName}` : secondaryWoundConfig.childName}
@@ -692,12 +663,6 @@ const CurriculumSystem = ({ onModuleSelect, userProgress = {}, clientId }) => {
                                       <span className="flex items-center space-x-1">
                                         <Brain className="w-3 h-3" />
                                         <span>Personalized</span>
-                                      </span>
-                                    )}
-                                    {isAdvisorAssigned(module.id) && (
-                                      <span className="flex items-center space-x-1 text-blue-600">
-                                        <Flag className="w-3 h-3" />
-                                        <span>Assigned by Advisor</span>
                                       </span>
                                     )}
                                     {module.prerequisites?.length > 0 && (

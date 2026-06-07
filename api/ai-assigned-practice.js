@@ -1,6 +1,7 @@
 import { requireTherapist, requireTherapistAssignment } from './_auth.js';
 import { callOpenRouterChat } from './_aiProvider.js';
 import { normalizeActivityBlocks, splitDescriptionAndActivityBlocks } from './_safeAIJson.js';
+import { buildWorksheetPersonalizationData } from './_worksheetPersonalizationData.js';
 
 const CATEGORY_LABELS = {
   general: 'General',
@@ -16,20 +17,28 @@ function sendError(res, status, message, code = 'server_error') {
   return res.status(status).json({ error: { code, message } });
 }
 
-function buildSingleMessages({ woundType, secondaryWound, category, guidance, clientName }) {
+function buildSingleMessages({ woundType, secondaryWound, category, guidance, clientName, personalizationData }) {
   const systemPrompt = `You are an expert Internal Family Systems (IFS) Advisor creating an Assigned IFS Practice idea for ${clientName || 'the client'}.
 
-The practice must be INTERACTIVE and ENGAGING — not passive reading or generic advice. Every practice should include:
-- A hands-on activity the client physically does (writing, drawing, speaking aloud, movement, visualization)
-- Clear step-by-step instructions with specific prompts or questions to answer
-- An estimated time (10-30 minutes)
-- A reflection component where the client processes what they discovered
+The practice must be INTERACTIVE and ENGAGING — not passive reading or generic advice. Every default practice must be a refined multi-section app-native worksheet unless the Advisor explicitly asks for a short practice. Include, when appropriate:
+- Opening orientation and estimated time
+- Grounding / settling step
+- Parts noticing activity
+- At least one interactive activity
+- Reflection / meaning-making
+- Somatic/body-awareness component when relevant
+- Self-energy integration
+- Real-life practice step
+- Closing reflection
+- Optional prompt for what to bring to the Advisor
+
+Default worksheet rules: at least 5 sections, at least 3 different interactive block types, not a one-section worksheet unless specifically requested, and paper-based activities must be converted to app-native interactive blocks such as virtual_paper, sorting, matching, body_map, zone_map, slider, checklist, rating, timeline, blank, textarea, question, instruction, and focus_card.
 
 Ground everything in IFS concepts: Parts Work, Self-energy, exiles, protectors, managers, firefighters, unburdening, blending/unblending.
 Write in a warm, direct second-person tone ("You will..." / "Notice how...").
 Do not diagnose, give medical advice, infer risk, or finalize assignment. Advisor review is required.
 
-Interactive widget rules: prefer ACTIVITY_BLOCKS_JSON structured blocks when useful. Every widget must have a unique id. Use type sort with columns/items for true drag-and-drop sorting (max 8 cards), type match with left/right for pairing (max 6 pairs), type body_map with body-awareness presets only, type zone_map with part-label nodes and Self-energy rings, and always include one virtual_paper fallback for reflective writing. Do not create diagnosis, risk score, medication suggestions, medical body interpretations, or emergency conclusions.`;
+Interactive widget rules: prefer ACTIVITY_BLOCKS_JSON structured blocks when useful. Every widget must have a unique id. Use type sort with columns/items for true drag-and-drop sorting (max 8 cards), type match with left/right for pairing (max 6 pairs), type body_map with body-awareness presets only, type zone_map with part-label nodes and Self-energy rings, and always include one virtual_paper fallback for reflective writing. If a task would normally say use outside paper, say use the space below as your virtual paper and create a virtual_paper block. Do not create diagnosis, risk score, medication suggestions, medical body interpretations, or emergency conclusions.`;
 
   const categoryInstruction = category && category !== 'general'
     ? `The practice should be in the "${CATEGORY_LABELS[category] || category}" category.`
@@ -41,20 +50,24 @@ Interactive widget rules: prefer ACTIVITY_BLOCKS_JSON structured blocks when use
 
   const guidanceNote = guidance ? `The Advisor specifically requests: "${guidance}". Weave this into the practice.` : '';
 
-  const userPrompt = `Create ONE Assigned IFS Practice idea.
+  const personalizationContext = personalizationData ? `\nScoped client context for personalization (assignment-authorized; summarize themes, do not dump raw JSON to client):\n${JSON.stringify(personalizationData, null, 2)}\n` : '';
+
+  const userPrompt = `Create ONE advanced, personalized Assigned IFS Practice worksheet draft.
 
 ${woundContext}
 ${categoryInstruction}
 ${guidanceNote}
+${personalizationContext}
+Use the context to identify relevant themes, select appropriate worksheet sections, choose varied interactive block types, and personalize prompts to the client's actual patterns. Include Advisor review rationale inside DESCRIPTION under an Advisor Review Rationale heading only if it helps the Advisor; keep client-facing practice language supportive and non-diagnostic.
 
 Return EXACTLY this format:
 TITLE: [Engaging title]
 CATEGORY: [One of: general, journaling, parts-work, meditation, exercise, reading, self-care]
 PRIORITY: [One of: low, normal, high]
-DESCRIPTION: [Readable sections with spacing, numbered steps, materials if any, time estimate, and reflection questions. Use **bold** sparingly for section labels. Do not include ACTIVITY_BLOCKS_JSON in this field.]
-ACTIVITY_BLOCKS_JSON: [{"type":"instruction","id":"intro_1","text":"..."},{"type":"sort","id":"sort_parts_1","label":"Sort what you notice","columns":["Needs attention","Feels protective","Feels close to Self"],"items":[{"id":"card_1","label":"Short label"}]},{"type":"virtual_paper","id":"notes_1","prompt":"Use this space as your virtual piece of paper."}]
+DESCRIPTION: [Readable multi-section worksheet with at least 5 sections by default. Separate client-facing steps from any Advisor Review Rationale. Use **bold** sparingly for section labels. Do not include ACTIVITY_BLOCKS_JSON in this field.]
+ACTIVITY_BLOCKS_JSON: [{"type":"instruction","id":"intro_1","text":"..."},{"type":"sort","id":"sort_parts_1","label":"Sort what you notice","columns":["Needs attention","Feels protective","Feels close to Self"],"items":[{"id":"card_1","label":"Short label"}]},{"type":"virtual_paper","id":"notes_1","prompt":"Use this space below as your virtual paper."}]
 
-Rules for ACTIVITY_BLOCKS_JSON: return valid JSON only, no markdown fence, no text before or after the JSON value, every block needs id and type, every question should be its own question or virtual_paper block, keep card labels short, and include virtual_paper for reflective writing.`;
+Rules for ACTIVITY_BLOCKS_JSON: return valid JSON only, no markdown fence, no text before or after the JSON value, every block needs id and type, include at least 8 blocks and at least 3 different interactive block types by default, every question should be its own question or virtual_paper block, keep card labels short, include virtual_paper for reflective writing, use body_map or slider for triggers/somatic work, sorting or matching for protector/exile dynamics, and zone_map or slider for Self-energy.`;
 
   return [
     { role: 'system', content: systemPrompt },
@@ -62,10 +75,10 @@ Rules for ACTIVITY_BLOCKS_JSON: return valid JSON only, no markdown fence, no te
   ];
 }
 
-function buildBatchMessages({ woundType, secondaryWound, guidance, clientName, count }) {
+function buildBatchMessages({ woundType, secondaryWound, guidance, clientName, count, personalizationData }) {
   const systemPrompt = `You are an expert Internal Family Systems (IFS) Advisor creating Assigned IFS Practice ideas for ${clientName || 'the client'}.
 
-Each practice must be INTERACTIVE and ENGAGING. Include hands-on activity, clear steps, 10-30 minute estimate, and reflection. Use diverse approaches such as letter-writing, body-based practice, parts dialogue, creative/art activity, or Self-energy practice.
+Each practice must be INTERACTIVE, ENGAGING, and multi-section by default. Include at least 5 sections and at least 3 different app-native activity block types unless the Advisor explicitly asks for short practices. Use diverse approaches such as virtual-paper letter writing, body_map somatic noticing, parts dialogue, sorting/matching protector dynamics, zone_map Self-energy integration, timeline, checklist, rating, slider, blank, or focus_card. Never tell the client to use paper; convert paper-based exercises into virtual_paper or another app-native block.
 
 Ground everything in IFS: parts, Self-energy, exiles, protectors, unburdening, blending/unblending. Write warmly in second person. Do not diagnose, infer risk, give medical advice, or finalize assignment. Advisor review is required.
 
@@ -77,18 +90,22 @@ Interactive widget rules: when returning ACTIVITY_BLOCKS_JSON, prefer structured
 
   const guidanceNote = guidance ? `The Advisor specifically requests: "${guidance}". Weave this into the practices.` : '';
 
-  const userPrompt = `Create ${count} DIFFERENT Assigned IFS Practice ideas for ${clientName || 'the client'}. Each should use a different category and approach.
+  const personalizationContext = personalizationData ? `\nScoped client context for personalization (assignment-authorized; summarize themes, do not dump raw JSON to client):\n${JSON.stringify(personalizationData, null, 2)}\n` : '';
+
+  const userPrompt = `Create ${count} DIFFERENT advanced, personalized Assigned IFS Practice worksheet drafts for ${clientName || 'the client'}. Each should use a different category and approach.
 
 ${woundContext}
 ${guidanceNote}
+${personalizationContext}
+Use the context to identify relevant themes, select appropriate sections, choose interactive block types, and include concise Advisor review rationale when useful. Client wording must stay warm, IFS-centered, non-diagnostic, and non-medication-related.
 
 For EACH practice use EXACTLY this format, separated by ---:
 
 TITLE: [Creative, specific title]
 CATEGORY: [One of: general, journaling, parts-work, meditation, exercise, reading, self-care]
 PRIORITY: [One of: low, normal, high]
-DESCRIPTION: [Readable sections with spacing, numbered steps. Materials needed, specific prompts/questions, time estimate, reflection. Use **bold** sparingly for section labels.]
-ACTIVITY_BLOCKS_JSON: [valid JSON array only; no markdown fence; no text before/after JSON; use activity block objects with id, type, title/label/prompt where appropriate; one question per block; include virtual_paper fallback]
+DESCRIPTION: [Readable multi-section worksheet with at least 5 sections by default. Include time estimate, grounding, parts noticing, interactive activity, reflection/meaning-making, Self-energy integration, real-life practice, closing, and optional Advisor prompt when appropriate. Use **bold** sparingly for section labels.]
+ACTIVITY_BLOCKS_JSON: [valid JSON array only; no markdown fence; no text before/after JSON; use at least 8 activity block objects and at least 3 different types by default; id and type required; title/label/prompt where appropriate; one question per block; include virtual_paper fallback; use sorting, matching, body_map, zone_map, slider, checklist, rating, timeline, blank, textarea, question, instruction, or focus_card as appropriate]
 
 ---
 
@@ -176,14 +193,19 @@ export default async function handler(req, res) {
 
     const mode = body.mode === 'batch' ? 'batch' : 'single';
     const count = Math.min(Math.max(Number.parseInt(body.count, 10) || 4, 1), 6);
+    const personalizationData = await buildWorksheetPersonalizationData({
+      clientId,
+      advisorInput: body.guidance || body.advisorInput || body.notes || '',
+      includeAdvisorNotes: true
+    });
     const messages = mode === 'batch'
-      ? buildBatchMessages({ ...body, count })
-      : buildSingleMessages(body);
+      ? buildBatchMessages({ ...body, count, personalizationData })
+      : buildSingleMessages({ ...body, personalizationData });
 
     const result = await callOpenRouterChat({
       messages,
       temperature: mode === 'batch' ? 0.85 : 0.8,
-      maxTokens: mode === 'batch' ? 2600 : 1000
+      maxTokens: mode === 'batch' ? 5200 : 2600
     });
 
     const practice = mode === 'batch' ? parseBatchPractice(result.text) : parseSinglePractice(result.text);
