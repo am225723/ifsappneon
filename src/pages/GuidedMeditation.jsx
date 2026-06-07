@@ -260,7 +260,8 @@ const TIMER_PRESETS = [60, 120, 180, 300, 600];
 
 export default function GuidedMeditation() {
   const { theme } = useTheme();
-  const { awardXP } = useData();
+  const dataContext = useData();
+  const awardXP = dataContext?.awardXP || (() => {});
   const isDark = theme.isDark;
 
   const [selectedMeditation, setSelectedMeditation] = useState(null);
@@ -295,7 +296,8 @@ export default function GuidedMeditation() {
   const [audioLoaded, setAudioLoaded] = useState(false);
   const [audioError, setAudioError] = useState(false);
   const [audioVolume, setAudioVolume] = useState(1.0);
-  const hasAudio = selectedMeditation?.audioSrc && audioLoaded && !audioError;
+  const hasAudio = Boolean(selectedMeditation?.audioSrc && audioLoaded && !audioError);
+  const selectedAudioUnavailable = Boolean(selectedMeditation?.audioSrc && audioError);
 
   const [completedMeditations, setCompletedMeditations] = useState([]);
 
@@ -306,7 +308,9 @@ export default function GuidedMeditation() {
       try {
         const data = await supabaseHelpers.getInteractiveData(client.id, 'meditation_history');
         if (data?.completed) setCompletedMeditations(data.completed);
-      } catch (e) { console.error(e); }
+      } catch (e) {
+      if (import.meta.env.DEV) console.warn('[GuidedMeditation] meditation history load skipped', { message: e?.message || 'Request failed' });
+    }
     };
     loadCompleted();
   }, []);
@@ -360,8 +364,10 @@ export default function GuidedMeditation() {
         lastCompleted: medId,
         lastCompletedAt: new Date().toISOString()
       });
-      awardXP(15);
-    } catch (e) { console.error(e); }
+      awardXP('meditation_complete', 15);
+    } catch (e) {
+      if (import.meta.env.DEV) console.warn('[GuidedMeditation] completion save skipped', { message: e?.message || 'Request failed' });
+    }
   }, [completedMeditations, awardXP]);
 
   useEffect(() => {
@@ -376,7 +382,13 @@ export default function GuidedMeditation() {
     audio.preload = 'auto';
     audio.volume = audioVolume;
     audio.oncanplaythrough = () => setAudioLoaded(true);
-    audio.onerror = () => setAudioError(true);
+    audio.onerror = () => {
+      setAudioError(true);
+      setAudioLoaded(false);
+      if (import.meta.env.DEV) {
+        console.info('[GuidedMeditation] audio asset unavailable; using non-audio fallback practice', { meditationId: selectedMeditation.id });
+      }
+    };
     audio.onended = () => {
       setIsPlaying(false);
       setCompleted(true);
@@ -454,7 +466,10 @@ export default function GuidedMeditation() {
       setIsPlaying(true);
       if (audioRef.current && med.audioSrc) {
         audioRef.current.currentTime = 0;
-        audioRef.current.play().catch(() => {});
+        audioRef.current.play().catch(() => {
+          setAudioError(true);
+          setAudioLoaded(false);
+        });
       }
     }, 100);
   };
@@ -476,7 +491,10 @@ export default function GuidedMeditation() {
         if (audioRef.current) audioRef.current.pause();
       } else {
         if (audioRef.current && selectedMeditation?.audioSrc) {
-          audioRef.current.play().catch(() => {});
+          audioRef.current.play().catch(() => {
+            setAudioError(true);
+            setAudioLoaded(false);
+          });
         }
       }
       setIsPlaying(!isPlaying);
@@ -580,6 +598,14 @@ export default function GuidedMeditation() {
             <span className={isDark ? 'text-slate-400' : 'text-gray-500'}>{formatTime(elapsed)}</span>
             <span className={isDark ? 'text-slate-400' : 'text-gray-500'}>{formatTime(selectedMeditation.duration)}</span>
           </div>
+
+
+          {selectedAudioUnavailable && (
+            <div className={`mb-4 rounded-2xl border p-4 text-sm ${isDark ? 'border-amber-500/30 bg-amber-950/20 text-amber-100' : 'border-amber-200 bg-amber-50 text-amber-800'}`}>
+              <p className="font-semibold">Guided meditations are being prepared. You can still use the grounding practice below.</p>
+              <p className="mt-1 text-xs opacity-80">This practice will continue with on-screen prompts and optional browser narration instead of recorded audio.</p>
+            </div>
+          )}
 
           {completed ? (
             <div className="text-center py-8">
@@ -872,6 +898,22 @@ export default function GuidedMeditation() {
         <p className={`text-xs mt-0.5 ${isDark ? 'text-slate-400' : 'text-gray-500'}`}>
           IFS-focused meditations to deepen your inner work
         </p>
+      </div>
+
+
+      <div className={`mb-6 rounded-2xl border p-5 ${isDark ? 'border-emerald-500/20 bg-emerald-950/20' : 'border-emerald-100 bg-emerald-50/80'}`}>
+        <p className={`text-sm font-semibold ${isDark ? 'text-emerald-100' : 'text-emerald-900'}`}>Guided meditations are being prepared. You can still use the grounding practice below.</p>
+        <div className={`mt-4 grid gap-3 text-sm ${isDark ? 'text-slate-300' : 'text-brand-stone-700'}`}>
+          <div className="rounded-xl bg-white/60 p-3 dark:bg-slate-900/40">
+            <span className="font-semibold">Breathing prompt:</span> Inhale gently for 4, pause for 2, and exhale for 6. Repeat three times.
+          </div>
+          <div className="rounded-xl bg-white/60 p-3 dark:bg-slate-900/40">
+            <span className="font-semibold">Self-energy check-in:</span> Notice one quality available right now—calm, curiosity, compassion, clarity, courage, or connection.
+          </div>
+          <div className="rounded-xl bg-white/60 p-3 dark:bg-slate-900/40">
+            <span className="font-semibold">Grounding steps:</span> Feel your feet, soften your shoulders, name three things you see, and thank any part that helped you arrive.
+          </div>
+        </div>
       </div>
 
       <button onClick={() => { setTimerMode(true); setView('timer'); }}

@@ -192,9 +192,9 @@ Verified by code inspection and required searches:
 
 UploadThing remains optional. If enabled in production:
 
-- Configure `UPLOADTHING_APP_ID`.
-- Configure `UPLOADTHING_SECRET`.
-- Configure `UPLOADTHING_CALLBACK_URL` when required by the deployed callback origin.
+- Configure `UPLOADTHING_TOKEN` for the current UploadThing v7 integration.
+- Configure `UPLOADTHING_CALLBACK_URL` only when required by the deployed callback origin.
+- Legacy `UPLOADTHING_APP_ID` / `UPLOADTHING_SECRET` entries may exist in older environments, but this app now prefers the token.
 - Keep UploadThing server secrets out of `VITE_*` variables.
 - Keep UploadThing database writes inside server-side API/router code.
 

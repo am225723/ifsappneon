@@ -28,19 +28,6 @@ export function determineNextBestStep(data = {}) {
     };
   }
 
-  const recentMoodDate = newestDate(data.recent_mood_or_trigger_entries || [], ['created_at', 'date']);
-  if (recentWithin(recentMoodDate, 3) || hasTextMatch(data.recent_mood_or_trigger_entries, ['trigger', 'activated', 'stress'])) {
-    return {
-      priority: 3,
-      title: 'Reflect on a Recent Trigger',
-      action_route: '/life-integration/trigger-reflection',
-      priority_loop: 'reactive',
-      estimated_time: '8–15 minutes',
-      reason: 'Recent mood or trigger activity may benefit from a gentle Life Integration reflection before moving on.',
-      supporting_signals: ['Recent mood/trigger entry']
-    };
-  }
-
   const progress = data.curriculum_state || {};
   const percent = Number(progress.percent_complete ?? progress.percent ?? 0);
   if (percent > 0 && percent < 100) {
@@ -53,6 +40,19 @@ export function determineNextBestStep(data = {}) {
       estimated_time: '10–20 minutes',
       reason: 'Your main IFS Path is already in motion, and no higher-priority assigned practice is waiting.',
       supporting_signals: [`Curriculum progress: ${Math.round(percent)}%`]
+    };
+  }
+
+  const recentMoodDate = newestDate(data.recent_mood_or_trigger_entries || [], ['created_at', 'date']);
+  if (recentWithin(recentMoodDate, 3) || hasTextMatch(data.recent_mood_or_trigger_entries, ['trigger', 'activated', 'stress'])) {
+    return {
+      priority: 3,
+      title: 'Reflect on a Recent Trigger',
+      action_route: '/life-integration/trigger-reflection',
+      priority_loop: 'reactive',
+      estimated_time: '8–15 minutes',
+      reason: 'Recent mood or trigger activity may benefit from a gentle Life Integration reflection after current Advisor-assigned and curriculum momentum checks.',
+      supporting_signals: ['Recent mood/trigger entry']
     };
   }
 
