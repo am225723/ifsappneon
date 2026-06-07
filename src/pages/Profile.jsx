@@ -62,6 +62,74 @@ function getIdentifiedParts(answers) {
   return identified;
 }
 
+
+function labelValue(value, fallback = 'not completed yet') {
+  return value ? String(value).replace(/[-_]+/g, ' ') : fallback;
+}
+
+function rankedPrimary(data, fallbackKeys = []) {
+  if (!data) return null;
+  if (data.primary) return labelValue(data.primary, null);
+  if (Array.isArray(data.ranked) && data.ranked[0]) return labelValue(Array.isArray(data.ranked[0]) ? data.ranked[0][0] : data.ranked[0].key || data.ranked[0].label, null);
+  if (data.results && typeof data.results === 'object') {
+    const [key] = Object.entries(data.results).sort((a, b) => ((b[1]?.total || b[1]?.average || b[1] || 0) - (a[1]?.total || a[1]?.average || a[1] || 0)))[0] || [];
+    return labelValue(key, null);
+  }
+  return fallbackKeys.map((key) => data[key] && key).filter(Boolean)[0] || null;
+}
+
+function buildAssessmentInsights({ assessment, partsAssessment, selfEnergyAssessment, attachmentAssessment }) {
+  const wound = labelValue(assessment?.primary_wound || rankedPrimary(assessment), null);
+  const secondaryWound = labelValue(assessment?.secondary_wound, null);
+  const partsTheme = rankedPrimary(partsAssessment) || (partsAssessment ? 'your active protector and exile patterns' : null);
+  const selfPrimary = rankedPrimary(selfEnergyAssessment) || selfEnergyAssessment?.strongestQuality || selfEnergyAssessment?.primaryQuality;
+  const selfEdge = selfEnergyAssessment?.growthEdge || selfEnergyAssessment?.lowestQuality || selfEnergyAssessment?.secondary;
+  const attachment = rankedPrimary(attachmentAssessment) || getAttachmentPrimarySecondary(attachmentAssessment).primary;
+
+  return [
+    {
+      title: 'Wound pattern summary',
+      body: wound ? `Your Wound Patterns Assessment may suggest ${wound}${secondaryWound ? ` with ${secondaryWound} also worth gentle attention` : ''}. This is not a label; it is a compassionate clue for parts work.` : 'A Wound Patterns Assessment has not been completed yet, so this area can stay open and curious.'
+    },
+    {
+      title: 'Parts system summary',
+      body: partsTheme ? `The Parts System Assessment could reflect ${labelValue(partsTheme)} activity. A part may be trying to protect connection, control, rest, or dignity.` : 'Parts System Assessment data is not complete yet; the Inner System Map can help name protectors and younger parts over time.'
+    },
+    {
+      title: 'Self-energy strengths',
+      body: selfPrimary ? `Self-Energy Assessment responses may suggest ${labelValue(selfPrimary)} is an accessible strength to lean on during practice.` : 'Self-energy strengths can be tracked through the Self-Energy Assessment and daily reflections.'
+    },
+    {
+      title: 'Self-energy growth edges',
+      body: selfEdge ? `${labelValue(selfEdge)} could reflect a growth edge: an area where parts may need more time, permission, or support before Self-energy feels available.` : 'Growth edges may become clearer after the Self-Energy Assessment or repeated Life Integration practice.'
+    },
+    {
+      title: 'Attachment pattern explanation',
+      body: attachment ? `Attachment responses may suggest ${labelValue(attachment)} patterns in how parts seek closeness, safety, distance, or reassurance. This is worth exploring with your Advisor, not treating as certainty.` : 'Attachment Pattern Assessment data is not complete yet; this section will deepen when it is available.'
+    },
+    {
+      title: 'How patterns may interact',
+      body: `These patterns may interact when a wound-sensitive part gets activated, protectors respond quickly, and Self-energy becomes harder to access. The useful question is: which part is trying to help, and what does it fear would happen if it softened?`
+    },
+    {
+      title: 'Suggested next curriculum focus',
+      body: wound || partsTheme ? 'Continue the curriculum module that helps you notice protectors, unblend, and listen for the younger part or unmet need underneath.' : 'Start or continue the Curriculum / IFS Path before adding too many side practices.'
+    },
+    {
+      title: 'Suggested Life Integration practice',
+      body: 'Use Return to Self-Energy after activation, or Reflect on a Trigger when a part reacts strongly in daily life.'
+    },
+    {
+      title: 'Suggested Inner System Map focus',
+      body: partsTheme ? `Add one part connected to ${labelValue(partsTheme)} and map what it protects, what it fears, and what it needs from Self-energy.` : 'Add one part you notice often, then map its role, burden, and relationship to other parts.'
+    },
+    {
+      title: 'What to bring to Advisor',
+      body: 'Bring one pattern that feels accurate, one that feels wrong or incomplete, and one question you want to explore together.'
+    }
+  ];
+}
+
 const typeLabels = { manager: 'Manager', firefighter: 'Firefighter', exile: 'Exile' };
 const typeColors = {
   manager: { bg: 'bg-brand-emerald-50', border: 'border-brand-emerald-100', text: 'text-brand-emerald-700', badge: 'bg-brand-emerald-50 text-brand-emerald-700', fill: 'bg-brand-stone-500' },
@@ -241,6 +309,8 @@ const Profile = ({ client }) => {
     loadAssessmentData();
     loadSupabaseData();
   }, [client]);
+
+  const assessmentInsights = buildAssessmentInsights({ assessment, partsAssessment, selfEnergyAssessment, attachmentAssessment });
 
   const handlePrint = () => {
     window.print();
@@ -734,6 +804,26 @@ const Profile = ({ client }) => {
               </div>
             </div>
           )}
+
+          <div className="soft-card overflow-hidden mb-8">
+            <div className="p-4 sm:p-8">
+              <h2 className="text-xl font-semibold text-brand-stone-900 dark:text-slate-100 flex items-center gap-2 mb-4">
+                <Sparkles className="w-5 h-5 text-brand-gold-700" />
+                Assessment Insights
+              </h2>
+              <p className="mb-5 text-sm leading-relaxed text-brand-stone-600 dark:text-slate-400">
+                This synthesis draws from the Wound Patterns Assessment, Parts System Assessment, Self-Energy Assessment, Attachment Pattern Assessment, formal wound results from ifs_assessment_results when present, and interactive assessment rows from ifs_interactive_data. It uses cautious, non-diagnostic language.
+              </p>
+              <div className="grid gap-4 md:grid-cols-2">
+                {assessmentInsights.map((insight) => (
+                  <div key={insight.title} className="rounded-2xl border border-brand-stone-200/70 bg-white/80 p-4 dark:border-slate-800 dark:bg-slate-900/50">
+                    <h3 className="text-sm font-bold text-brand-stone-900 dark:text-slate-100">{insight.title}</h3>
+                    <p className="mt-2 text-sm leading-relaxed text-brand-stone-600 dark:text-slate-400">{insight.body}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
 
           {customAssessments.length > 0 && (
             <div className="soft-card overflow-hidden mb-8">

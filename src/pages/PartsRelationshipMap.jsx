@@ -16,7 +16,7 @@ import {
   updatePartRelationship
 } from '../lib/partRelationships';
 
-const DATA_LOAD_ERROR_MESSAGE = 'Your IFS data could not be loaded right now. Please refresh or try again.';
+const DATA_LOAD_ERROR_MESSAGE = 'Your Inner System Map data could not be loaded right now. Please refresh or try again.';
 
 function getSafeErrorStatus(error) {
   return error?.status || error?.statusCode || null;

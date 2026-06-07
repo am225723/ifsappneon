@@ -421,7 +421,7 @@ export default function UnburdeningProtocol() {
             <div>
               <label className={`block text-sm font-medium mb-3 ${textSecondary}`}>Is this part ready to let go?</label>
               <div className="flex gap-4">
-                {['yes', 'not yet', 'partially'].map(opt => (
+                {['yes', 'not yet', 'somewhat'].map(opt => (
                   <button
                     key={opt}
                     onClick={() => updateResponse(key, { ready: opt })}

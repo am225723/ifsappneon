@@ -118,8 +118,58 @@ function summarizeQueryErrors(resultsByTable, effectiveClientId, selfProfile) {
     }));
 }
 
-const DATA_LOAD_ERROR_MESSAGE = 'Your IFS data could not be loaded right now. Please refresh or try again.';
-const PARTIAL_DATA_LOAD_MESSAGE = 'Some parts of your IFS path could not be refreshed. The rest of your information is still shown.';
+const CRITICAL_HOME_LOAD_MESSAGE = 'Your home workspace could not be connected right now. Please refresh or try again.';
+
+const PALETTES = {
+  luminous: { label: 'Luminous Green', background: '#f7f8f1', surface: '#ffffffcc', primary: '#2f6f5f', accent: '#c3912f', softAccent: '#e8f1df', border: '#d8e5cb' },
+  gold: { label: 'Warm Gold', background: '#fbf6e9', surface: '#fffaf0cc', primary: '#8b6524', accent: '#c18a2e', softAccent: '#f4e4bd', border: '#ead39b' },
+  sage: { label: 'Soft Sage', background: '#f3f7f0', surface: '#ffffffcc', primary: '#57745d', accent: '#9b8f54', softAccent: '#dfe9dc', border: '#cddcc8' },
+  rosewood: { label: 'Rosewood', background: '#fbf4f2', surface: '#fffaf9cc', primary: '#8a4f52', accent: '#b97a61', softAccent: '#f0d8d5', border: '#e4bfba' },
+  ocean: { label: 'Ocean Blue', background: '#f0f7fa', surface: '#f8fcffcc', primary: '#356f8a', accent: '#5c9bae', softAccent: '#d7edf3', border: '#b9dbe5' },
+  lavender: { label: 'Lavender Calm', background: '#f7f3fb', surface: '#fffaffcc', primary: '#6c5a8f', accent: '#9b83bf', softAccent: '#e5dbf1', border: '#d4c5e8' }
+};
+
+function useClientPalette() {
+  const [paletteKey, setPaletteKey] = useState(() => localStorage.getItem('ifsClientColorPalette') || 'luminous');
+  const palette = PALETTES[paletteKey] || PALETTES.luminous;
+  useEffect(() => {
+    localStorage.setItem('ifsClientColorPalette', paletteKey);
+    const root = document.documentElement;
+    root.style.setProperty('--ifs-bg', palette.background);
+    root.style.setProperty('--ifs-surface', palette.surface);
+    root.style.setProperty('--ifs-primary', palette.primary);
+    root.style.setProperty('--ifs-accent', palette.accent);
+    root.style.setProperty('--ifs-soft-accent', palette.softAccent);
+    root.style.setProperty('--ifs-border', palette.border);
+  }, [paletteKey, palette]);
+  return { paletteKey, setPaletteKey, palette };
+}
+
+const PaletteSelector = ({ paletteKey, setPaletteKey }) => {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="relative">
+      <button type="button" onClick={() => setOpen((value) => !value)} className="rounded-full border px-4 py-2 text-xs font-bold uppercase tracking-[0.2em] shadow-sm transition hover:-translate-y-0.5" style={{ borderColor: 'var(--ifs-border)', color: 'var(--ifs-primary)', background: 'var(--ifs-surface)' }}>
+        Appearance / Color Palette
+      </button>
+      {open && (
+        <div className="absolute right-0 z-20 mt-3 w-80 rounded-3xl border bg-white/95 p-4 shadow-2xl backdrop-blur dark:bg-slate-900/95" style={{ borderColor: 'var(--ifs-border)' }}>
+          <p className="mb-3 text-xs font-bold uppercase tracking-[0.24em]" style={{ color: 'var(--ifs-primary)' }}>Color Palette</p>
+          <div className="grid gap-2">
+            {Object.entries(PALETTES).map(([key, palette]) => (
+              <button key={key} type="button" onClick={() => setPaletteKey(key)} className={`flex items-center justify-between rounded-2xl border p-3 text-left text-sm transition ${paletteKey === key ? 'shadow-md' : 'hover:bg-brand-stone-50 dark:hover:bg-slate-800'}`} style={{ borderColor: paletteKey === key ? palette.accent : palette.border }}>
+                <span className="font-semibold text-brand-stone-800 dark:text-slate-100">{palette.label}</span>
+                <span className="flex gap-1">
+                  {[palette.background, palette.primary, palette.accent, palette.softAccent].map((color) => <span key={color} className="h-5 w-5 rounded-full border border-white shadow-sm" style={{ background: color }} />)}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
 
 const Home = ({ clientId, client, mode = 'home', selfProfile = null, selfProfileResult = null }) => {
   const navigate = useNavigate();
@@ -135,8 +185,9 @@ const Home = ({ clientId, client, mode = 'home', selfProfile = null, selfProfile
   const [curriculumSummary, setCurriculumSummary] = useState(null);
   const [curriculumReflections, setCurriculumReflections] = useState([]);
   const [assignedPracticeCount, setAssignedPracticeCount] = useState(0);
-  const [dataLoadError, setDataLoadError] = useState(null);
+  const [criticalLoadError, setCriticalLoadError] = useState(null);
   const [nextStepState, setNextStepState] = useState({ loading: false, data: null, error: '' });
+  const { paletteKey, setPaletteKey, palette } = useClientPalette();
   const selfProfileForLoad = selfProfile || selfProfileResult?.profile || null;
   const effectiveClientId = getEffectiveClientId({ mode, currentClientId: clientId, selfProfile: selfProfileForLoad });
   const effectiveClient = mode === 'my-ifs' ? (selfProfileForLoad || client) : client;
@@ -159,7 +210,7 @@ const Home = ({ clientId, client, mode = 'home', selfProfile = null, selfProfile
 
   useEffect(() => {
     const loadData = async () => {
-      setDataLoadError(null);
+      setCriticalLoadError(null);
       if (shouldShowWorkspaceChoice) {
         setLoading(false);
         return;
@@ -217,7 +268,7 @@ const Home = ({ clientId, client, mode = 'home', selfProfile = null, selfProfile
           ] = settledResults.map((settled, index) => settledDataResult(settled, optionalQueries[index][0]));
 
 
-          const queryErrors = summarizeQueryErrors({
+          const optionalQueryFailures = summarizeQueryErrors({
             ifs_interactive_data: interactiveResult,
             ifs_assessment_results: formalAssessmentResult,
             ifs_parts: partsCountResult,
@@ -232,13 +283,16 @@ const Home = ({ clientId, client, mode = 'home', selfProfile = null, selfProfile
             curriculum_reflections: curriculumReflectionsResult
           }, effectiveClientId, selfProfileForLoad);
 
-          if (queryErrors.length) {
-            setDataLoadError({
-              message: hasResolvedSelfProfile ? PARTIAL_DATA_LOAD_MESSAGE : DATA_LOAD_ERROR_MESSAGE,
-              details: queryErrors
-            });
+                  if (optionalQueryFailures.length) {
+            if (!hasResolvedSelfProfile && !effectiveClientId) {
+              setCriticalLoadError({
+                message: CRITICAL_HOME_LOAD_MESSAGE,
+                details: optionalQueryFailures,
+                scope: 'global'
+              });
+            }
             if (import.meta.env.DEV) {
-              console.warn('[MyIFSWork/Home] data query failures', queryErrors.map((item) => ({
+              console.warn('[MyIFSWork/Home] data query failures', optionalQueryFailures.map((item) => ({
                 table: item.table,
                 status: item.status,
                 effectiveClientId: item.effectiveClientId,
@@ -308,8 +362,8 @@ const Home = ({ clientId, client, mode = 'home', selfProfile = null, selfProfile
               selfProfilePresent: hasResolvedSelfProfile
             });
           }
-          setDataLoadError({
-            message: hasResolvedSelfProfile ? PARTIAL_DATA_LOAD_MESSAGE : DATA_LOAD_ERROR_MESSAGE,
+          setCriticalLoadError({
+            message: effectiveClientId ? null : CRITICAL_HOME_LOAD_MESSAGE,
             details: [{
               table: 'home_data',
               status: err?.status || err?.statusCode || null,
@@ -317,7 +371,7 @@ const Home = ({ clientId, client, mode = 'home', selfProfile = null, selfProfile
               effectiveClientId,
               selfProfilePresent: Boolean((selfProfile || selfProfileResult?.profile)?.id)
             }],
-            scope: effectiveClientId ? 'partial' : 'global'
+            scope: effectiveClientId ? 'section' : 'global'
           });
         }
       }
@@ -514,6 +568,18 @@ const Home = ({ clientId, client, mode = 'home', selfProfile = null, selfProfile
     { to: '/inbox', icon: MessageSquare, title: 'Advisor Messages', description: 'View supportive messages and updates from your Advisor.', buttonLabel: 'Open Messages', tone: 'gold' }
   ];
 
+  const recentInnerWork = [
+    latestCurriculumReflection && { type: 'Module reflection', title: latestCurriculumReflection.moduleTitle || latestCurriculumReflection.module_id || 'Curriculum reflection', detail: latestCurriculumReflection.summary || latestCurriculumReflection.reflection || 'A curriculum reflection was saved.', to: latestCurriculumReflection.moduleId ? `/curriculum/module/${latestCurriculumReflection.moduleId}` : '/curriculum' },
+    recentLifeReflection && { type: 'Life Integration', title: formatLifeReflectionType(recentLifeReflection.reflection_type), detail: recentLifeReflection.summary, to: recentLifeReflection.id ? `/life-integration/reflections/${recentLifeReflection.id}` : '/life-integration' },
+    latestMilestone && { type: 'Healing timeline', title: latestMilestone.title || 'Recent milestone', detail: latestMilestone.description || 'A recent moment of inner work was recorded.', to: '/healing-timeline' }
+  ].filter(Boolean).slice(0, 3);
+
+  const quietTools = [
+    { to: '/life-integration/return-to-self', label: 'Return to Self' },
+    { to: '/parts-dialogue', label: 'Parts Dialogue' },
+    { to: '/journal', label: 'Journal' }
+  ];
+
   const handleLoadNextStep = async (force = false) => {
     if (!effectiveClientId || nextStepState.loading) return;
     setNextStepState((current) => ({ ...current, loading: true, error: '' }));
@@ -583,202 +649,146 @@ const Home = ({ clientId, client, mode = 'home', selfProfile = null, selfProfile
         </section>
       )}
 
-      <section className="mb-12 text-center lg:flex lg:items-center lg:justify-between lg:text-left">
-        <div className="max-w-2xl">
-          <p className="mb-4 text-xs font-bold uppercase tracking-[0.28em] text-brand-emerald-700 dark:text-brand-emerald-100">The Luminous Self</p>
-          <h1 className="mb-4 text-4xl font-normal text-brand-stone-900 dark:text-slate-100 lg:text-6xl">
-            {clientFirstName ? `Hello, ${clientFirstName}` : 'Welcome back to your IFS path'}
-          </h1>
-          <p className="mb-8 text-lg leading-relaxed text-brand-stone-600 dark:text-slate-400">
-            Continue your IFS path and use the tools below to understand, support, and connect with your parts.
-          </p>
-          <div className="flex flex-col justify-center gap-4 sm:flex-row lg:justify-start">
-            <button onClick={() => navigate('/curriculum')} className="btn-sanctuary-primary justify-center">
-              <BookOpen className="h-5 w-5" />
-              Continue Curriculum
-            </button>
-            <button onClick={() => navigate('/progress-timeline')} className="btn-sanctuary-secondary justify-center">
-              <Trophy className="h-5 w-5" />
-              View My Progress
-            </button>
-            <button onClick={() => navigate('/assessments')} className="btn-sanctuary-secondary justify-center">
-              <Brain className="h-5 w-5" />
-              Take / Review Assessment
-            </button>
+      <section className="mb-12 overflow-hidden rounded-[2.25rem] border p-7 shadow-premium md:p-10" style={{ background: `linear-gradient(135deg, ${palette.surface}, ${palette.background})`, borderColor: palette.border }}>
+        <div className="flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between">
+          <div className="max-w-3xl">
+            <p className="mb-4 text-xs font-bold uppercase tracking-[0.32em]" style={{ color: palette.primary }}>The Luminous Self</p>
+            <h1 className="mb-4 font-serif text-4xl font-normal leading-tight text-brand-stone-900 dark:text-slate-100 lg:text-6xl">
+              {clientFirstName ? `Hello, ${clientFirstName}` : 'Welcome back to your IFS path'}
+            </h1>
+            <p className="max-w-2xl text-lg leading-relaxed text-brand-stone-600 dark:text-slate-300">
+              Your main path is the Curriculum. Advisor-guided practices, reflections, and tools sit nearby as calm support—not a crowded dashboard.
+            </p>
+            <div className="mt-6 flex flex-wrap gap-3">
+              <button onClick={() => navigate(currentModule?.id ? `/curriculum/module/${currentModule.id}` : '/curriculum')} className="btn-sanctuary-primary justify-center">
+                <BookOpen className="h-5 w-5" />
+                {currentModule?.id ? 'Continue IFS Path' : 'Begin IFS Path'}
+              </button>
+              <button onClick={() => navigate('/tools')} className="btn-sanctuary-secondary justify-center">
+                <Sparkles className="h-5 w-5" />
+                Open Tools & Practices
+              </button>
+            </div>
+            <div className="mt-5 flex flex-wrap gap-2 text-xs">
+              <span className="rounded-full bg-white/80 px-3 py-1 font-semibold shadow-sm" style={{ color: palette.primary }}>Curriculum-first IFS path</span>
+              <span className="rounded-full px-3 py-1 font-semibold" style={{ background: palette.softAccent, color: palette.primary }}>{curriculumSummary ? `${curriculumSummary.completedCount}/${curriculumSummary.totalModules} modules` : 'Ready to begin'}</span>
+              {activeAssignedPractice && <span className="rounded-full bg-brand-gold-50 px-3 py-1 font-semibold text-brand-gold-700 dark:bg-brand-gold-950/30 dark:text-brand-gold-500">Advisor-guided practice ready</span>}
+            </div>
           </div>
-          <div className="mt-5 flex flex-wrap justify-center gap-2 text-xs lg:justify-start">
-            <span className="rounded-full bg-white/80 px-3 py-1 font-semibold text-brand-emerald-700 shadow-sm dark:bg-slate-900/60 dark:text-brand-emerald-100">Curriculum-first IFS path</span>
-            {activeAssignedPractice && <span className="rounded-full bg-brand-gold-50 px-3 py-1 font-semibold text-brand-gold-700 dark:bg-brand-gold-950/30 dark:text-brand-gold-500">Advisor-guided practice ready</span>}
-            {activeLiveSession && <span className="rounded-full bg-brand-emerald-600 px-3 py-1 font-semibold text-white">Live guided practice available</span>}
-          </div>
-        </div>
-        <div className="mt-10 hidden lg:block">
-          <div className="relative flex h-56 w-56 items-center justify-center rounded-full border border-brand-gold-100 bg-gradient-to-br from-white to-brand-gold-50 shadow-2xl shadow-brand-gold-500/10 dark:border-brand-gold-900/30 dark:from-brand-cardDark dark:to-brand-gold-950/20">
-            <Sun className="h-20 w-20 text-brand-gold-600" />
-            <div className="absolute -right-5 top-8 h-16 w-16 rounded-full bg-brand-emerald-100/70 blur-2xl" />
+          <div className="flex flex-col items-start gap-4 lg:items-end">
+            <PaletteSelector paletteKey={paletteKey} setPaletteKey={setPaletteKey} />
+            <div className="hidden h-44 w-44 items-center justify-center rounded-full border bg-white/60 shadow-2xl lg:flex" style={{ borderColor: palette.border }}>
+              <Sun className="h-16 w-16" style={{ color: palette.accent }} />
+            </div>
           </div>
         </div>
       </section>
 
-      {dataLoadError && (
-        <section className={`mb-8 rounded-3xl border p-5 text-sm ${
-          dataLoadError.scope === 'partial'
-            ? 'border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/20 dark:text-amber-100'
-            : 'border-red-200 bg-red-50 text-red-700 dark:border-red-900/60 dark:bg-red-950/20 dark:text-red-200'
-        }`}>
-          <p className="font-semibold">{dataLoadError.message}</p>
+      {criticalLoadError?.message && criticalLoadError.scope === 'global' && (
+        <section className="mb-8 rounded-3xl border border-red-200 bg-red-50 p-5 text-sm text-red-700 dark:border-red-900/60 dark:bg-red-950/20 dark:text-red-200">
+          <p className="font-semibold">{criticalLoadError.message}</p>
         </section>
       )}
 
       {isMyIFSMode && (
-        <section className="mb-8 rounded-3xl border border-brand-gold-200/70 bg-brand-gold-50/80 p-5 text-sm text-brand-stone-700 dark:border-brand-gold-900/50 dark:bg-brand-gold-950/20 dark:text-slate-300">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-[0.24em] text-brand-gold-700 dark:text-brand-gold-500">My IFS Work</p>
-              <p className="mt-1 font-semibold text-brand-stone-900 dark:text-slate-100">Your personal IFS path is connected.</p>
-              <p className="mt-1">Continue your curriculum, revisit your assessments, and return to the tools that support your parts work.</p>
-              {!hasSelfData && (
-                <p className="mt-2 font-semibold">Start with the curriculum or an assessment to begin your IFS path.</p>
-              )}
-            </div>
-            <div className="rounded-2xl bg-white/70 px-4 py-3 text-xs dark:bg-slate-900/50">
-              <p className="font-bold text-brand-stone-900 dark:text-slate-100">Your path summary</p>
-              <div className="mt-2 grid gap-1 sm:grid-cols-2">
-                <span>Curriculum progress: {curriculumSummary ? `${curriculumSummary.completedCount}/${curriculumSummary.totalModules} modules` : 'Ready to begin'}</span>
-                <span>Assessments completed: {assessmentSummary.formalWoundCount + assessmentSummary.interactiveAssessments.length}</span>
-                <span>Interactive tools completed: {assessmentSummary.interactiveDataCount}</span>
-                <span>Inner System Map: {hasInnerSystemProgress ? 'Started' : 'Not started yet'}</span>
-                <span>Journal reflections: {assessmentSummary.journalCount ? 'Started' : 'Not started yet'}</span>
-              </div>
-            </div>
-          </div>
+        <section className="mb-8 rounded-3xl border bg-white/70 p-5 text-sm text-brand-stone-700 dark:bg-slate-900/50 dark:text-slate-300" style={{ borderColor: palette.border }}>
+          <p className="text-xs font-bold uppercase tracking-[0.24em]" style={{ color: palette.primary }}>My IFS Work</p>
+          <p className="mt-1 font-semibold text-brand-stone-900 dark:text-slate-100">Your personal IFS path is connected.</p>
+          <p className="mt-1">Continue the curriculum, revisit assessments, and return to the practices that support your parts work.</p>
+          {!hasSelfData && <p className="mt-2 font-semibold">Start with the curriculum or an assessment to begin your IFS path.</p>}
         </section>
       )}
 
-      <section className="mb-8">
-        <div className="rounded-[2rem] border border-brand-emerald-100 bg-white/85 p-5 shadow-premium dark:border-brand-emerald-900/40 dark:bg-slate-900/60">
-          <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+      <section className="mb-10 grid gap-6 lg:grid-cols-[1.35fr_0.85fr]">
+        <div className="rounded-[2rem] border bg-white/85 p-6 shadow-premium dark:bg-slate-900/60" style={{ borderColor: palette.border }}>
+          <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
             <div>
-              <p className="text-xs font-bold uppercase tracking-[0.24em] text-brand-emerald-700 dark:text-brand-emerald-100">Next Best Step</p>
-              <h2 className="mt-1 text-2xl font-serif font-normal text-brand-stone-900 dark:text-slate-100">Your Next Guided Step</h2>
-              <p className="mt-2 max-w-2xl text-sm text-brand-stone-600 dark:text-slate-400">Based on your current IFS Path and recent app activity, this may be a helpful next step.</p>
+              <p className="text-xs font-bold uppercase tracking-[0.24em]" style={{ color: palette.primary }}>Continue Your IFS Path</p>
+              <h2 className="mt-2 font-serif text-3xl font-normal text-brand-stone-900 dark:text-slate-100">{currentModule?.title || 'Begin with the main curriculum'}</h2>
+              <p className="mt-3 text-sm leading-relaxed text-brand-stone-600 dark:text-slate-400">The Curriculum is your main guided path. Assigned IFS Practices remain separate Advisor-guided activities.</p>
             </div>
-            <button type="button" onClick={() => handleLoadNextStep(Boolean(nextStepState.data))} disabled={nextStepState.loading || !effectiveClientId} className="btn-sanctuary-secondary shrink-0 disabled:opacity-60">
-              {nextStepState.loading ? 'Finding your next guided step…' : nextStepState.data ? 'Refresh Step' : 'Find My Next Step'}
+            <div className="rounded-3xl px-5 py-4 text-center" style={{ background: palette.softAccent }}>
+              <p className="text-3xl font-bold" style={{ color: palette.primary }}>{curriculumProgress}%</p>
+              <p className="text-xs uppercase tracking-wide text-brand-stone-500">complete</p>
+            </div>
+          </div>
+          <div className="mt-6 h-3 overflow-hidden rounded-full bg-brand-stone-100 dark:bg-slate-800">
+            <div className="h-full rounded-full transition-all" style={{ width: `${curriculumProgress}%`, background: `linear-gradient(90deg, ${palette.accent}, ${palette.primary})` }} />
+          </div>
+          <div className="mt-6 flex flex-wrap gap-3">
+            <Link to={currentModule?.id ? `/curriculum/module/${currentModule.id}` : '/curriculum'} className="btn-sanctuary-primary">{currentModule?.id ? 'Continue Module' : 'Start Curriculum'} <ArrowRight className="h-4 w-4" /></Link>
+            <Link to="/curriculum" className="btn-sanctuary-secondary">View Curriculum</Link>
+          </div>
+        </div>
+
+        <div className="rounded-[2rem] border bg-white/75 p-6 dark:bg-slate-900/50" style={{ borderColor: palette.border }}>
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[0.24em]" style={{ color: palette.primary }}>Your Next Guided Step</p>
+              <h2 className="mt-2 font-serif text-2xl font-normal text-brand-stone-900 dark:text-slate-100">Gentle next step</h2>
+            </div>
+            <button type="button" onClick={() => handleLoadNextStep(Boolean(nextStepState.data))} disabled={nextStepState.loading || !effectiveClientId} className="rounded-full border px-3 py-2 text-xs font-semibold disabled:opacity-60" style={{ borderColor: palette.border, color: palette.primary }}>
+              {nextStepState.loading ? 'Finding…' : nextStepState.data ? 'Refresh' : 'Find'}
             </button>
           </div>
-          {nextStepState.error && <p className="mt-4 rounded-2xl bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:bg-amber-950/20 dark:text-amber-100">Your next guided step could not be generated right now. You can continue with your curriculum.</p>}
-          {!nextStepState.data && !nextStepState.loading && !nextStepState.error && <p className="mt-4 text-sm text-brand-stone-500 dark:text-slate-500">Continue your curriculum to unlock more personalized guidance.</p>}
-          {nextStepState.data?.next_best_step && (
-            <div className="mt-5 rounded-3xl border border-brand-stone-100 bg-brand-sanctuary/70 p-5 dark:border-slate-800 dark:bg-slate-950/40">
-              <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                <div>
-                  <h3 className="text-xl font-semibold text-brand-stone-900 dark:text-slate-100">{nextStepState.data.next_best_step.title}</h3>
-                  <p className="mt-2 text-sm leading-relaxed text-brand-stone-600 dark:text-slate-400">{nextStepState.data.next_best_step.description}</p>
-                  <p className="mt-3 text-sm text-brand-stone-600 dark:text-slate-400"><span className="font-semibold text-brand-stone-900 dark:text-slate-100">Why this may help:</span> {nextStepState.data.next_best_step.reason}</p>
-                  <p className="mt-2 text-xs font-semibold uppercase tracking-wide text-brand-gold-700 dark:text-brand-gold-500">Estimated time: {nextStepState.data.next_best_step.estimated_time}</p>
-                </div>
-                <Link to={nextStepState.data.next_best_step.action_route || '/curriculum'} className="btn-sanctuary-primary shrink-0">Open Step <ArrowRight className="h-4 w-4" /></Link>
-              </div>
-              {Boolean(nextStepState.data.next_best_step.supporting_signals?.length) && <div className="mt-4 flex flex-wrap gap-2">{nextStepState.data.next_best_step.supporting_signals.map((signal) => <span key={signal} className="rounded-full bg-white px-3 py-1 text-xs text-brand-stone-600 dark:bg-slate-900 dark:text-slate-300">{signal}</span>)}</div>}
+          {nextStepState.error && <p className="mt-4 rounded-2xl bg-amber-50 px-4 py-3 text-sm text-amber-800">Your next guided step could not be generated right now. You can continue with your curriculum.</p>}
+          {nextStepState.data?.next_best_step ? (
+            <div className="mt-4">
+              <h3 className="font-semibold text-brand-stone-900 dark:text-slate-100">{nextStepState.data.next_best_step.title}</h3>
+              <p className="mt-2 text-sm leading-relaxed text-brand-stone-600 dark:text-slate-400">{nextStepState.data.next_best_step.description}</p>
+              <p className="mt-3 text-xs font-semibold uppercase tracking-wide" style={{ color: palette.accent }}>{nextStepState.data.next_best_step.estimated_time}</p>
+              <Link to={nextStepState.data.next_best_step.action_route || '/curriculum'} className="mt-4 inline-flex items-center gap-2 text-sm font-bold" style={{ color: palette.primary }}>Open Step <ArrowRight className="h-4 w-4" /></Link>
               {(nextStepState.data.next_best_step.interactive_payload?.content || nextStepState.data.next_best_step.interactive_payload?.blocks?.length) && (
-                <div className="mt-5 rounded-2xl bg-white/80 p-4 dark:bg-slate-900/60">
-                  <p className="mb-3 text-sm font-semibold text-brand-stone-900 dark:text-slate-100">Guided Practice Preview</p>
-                  <InteractiveWorksheetRenderer blocks={nextStepState.data.next_best_step.interactive_payload.blocks?.length ? nextStepState.data.next_best_step.interactive_payload.blocks : nextStepState.data.next_best_step.interactive_payload.content} fallbackText={nextStepState.data.next_best_step.interactive_payload.content} />
+                <div className="mt-4 rounded-2xl bg-white/70 p-3 dark:bg-slate-950/30">
+                  {nextStepState.data.next_best_step.interactive_payload?.content && <p className="text-sm text-brand-stone-600 dark:text-slate-400">{nextStepState.data.next_best_step.interactive_payload.content}</p>}
+                  {Boolean(nextStepState.data.next_best_step.interactive_payload?.blocks?.length) && <InteractiveWorksheetRenderer blocks={nextStepState.data.next_best_step.interactive_payload.blocks} readOnly />}
                 </div>
               )}
             </div>
-          )}
+          ) : !nextStepState.loading && <p className="mt-4 text-sm text-brand-stone-500 dark:text-slate-500">Continue the curriculum or ask for a personalized next step when you are ready.</p>}
         </div>
       </section>
 
-      <section className="mb-14">
-        <div className="rounded-[2rem] border border-brand-gold-100 bg-gradient-to-br from-white via-brand-gold-50/70 to-brand-emerald-50 p-6 shadow-premium dark:border-slate-800 dark:from-brand-cardDark dark:via-brand-gold-950/20 dark:to-brand-emerald-950/20 lg:p-8">
-          <div className="grid gap-8 lg:grid-cols-[1.25fr_0.75fr] lg:items-center">
-            <div>
-              <p className="mb-2 text-xs font-bold uppercase tracking-[0.24em] text-brand-gold-700 dark:text-brand-gold-500">Continue Your IFS Path</p>
-              <h2 className="text-4xl font-serif font-normal text-brand-stone-900 dark:text-slate-100">Your IFS Curriculum</h2>
-              <p className="mt-3 max-w-2xl text-sm leading-relaxed text-brand-stone-600 dark:text-slate-400">
-                The curriculum is your main path through IFS. Use the tools below to support what you are learning.
-              </p>
-              <div className="mt-6 rounded-3xl bg-white/80 p-5 shadow-sm dark:bg-slate-900/50">
-                <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                  <div>
-                    <p className="text-xs font-bold uppercase tracking-wide text-brand-emerald-700 dark:text-brand-emerald-100">
-                      {curriculumSummary?.assignedModule ? 'Assigned by Advisor' : curriculumSummary ? 'Available' : 'Warm beginning'}
-                    </p>
-                    <h3 className="mt-1 text-2xl font-semibold text-brand-stone-900 dark:text-slate-100">
-                      {currentModule?.title || 'Start with the first module'}
-                    </h3>
-                    <p className="mt-2 text-sm text-brand-stone-600 dark:text-slate-400">
-                      {currentModule?.description || 'Start with the first module and build your understanding of parts, protectors, exiles, and Self-energy step by step.'}
-                    </p>
-                    {curriculumSummary?.lastCompletedModule && (
-                      <p className="mt-3 text-xs font-semibold text-brand-stone-500 dark:text-slate-500">Last completed: {curriculumSummary.lastCompletedModule.title}</p>
-                    )}
-                    <p className="mt-2 text-xs font-semibold text-brand-gold-700 dark:text-brand-gold-500">
-                      {curriculumReflections.length ? `${curriculumReflections.length} module reflection${curriculumReflections.length === 1 ? '' : 's'} saved` : 'Optional reflections can help you remember what shifted as you move through the curriculum.'}
-                    </p>
-                  </div>
-                  <div className="shrink-0 rounded-3xl bg-brand-emerald-50 px-5 py-4 text-center dark:bg-brand-emerald-950/30">
-                    <p className="text-3xl font-bold text-brand-emerald-700 dark:text-brand-emerald-100">{curriculumProgress}%</p>
-                    <p className="text-xs uppercase tracking-wide text-brand-stone-500 dark:text-slate-500">complete</p>
-                  </div>
-                </div>
-                <div className="mt-5 h-3 overflow-hidden rounded-full bg-brand-stone-100 dark:bg-slate-800">
-                  <div className="h-full rounded-full bg-gradient-to-r from-brand-gold-500 to-brand-emerald-600" style={{ width: `${curriculumProgress}%` }} />
-                </div>
-                <div className="mt-5 flex flex-wrap gap-3">
-                  <Link to={currentModule?.id ? `/curriculum/module/${currentModule.id}` : '/curriculum'} className="btn-sanctuary-primary">{curriculumSummary?.assignedModule ? 'Open Assigned Module' : currentModule?.id ? 'Continue Module' : 'Start Module'} <ArrowRight className="h-4 w-4" /></Link>
-                  <Link to="/curriculum" className="btn-sanctuary-secondary">View Full Curriculum</Link>
-                </div>
-              </div>
-            </div>
-            <div className="rounded-[2rem] border border-white/70 bg-white/70 p-5 dark:border-slate-800 dark:bg-slate-900/45">
-              <h3 className="font-semibold text-brand-stone-900 dark:text-slate-100">IFS Path at a glance</h3>
-              <div className="mt-4 space-y-3 text-sm text-brand-stone-600 dark:text-slate-400">
-                <p><span className="font-semibold text-brand-stone-900 dark:text-slate-100">Modules:</span> {curriculumSummary ? `${curriculumSummary.completedCount} of ${curriculumSummary.totalModules} complete` : 'Ready to begin'}</p>
-                <p><span className="font-semibold text-brand-stone-900 dark:text-slate-100">Assessment:</span> {hasWoundAssessment || assessmentSummary.interactiveAssessments.length ? 'Available for personalization' : 'Not completed yet'}</p>
-                <p><span className="font-semibold text-brand-stone-900 dark:text-slate-100">Inner System Map:</span> {hasInnerSystemProgress ? 'Started' : 'Ready to begin'}</p>
-                <p><span className="font-semibold text-brand-stone-900 dark:text-slate-100">Journal/reflections:</span> {assessmentSummary.journalCount ? 'Started' : 'Ready to begin'}</p>
-                <p><span className="font-semibold text-brand-stone-900 dark:text-slate-100">Curriculum reflections:</span> {curriculumReflections.length ? `${curriculumReflections.length} Module Reflection${curriculumReflections.length === 1 ? '' : 's'} saved${latestCurriculumReflection ? ` · Latest: ${latestCurriculumReflection.moduleTitle}` : ''}` : 'Optional reflections can help you remember what shifted as you move through the curriculum.'}</p>
-                <p><span className="font-semibold text-brand-stone-900 dark:text-slate-100">Daily-life reflections:</span> {lifeReflectionCount ? `${lifeReflectionCount} saved` : 'Ready when daily life brings something up'}</p>
-                <p><span className="font-semibold text-brand-stone-900 dark:text-slate-100">Assigned IFS Practices:</span> {assignedPracticeCount || 'None active'}</p>
-              </div>
-            </div>
+      <section className="mb-10 grid gap-6 lg:grid-cols-3">
+        <div className="rounded-[2rem] border bg-white/75 p-6 dark:bg-slate-900/50" style={{ borderColor: palette.border }}>
+          <p className="text-xs font-bold uppercase tracking-[0.24em]" style={{ color: palette.primary }}>Advisor-Guided Practice</p>
+          <h2 className="mt-2 font-serif text-2xl font-normal text-brand-stone-900 dark:text-slate-100">{activeAssignedPractice ? activeAssignedPractice.title || 'Practice ready' : 'No active assigned practice'}</h2>
+          <p className="mt-3 text-sm leading-relaxed text-brand-stone-600 dark:text-slate-400">Assigned IFS Practices are separate from Curriculum and live in your Advisor-guided practice area.</p>
+          <Link to="/assigned-practices" className="mt-5 inline-flex items-center gap-2 text-sm font-bold" style={{ color: palette.primary }}>Open Assigned IFS Practices <ArrowRight className="h-4 w-4" /></Link>
+        </div>
+
+        <div className="rounded-[2rem] border bg-white/75 p-6 dark:bg-slate-900/50" style={{ borderColor: palette.border }}>
+          <p className="text-xs font-bold uppercase tracking-[0.24em]" style={{ color: palette.primary }}>Recent Inner Work</p>
+          <div className="mt-4 space-y-4">
+            {recentInnerWork.length ? recentInnerWork.map((item) => (
+              <Link key={`${item.type}-${item.title}`} to={item.to} className="block border-l-2 pl-4" style={{ borderColor: palette.accent }}>
+                <p className="text-xs font-bold uppercase tracking-wide text-brand-stone-500">{item.type}</p>
+                <p className="mt-1 text-sm font-semibold text-brand-stone-900 dark:text-slate-100">{item.title}</p>
+                <p className="mt-1 line-clamp-2 text-xs text-brand-stone-600 dark:text-slate-400">{item.detail}</p>
+              </Link>
+            )) : <p className="text-sm text-brand-stone-500 dark:text-slate-500">Recent module reflections, Life Integration reflections, journal entries, and worksheet completions will appear here.</p>}
           </div>
         </div>
-      </section>
 
-      <section className="mb-14">
-        <SectionHeader title="My Assessments & Progress" subtitle="Your assessments help personalize how the curriculum supports your parts work. Review patterns, progress, parts work, and Advisor-guided practices without over-focusing on scores." />
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {assessmentProgressTiles.map((tile) => <ClientHomeTile key={tile.title} {...tile} />)}
+        <div className="rounded-[2rem] border bg-white/75 p-6 dark:bg-slate-900/50" style={{ borderColor: palette.border }}>
+          <p className="text-xs font-bold uppercase tracking-[0.24em]" style={{ color: palette.primary }}>Inner System Snapshot</p>
+          <h2 className="mt-2 font-serif text-2xl font-normal text-brand-stone-900 dark:text-slate-100">{assessmentSummary.partsCount || partsMapPartsCount || 0} part{(assessmentSummary.partsCount || partsMapPartsCount) === 1 ? '' : 's'} mapped</h2>
+          <p className="mt-3 text-sm leading-relaxed text-brand-stone-600 dark:text-slate-400">{hasInnerSystemProgress ? 'Your Inner System Map has started. Continue adding parts and relationships gently.' : 'Begin by adding one part you notice often.'}</p>
+          <Link to="/parts-relationships" className="mt-5 inline-flex items-center gap-2 text-sm font-bold" style={{ color: palette.primary }}>Open Inner System Map <ArrowRight className="h-4 w-4" /></Link>
         </div>
       </section>
 
-      <section className="mb-14">
-        <SectionHeader title="Tools to Support Your IFS Path" subtitle="Use these when a module invites reflection, parts work, grounding, or deeper understanding." />
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {curriculumSupportTiles.map((tile) => <ClientHomeTile key={tile.title} {...tile} />)}
+      <section className="mb-14 rounded-[2rem] border bg-white/65 p-6 dark:bg-slate-900/45" style={{ borderColor: palette.border }}>
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-[0.24em]" style={{ color: palette.primary }}>Quiet Tools Drawer</p>
+            <h2 className="mt-2 font-serif text-2xl font-normal text-brand-stone-900 dark:text-slate-100">Open tools only when they support the path</h2>
+          </div>
+          <Link to="/tools" className="btn-sanctuary-secondary">Open Tools & Practices</Link>
         </div>
-      </section>
-
-      <section className="mb-14">
-        <SectionHeader title="Life Integration" subtitle="Use these short Daily Life Practice tools between modules and outside the app. They support your IFS Path without replacing it." />
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {lifeIntegrationTiles.map((tile) => <ClientHomeTile key={tile.title} {...tile} />)}
+        <div className="mt-5 flex flex-wrap gap-2">
+          {quietTools.map((tool) => <Link key={tool.to} to={tool.to} className="rounded-full border px-4 py-2 text-sm font-semibold" style={{ borderColor: palette.border, color: palette.primary, background: palette.surface }}>{tool.label}</Link>)}
         </div>
-      </section>
-
-      <section className="mb-14 opacity-95">
-        <SectionHeader title="Advisor-Guided Support" subtitle="Advisor support is here when you choose to use it, while your IFS self-guidance stays at the center." />
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
-          {advisorTiles.map((tile) => <ClientHomeTile key={tile.title} {...tile} />)}
-        </div>
-        <p className="mt-4 rounded-2xl bg-brand-stone-100 px-4 py-3 text-xs text-brand-stone-600 dark:bg-slate-900/50 dark:text-slate-400">
-          This app supports reflection and IFS practice between sessions. It is not monitored for emergencies.
-        </p>
       </section>
 
       <section className="mb-6">
