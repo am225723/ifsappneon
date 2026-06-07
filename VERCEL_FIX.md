@@ -40,13 +40,14 @@ OPENROUTER_SITE_URL
 OPENROUTER_APP_TITLE=IFS App
 ```
 
-Upload flows also require the existing UploadThing variables when enabled:
+Upload flows use the current UploadThing v7 server token when enabled:
 
 ```text
-UPLOADTHING_APP_ID
-UPLOADTHING_SECRET
-UPLOADTHING_CALLBACK_URL
+UPLOADTHING_TOKEN
+UPLOADTHING_CALLBACK_URL   # optional callback override
 ```
+
+Keep the token server-side only. Do not expose UploadThing secrets through `VITE_*`. Legacy `UPLOADTHING_APP_ID` / `UPLOADTHING_SECRET` values are no longer the preferred configuration for this app.
 
 ## Deployment Gate
 

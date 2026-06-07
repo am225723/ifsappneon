@@ -49,13 +49,14 @@ OPENROUTER_APP_TITLE=IFS App
 
 Use `CLERK_AUTHORIZED_PARTIES` when Clerk JWT verification should be restricted to known production/preview origins. `OPENROUTER_MODEL` defaults to `openrouter/free`; `OPENROUTER_SITE_URL` and `OPENROUTER_APP_TITLE` are optional OpenRouter attribution headers.
 
-Upload support also uses the existing UploadThing server variables when upload flows are enabled:
+Upload support uses the current UploadThing v7 server token when upload flows are enabled:
 
 ```text
-UPLOADTHING_APP_ID
-UPLOADTHING_SECRET
-UPLOADTHING_CALLBACK_URL
+UPLOADTHING_TOKEN
+UPLOADTHING_CALLBACK_URL   # optional, only when the deployed callback origin needs an override
 ```
+
+Legacy `UPLOADTHING_APP_ID` / `UPLOADTHING_SECRET` values may remain in older Vercel environments, but the current server route prefers `UPLOADTHING_TOKEN`. Do not create `VITE_UPLOADTHING_*` variables for secrets. Guided Meditation never depends on UploadThing being configured; missing media falls back to on-screen grounding practice.
 
 ## 🔐 Server/Client Boundary Expectations
 

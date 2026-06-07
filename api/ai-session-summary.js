@@ -143,7 +143,7 @@ function buildMessages({ client, currentUser, rangeDays, since, clinicalData }) 
         required_disclaimer: DISCLAIMER,
         sparse_data_instruction: hasAnyClinicalData(clinicalData) ? null : 'Available data is limited for this range. Summarize what is available, list missing areas, suggest session-opening questions, and suggest what the Advisor may want to clarify.',
         required_sections: [
-          '1. Snapshot of current IFS path',
+          '1. Current IFS path snapshot',
           '2. Most relevant client inputs since last session',
           '3. Module response themes',
           '4. Journal/reflection themes',
@@ -324,7 +324,7 @@ async function loadClinicalData(clientId, since) {
     journalEntries: journals.rows.map(normalizeJournal),
     parts: parts.rows.map(normalizePart),
     partRelationships: relationships.rows.map(normalizeRelationship),
-    assignedHomework: homework.rows.map((row) => ({ ...normalizeHomework(row), completion_notes: truncateText(row.completion_notes, 500), interactive_responses_summary: compactJson(row.interactive_responses, 700) })),
+    assignedHomework: homework.rows.map((row) => ({ ...normalizeHomework(row), completion_notes: truncateText(row.completion_notes, 500), interactive_responses_summary: compactJson(row.interactive_responses, 700), activity_blocks_summary: compactJson(row.activity_blocks || row.activityBlocks, 700) })),
     progressSummary: progress.rows.map(normalizeProgress),
     moduleResponses: interactions.filter((row) => String(row.module_id || '').startsWith('module-')).slice(0, 40),
     curriculumReflections: interactions.filter((row) => String(row.module_id || '').includes('curriculum') || row.title).slice(0, 20),

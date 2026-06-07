@@ -14,8 +14,7 @@ async function getUserId(req) {
 const handlers = createRouteHandler({
   router: ourFileRouter,
   config: {
-    uploadthingId: process.env.UPLOADTHING_APP_ID,
-    uploadthingSecret: process.env.UPLOADTHING_SECRET,
+    token: process.env.UPLOADTHING_TOKEN,
     callbackUrl: process.env.UPLOADTHING_CALLBACK_URL,
     isDev: process.env.NODE_ENV !== 'production'
   }
@@ -27,6 +26,6 @@ export default async function handler(req, res) {
     return handlers(req, res);
   } catch (error) {
     const status = error.statusCode || 401;
-    return res.status(status).json({ error: status === 500 ? 'Server environment is not configured.' : error.message });
+    return res.status(status).json({ error: status >= 500 ? 'Upload service is not configured right now.' : 'Upload access is not available.' });
   }
 }
