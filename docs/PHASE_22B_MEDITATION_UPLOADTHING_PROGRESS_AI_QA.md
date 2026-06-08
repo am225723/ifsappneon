@@ -190,6 +190,6 @@ neon/999_backfill_therapist_assignments.sql
 
 ## Known limitations / follow-up tasks
 
-- There is no Advisor/Admin UI yet for uploading meditation media. UploadThing routes and documentation are ready; a future content-management UI can wire returned `ufsUrl` values into a content library.
+- At the end of Phase 22B there was no Advisor/Admin UI yet for uploading meditation media. Phase 22D adds that content-management UI and stores returned `ufsUrl` values in `ifs_meditation_media`.
 - Some meditation cards still reference static audio paths; these are safe because the page now gracefully falls back when assets are absent.
 - Lint may still report deferred repository-wide lint debt unrelated to Phase 22B.

@@ -19,11 +19,10 @@ import { useData } from '../contexts/DataContext';
 import { supabaseHelpers } from '../lib/supabase';
 import { clientAuth } from '../lib/supabasePersonalization';
 import {
-  getGuidedPracticeById,
   guidedPracticeLibrary,
-  practiceCategories,
-  quickPractices,
+  PRACTICE_CATEGORY_ORDER,
 } from '../lib/guidedPracticeLibrary';
+import { loadActiveMeditationMedia, mergeMeditationMediaWithLibrary } from '../lib/meditationMedia';
 
 const AUDIO_FALLBACK_COPY = 'Audio is not available for this practice yet. You can still complete the guided practice below.';
 
@@ -46,6 +45,9 @@ function PracticeMeta({ practice }) {
 function PracticeCard({ practice, completed }) {
   return (
     <article className="flex h-full flex-col rounded-3xl border border-brand-stone-200/70 bg-white/85 p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-brand-gold-200 hover:shadow-lg dark:border-slate-800 dark:bg-brand-cardDark/90 dark:hover:border-brand-gold-900/50">
+      {practice.coverImageUrl && (
+        <img src={practice.coverImageUrl} alt="" className="mb-4 h-36 w-full rounded-2xl object-cover" loading="lazy" />
+      )}
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-xs font-bold uppercase tracking-[0.2em] text-brand-gold-700 dark:text-brand-gold-500">{practice.category}</p>
@@ -55,6 +57,11 @@ function PracticeCard({ practice, completed }) {
       </div>
       <p className="mt-3 flex-1 text-sm leading-relaxed text-brand-stone-600 dark:text-slate-400">{practice.description}</p>
       <PracticeMeta practice={practice} />
+      {practice.audioUrl && (
+        <span className="mt-3 inline-flex w-fit items-center gap-1 rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300">
+          <Headphones className="h-3 w-3" /> Audio available
+        </span>
+      )}
       <Link
         to={practice.route}
         className="mt-5 inline-flex items-center justify-center gap-2 rounded-2xl bg-brand-gold-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-gold-700"
@@ -276,7 +283,19 @@ function PracticePlayer({ practice, completed, onComplete }) {
   );
 }
 
-function PracticeLibrary({ completedIds }) {
+function PracticeLibrary({ completedIds, library }) {
+  const quickPracticeCards = library.filter((practice) => practice.category === 'Quick Practices');
+  const practiceCategoriesForLibrary = PRACTICE_CATEGORY_ORDER.filter((category) => category !== 'Quick Practices').map((category) => ({
+    name: category,
+    practices: library.filter((practice) => practice.category === category),
+  })).filter((category) => category.practices.length > 0);
+  const knownCategoryNames = new Set(PRACTICE_CATEGORY_ORDER);
+  const customCategories = [...new Set(library.map((practice) => practice.category).filter((category) => category && !knownCategoryNames.has(category)))].map((category) => ({
+    name: category,
+    practices: library.filter((practice) => practice.category === category),
+  }));
+  const allCategories = [...practiceCategoriesForLibrary, ...customCategories];
+
   return (
     <main className="mx-auto max-w-6xl px-6 py-10 lg:py-14">
       <header className="rounded-[2rem] border border-brand-gold-100 bg-gradient-to-br from-white via-brand-sanctuary to-brand-gold-50/70 p-6 shadow-sm dark:border-brand-gold-900/40 dark:from-brand-cardDark dark:via-brand-midnight dark:to-brand-gold-950/20 md:p-8">
@@ -298,12 +317,12 @@ function PracticeLibrary({ completedIds }) {
           </div>
         </div>
         <div className="grid gap-4 md:grid-cols-3">
-          {quickPractices.map((practice) => <PracticeCard key={practice.id} practice={practice} completed={completedIds.includes(practice.id)} />)}
+          {quickPracticeCards.map((practice) => <PracticeCard key={practice.id} practice={practice} completed={completedIds.includes(practice.id)} />)}
         </div>
       </section>
 
       <div className="mt-10 space-y-10">
-        {practiceCategories.map((category) => (
+        {allCategories.map((category) => (
           <section key={category.name} aria-labelledby={`${category.name.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}-heading`}>
             <div className="mb-4 flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300">
@@ -330,8 +349,29 @@ export default function GuidedMeditation() {
   const dataContext = useData();
   const awardXP = useMemo(() => dataContext?.awardXP || (() => {}), [dataContext?.awardXP]);
   const [completedIds, setCompletedIds] = useState([]);
+  const [library, setLibrary] = useState(guidedPracticeLibrary);
+  const [mediaLoading, setMediaLoading] = useState(true);
 
-  const selectedPractice = useMemo(() => (practiceId ? getGuidedPracticeById(practiceId) : null), [practiceId]);
+  const selectedPractice = useMemo(() => (practiceId ? library.find((practice) => practice.id === practiceId) || null : null), [library, practiceId]);
+
+
+  useEffect(() => {
+    let cancelled = false;
+    const loadMedia = async () => {
+      const { data, error } = await loadActiveMeditationMedia();
+      if (cancelled) return;
+      if (error) {
+        if (import.meta.env.DEV) console.warn('[GuidedMeditation] active media load skipped', { message: error?.message || 'Request failed' });
+        setLibrary(guidedPracticeLibrary);
+        setMediaLoading(false);
+        return;
+      }
+      setLibrary(mergeMeditationMediaWithLibrary(guidedPracticeLibrary, data || []));
+      setMediaLoading(false);
+    };
+    loadMedia();
+    return () => { cancelled = true; };
+  }, []);
 
   useEffect(() => {
     const loadCompleted = async () => {
@@ -365,13 +405,21 @@ export default function GuidedMeditation() {
     });
   }, [awardXP]);
 
+  if (practiceId && !selectedPractice && mediaLoading) {
+    return (
+      <main className="mx-auto max-w-3xl px-6 py-12">
+        <div className="rounded-[2rem] border border-brand-stone-200 bg-white/85 p-6 text-brand-stone-700 dark:border-slate-800 dark:bg-brand-cardDark/90 dark:text-slate-200">Loading guided practice…</div>
+      </main>
+    );
+  }
+
   if (practiceId && !selectedPractice) {
     return (
       <main className="mx-auto max-w-3xl px-6 py-12">
         <div className="rounded-[2rem] border border-amber-200 bg-amber-50 p-6 text-amber-900 dark:border-amber-500/30 dark:bg-amber-950/20 dark:text-amber-100">
           <p className="text-sm font-bold uppercase tracking-[0.24em]">Practice not found</p>
           <h1 className="mt-2 text-2xl font-semibold">This guided practice is not in the library.</h1>
-          <p className="mt-2 text-sm">The library currently contains {guidedPracticeLibrary.length} mapped practice records.</p>
+          <p className="mt-2 text-sm">The library currently contains {library.length || guidedPracticeLibrary.length} mapped practice records.</p>
           <button onClick={() => navigate('/meditation')} className="mt-4 rounded-2xl bg-brand-gold-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-gold-700">
             Return to full library
           </button>
@@ -384,5 +432,5 @@ export default function GuidedMeditation() {
     return <PracticePlayer key={selectedPractice.id} practice={selectedPractice} completed={completedIds.includes(selectedPractice.id)} onComplete={handleComplete} />;
   }
 
-  return <PracticeLibrary completedIds={completedIds} />;
+  return <PracticeLibrary completedIds={completedIds} library={library.length ? library : guidedPracticeLibrary} />;
 }

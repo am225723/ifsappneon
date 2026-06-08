@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { 
   Users, User, TrendingUp, Calendar, FileText, MessageSquare, 
-  Clock, CheckCircle, AlertTriangle, Activity, Heart, Shield,
+  Clock, CheckCircle, AlertTriangle, Activity, Headphones, Heart, Shield,
   ChevronRight, Search, Filter, Plus, Eye, BarChart3, Sparkles,
   BookOpen, ChevronDown, ChevronUp, MessageCircle, Flag, Lightbulb,
   Play, Target, X, Copy, Download, ArrowLeft, RefreshCw,
@@ -6316,6 +6316,7 @@ const TherapistDashboard = () => {
               { label: 'Advisor Messages', desc: 'Open secure client messages and updates.', icon: MessageCircle, onClick: () => navigate('/advisor-messages') },
               { label: 'Notifications', desc: 'Review unread updates and notification preferences.', icon: Bell, onClick: () => navigate('/notifications') },
               { label: 'Resource Library', desc: 'Open learning supports and reference materials.', icon: FileText, onClick: () => navigate('/resource-library') },
+              { label: 'Meditation Media Library', desc: 'Upload and manage meditation audio and cover images.', icon: Headphones, onClick: () => navigate('/admin/meditation-media') },
               { label: 'Coming Later', desc: 'Future-facing ideas are kept here instead of in primary navigation.', icon: Gem, onClick: () => setActiveTab('roadmap') }
             ].map((item) => {
               const Icon = item.icon;
