@@ -575,6 +575,7 @@ const Home = ({ clientId, client, mode = 'home', selfProfile = null, selfProfile
   ].filter(Boolean).slice(0, 3);
 
   const quietTools = [
+    { to: '/meditation', label: 'Guided Meditation' },
     { to: '/life-integration/return-to-self', label: 'Return to Self' },
     { to: '/parts-dialogue', label: 'Parts Dialogue' },
     { to: '/journal', label: 'Journal' }
