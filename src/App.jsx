@@ -59,6 +59,7 @@ import UnburdeningProtocol from './pages/UnburdeningProtocol';
 import AssessmentBuilder from './pages/AssessmentBuilder';
 import CustomAssessment from './pages/CustomAssessment';
 import GuidedMeditation from './pages/GuidedMeditation';
+import MeditationMediaManager from './pages/MeditationMediaManager';
 import DailyCheckin from './pages/DailyCheckin';
 import MoodAnalytics from './pages/MoodAnalytics';
 import LongitudinalAnalytics from './pages/LongitudinalAnalytics';
@@ -606,6 +607,7 @@ function AppContent({ authChecked, clerkLoaded, clerkSignedIn, isAuthenticated, 
                 <Route path="/life-integration/needs-boundaries" element={clientOnly(<NeedsBoundariesPractice />)} />
                 <Route path="/unburdening" element={<FeatureGate feature="unburdening"><UnburdeningProtocol /></FeatureGate>} />
                 <Route path="/assessment-builder" element={therapistOnly(<AssessmentBuilder />)} />
+                <Route path="/admin/meditation-media" element={therapistOnly(<MeditationMediaManager />)} />
                 <Route path="/custom-assessment/:assessmentId" element={<CustomAssessment />} />
                 <Route path="/guided-meditation" element={<Navigate to="/meditation" replace />} />
                 <Route path="/meditation" element={<FeatureGate feature="meditations"><GuidedMeditation /></FeatureGate>} />

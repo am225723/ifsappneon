@@ -362,6 +362,26 @@ CREATE TABLE IF NOT EXISTS ifs_content_library (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+CREATE TABLE IF NOT EXISTS ifs_meditation_media (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  practice_id TEXT NOT NULL,
+  title TEXT NOT NULL,
+  description TEXT,
+  category TEXT,
+  level TEXT,
+  duration_label TEXT,
+  practice_type TEXT,
+  audio_url TEXT,
+  cover_image_url TEXT,
+  uploadthing_audio_key TEXT,
+  uploadthing_image_key TEXT,
+  is_active BOOLEAN DEFAULT TRUE,
+  sort_order INTEGER DEFAULT 0,
+  created_by UUID REFERENCES ifs_clients(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 CREATE TABLE IF NOT EXISTS ifs_generated_reports (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   therapist_id UUID NOT NULL REFERENCES ifs_clients(id) ON DELETE CASCADE,
@@ -419,6 +439,9 @@ CREATE INDEX IF NOT EXISTS idx_parts_client ON ifs_parts(client_id);
 CREATE INDEX IF NOT EXISTS idx_mood_client ON ifs_mood_entries(client_id);
 CREATE INDEX IF NOT EXISTS idx_messages_client ON ifs_messages(client_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_uploads_user ON ifs_uploads(clerk_user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_ifs_meditation_media_active ON ifs_meditation_media(is_active, sort_order, title);
+CREATE INDEX IF NOT EXISTS idx_ifs_meditation_media_practice ON ifs_meditation_media(practice_id);
+
 CREATE INDEX IF NOT EXISTS idx_ifs_therapist_clients_therapist ON ifs_therapist_clients(therapist_id, status);
 CREATE INDEX IF NOT EXISTS idx_ifs_therapist_clients_client ON ifs_therapist_clients(client_id, status);
 CREATE INDEX IF NOT EXISTS idx_assigned_homework_client_status ON ifs_assigned_homework(client_id, status);

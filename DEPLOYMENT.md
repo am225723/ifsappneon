@@ -56,7 +56,7 @@ UPLOADTHING_TOKEN
 UPLOADTHING_CALLBACK_URL   # optional, only when the deployed callback origin needs an override
 ```
 
-Legacy `UPLOADTHING_APP_ID` / `UPLOADTHING_SECRET` values may remain in older Vercel environments, but the current server route prefers `UPLOADTHING_TOKEN`. Do not create `VITE_UPLOADTHING_*` variables for secrets. Guided Meditation never depends on UploadThing being configured; missing media falls back to on-screen grounding practice.
+Legacy `UPLOADTHING_APP_ID` / `UPLOADTHING_SECRET` values may remain in older Vercel environments, but the current server route prefers `UPLOADTHING_TOKEN`. Do not create `VITE_UPLOADTHING_*` variables for secrets. Guided Meditation never depends on UploadThing being configured; missing media falls back to on-screen grounding practice. Guided Meditation media management is available to Advisor/Admin roles at `/admin/meditation-media` after applying `neon/033_create_ifs_meditation_media.sql`; uploaded public URLs are saved in `ifs_meditation_media` and merged into the static practice library at runtime.
 
 ## 🔐 Server/Client Boundary Expectations
 

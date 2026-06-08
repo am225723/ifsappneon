@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
-import { AlertTriangle, BookOpen, ClipboardCheck, FileText, Grid3X3, Heart, Loader2, RefreshCw, Shield, Sparkles, Users } from 'lucide-react';
+import { AlertTriangle, BookOpen, ClipboardCheck, FileText, Grid3X3, Headphones, Heart, Loader2, RefreshCw, Shield, Sparkles, Users } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import { supabase } from '../lib/supabase';
 import { clientAuth } from '../lib/supabasePersonalization';
@@ -120,6 +120,7 @@ export default function AdminHub() {
           { to: '/curriculum', label: 'Curriculum & Assessments', desc: 'Review the IFS Path, learning supports, and curriculum tools.', icon: BookOpen },
           { to: '/assessment-builder', label: 'Assessment Generator', desc: 'Create or manage assessment experiences.', icon: ClipboardCheck },
           { to: '/advisor-homework', label: 'Practice Generator', desc: 'Open the Assigned IFS Practice Generator.', icon: Sparkles },
+          { to: '/admin/meditation-media', label: 'Meditation Media Library', desc: 'Upload and manage guided meditation audio and cover images.', icon: Headphones },
           { to: '/advisor-reports', label: 'Insights & Reports', desc: 'Review client progress and Advisor reports.', icon: FileText },
         ].map((item) => {
           const Icon = item.icon;
