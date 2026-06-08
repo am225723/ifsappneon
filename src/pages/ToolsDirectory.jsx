@@ -55,7 +55,7 @@ const sections = [
       { label: 'Repair After Conflict', description: 'Move toward repair, a boundary, or clearer communication from Self-energy.', to: '/life-integration/repair-after-conflict', icon: HeartPulse, roles: clientRoles },
       { label: 'Protector Check-In', description: 'Appreciate a protector and ask what it needs today.', to: '/life-integration/protector-check-in', icon: Shield, roles: clientRoles },
       { label: 'Needs & Boundaries Reflection', description: 'Listen for the need or boundary a part is trying to express.', to: '/life-integration/needs-boundaries', icon: ScrollText, roles: clientRoles },
-      { label: 'Guided Meditation', to: '/meditation', icon: HeartPulse, roles: clientRoles, feature: 'meditations' },
+      { label: 'Guided Meditation & Practice Library', description: 'Open the full library of quick practices, meditation cards, breathing exercises, and in-app fallbacks.', to: '/meditation', icon: HeartPulse, roles: clientRoles, feature: 'meditations' },
       { label: 'Self-Energy Practice', to: '/qualities', icon: Wand2, roles: clientRoles },
       { label: 'Affirmations', to: '/affirmations', icon: Sparkles, roles: clientRoles },
       { label: 'Micro-Learning', to: '/micro-learning', icon: BookOpen, roles: clientRoles },

@@ -609,6 +609,7 @@ function AppContent({ authChecked, clerkLoaded, clerkSignedIn, isAuthenticated, 
                 <Route path="/custom-assessment/:assessmentId" element={<CustomAssessment />} />
                 <Route path="/guided-meditation" element={<Navigate to="/meditation" replace />} />
                 <Route path="/meditation" element={<FeatureGate feature="meditations"><GuidedMeditation /></FeatureGate>} />
+                <Route path="/meditation/:practiceId" element={<FeatureGate feature="meditations"><GuidedMeditation /></FeatureGate>} />
                 <Route path="/daily-checkin" element={<FeatureGate feature="dailyCheckin"><DailyCheckin /></FeatureGate>} />
                 <Route path="/mood-analytics" element={clientOnly(<FeatureGate feature="moodAnalytics"><MoodAnalytics /></FeatureGate>)} />
                 <Route path="/milestones" element={<FeatureGate feature="milestones"><Milestones /></FeatureGate>} />
