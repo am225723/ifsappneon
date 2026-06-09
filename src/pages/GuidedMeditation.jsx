@@ -23,6 +23,7 @@ import {
   PRACTICE_CATEGORY_ORDER,
 } from '../lib/guidedPracticeLibrary';
 import { loadActiveMeditationMedia, mergeMeditationMediaWithLibrary } from '../lib/meditationMedia';
+import TranscriptPanel from '../components/TranscriptPanel';
 
 const AUDIO_FALLBACK_COPY = 'Audio is not available for this practice yet. You can still complete the guided practice below.';
 
@@ -279,6 +280,8 @@ function PracticePlayer({ practice, completed, onComplete }) {
           </div>
         )}
       </section>
+
+      <TranscriptPanel transcriptPath={practice.transcriptPath} className="mt-6" />
     </div>
   );
 }

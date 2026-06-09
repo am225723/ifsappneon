@@ -1,3 +1,4 @@
+import { guidedPracticeMediaByPracticeId } from './guidedPracticeMediaMap';
 export const PRACTICE_CATEGORY_ORDER = [
   'Quick Practices',
   'Self-Connection',
@@ -6,6 +7,7 @@ export const PRACTICE_CATEGORY_ORDER = [
   'Breathing Exercises',
 ];
 
+
 const makeSteps = (steps) => steps.map((text, index) => ({
   id: `step-${index + 1}`,
   text,
@@ -13,7 +15,7 @@ const makeSteps = (steps) => steps.map((text, index) => ({
   duration: 45,
 }));
 
-export const guidedPracticeLibrary = [
+const baseGuidedPracticeLibrary = [
   {
     id: 'quick-self-connection',
     title: 'Quick Self-Connection',
@@ -322,6 +324,11 @@ export const guidedPracticeLibrary = [
     ]),
   },
 ];
+
+export const guidedPracticeLibrary = baseGuidedPracticeLibrary.map((practice) => ({
+  ...practice,
+  ...(guidedPracticeMediaByPracticeId[practice.id] || {})
+}));
 
 export const guidedPracticeById = guidedPracticeLibrary.reduce((acc, practice) => {
   acc[practice.id] = practice;

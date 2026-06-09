@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Clock, Play, Check, ChevronRight, Heart, Sparkles, Wind, Sun, Moon, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Clock, Check, ChevronRight, Heart, Sparkles, Wind, Sun, Moon, RefreshCw, Headphones } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import { useData } from '../contexts/DataContext';
 import { supabaseHelpers } from '../lib/supabase';
 import { clientAuth } from '../lib/supabasePersonalization';
+import TranscriptPanel from '../components/TranscriptPanel';
+import { guidedPracticeMediaByPracticeId } from '../lib/guidedPracticeMediaMap';
+import { loadActiveMeditationMedia, mergeMeditationMediaWithLibrary } from '../lib/meditationMedia';
 
-const microExercises = [
+const baseMicroExercises = [
   {
     id: 'breath-anchor',
     title: 'Breath Anchor',
@@ -24,7 +27,7 @@ const microExercises = [
     ]
   },
   {
-    id: 'self-compassion',
+    id: 'self-compassion-pause',
     title: 'Self-Compassion Pause',
     duration: '2 min',
     category: 'healing',
@@ -40,7 +43,7 @@ const microExercises = [
     ]
   },
   {
-    id: 'parts-check-in',
+    id: 'quick-parts-check-in',
     title: 'Quick Parts Check-In',
     duration: '2 min',
     category: 'awareness',
@@ -88,7 +91,7 @@ const microExercises = [
     ]
   },
   {
-    id: 'body-scan-mini',
+    id: 'mini-body-scan',
     title: 'Mini Body Scan',
     duration: '2 min',
     category: 'grounding',
@@ -105,6 +108,11 @@ const microExercises = [
   }
 ];
 
+const microExercises = baseMicroExercises.map((exercise) => ({
+  ...exercise,
+  ...(guidedPracticeMediaByPracticeId[exercise.id] || {})
+}));
+
 export default function MicroLearning() {
   const { theme, getAnimationClass } = useTheme();
   const { awardXP } = useData();
@@ -113,6 +121,7 @@ export default function MicroLearning() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [timer, setTimer] = useState(0);
   const [completedToday, setCompletedToday] = useState([]);
+  const [exercises, setExercises] = useState(microExercises);
 
   useEffect(() => {
     const loadCompleted = async () => {
@@ -129,6 +138,15 @@ export default function MicroLearning() {
       } catch { /* ignore */ }
     };
     loadCompleted();
+  }, []);
+
+  useEffect(() => {
+    let mounted = true;
+    loadActiveMeditationMedia().then(({ data }) => {
+      if (!mounted || !Array.isArray(data)) return;
+      setExercises(mergeMeditationMediaWithLibrary(microExercises, data));
+    });
+    return () => { mounted = false; };
   }, []);
 
   const startExercise = (exercise) => {
@@ -163,13 +181,17 @@ export default function MicroLearning() {
         return () => clearInterval(interval);
       } else {
         if (currentStep < activeExercise.steps.length - 1) {
-          setCurrentStep(s => s + 1);
-          setTimer(0);
+          queueMicrotask(() => {
+            setCurrentStep(s => s + 1);
+            setTimer(0);
+          });
         } else {
           completeExercise();
         }
       }
     }
+  // Existing timer loop intentionally depends on the current active exercise state.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isPlaying, timer, currentStep, activeExercise]);
 
 
@@ -180,7 +202,7 @@ export default function MicroLearning() {
     setTimer(0);
   };
 
-  const categories = [...new Set(microExercises.map(e => e.category))];
+  const categories = [...new Set(exercises.map(e => e.category))];
 
   return (
     <div className={`min-h-screen ${theme.isDark ? 'text-slate-100' : ''}`}>
@@ -207,11 +229,11 @@ export default function MicroLearning() {
             <div>
               <h3 className={`font-semibold ${theme.isDark ? 'text-white' : 'text-gray-900'}`}>Today's Progress</h3>
               <p className={`text-sm ${theme.isDark ? 'text-slate-400' : 'text-gray-500'}`}>
-                {completedToday.length} of {microExercises.length} exercises completed
+                {completedToday.length} of {exercises.length} exercises completed
               </p>
             </div>
             <div className="flex gap-1">
-              {microExercises.map(ex => (
+              {exercises.map(ex => (
                 <div 
                   key={ex.id}
                   className={`w-8 h-8 rounded-full flex items-center justify-center ${
@@ -234,7 +256,7 @@ export default function MicroLearning() {
               {category}
             </h3>
             <div className="grid md:grid-cols-2 gap-4">
-              {microExercises.filter(e => e.category === category).map(exercise => {
+              {exercises.filter(e => e.category === category).map(exercise => {
                 const Icon = exercise.icon;
                 const isCompleted = completedToday.includes(exercise.id);
                 
@@ -262,6 +284,8 @@ export default function MicroLearning() {
                         <div className="flex items-center gap-2 text-xs">
                           <Clock className="w-3 h-3" />
                           <span className={theme.isDark ? 'text-slate-400' : 'text-gray-500'}>{exercise.duration}</span>
+                          <span className={theme.isDark ? 'text-slate-500' : 'text-gray-400'}>{exercise.mp3Filename}</span>
+                          {exercise.audioUrl && <span className="inline-flex items-center gap-1 text-emerald-600"><Headphones className="h-3 w-3" /> Audio</span>}
                         </div>
                       </div>
                       <ChevronRight className={`w-5 h-5 ${theme.isDark ? 'text-slate-500' : 'text-gray-400'}`} />
@@ -276,7 +300,7 @@ export default function MicroLearning() {
 
       {activeExercise && (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
-          <div className={`${theme.cardBg} rounded-3xl shadow-2xl max-w-lg w-full p-8 ${theme.isDark ? 'text-white' : ''}`}>
+          <div className={`${theme.cardBg} rounded-3xl shadow-2xl max-w-2xl max-h-[90vh] overflow-y-auto w-full p-8 ${theme.isDark ? 'text-white' : ''}`}>
             <div className="text-center mb-8">
               <h2 className="text-2xl font-bold mb-2">{activeExercise.title}</h2>
               <p className={`text-sm ${theme.isDark ? 'text-slate-400' : 'text-gray-500'}`}>
@@ -299,6 +323,17 @@ export default function MicroLearning() {
                 {activeExercise.steps[currentStep].text}
               </p>
             </div>
+
+            {activeExercise.audioUrl ? (
+              <div className="mb-6 rounded-2xl border border-emerald-100 bg-emerald-50 p-3 text-gray-900">
+                <p className="mb-2 text-sm font-semibold text-emerald-800">Optional audio guidance</p>
+                <audio src={activeExercise.audioUrl} controls className="w-full" />
+              </div>
+            ) : (
+              <p className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-sm font-semibold text-amber-900">Audio is optional and has not been mapped yet. Continue with the written steps and transcript.</p>
+            )}
+
+            <TranscriptPanel transcriptPath={activeExercise.transcriptPath} className="mb-6 text-left" />
 
             <div className="flex justify-center gap-4">
               <button
