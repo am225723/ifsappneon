@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Clock, Headphones } from 'lucide-react';
 import TranscriptPanel from './TranscriptPanel';
+import AudioPracticePlayer from './AudioPracticePlayer';
 import { getGuidedPracticeMediaBySection } from '../lib/guidedPracticeMediaMap';
 import { loadActiveMeditationMedia, mergeMeditationMediaWithLibrary } from '../lib/meditationMedia';
 
@@ -22,6 +23,7 @@ function mediaMapToPractice(item) {
     fallbackPractice: true,
     mp3Filename: item.mp3Filename,
     transcriptPath: item.transcriptPath,
+    captionsPath: item.captionsPath,
     itemNumber: item.itemNumber,
     appArea: item.appArea,
     steps: [
@@ -79,6 +81,7 @@ export default function CurriculumGuidedPracticePanel() {
               <span className="mt-1 flex flex-wrap items-center gap-2 text-xs text-gray-500">
                 <Clock className="h-3.5 w-3.5" /> {practice.duration || practice.expectedDuration}
                 <span>{practice.audioUrl ? 'Audio mapped' : 'Audio not mapped'}</span>
+                <span>{practice.captionsPath ? 'Captions configured' : 'Captions pending'}</span>
               </span>
             </button>
           ))}
@@ -90,15 +93,18 @@ export default function CurriculumGuidedPracticePanel() {
               <p className="text-xs font-bold uppercase tracking-wide text-amber-700">{activePractice.itemNumber} · {activePractice.mp3Filename}</p>
               <h3 className="mt-1 text-xl font-bold text-gray-900">{activePractice.title}</h3>
               <p className="mt-1 text-sm text-gray-600">Transcript: {activePractice.transcriptPath}</p>
+              <p className="mt-1 text-sm text-gray-600">Captions: {activePractice.captionsPath || 'Captions are not available yet'}</p>
             </div>
             <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-700">{activePractice.duration}</span>
           </div>
 
           {activePractice.audioUrl ? (
-            <div className="mt-4 rounded-2xl border border-emerald-100 bg-emerald-50 p-3">
-              <p className="mb-2 text-sm font-semibold text-emerald-800">Audio guidance</p>
-              <audio src={activePractice.audioUrl} controls className="w-full" />
-            </div>
+            <AudioPracticePlayer
+              audioUrl={activePractice.audioUrl}
+              captionsPath={activePractice.captionsPath}
+              title={activePractice.title}
+              className="mt-4"
+            />
           ) : (
             <p className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-sm font-semibold text-amber-900">{fallbackCopy}</p>
           )}
@@ -110,7 +116,7 @@ export default function CurriculumGuidedPracticePanel() {
             </ol>
           </div>
 
-          <TranscriptPanel transcriptPath={activePractice.transcriptPath} className="mt-4" />
+          <TranscriptPanel transcriptPath={activePractice.transcriptPath} title={activePractice.title} className="mt-4" />
         </article>
       </div>
     </section>

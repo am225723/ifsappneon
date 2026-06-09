@@ -6,6 +6,7 @@ import { useData } from '../contexts/DataContext';
 import { supabaseHelpers } from '../lib/supabase';
 import { clientAuth } from '../lib/supabasePersonalization';
 import TranscriptPanel from '../components/TranscriptPanel';
+import AudioPracticePlayer from '../components/AudioPracticePlayer';
 import { guidedPracticeMediaByPracticeId } from '../lib/guidedPracticeMediaMap';
 import { loadActiveMeditationMedia, mergeMeditationMediaWithLibrary } from '../lib/meditationMedia';
 
@@ -325,15 +326,17 @@ export default function MicroLearning() {
             </div>
 
             {activeExercise.audioUrl ? (
-              <div className="mb-6 rounded-2xl border border-emerald-100 bg-emerald-50 p-3 text-gray-900">
-                <p className="mb-2 text-sm font-semibold text-emerald-800">Optional audio guidance</p>
-                <audio src={activeExercise.audioUrl} controls className="w-full" />
-              </div>
+              <AudioPracticePlayer
+                audioUrl={activeExercise.audioUrl}
+                captionsPath={activeExercise.captionsPath}
+                title={activeExercise.title}
+                className="mb-6 text-gray-900"
+              />
             ) : (
               <p className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-sm font-semibold text-amber-900">Audio is optional and has not been mapped yet. Continue with the written steps and transcript.</p>
             )}
 
-            <TranscriptPanel transcriptPath={activeExercise.transcriptPath} className="mb-6 text-left" />
+            <TranscriptPanel transcriptPath={activeExercise.transcriptPath} title={activeExercise.title} className="mb-6 text-left" />
 
             <div className="flex justify-center gap-4">
               <button

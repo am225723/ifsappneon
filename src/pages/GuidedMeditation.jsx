@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -24,6 +24,7 @@ import {
 } from '../lib/guidedPracticeLibrary';
 import { loadActiveMeditationMedia, mergeMeditationMediaWithLibrary } from '../lib/meditationMedia';
 import TranscriptPanel from '../components/TranscriptPanel';
+import AudioPracticePlayer from '../components/AudioPracticePlayer';
 
 const AUDIO_FALLBACK_COPY = 'Audio is not available for this practice yet. You can still complete the guided practice below.';
 
@@ -120,12 +121,9 @@ function PracticePlayer({ practice, completed, onComplete }) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
   const [elapsed, setElapsed] = useState(0);
-  const [audioLoaded, setAudioLoaded] = useState(false);
-  const [audioError, setAudioError] = useState(false);
   const [reflection, setReflection] = useState('');
-  const audioRef = useRef(null);
-  const hasAudio = Boolean(practice.audioUrl && audioLoaded && !audioError);
-  const showFallback = !hasAudio;
+  const hasAudio = Boolean(practice.audioUrl);
+  const showFallback = !practice.audioUrl;
   const activeStep = practice.steps[currentStep] || practice.steps[0];
 
   useEffect(() => {
@@ -150,13 +148,7 @@ function PracticePlayer({ practice, completed, onComplete }) {
   }, [hasAudio, isPlaying, onComplete, practice]);
 
   const togglePlay = () => {
-    if (hasAudio && audioRef.current) {
-      if (isPlaying) {
-        audioRef.current.pause();
-      } else {
-        audioRef.current.play().catch(() => setAudioError(true));
-      }
-    }
+    if (hasAudio) return;
     setIsPlaying((current) => !current);
   };
 
@@ -164,10 +156,7 @@ function PracticePlayer({ practice, completed, onComplete }) {
     setIsPlaying(false);
     setCurrentStep(0);
     setElapsed(0);
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current.currentTime = 0;
-    }
+    // Audio reset is handled inside AudioPracticePlayer when audio is available.
   };
 
   const stepProgress = practice.steps.length > 1 ? (currentStep / (practice.steps.length - 1)) * 100 : 100;
@@ -193,23 +182,24 @@ function PracticePlayer({ practice, completed, onComplete }) {
 
       <section className="mt-6 space-y-5 rounded-[2rem] border border-brand-stone-200 bg-white/85 p-5 dark:border-slate-800 dark:bg-brand-cardDark/90 md:p-6">
         {practice.audioUrl && (
-          <div className="rounded-2xl border border-brand-stone-200 bg-brand-stone-50/60 p-4 dark:border-slate-700 dark:bg-slate-900/50">
-            <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-brand-stone-700 dark:text-slate-200">
-              <Headphones className="h-4 w-4" /> Audio guidance
-            </div>
-            <audio
-              ref={audioRef}
-              src={practice.audioUrl}
-              controls
-              className="w-full"
-              onCanPlay={() => setAudioLoaded(true)}
-              onError={() => setAudioError(true)}
-              onEnded={() => {
-                setIsPlaying(false);
-                onComplete(practice.id);
-              }}
-            />
-          </div>
+          <AudioPracticePlayer
+            audioUrl={practice.audioUrl}
+            captionsPath={practice.captionsPath}
+            title={practice.title}
+            onPlayStateChange={setIsPlaying}
+            onTimeChange={(time) => {
+              setElapsed(Math.floor(time));
+              const nextStepIndex = practice.steps.findIndex((step, index) => {
+                const nextStep = practice.steps[index + 1];
+                return time >= step.time && (!nextStep || time < nextStep.time);
+              });
+              if (nextStepIndex >= 0) setCurrentStep(nextStepIndex);
+            }}
+            onEnded={() => {
+              setIsPlaying(false);
+              onComplete(practice.id);
+            }}
+          />
         )}
 
         {showFallback && (
@@ -238,9 +228,9 @@ function PracticePlayer({ practice, completed, onComplete }) {
           <button onClick={resetPractice} className="inline-flex items-center gap-2 rounded-2xl border border-brand-stone-200 px-4 py-2 text-sm font-semibold text-brand-stone-700 hover:bg-brand-stone-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800">
             <RotateCcw className="h-4 w-4" /> Reset
           </button>
-          <button onClick={togglePlay} className="inline-flex items-center gap-2 rounded-2xl bg-brand-gold-600 px-5 py-2 text-sm font-semibold text-white hover:bg-brand-gold-700">
+          <button onClick={togglePlay} disabled={hasAudio} className="inline-flex items-center gap-2 rounded-2xl bg-brand-gold-600 px-5 py-2 text-sm font-semibold text-white hover:bg-brand-gold-700 disabled:cursor-not-allowed disabled:opacity-50">
             {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
-            {isPlaying ? 'Pause' : 'Start guided steps'}
+            {hasAudio ? 'Use audio controls above' : isPlaying ? 'Pause' : 'Start guided steps'}
           </button>
           <button
             onClick={() => setCurrentStep((step) => Math.max(0, step - 1))}
@@ -281,7 +271,7 @@ function PracticePlayer({ practice, completed, onComplete }) {
         )}
       </section>
 
-      <TranscriptPanel transcriptPath={practice.transcriptPath} className="mt-6" />
+      <TranscriptPanel transcriptPath={practice.transcriptPath} title={practice.title} className="mt-6" />
     </div>
   );
 }

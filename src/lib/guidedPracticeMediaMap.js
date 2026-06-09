@@ -5,6 +5,7 @@ export const guidedPracticeMediaMap = [
     practiceId: 'meeting-your-self',
     title: 'Meeting Your Self',
     mp3Filename: '01_Meeting_Your_Self.mp3',
+    captionsPath: '/docs/captions/01_Meeting_Your_Self.srt',
     transcriptPath: '/docs/meeting-self.txt',
     expectedDuration: '15 min',
     appArea: 'meditation'
@@ -15,6 +16,7 @@ export const guidedPracticeMediaMap = [
     practiceId: 'cultivating-self-qualities',
     title: 'Cultivating Self Qualities',
     mp3Filename: '02_Cultivating_Self_Qualities.mp3',
+    captionsPath: '/docs/captions/02_Cultivating_Self_Qualities.srt',
     transcriptPath: '/docs/self-qualities.txt',
     expectedDuration: '20 min',
     appArea: 'meditation'
@@ -25,6 +27,7 @@ export const guidedPracticeMediaMap = [
     practiceId: 'meeting-your-inner-child',
     title: 'Meeting Your Inner Child',
     mp3Filename: '03_Meeting_Your_Inner_Child.mp3',
+    captionsPath: '/docs/captions/03_Meeting_Your_Inner_Child.srt',
     transcriptPath: '/docs/meeting-inner-child.txt',
     expectedDuration: '18 min',
     appArea: 'meditation'
@@ -35,6 +38,7 @@ export const guidedPracticeMediaMap = [
     practiceId: 'reparenting-meditation',
     title: 'Reparenting Meditation',
     mp3Filename: '04_Reparenting_Meditation.mp3',
+    captionsPath: '/docs/captions/04_Reparenting_Meditation.srt',
     transcriptPath: '/docs/reparenting.txt',
     expectedDuration: '25 min',
     appArea: 'meditation'
@@ -45,6 +49,7 @@ export const guidedPracticeMediaMap = [
     practiceId: 'inner-child-play',
     title: 'Inner Child Play',
     mp3Filename: '05_Inner_Child_Play.mp3',
+    captionsPath: '/docs/captions/05_Inner_Child_Play.srt',
     transcriptPath: '/docs/child-play.txt',
     expectedDuration: '12 min',
     appArea: 'meditation'
@@ -55,6 +60,7 @@ export const guidedPracticeMediaMap = [
     practiceId: 'unblending-practice',
     title: 'Unblending Practice',
     mp3Filename: '06_Unblending_Practice.mp3',
+    captionsPath: '/docs/captions/06_Unblending_Practice.srt',
     transcriptPath: '/docs/unblending.txt',
     expectedDuration: '15 min',
     appArea: 'meditation'
@@ -65,6 +71,7 @@ export const guidedPracticeMediaMap = [
     practiceId: 'parts-council-meditation',
     title: 'Parts Council Meditation',
     mp3Filename: '07_Parts_Council_Meditation.mp3',
+    captionsPath: '/docs/captions/07_Parts_Council_Meditation.srt',
     transcriptPath: '/docs/parts-council.txt',
     expectedDuration: '30 min',
     appArea: 'meditation'
@@ -75,6 +82,7 @@ export const guidedPracticeMediaMap = [
     practiceId: 'working-with-firefighters',
     title: 'Working with Firefighters',
     mp3Filename: '08_Working_with_Firefighters.mp3',
+    captionsPath: '/docs/captions/08_Working_with_Firefighters.srt',
     transcriptPath: '/docs/firefighter-work.txt',
     expectedDuration: '20 min',
     appArea: 'meditation'
@@ -85,6 +93,7 @@ export const guidedPracticeMediaMap = [
     practiceId: 'box-breathing',
     title: 'Box Breathing',
     mp3Filename: '09_Box_Breathing.mp3',
+    captionsPath: '/docs/captions/09_Box_Breathing.srt',
     transcriptPath: '/docs/box-breathing.txt',
     expectedDuration: '10 min',
     appArea: 'meditation'
@@ -95,6 +104,7 @@ export const guidedPracticeMediaMap = [
     practiceId: '4-7-8-breathing',
     title: '4-7-8 Breathing',
     mp3Filename: '10_4-7-8_Breathing.mp3',
+    captionsPath: '/docs/captions/10_4-7-8_Breathing.srt',
     transcriptPath: '/docs/4-7-8-breathing.txt',
     expectedDuration: '12 min',
     appArea: 'meditation'
@@ -105,6 +115,7 @@ export const guidedPracticeMediaMap = [
     practiceId: 'cultivating-self-energy-practice',
     title: 'Cultivating Self Energy Practice',
     mp3Filename: '11_Cultivating_Self_Energy_Practice.mp3',
+    captionsPath: '/docs/captions/11_Cultivating_Self_Energy_Practice.srt',
     transcriptPath: '/docs/cultivating-self-energy.txt',
     expectedDuration: '18 min',
     appArea: 'curriculum'
@@ -115,6 +126,7 @@ export const guidedPracticeMediaMap = [
     practiceId: 'self-leadership-mastery-practice',
     title: 'Self Leadership Mastery Practice',
     mp3Filename: '12_Self_Leadership_Mastery_Practice.mp3',
+    captionsPath: '/docs/captions/12_Self_Leadership_Mastery_Practice.srt',
     transcriptPath: '/docs/self-leadership-mastery.txt',
     expectedDuration: '20 min',
     appArea: 'curriculum'
@@ -125,6 +137,7 @@ export const guidedPracticeMediaMap = [
     practiceId: 'safe-place-visualization-inner-child',
     title: 'Safe Place Visualization for Your Inner Child',
     mp3Filename: '13_Safe_Place_Visualization_for_Your_Inner_Child.mp3',
+    captionsPath: '/docs/captions/13_Safe_Place_Visualization_for_Your_Inner_Child.srt',
     transcriptPath: '/docs/safe-place-visualization.txt',
     expectedDuration: '22 min',
     appArea: 'curriculum'
@@ -135,6 +148,7 @@ export const guidedPracticeMediaMap = [
     practiceId: 'body-based-inner-child-connection',
     title: 'Body-Based Inner Child Connection',
     mp3Filename: '14_Body-Based_Inner_Child_Connection.mp3',
+    captionsPath: '/docs/captions/14_Body-Based_Inner_Child_Connection.srt',
     transcriptPath: '/docs/body-inner-child-connection.txt',
     expectedDuration: '22 min',
     appArea: 'curriculum'
@@ -145,6 +159,7 @@ export const guidedPracticeMediaMap = [
     practiceId: 'unburdening-ceremony',
     title: 'The Unburdening Ceremony',
     mp3Filename: '15_The_Unburdening_Ceremony.mp3',
+    captionsPath: '/docs/captions/15_The_Unburdening_Ceremony.srt',
     transcriptPath: '/docs/unburdening-ceremony.txt',
     expectedDuration: '25 min',
     appArea: 'curriculum'
@@ -155,6 +170,7 @@ export const guidedPracticeMediaMap = [
     practiceId: 'six-fs-protocol-mastery-practice',
     title: "6 F's Protocol Mastery Practice",
     mp3Filename: '16_6_Fs_Protocol_Mastery_Practice.mp3',
+    captionsPath: '/docs/captions/16_6_Fs_Protocol_Mastery_Practice.srt',
     transcriptPath: '/docs/6-fs.txt',
     expectedDuration: '18 min',
     appArea: 'curriculum'
@@ -165,6 +181,7 @@ export const guidedPracticeMediaMap = [
     practiceId: 'personalized-wound-healing-action-plan',
     title: 'Personalized Wound Healing Action Plan',
     mp3Filename: '17_Personalized_Wound_Healing_Action_Plan.mp3',
+    captionsPath: '/docs/captions/17_Personalized_Wound_Healing_Action_Plan.srt',
     transcriptPath: '/docs/wound-healing-plan.txt',
     expectedDuration: '20 min',
     appArea: 'curriculum'
@@ -175,6 +192,7 @@ export const guidedPracticeMediaMap = [
     practiceId: 'reparenting-your-inner-child',
     title: 'Reparenting Your Inner Child',
     mp3Filename: '18_Reparenting_Your_Inner_Child.mp3',
+    captionsPath: '/docs/captions/18_Reparenting_Your_Inner_Child.srt',
     transcriptPath: '/docs/reparenting-inner-child.txt',
     expectedDuration: '15 min',
     appArea: 'curriculum'
@@ -185,6 +203,7 @@ export const guidedPracticeMediaMap = [
     practiceId: 'somatic-healing-body-scan',
     title: 'Somatic Healing Body Scan',
     mp3Filename: '19_Somatic_Healing_Body_Scan.mp3',
+    captionsPath: '/docs/captions/19_Somatic_Healing_Body_Scan.srt',
     transcriptPath: '/docs/somatic-healing-body-scan.txt',
     expectedDuration: '18 min',
     appArea: 'curriculum'
@@ -195,6 +214,7 @@ export const guidedPracticeMediaMap = [
     practiceId: 'attachment-pattern-reflection',
     title: 'Attachment Pattern Reflection',
     mp3Filename: '20_Attachment_Pattern_Reflection.mp3',
+    captionsPath: '/docs/captions/20_Attachment_Pattern_Reflection.srt',
     transcriptPath: '/docs/attachment-pattern-reflection.txt',
     expectedDuration: '15 min',
     appArea: 'curriculum'
@@ -205,6 +225,7 @@ export const guidedPracticeMediaMap = [
     practiceId: 'befriending-your-inner-critic',
     title: 'Befriending Your Inner Critic',
     mp3Filename: '21_Befriending_Your_Inner_Critic.mp3',
+    captionsPath: '/docs/captions/21_Befriending_Your_Inner_Critic.srt',
     transcriptPath: '/docs/befriending-inner-critic.txt',
     expectedDuration: '18 min',
     appArea: 'curriculum'
@@ -215,6 +236,7 @@ export const guidedPracticeMediaMap = [
     practiceId: 'breath-anchor',
     title: 'Breath Anchor',
     mp3Filename: '22_Breath_Anchor.mp3',
+    captionsPath: '/docs/captions/22_Breath_Anchor.srt',
     transcriptPath: '/docs/breath-anchor.txt',
     expectedDuration: '2 min',
     appArea: 'micro-learning'
@@ -225,6 +247,7 @@ export const guidedPracticeMediaMap = [
     practiceId: 'self-compassion-pause',
     title: 'Self-Compassion Pause',
     mp3Filename: '23_Self-Compassion_Pause.mp3',
+    captionsPath: '/docs/captions/23_Self-Compassion_Pause.srt',
     transcriptPath: '/docs/self-compassion-pause.txt',
     expectedDuration: '2 min',
     appArea: 'micro-learning'
@@ -235,6 +258,7 @@ export const guidedPracticeMediaMap = [
     practiceId: 'quick-parts-check-in',
     title: 'Quick Parts Check-In',
     mp3Filename: '24_Quick_Parts_Check-In.mp3',
+    captionsPath: '/docs/captions/24_Quick_Parts_Check-In.srt',
     transcriptPath: '/docs/quick-parts-check-in.txt',
     expectedDuration: '2 min',
     appArea: 'micro-learning'
@@ -245,6 +269,7 @@ export const guidedPracticeMediaMap = [
     practiceId: 'morning-intention',
     title: 'Morning Intention',
     mp3Filename: '25_Morning_Intention.mp3',
+    captionsPath: '/docs/captions/25_Morning_Intention.srt',
     transcriptPath: '/docs/morning-intention.txt',
     expectedDuration: '2 min',
     appArea: 'micro-learning'
@@ -255,6 +280,7 @@ export const guidedPracticeMediaMap = [
     practiceId: 'evening-release',
     title: 'Evening Release',
     mp3Filename: '26_Evening_Release.mp3',
+    captionsPath: '/docs/captions/26_Evening_Release.srt',
     transcriptPath: '/docs/evening-release.txt',
     expectedDuration: '2 min',
     appArea: 'micro-learning'
@@ -265,6 +291,7 @@ export const guidedPracticeMediaMap = [
     practiceId: 'mini-body-scan',
     title: 'Mini Body Scan',
     mp3Filename: '27_Mini_Body_Scan.mp3',
+    captionsPath: '/docs/captions/27_Mini_Body_Scan.srt',
     transcriptPath: '/docs/mini-body-scan.txt',
     expectedDuration: '2 min',
     appArea: 'micro-learning'
