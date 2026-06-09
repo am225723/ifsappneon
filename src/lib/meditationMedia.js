@@ -1,3 +1,4 @@
+import { guidedPracticeMediaByPracticeId } from './guidedPracticeMediaMap';
 const API_PATH = '/api/meditation-media';
 
 async function getAuthToken() {
@@ -86,6 +87,7 @@ function parseDurationSeconds(durationLabel) {
 function mediaRowToPractice(row) {
   const practiceId = row.practice_id || row.id;
   const duration = row.duration_label || '5 min';
+  const mediaMap = guidedPracticeMediaByPracticeId[practiceId] || {};
   return {
     id: practiceId,
     title: row.title || 'Guided Meditation',
@@ -93,6 +95,10 @@ function mediaRowToPractice(row) {
     category: row.category || 'Self-Connection',
     level: row.level || 'All levels',
     duration,
+    mp3Filename: mediaMap.mp3Filename || row.mp3_filename || null,
+    transcriptPath: mediaMap.transcriptPath || row.transcript_path || null,
+    itemNumber: mediaMap.itemNumber || null,
+    appArea: mediaMap.appArea || null,
     durationSeconds: parseDurationSeconds(duration),
     type: row.practice_type || 'meditation',
     route: `/meditation/${practiceId}`,
@@ -131,6 +137,10 @@ export function mergeMeditationMediaWithLibrary(staticLibrary = [], mediaRows = 
       durationSeconds: media.duration_label ? parseDurationSeconds(media.duration_label) : practice.durationSeconds,
       type: media.practice_type || practice.type,
       audioUrl: media.audio_url || practice.audioUrl,
+      mp3Filename: (guidedPracticeMediaByPracticeId[practice.id]?.mp3Filename || practice.mp3Filename || null),
+      transcriptPath: (guidedPracticeMediaByPracticeId[practice.id]?.transcriptPath || practice.transcriptPath || null),
+      itemNumber: (guidedPracticeMediaByPracticeId[practice.id]?.itemNumber || practice.itemNumber || null),
+      appArea: (guidedPracticeMediaByPracticeId[practice.id]?.appArea || practice.appArea || null),
       coverImageUrl: media.cover_image_url || practice.coverImageUrl,
       uploadThingFileKey: media.uploadthing_audio_key || practice.uploadThingFileKey,
       uploadThingImageKey: media.uploadthing_image_key || practice.uploadThingImageKey || null,

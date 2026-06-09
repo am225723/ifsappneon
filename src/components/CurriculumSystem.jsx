@@ -16,6 +16,7 @@ import { WOUND_MODULE_PRIORITIES, LEVEL_ORDER } from '../lib/woundModulePrioriti
 import { canAccessModule } from '../lib/accessControl';
 import { buildSharedCurriculumSummary, getModuleActionLabel, getModuleSupportLinks } from '../lib/curriculumExperience';
 import { countCurriculumReflectionsByModule, loadCurriculumReflections } from '../lib/curriculumReflections';
+import CurriculumGuidedPracticePanel from './CurriculumGuidedPracticePanel';
 
 const CurriculumSystem = ({ onModuleSelect, userProgress = {}, clientId }) => {
   const [completedModules, setCompletedModules] = useState([]);
@@ -450,6 +451,8 @@ const CurriculumSystem = ({ onModuleSelect, userProgress = {}, clientId }) => {
             )}
           </div>
         )}
+
+        <CurriculumGuidedPracticePanel />
 
         {/* Progress Overview */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

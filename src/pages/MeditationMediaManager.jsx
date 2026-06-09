@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
-import { Archive, CheckCircle, Clipboard, Headphones, Image as ImageIcon, Loader2, Save, UploadCloud } from 'lucide-react';
+import { Archive, CheckCircle, Clipboard, FileText, Headphones, Image as ImageIcon, Loader2, Save, UploadCloud } from 'lucide-react';
 import { guidedPracticeLibrary } from '../lib/guidedPracticeLibrary';
+import { guidedPracticeMediaMap, guidedPracticeMediaByFilename, guidedPracticeMediaByPracticeId } from '../lib/guidedPracticeMediaMap';
 import {
   archiveMeditationMedia,
   createMeditationMedia,
@@ -16,15 +17,32 @@ import {
 } from '../lib/uploadthing';
 import { clientAuth } from '../lib/supabasePersonalization';
 
+const canonicalPracticeOptions = guidedPracticeMediaMap.map((item, index) => ({
+  id: item.practiceId,
+  title: item.title,
+  description: `${item.itemNumber} ${item.appArea} practice mapped to ${item.mp3Filename}.`,
+  category: item.appArea === 'micro-learning' ? 'Micro-Learning' : item.appArea === 'curriculum' ? 'Curriculum Guided Practice' : 'Guided Meditation',
+  level: 'All levels',
+  duration: item.expectedDuration,
+  type: item.appArea === 'micro-learning' ? 'micro-learning' : item.appArea === 'curriculum' ? 'curriculum-practice' : 'meditation',
+  sort_order: index + 1,
+  ...item
+}));
+
+const mediaPracticeOptions = [
+  ...canonicalPracticeOptions,
+  ...guidedPracticeLibrary.filter((practice) => !guidedPracticeMediaByPracticeId[practice.id])
+];
+
 const emptyForm = {
   id: null,
-  practice_id: guidedPracticeLibrary[0]?.id || '',
-  title: guidedPracticeLibrary[0]?.title || '',
-  description: guidedPracticeLibrary[0]?.description || '',
-  category: guidedPracticeLibrary[0]?.category || 'Self-Connection',
-  level: guidedPracticeLibrary[0]?.level || 'Beginner',
-  duration_label: guidedPracticeLibrary[0]?.duration || '5 min',
-  practice_type: guidedPracticeLibrary[0]?.type || 'meditation',
+  practice_id: mediaPracticeOptions[0]?.id || '',
+  title: mediaPracticeOptions[0]?.title || '',
+  description: mediaPracticeOptions[0]?.description || '',
+  category: mediaPracticeOptions[0]?.category || 'Self-Connection',
+  level: mediaPracticeOptions[0]?.level || 'Beginner',
+  duration_label: mediaPracticeOptions[0]?.duration || mediaPracticeOptions[0]?.expectedDuration || '5 min',
+  practice_type: mediaPracticeOptions[0]?.type || 'meditation',
   audio_url: '',
   cover_image_url: '',
   uploadthing_audio_key: '',
@@ -53,7 +71,7 @@ function normalizeUploadResult(files) {
 }
 
 function practiceOptionLabel(practice) {
-  return `${practice.title} · ${practice.category} · ${practice.duration}`;
+  return `${practice.itemNumber ? `${practice.itemNumber} · ` : ''}${practice.title} · ${practice.appArea || practice.category} · ${practice.duration || practice.expectedDuration}`;
 }
 
 export default function MeditationMediaManager() {
@@ -67,11 +85,23 @@ export default function MeditationMediaManager() {
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [uploadError, setUploadError] = useState('');
+  const [bulkCsv, setBulkCsv] = useState('');
+  const [bulkPreview, setBulkPreview] = useState([]);
+  const [bulkSaving, setBulkSaving] = useState(false);
 
   const selectedPractice = useMemo(
-    () => guidedPracticeLibrary.find((practice) => practice.id === form.practice_id),
+    () => mediaPracticeOptions.find((practice) => practice.id === form.practice_id || practice.practiceId === form.practice_id),
     [form.practice_id]
   );
+  const selectedMediaMap = guidedPracticeMediaByPracticeId[form.practice_id] || null;
+
+  const recordsByPracticeId = useMemo(() => {
+    const map = new Map();
+    records.forEach((record) => {
+      if (record.practice_id && !map.has(record.practice_id)) map.set(record.practice_id, record);
+    });
+    return map;
+  }, [records]);
 
   const loadRecords = async () => {
     setLoading(true);
@@ -95,7 +125,7 @@ export default function MeditationMediaManager() {
   };
 
   const choosePractice = (practiceId) => {
-    const practice = guidedPracticeLibrary.find((item) => item.id === practiceId);
+    const practice = mediaPracticeOptions.find((item) => item.id === practiceId || item.practiceId === practiceId);
     setForm((current) => ({
       ...current,
       practice_id: practiceId,
@@ -103,8 +133,9 @@ export default function MeditationMediaManager() {
       description: current.id ? current.description : (practice?.description || current.description),
       category: practice?.category || current.category,
       level: practice?.level || current.level,
-      duration_label: practice?.duration || current.duration_label,
-      practice_type: practice?.type || current.practice_type
+      duration_label: practice?.duration || practice?.expectedDuration || current.duration_label,
+      practice_type: practice?.type || current.practice_type,
+      sort_order: practice?.sort_order || current.sort_order
     }));
   };
 
@@ -178,6 +209,69 @@ export default function MeditationMediaManager() {
     setMessage('URL copied to clipboard.');
   };
 
+
+  const parseBulkCsv = () => {
+    const rows = bulkCsv.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+    const parsedRows = rows
+      .filter((line, index) => !(index === 0 && /^mp3Filename\s*,\s*audioUrl/i.test(line)))
+      .map((line, index) => {
+        const [mp3Filename = '', audioUrl = '', uploadThingAudioKey = ''] = line.split(',').map((value) => value.trim());
+        const mapItem = guidedPracticeMediaByFilename[mp3Filename] || null;
+        const hasSafeUrl = /^https?:\/\//i.test(audioUrl);
+        return {
+          rowNumber: index + 1,
+          mp3Filename,
+          audioUrl,
+          uploadThingAudioKey,
+          matched: Boolean(mapItem && hasSafeUrl),
+          mapItem,
+          issue: !mapItem ? 'Filename does not match the canonical 27-item map.' : !hasSafeUrl ? 'Audio URL must start with http:// or https://.' : ''
+        };
+      });
+    setBulkPreview(parsedRows);
+    if (!parsedRows.length) setUploadError('Paste at least one CSV row with mp3Filename,audioUrl,uploadThingAudioKey.');
+    else setUploadError('');
+  };
+
+  const saveBulkMappings = async () => {
+    const matchedRows = bulkPreview.filter((row) => row.matched);
+    if (!matchedRows.length) {
+      setUploadError('Preview matched rows before saving.');
+      return;
+    }
+    setBulkSaving(true);
+    setUploadError('');
+    setMessage('');
+    let saved = 0;
+    for (const row of matchedRows) {
+      const item = row.mapItem;
+      const existing = recordsByPracticeId.get(item.practiceId);
+      const payload = {
+        practice_id: item.practiceId,
+        title: item.title,
+        description: `${item.itemNumber} ${item.appArea} UploadThing audio mapping for ${item.mp3Filename}.`,
+        category: item.appArea === 'micro-learning' ? 'Micro-Learning' : item.appArea === 'curriculum' ? 'Curriculum Guided Practice' : 'Guided Meditation',
+        level: 'All levels',
+        duration_label: item.expectedDuration,
+        practice_type: item.appArea === 'micro-learning' ? 'micro-learning' : item.appArea === 'curriculum' ? 'curriculum-practice' : 'meditation',
+        audio_url: row.audioUrl,
+        uploadthing_audio_key: row.uploadThingAudioKey || null,
+        is_active: true,
+        sort_order: Number.parseInt(item.itemNumber.slice(1), 10) || 0
+      };
+      const result = existing ? await updateMeditationMedia(existing.id, payload) : await createMeditationMedia(payload);
+      if (result.error) {
+        setUploadError(result.error.message || `Unable to save ${item.mp3Filename}.`);
+        setBulkSaving(false);
+        return;
+      }
+      saved += 1;
+    }
+    await loadRecords();
+    setBulkSaving(false);
+    setMessage(`Bulk mapped ${saved} uploaded audio file${saved === 1 ? '' : 's'}.`);
+  };
+
   const uploadAppearance = {
     button: 'rounded-2xl bg-brand-gold-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-gold-700 ut-ready:bg-brand-gold-600 ut-uploading:bg-brand-stone-400',
     allowedContent: 'text-xs text-brand-stone-500 dark:text-slate-400',
@@ -190,7 +284,7 @@ export default function MeditationMediaManager() {
         <p className="text-xs font-semibold uppercase tracking-[0.3em] text-brand-gold-700 dark:text-brand-gold-500">Advisor/Admin Tools</p>
         <h1 className="mt-3 font-serif text-3xl font-semibold text-brand-stone-900 dark:text-slate-100 md:text-4xl">Meditation Media Library</h1>
         <p className="mt-3 max-w-3xl text-brand-stone-600 dark:text-slate-300">
-          Upload guided meditation audio and optional cover images for the Meditation page.
+          Map UploadThing audio URLs and optional cover images for all 27 meditation, curriculum, and micro-learning practices.
         </p>
       </header>
 
@@ -214,9 +308,17 @@ export default function MeditationMediaManager() {
             <label className="md:col-span-2 text-sm font-semibold text-brand-stone-700 dark:text-slate-200">
               Existing practice
               <select value={form.practice_id} onChange={(event) => choosePractice(event.target.value)} className="mt-1 w-full rounded-2xl border border-brand-stone-200 bg-white px-3 py-2 text-sm text-brand-stone-900 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100">
-                {guidedPracticeLibrary.map((practice) => <option key={practice.id} value={practice.id}>{practiceOptionLabel(practice)}</option>)}
+                {mediaPracticeOptions.map((practice) => <option key={practice.id || practice.practiceId} value={practice.id || practice.practiceId}>{practiceOptionLabel(practice)}</option>)}
               </select>
             </label>
+
+            {selectedMediaMap && (
+              <div className="md:col-span-2 rounded-2xl border border-brand-gold-100 bg-brand-gold-50/60 p-3 text-xs text-brand-stone-700 dark:border-brand-gold-900/40 dark:bg-brand-gold-950/20 dark:text-slate-200">
+                <p className="font-bold uppercase tracking-wide text-brand-gold-700 dark:text-brand-gold-500">Expected Phase 22E mapping</p>
+                <p className="mt-1">MP3 filename: <span className="font-semibold">{selectedMediaMap.mp3Filename}</span></p>
+                <p>Transcript path: <span className="font-semibold">{selectedMediaMap.transcriptPath}</span></p>
+              </div>
+            )}
 
             <label className="text-sm font-semibold text-brand-stone-700 dark:text-slate-200">
               Practice ID
@@ -309,10 +411,60 @@ export default function MeditationMediaManager() {
             <span className="rounded-full bg-brand-stone-100 px-3 py-1 dark:bg-slate-800">{form.level}</span>
             <span className="rounded-full bg-brand-stone-100 px-3 py-1 dark:bg-slate-800">{form.duration_label}</span>
             <span className="rounded-full bg-brand-stone-100 px-3 py-1 capitalize dark:bg-slate-800">{form.practice_type}</span>
+            {selectedMediaMap && <span className="rounded-full bg-brand-stone-100 px-3 py-1 dark:bg-slate-800">{selectedMediaMap.mp3Filename}</span>}
+            {selectedMediaMap && <span className="rounded-full bg-brand-stone-100 px-3 py-1 dark:bg-slate-800">{selectedMediaMap.transcriptPath}</span>}
             {form.audio_url && <span className="rounded-full bg-emerald-50 px-3 py-1 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300">Audio attached</span>}
           </div>
         </aside>
       </div>
+
+
+      <section className="mt-8 rounded-[2rem] border border-brand-stone-200 bg-white/85 p-5 shadow-sm dark:border-slate-800 dark:bg-brand-cardDark/90 md:p-6">
+        <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+          <div>
+            <h2 className="text-xl font-semibold text-brand-stone-900 dark:text-slate-100">Bulk Map Uploaded Audio</h2>
+            <p className="mt-1 text-sm text-brand-stone-600 dark:text-slate-400">Paste CSV rows from UploadThing using mp3Filename,audioUrl,uploadThingAudioKey. The filename is matched against the canonical 27-item map before saving.</p>
+          </div>
+          <span className="inline-flex items-center gap-2 rounded-full bg-brand-gold-50 px-3 py-1 text-xs font-bold text-brand-gold-700 dark:bg-brand-gold-950/30 dark:text-brand-gold-500"><FileText className="h-4 w-4" /> Safe URL mapping</span>
+        </div>
+        <textarea
+          value={bulkCsv}
+          onChange={(event) => setBulkCsv(event.target.value)}
+          className="mt-4 min-h-36 w-full rounded-2xl border border-brand-stone-200 bg-white px-3 py-2 text-xs font-mono text-brand-stone-900 outline-none focus:border-brand-gold-400 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+          placeholder={"mp3Filename,audioUrl,uploadThingAudioKey\n01_Meeting_Your_Self.mp3,https://utfs.io/f/...,abc123"}
+        />
+        <div className="mt-3 flex flex-wrap gap-3">
+          <button type="button" onClick={parseBulkCsv} className="rounded-2xl border border-brand-stone-200 px-4 py-2 text-sm font-semibold text-brand-stone-700 hover:bg-brand-stone-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800">Preview matches</button>
+          <button type="button" onClick={saveBulkMappings} disabled={bulkSaving || !bulkPreview.some((row) => row.matched)} className="inline-flex items-center gap-2 rounded-2xl bg-brand-gold-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-gold-700 disabled:opacity-60">
+            {bulkSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+            Save matched rows
+          </button>
+        </div>
+        {bulkPreview.length > 0 && (
+          <div className="mt-4 overflow-hidden rounded-2xl border border-brand-stone-200 dark:border-slate-700">
+            <table className="min-w-full divide-y divide-brand-stone-200 text-left text-xs dark:divide-slate-700">
+              <thead className="bg-brand-stone-50 text-brand-stone-600 dark:bg-slate-900 dark:text-slate-300">
+                <tr>
+                  <th className="px-3 py-2">Filename</th>
+                  <th className="px-3 py-2">Matched practice</th>
+                  <th className="px-3 py-2">Audio URL</th>
+                  <th className="px-3 py-2">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-brand-stone-100 dark:divide-slate-800">
+                {bulkPreview.map((row) => (
+                  <tr key={`${row.rowNumber}-${row.mp3Filename}`}>
+                    <td className="px-3 py-2 font-mono text-brand-stone-700 dark:text-slate-200">{row.mp3Filename || 'Missing filename'}</td>
+                    <td className="px-3 py-2 text-brand-stone-700 dark:text-slate-200">{row.mapItem ? `${row.mapItem.itemNumber} · ${row.mapItem.title}` : 'No match'}</td>
+                    <td className="max-w-xs truncate px-3 py-2 text-brand-stone-500 dark:text-slate-400">{row.audioUrl || 'Missing URL'}</td>
+                    <td className={`px-3 py-2 font-semibold ${row.matched ? 'text-emerald-700 dark:text-emerald-300' : 'text-red-700 dark:text-red-300'}`}>{row.matched ? 'Ready to save' : row.issue}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
 
       <section className="mt-8 rounded-[2rem] border border-brand-stone-200 bg-white/85 p-5 shadow-sm dark:border-slate-800 dark:bg-brand-cardDark/90 md:p-6">
         <h2 className="text-xl font-semibold text-brand-stone-900 dark:text-slate-100">Existing media</h2>
@@ -328,10 +480,18 @@ export default function MeditationMediaManager() {
                   <div>
                     <h3 className="font-semibold text-brand-stone-900 dark:text-slate-100">{record.title}</h3>
                     <p className="mt-1 text-xs text-brand-stone-500 dark:text-slate-400">{record.practice_id} · {record.duration_label || 'duration unset'}</p>
+                    {guidedPracticeMediaByPracticeId[record.practice_id] && (
+                      <p className="mt-1 text-xs text-brand-stone-500 dark:text-slate-400">Expected: {guidedPracticeMediaByPracticeId[record.practice_id].mp3Filename} · {guidedPracticeMediaByPracticeId[record.practice_id].transcriptPath}</p>
+                    )}
                   </div>
                   {record.is_active ? <CheckCircle className="h-5 w-5 text-emerald-500" /> : <Archive className="h-5 w-5 text-brand-stone-400" />}
                 </div>
                 <p className="mt-3 text-sm text-brand-stone-600 dark:text-slate-400">{record.description || 'No description.'}</p>
+                <div className="mt-4 flex flex-wrap gap-2 text-xs font-semibold">
+                  <span className={`rounded-full px-3 py-1 ${record.audio_url ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300' : 'bg-amber-50 text-amber-800 dark:bg-amber-950/30 dark:text-amber-200'}`}>{record.audio_url ? 'audioUrl mapped' : 'audioUrl missing'}</span>
+                  <span className={`rounded-full px-3 py-1 ${record.uploadthing_audio_key ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300' : 'bg-amber-50 text-amber-800 dark:bg-amber-950/30 dark:text-amber-200'}`}>{record.uploadthing_audio_key ? 'UploadThing key saved' : 'UploadThing key missing'}</span>
+                  <span className="rounded-full bg-brand-stone-100 px-3 py-1 text-brand-stone-700 dark:bg-slate-800 dark:text-slate-200">Transcript expected in public/docs</span>
+                </div>
                 <div className="mt-4 flex flex-wrap gap-2">
                   <button type="button" onClick={() => editRecord(record)} className="rounded-2xl border border-brand-stone-200 px-3 py-2 text-xs font-semibold text-brand-stone-700 dark:border-slate-700 dark:text-slate-200">Edit</button>
                   <button type="button" onClick={() => archiveRecord(record)} className="rounded-2xl border border-brand-stone-200 px-3 py-2 text-xs font-semibold text-brand-stone-700 dark:border-slate-700 dark:text-slate-200">Deactivate</button>
