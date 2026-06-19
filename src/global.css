@@ -1,5 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..600;1,9..144,400&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Noto+Serif:wght@400;500;600;700&family=Space+Grotesk:wght@500&family=Syne:wght@700;800&family=Permanent+Marker&family=Rock+Salt&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Noto+Serif:wght@400;500;600;700&family=Space+Grotesk:wght@400;500&family=Syne:wght@700;800&family=Permanent+Marker&family=Rock+Salt&family=Cinzel:wght@400;500;600&family=Caveat:wght@400;500;600&family=Cormorant+Garamond:wght@400;500;600&family=Marcellus&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap');
 
 @tailwind base;
@@ -99,7 +99,7 @@
   -webkit-font-smoothing: antialiased;
 }
 
-/* Final IFS sign-in overrides: use the local /logo.png asset and force the requested serif typography. */
+/* Final IFS sign-in overrides: use the local /logo.png asset and force the requested ethereal typography. */
 #gravity-center,
 img[alt="Intrinsic Therapeutic Solutions Logo"] {
   width: min(315px, 82vw) !important;
@@ -141,19 +141,49 @@ img[alt="Intrinsic Therapeutic Solutions Logo"]:active {
 }
 
 #gravity-center + h1 {
-  font-family: 'Noto Serif', Georgia, serif !important;
-  font-weight: 600 !important;
-  letter-spacing: 0.015em !important;
+  font-family: 'Cinzel', 'Marcellus', Georgia, serif !important;
+  font-weight: 500 !important;
+  letter-spacing: 0.055em !important;
   line-height: 0.98 !important;
-  margin-top: 0.15rem !important;
-  font-size: clamp(2.55rem, 6.4vw, 4.25rem) !important;
+  margin-top: 0.1rem !important;
+  font-size: clamp(2.25rem, 5.8vw, 3.95rem) !important;
+  text-transform: none !important;
 }
 
 #gravity-center + h1 + p,
 #gravity-center ~ p {
-  font-family: 'Noto Serif', Georgia, serif !important;
-  letter-spacing: 0.22em !important;
+  font-family: 'Caveat', 'La Belle Aurore', cursive !important;
+  letter-spacing: 0.08em !important;
   font-weight: 500 !important;
+  font-size: clamp(1.15rem, 2.8vw, 1.55rem) !important;
+  text-transform: uppercase !important;
+}
+
+/* Main login card typography refinement. */
+form label,
+.font-label-sm,
+.font-vintage,
+button[type="button"],
+footer a,
+footer p {
+  font-family: 'Space Grotesk', 'Manrope', sans-serif !important;
+}
+
+button[type="submit"] span:first-child {
+  font-family: 'Cinzel', 'Marcellus', Georgia, serif !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.14em !important;
+}
+
+main p:first-child,
+a[href="#"] {
+  font-family: 'Caveat', cursive !important;
+  font-weight: 500 !important;
+  letter-spacing: 0.02em !important;
+}
+
+main p:first-child {
+  font-size: clamp(1.65rem, 4.8vw, 2.15rem) !important;
 }
 
 /* Scroll-performance mode for the login page: reduce expensive blur/shadow/filter repainting while the user is actively scrolling. */
