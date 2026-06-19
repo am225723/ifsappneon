@@ -1,0 +1,64 @@
+.ifs-login-page {
+  background-color: #060e20;
+  background:
+    radial-gradient(circle at 18% 18%, rgba(233, 193, 118, 0.22), transparent 21rem),
+    radial-gradient(circle at 82% 20%, rgba(85, 39, 142, 0.28), transparent 24rem),
+    radial-gradient(circle at 18% 82%, rgba(14, 72, 88, 0.36), transparent 26rem),
+    linear-gradient(145deg, #060e20 0%, #0b274f 38%, #30164a 74%, #071326 100%);
+}
+
+.ifs-login-page::before {
+  z-index: 1;
+  opacity: 0.62;
+  background:
+    radial-gradient(circle at 50% 18%, rgba(255, 222, 165, 0.14), transparent 18rem),
+    radial-gradient(circle at 15% 62%, rgba(233, 193, 118, 0.2), transparent 24rem),
+    radial-gradient(circle at 82% 54%, rgba(29, 73, 128, 0.32), transparent 26rem),
+    radial-gradient(circle at 72% 18%, rgba(86, 38, 136, 0.28), transparent 20rem);
+  mix-blend-mode: screen;
+}
+
+.ifs-login-page::after {
+  z-index: 2;
+  opacity: 0.28;
+  background:
+    radial-gradient(ellipse at center, transparent 0%, transparent 58%, rgba(1, 5, 14, 0.34) 100%),
+    linear-gradient(180deg, rgba(0, 0, 0, 0.02), rgba(0, 0, 0, 0.12));
+}
+
+.ifs-login-canvas {
+  filter: saturate(1.32) contrast(1.18) brightness(1.08);
+  opacity: 1;
+}
+
+.ifs-login-fragments::before,
+.ifs-login-fragments::after {
+  content: '';
+  position: absolute;
+  inset: -18%;
+  pointer-events: none;
+  opacity: 0.36;
+  mix-blend-mode: screen;
+  background:
+    repeating-radial-gradient(ellipse at 20% 24%, transparent 0 22px, rgba(233, 193, 118, 0.22) 25px 30px, transparent 34px 62px),
+    repeating-radial-gradient(ellipse at 78% 68%, transparent 0 24px, rgba(24, 76, 135, 0.3) 28px 34px, transparent 39px 72px),
+    repeating-radial-gradient(ellipse at 46% 50%, transparent 0 28px, rgba(90, 38, 142, 0.23) 31px 37px, transparent 42px 78px);
+  filter: blur(0.15px) saturate(1.2);
+  animation: ifsOldBgDrift 16s ease-in-out infinite alternate;
+}
+
+.ifs-login-fragments::after {
+  opacity: 0.22;
+  transform: rotate(8deg) scale(1.08);
+  animation-duration: 23s;
+  animation-direction: alternate-reverse;
+}
+
+@keyframes ifsOldBgDrift {
+  from {
+    transform: translate3d(-2.5%, -1.5%, 0) rotate(-1deg) scale(1.02);
+  }
+  to {
+    transform: translate3d(2.5%, 1.5%, 0) rotate(2deg) scale(1.08);
+  }
+}
