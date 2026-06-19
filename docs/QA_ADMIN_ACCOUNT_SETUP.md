@@ -11,9 +11,11 @@ The QA account is **not** an authentication bypass. The human operator creates t
 - Uses normal Clerk authentication.
 - Uses the app's existing internal role gate from `public.ifs_clients.user_role`.
 - Creates or updates only the exact `ifs_clients` row matched by `QA_ADMIN_CLERK_USER_ID` or exact `QA_ADMIN_EMAIL`.
+- Refuses to proceed if the Clerk user ID or QA email matches multiple internal rows.
 - Supports `admin`, `supervisor`, `therapist`, or `advisor` test roles.
 - Does not create a Clerk user.
 - Does not require or print a password.
+- Fails closed if `QA_ADMIN_PASSWORD` is set in the environment.
 - Does not seed real PHI.
 - Does not run broad backfills such as `neon/999_backfill_therapist_assignments.sql`.
 
@@ -46,6 +48,8 @@ ENABLE_QA_SEED=false
 
 `QA_ADMIN_ROLE` defaults to `admin` when omitted. Valid values are `admin`, `supervisor`, `therapist`, and `advisor`.
 
+Do **not** set `QA_ADMIN_PASSWORD`. The script intentionally aborts if that variable exists, because passwords belong only in Clerk or an approved password manager.
+
 ## Password handling
 
 - Create and reset the QA password in Clerk or an approved password manager only.
@@ -63,6 +67,8 @@ Use a clearly fake identity such as:
 - Name: `QA Admin`.
 - Data: fake QA/demo data only; no real PHI.
 
+Before running the seed, confirm the QA email is unique in the target environment. The script refuses to update when the email matches multiple `ifs_clients` rows or is already linked to a different Clerk user.
+
 ## Manual setup steps
 
 1. Create a QA user in Clerk using the Clerk Dashboard or Clerk API.
@@ -75,14 +81,15 @@ Use a clearly fake identity such as:
    - `QA_ADMIN_CLERK_USER_ID`
    - `QA_ADMIN_ROLE=admin`
    - `ENABLE_QA_SEED=true` only if you are intentionally preparing fake demo data outside this script.
-5. Run:
+5. Confirm `QA_ADMIN_PASSWORD` is not set anywhere in the shell, Vercel environment, `.env` files, screenshots, docs, or prompts.
+6. Run:
 
    ```bash
    npm run qa:seed-admin
    ```
 
-6. Log in through the normal app sign-in page with the Clerk QA user.
-7. Rotate/reset the password after external-agent testing if desired.
+7. Log in through the normal app sign-in page with the Clerk QA user.
+8. Rotate/reset the password after external-agent testing if desired.
 
 ## External tool use
 
@@ -112,6 +119,8 @@ No manual SQL is required for the QA admin account itself when `npm run qa:seed-
 
 - [ ] QA user was created in Clerk, not by a custom app endpoint.
 - [ ] Internal role is stored in `ifs_clients.user_role`.
+- [ ] QA email is unique in the target environment.
+- [ ] `QA_ADMIN_PASSWORD` is not set, committed, printed, logged, screenshotted, or pasted into prompts.
 - [ ] No unauthenticated admin creation route was added.
 - [ ] No password was committed or printed.
 - [ ] No frontend secret variable was introduced.
