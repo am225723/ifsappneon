@@ -12,7 +12,10 @@ const themePresets = {
     accentColor: '#3B82F6',
     headerBg: 'from-blue-600/90 to-cyan-600/90',
     cardBg: 'bg-white/80',
-    animation: 'gentle'
+    animation: 'gentle',
+    pageBackground: 'linear-gradient(135deg, #eff6ff 0%, #ecfeff 48%, #f0fdfa 100%)',
+    surfaceBackground: '#ffffffcc',
+    textPrimary: '#111827'
   },
   nurturing: {
     id: 'nurturing',
@@ -23,7 +26,10 @@ const themePresets = {
     accentColor: '#10B981',
     headerBg: 'from-emerald-600/90 to-green-600/90',
     cardBg: 'bg-white/80',
-    animation: 'bloom'
+    animation: 'bloom',
+    pageBackground: 'linear-gradient(135deg, #ecfdf5 0%, #f0fdf4 50%, #f7fee7 100%)',
+    surfaceBackground: '#ffffffcc',
+    textPrimary: '#111827'
   },
   warmth: {
     id: 'warmth',
@@ -34,7 +40,10 @@ const themePresets = {
     accentColor: '#F59E0B',
     headerBg: 'from-amber-500/90 to-orange-500/90',
     cardBg: 'bg-white/80',
-    animation: 'warm'
+    animation: 'warm',
+    pageBackground: 'linear-gradient(135deg, #fffbeb 0%, #fff7ed 50%, #fff1f2 100%)',
+    surfaceBackground: '#ffffffcc',
+    textPrimary: '#111827'
   },
   sanctuary: {
     id: 'sanctuary',
@@ -45,7 +54,10 @@ const themePresets = {
     accentColor: '#8B5CF6',
     headerBg: 'from-purple-600/90 to-pink-600/90',
     cardBg: 'bg-white/80',
-    animation: 'gentle'
+    animation: 'gentle',
+    pageBackground: 'linear-gradient(135deg, #f8fafc 0%, #faf5ff 50%, #fdf2f8 100%)',
+    surfaceBackground: '#ffffffcc',
+    textPrimary: '#111827'
   },
   night: {
     id: 'night',
@@ -58,7 +70,10 @@ const themePresets = {
     cardBg: 'bg-slate-800/80',
     textColor: 'text-slate-100',
     animation: 'subtle',
-    isDark: true
+    isDark: true,
+    pageBackground: 'linear-gradient(135deg, #0b0f19 0%, #111827 52%, #1e1b4b 100%)',
+    surfaceBackground: '#141b2dcc',
+    textPrimary: '#f8fafc'
   }
 };
 
@@ -105,6 +120,39 @@ const animationStyles = {
   }
 };
 
+function normalizeTheme(themeLike) {
+  if (!themeLike) return themePresets.warmth;
+  if (typeof themeLike === 'string') return themePresets[themeLike] || themePresets.warmth;
+  if (themeLike.id && themePresets[themeLike.id]) {
+    return { ...themePresets[themeLike.id], ...themeLike };
+  }
+  return themeLike;
+}
+
+function applyThemeToDocument(theme) {
+  if (typeof document === 'undefined') return;
+
+  const resolvedTheme = normalizeTheme(theme);
+  const root = document.documentElement;
+  const body = document.body;
+  const isDark = !!resolvedTheme.isDark;
+
+  root.classList.toggle('dark', isDark);
+  root.dataset.ifsTheme = resolvedTheme.id || 'custom';
+  root.style.colorScheme = isDark ? 'dark' : 'light';
+  root.style.setProperty('--ifs-accent', resolvedTheme.accentColor || '#F59E0B');
+  root.style.setProperty('--ifs-page-bg', resolvedTheme.pageBackground || (isDark ? themePresets.night.pageBackground : themePresets.warmth.pageBackground));
+  root.style.setProperty('--ifs-surface-bg', resolvedTheme.surfaceBackground || (isDark ? '#141b2dcc' : '#ffffffcc'));
+  root.style.setProperty('--ifs-text-primary', resolvedTheme.textPrimary || (isDark ? '#f8fafc' : '#111827'));
+
+  if (body) {
+    body.classList.toggle('dark', isDark);
+    body.dataset.ifsTheme = resolvedTheme.id || 'custom';
+    body.style.background = 'var(--ifs-page-bg)';
+    body.style.color = 'var(--ifs-text-primary)';
+  }
+}
+
 export function ThemeProvider({ children }) {
   const [currentTheme, setCurrentTheme] = useState(themePresets.warmth);
   const [animationsEnabled, setAnimationsEnabled] = useState(true);
@@ -112,8 +160,20 @@ export function ThemeProvider({ children }) {
   const [prefsLoaded, setPrefsLoaded] = useState(false);
 
   useEffect(() => {
+    const localThemeId = localStorage.getItem('ifs-theme-id');
+    if (localThemeId && themePresets[localThemeId]) {
+      setCurrentTheme(themePresets[localThemeId]);
+      applyThemeToDocument(themePresets[localThemeId]);
+    } else {
+      applyThemeToDocument(themePresets.warmth);
+    }
     loadPreferences();
   }, []);
+
+  useEffect(() => {
+    applyThemeToDocument(currentTheme);
+    localStorage.setItem('ifs-theme-id', currentTheme.id || 'custom');
+  }, [currentTheme]);
 
   useEffect(() => {
     if (prefsLoaded) {
@@ -129,7 +189,7 @@ export function ThemeProvider({ children }) {
       const { supabaseHelpers } = await import('../lib/supabase');
       const prefs = await supabaseHelpers.getPreferences(client.id);
       if (prefs) {
-        if (prefs.theme && Object.keys(prefs.theme).length > 0) setCurrentTheme(prefs.theme);
+        if (prefs.theme && Object.keys(prefs.theme).length > 0) setCurrentTheme(normalizeTheme(prefs.theme));
         if (prefs.animations_enabled !== null && prefs.animations_enabled !== undefined) setAnimationsEnabled(prefs.animations_enabled);
         if (prefs.animation_speed) setAnimationSpeed(prefs.animation_speed);
       }
