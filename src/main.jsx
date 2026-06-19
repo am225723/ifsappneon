@@ -8,6 +8,7 @@ import { Keyboard } from '@capacitor/keyboard'
 import './index.css'
 import App from './App.jsx'
 import AuthInteractiveBackground from './components/AuthInteractiveBackground.jsx'
+import IFSLoginOverlay from './components/IFSLoginOverlay.jsx'
 
 const clerkPublishableKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
@@ -35,6 +36,7 @@ const app = (
     <AuthInteractiveBackground />
     {clerkPublishableKey ? (
       <ClerkProvider publishableKey={clerkPublishableKey}>
+        <IFSLoginOverlay />
         <App />
       </ClerkProvider>
     ) : (
