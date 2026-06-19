@@ -1,0 +1,22 @@
+/* Extra vertical breathing room for the Sunday Best title so it does not overlap the subtitle. */
+#gravity-center + h1.ifs-title-sunday {
+  line-height: 1.18 !important;
+  margin-top: 0.35rem !important;
+  margin-bottom: 0.95rem !important;
+  padding-bottom: 0.12em !important;
+}
+
+#gravity-center + h1.ifs-title-sunday + p,
+#gravity-center ~ p {
+  margin-top: 0.35rem !important;
+  display: block !important;
+  position: relative !important;
+  z-index: 2 !important;
+}
+
+@media (max-width: 520px) {
+  #gravity-center + h1.ifs-title-sunday {
+    line-height: 1.22 !important;
+    margin-bottom: 1.05rem !important;
+  }
+}
