@@ -2,14 +2,35 @@
 import { neon } from '@neondatabase/serverless';
 
 const REQUIRED_ROLES = new Set(['admin', 'supervisor', 'therapist', 'advisor']);
+const REQUIRED_IFS_CLIENT_COLUMNS = [
+  'clerk_user_id',
+  'email',
+  'name',
+  'user_role',
+  'status',
+  'onboarding_completed',
+  'last_active',
+  'created_at',
+  'updated_at'
+];
+
+function fail(message) {
+  console.error(message);
+  process.exit(1);
+}
 
 function requireEnv(name) {
   const value = process.env[name]?.trim();
   if (!value) {
-    console.error(`Missing required environment variable: ${name}`);
-    process.exit(1);
+    fail(`Missing required environment variable: ${name}`);
   }
   return value;
+}
+
+function disallowEnv(name) {
+  if (process.env[name]?.trim()) {
+    fail(`${name} must not be set. Manage QA passwords only in Clerk or an approved password manager.`);
+  }
 }
 
 function readBoolean(name) {
@@ -23,6 +44,16 @@ function safeLabel(value) {
   return `${local.slice(0, 2)}***@${domain}`;
 }
 
+function normalizeEmail(value) {
+  return value.trim().toLowerCase();
+}
+
+function validateEmail(value) {
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+    fail('QA_ADMIN_EMAIL must be a valid email address for the Clerk QA user.');
+  }
+}
+
 async function getTableColumns(sql, tableName) {
   const rows = await sql`
     SELECT column_name
@@ -33,62 +64,89 @@ async function getTableColumns(sql, tableName) {
   return new Set(rows.map((row) => row.column_name));
 }
 
+function assertRequiredColumns(columns) {
+  const missingColumns = REQUIRED_IFS_CLIENT_COLUMNS.filter((column) => !columns.has(column));
+  if (missingColumns.length > 0) {
+    throw new Error(`public.ifs_clients is missing required column(s): ${missingColumns.join(', ')}`);
+  }
+}
+
 async function main() {
+  disallowEnv('QA_ADMIN_PASSWORD');
+
   const databaseUrl = requireEnv('DATABASE_URL');
   const clerkUserId = requireEnv('QA_ADMIN_CLERK_USER_ID');
-  const email = requireEnv('QA_ADMIN_EMAIL').toLowerCase();
+  const email = normalizeEmail(requireEnv('QA_ADMIN_EMAIL'));
   const name = process.env.QA_ADMIN_NAME?.trim() || 'QA Admin';
   const requestedRole = (process.env.QA_ADMIN_ROLE?.trim() || 'admin').toLowerCase();
   const role = requestedRole === 'advisor' ? 'advisor' : requestedRole;
 
+  validateEmail(email);
+
+  if (!clerkUserId.startsWith('user_')) {
+    console.warn('QA_ADMIN_CLERK_USER_ID does not look like a standard Clerk user_ value; continuing because Clerk ID formats may vary.');
+  }
+
   if (!REQUIRED_ROLES.has(role)) {
-    console.error(`Invalid QA_ADMIN_ROLE: ${requestedRole}. Use one of: ${Array.from(REQUIRED_ROLES).join(', ')}`);
-    process.exit(1);
+    fail(`Invalid QA_ADMIN_ROLE: ${requestedRole}. Use one of: ${Array.from(REQUIRED_ROLES).join(', ')}`);
   }
 
   const sql = neon(databaseUrl);
   const columns = await getTableColumns(sql, 'ifs_clients');
-  for (const requiredColumn of ['clerk_user_id', 'email', 'name', 'user_role']) {
-    if (!columns.has(requiredColumn)) {
-      throw new Error(`public.ifs_clients is missing required column: ${requiredColumn}`);
-    }
-  }
+  assertRequiredColumns(columns);
 
   const byClerk = await sql`
     SELECT id, email, user_role
     FROM public.ifs_clients
     WHERE clerk_user_id = ${clerkUserId}
-    LIMIT 1
+    LIMIT 2
+  `;
+
+  if (byClerk.length > 1) {
+    throw new Error('Refusing to modify rows: QA_ADMIN_CLERK_USER_ID matched more than one ifs_clients row.');
+  }
+
+  const emailMatches = await sql`
+    SELECT id, clerk_user_id, email, user_role
+    FROM public.ifs_clients
+    WHERE lower(email) = ${email}
+    ORDER BY created_at ASC NULLS LAST, id ASC
+    LIMIT 3
   `;
 
   let action = 'created';
   let adminRow = byClerk[0];
 
   if (adminRow) {
+    const conflictingEmailRows = emailMatches.filter((row) => String(row.id) !== String(adminRow.id));
+    if (conflictingEmailRows.length > 0) {
+      throw new Error('Refusing to modify row: QA_ADMIN_EMAIL already matches another ifs_clients row. Use a unique fake QA email.');
+    }
+
     const updated = await sql`
       UPDATE public.ifs_clients
       SET name = ${name},
           email = ${email},
           user_role = ${role},
-          status = COALESCE(status, 'active'),
-          onboarding_completed = COALESCE(onboarding_completed, true),
+          status = 'active',
+          onboarding_completed = true,
+          last_active = COALESCE(last_active, NOW()),
           updated_at = NOW()
-      WHERE clerk_user_id = ${clerkUserId}
+      WHERE id = ${adminRow.id}
+        AND clerk_user_id = ${clerkUserId}
       RETURNING id, email, user_role
     `;
     adminRow = updated[0];
     action = 'updated_by_clerk_user_id';
   } else {
-    const byEmail = await sql`
-      SELECT id, clerk_user_id, email, user_role
-      FROM public.ifs_clients
-      WHERE lower(email) = ${email}
-      ORDER BY created_at ASC NULLS LAST
-      LIMIT 1
-    `;
+    if (emailMatches.length > 1) {
+      throw new Error('Refusing to modify rows: QA_ADMIN_EMAIL matched more than one ifs_clients row. Use a unique fake QA email.');
+    }
 
-    if (byEmail[0]) {
-      if (byEmail[0].clerk_user_id && byEmail[0].clerk_user_id !== clerkUserId) {
+    const byEmail = emailMatches[0];
+
+    if (byEmail) {
+      if (byEmail.clerk_user_id && byEmail.clerk_user_id !== clerkUserId) {
         throw new Error('Refusing to modify row: QA_ADMIN_EMAIL is already linked to a different Clerk user ID.');
       }
       const updated = await sql`
@@ -97,10 +155,11 @@ async function main() {
             name = ${name},
             email = ${email},
             user_role = ${role},
-            status = COALESCE(status, 'active'),
-            onboarding_completed = COALESCE(onboarding_completed, true),
+            status = 'active',
+            onboarding_completed = true,
+            last_active = COALESCE(last_active, NOW()),
             updated_at = NOW()
-        WHERE id = ${byEmail[0].id}
+        WHERE id = ${byEmail.id}
         RETURNING id, email, user_role
       `;
       adminRow = updated[0];
