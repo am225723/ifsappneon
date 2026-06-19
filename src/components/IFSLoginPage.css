@@ -1,0 +1,572 @@
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700&family=Noto+Serif:wght@400;500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap');
+
+.ifs-login-page {
+  min-height: max(884px, 100dvh);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow-x: hidden;
+  background: #060e20;
+  color: #e5e2db;
+  font-family: 'Manrope', sans-serif;
+}
+
+.ifs-login-canvas {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.ifs-login-fragments {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.ifs-login-fragment-border {
+  position: absolute;
+  top: 25%;
+  right: 2.5rem;
+  width: 12rem;
+  height: 12rem;
+  border: 4px solid rgba(197, 160, 89, 0.1);
+  transform: rotate(12deg);
+  border-radius: 255px 15px 225px 15px / 15px 225px 15px 255px;
+}
+
+.ifs-login-fragment-glow {
+  position: absolute;
+  bottom: 25%;
+  left: 1.25rem;
+  width: 8rem;
+  height: 8rem;
+  border-radius: 9999px;
+  background: rgba(146, 39, 36, 0.05);
+  filter: blur(48px);
+}
+
+.ifs-login-header {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 1rem 0;
+  position: relative;
+  z-index: 10;
+  pointer-events: none;
+}
+
+.ifs-login-brand-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  padding: 2rem;
+  border-radius: 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(0, 32, 34, 0.4);
+  backdrop-filter: blur(12px);
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.25);
+}
+
+.ifs-login-logo {
+  width: 230px;
+  height: auto;
+  filter: drop-shadow(0 0 25px rgba(197, 160, 89, 0.6));
+  animation: ifsFloat 6s ease-in-out infinite;
+}
+
+.ifs-login-brand-card h1 {
+  margin: 1rem 0 0;
+  color: #e5e2db;
+  font-family: 'Noto Serif', serif;
+  font-size: clamp(2rem, 7vw, 4.5rem);
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  font-weight: 700;
+  text-align: center;
+  text-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+}
+
+.ifs-login-brand-card p {
+  margin: -0.5rem 0 0;
+  color: #e5e2db;
+  font-family: 'Noto Serif', serif;
+  font-size: 1.125rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  text-shadow: 0 5px 18px rgba(0, 0, 0, 0.4);
+}
+
+.ifs-login-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 1rem;
+  position: relative;
+  z-index: 10;
+}
+
+.ifs-login-panel {
+  width: min(100%, 448px);
+  position: relative;
+  padding: 2rem;
+  border-radius: 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(0, 32, 34, 0.6);
+  backdrop-filter: blur(24px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  transform: rotate(-1deg);
+}
+
+.ifs-login-texture {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  opacity: 0.2;
+  pointer-events: none;
+  border-radius: 1rem;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.28);
+  background-image: url('https://www.transparenttextures.com/patterns/cardboard-flat.png');
+  filter: contrast(1.1) brightness(0.9);
+}
+
+.ifs-login-tape {
+  position: absolute;
+  top: -1rem;
+  left: 50%;
+  width: 8rem;
+  height: 2rem;
+  transform: translateX(-50%) rotate(-2deg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.125rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(27, 67, 50, 0.8);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.3);
+}
+
+.ifs-login-tape span {
+  color: rgba(255, 255, 255, 0.9);
+  font-family: 'Noto Serif', serif;
+  font-size: 10px;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.ifs-login-panel-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.ifs-login-copy {
+  text-align: center;
+}
+
+.ifs-login-script {
+  margin: 0;
+  color: #e5e2db;
+  font-family: 'Noto Serif', serif;
+  font-size: 1.25rem;
+  text-shadow: 0 3px 12px rgba(0, 0, 0, 0.35);
+}
+
+.ifs-login-subtitle {
+  margin: 0.25rem 0 0;
+  color: #e5e2db;
+  font-size: 0.875rem;
+  text-shadow: 0 3px 12px rgba(0, 0, 0, 0.25);
+}
+
+.ifs-login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.ifs-login-social-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.ifs-login-divider {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  width: 100%;
+}
+
+.ifs-login-divider::before,
+.ifs-login-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.ifs-login-divider span {
+  color: rgba(229, 226, 219, 0.8);
+  font-family: 'Noto Serif', serif;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.ifs-login-social-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.ifs-login-social-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 3.15rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid rgba(197, 160, 89, 0.3);
+  border-radius: 0.5rem;
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(10px);
+  transition: background 300ms ease, border-color 300ms ease, transform 300ms ease;
+}
+
+.ifs-login-social-button:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(197, 160, 89, 0.6);
+  transform: translateY(-1px);
+}
+
+.ifs-login-social-button span {
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.ifs-login-social-icon {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.ifs-login-social-icon--apple {
+  fill: rgba(255, 255, 255, 0.9);
+}
+
+.ifs-login-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.ifs-login-field > span {
+  padding-left: 0.25rem;
+  color: rgba(229, 226, 219, 0.8);
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  text-transform: uppercase;
+}
+
+.ifs-login-input-wrap {
+  position: relative;
+}
+
+.ifs-login-input-wrap input {
+  width: 100%;
+  min-height: 3.5rem;
+  border: 0;
+  border-bottom: 2px solid #414848;
+  border-radius: 0.125rem 0.125rem 0 0;
+  background: rgba(13, 44, 46, 0.6);
+  padding: 1rem 3.2rem 1rem 1rem;
+  color: #e5e2db;
+  font-family: 'Manrope', sans-serif;
+  font-size: 1rem;
+  outline: none;
+  transition: border-color 300ms ease, box-shadow 300ms ease;
+}
+
+.ifs-login-input-wrap input:focus {
+  border-bottom-color: #c5a059;
+  box-shadow: 0 14px 28px rgba(197, 160, 89, 0.08);
+}
+
+.ifs-login-input-wrap input::placeholder {
+  color: rgba(229, 226, 219, 0.6);
+}
+
+.ifs-login-symbol,
+.ifs-login-enter-icon {
+  font-family: 'Material Symbols Outlined';
+  font-weight: normal;
+  font-style: normal;
+  font-size: 24px;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  direction: ltr;
+  -webkit-font-feature-settings: 'liga';
+  -webkit-font-smoothing: antialiased;
+  font-feature-settings: 'liga';
+}
+
+.ifs-login-symbol {
+  position: absolute;
+  right: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: rgba(229, 226, 219, 0.8);
+}
+
+.ifs-login-send-key {
+  align-self: flex-end;
+  border: 0;
+  background: transparent;
+  color: rgba(229, 226, 219, 0.9);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.ifs-login-send-key:hover,
+.ifs-login-lost-key:hover {
+  color: #ffffff;
+  text-decoration: underline;
+}
+
+.ifs-login-error {
+  margin: -0.25rem 0 0;
+  color: #ffdad6;
+  font-size: 0.82rem;
+  text-align: center;
+}
+
+.ifs-login-enter {
+  position: relative;
+  min-height: 4.9rem;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0.5rem;
+  background: transparent;
+  color: #ffffff;
+  box-shadow: 0 20px 35px rgba(0, 0, 0, 0.28);
+  transform: rotate(-2deg);
+  transition: transform 500ms ease, filter 500ms ease;
+  cursor: pointer;
+}
+
+.ifs-login-enter::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, #173537, #002d2b, #c5a059);
+  opacity: 0.9;
+  transition: opacity 300ms ease;
+}
+
+.ifs-login-enter::after {
+  content: '';
+  position: absolute;
+  right: -1rem;
+  top: -1rem;
+  width: 3rem;
+  height: 3rem;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.2);
+  filter: blur(18px);
+}
+
+.ifs-login-enter:hover {
+  transform: rotate(-2deg) scale(1.02);
+}
+
+.ifs-login-enter:hover::before {
+  opacity: 1;
+}
+
+.ifs-login-enter:active {
+  transform: rotate(-2deg) scale(0.98);
+}
+
+.ifs-login-enter:disabled {
+  cursor: wait;
+  opacity: 0.72;
+}
+
+.ifs-login-enter span {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  font-family: 'Noto Serif', serif;
+  font-size: 1.55rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+}
+
+.ifs-login-enter-icon {
+  margin-left: 0.35rem;
+  font-size: 2rem !important;
+}
+
+.ifs-login-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  padding-top: 1rem;
+}
+
+.ifs-login-lost-key {
+  border: 0;
+  background: transparent;
+  color: rgba(229, 226, 219, 0.9);
+  font-family: 'Noto Serif', serif;
+  font-size: 1rem;
+  cursor: pointer;
+  text-shadow: 0 3px 12px rgba(0, 0, 0, 0.28);
+}
+
+.ifs-login-divider--small {
+  padding: 0.5rem 0;
+}
+
+.ifs-login-new-journey {
+  width: 100%;
+  display: block;
+  border: 1px solid rgba(197, 160, 89, 0.5);
+  border-radius: 0.5rem;
+  padding: 0.95rem 1rem;
+  color: #e5e2db;
+  text-align: center;
+  text-decoration: none;
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  backdrop-filter: blur(10px);
+  transform: rotate(1.5deg);
+  transition: background 300ms ease, border-color 300ms ease;
+}
+
+.ifs-login-new-journey:hover {
+  background: rgba(197, 160, 89, 0.1);
+  border-color: rgba(197, 160, 89, 0.75);
+}
+
+.ifs-login-footer {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0 1rem 1rem;
+  position: relative;
+  z-index: 10;
+}
+
+.ifs-login-footer div {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.ifs-login-footer a {
+  color: rgba(229, 226, 219, 0.9);
+  font-size: 0.75rem;
+  text-decoration: underline dotted;
+}
+
+.ifs-login-footer span {
+  color: rgba(229, 226, 219, 0.8);
+}
+
+.ifs-login-footer p {
+  margin: 0;
+  color: rgba(229, 226, 219, 0.56);
+  font-size: 0.75rem;
+}
+
+@keyframes ifsFloat {
+  0% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-20px) rotate(2deg); }
+  100% { transform: translateY(0) rotate(0deg); }
+}
+
+@media (min-width: 768px) {
+  .ifs-login-panel {
+    padding: 3rem;
+  }
+}
+
+@media (max-width: 520px) {
+  .ifs-login-page {
+    min-height: 100dvh;
+  }
+
+  .ifs-login-header {
+    padding-top: 1.5rem;
+  }
+
+  .ifs-login-brand-card {
+    width: min(100%, 336px);
+    padding: 1.5rem 1.25rem;
+  }
+
+  .ifs-login-logo {
+    width: 176px;
+  }
+
+  .ifs-login-brand-card h1 {
+    font-size: 2rem;
+  }
+
+  .ifs-login-brand-card p {
+    font-size: 0.82rem;
+  }
+
+  .ifs-login-main {
+    padding: 2.4rem 1rem;
+    justify-content: flex-start;
+  }
+
+  .ifs-login-panel {
+    padding: 2rem 1.25rem;
+  }
+
+  .ifs-login-social-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+  }
+
+  .ifs-login-social-button {
+    padding-inline: 0.65rem;
+  }
+
+  .ifs-login-social-button span {
+    letter-spacing: 0.1em;
+  }
+}
