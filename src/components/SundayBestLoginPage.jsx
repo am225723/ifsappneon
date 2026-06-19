@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import FinalIFSLoginPage from './FinalIFSLoginPage.jsx';
 import './SundayBestLoginTitle.css';
+import './SundayBestSpacingFix.css';
 
 export default function SundayBestLoginPage() {
   useEffect(() => {
