@@ -104,7 +104,7 @@
 .cl-card {
   position: relative !important;
   overflow: hidden !important;
-  padding: 15.25rem 1.9rem 2rem !important;
+  padding: 14.4rem 1.9rem 2rem !important;
   border-radius: 28px !important;
   border: 1px solid rgba(197, 160, 89, 0.24) !important;
   background:
@@ -118,15 +118,15 @@
 .cl-card::before {
   content: 'INTRINSIC\A THERAPEUTIC SOLUTIONS\A\A IFS Healing\A THE LUMINOUS SELF';
   position: absolute;
-  top: 1.7rem;
+  top: 1.35rem;
   left: 50%;
-  width: min(82%, 330px);
-  min-height: 13rem;
+  width: min(88%, 360px);
+  min-height: 12.25rem;
   transform: translateX(-50%);
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  padding-bottom: 1.1rem;
+  padding: 0 0.8rem 1.15rem;
   border-radius: 24px;
   border: 1px solid rgba(255, 255, 255, 0.08);
   background:
@@ -136,9 +136,9 @@
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.24);
   color: #e5e2db;
   font-family: 'Noto Serif', 'Fraunces', serif;
-  font-size: 1.45rem;
-  line-height: 1.75;
-  letter-spacing: 0.14em;
+  font-size: 1.18rem;
+  line-height: 1.7;
+  letter-spacing: 0.11em;
   text-align: center;
   white-space: pre;
   text-shadow: 0 2px 18px rgba(0, 0, 0, 0.45);
@@ -147,7 +147,7 @@
 .cl-card::after {
   content: 'VERIFIED ACCESS';
   position: absolute;
-  top: 14.25rem;
+  top: 13.45rem;
   left: 50%;
   z-index: 2;
   transform: translateX(-50%) rotate(-2deg);
@@ -165,7 +165,8 @@
 
 .cl-header,
 .cl-navbar,
-.cl-internal-b3fm6y {
+.cl-internal-b3fm6y,
+.cl-badge {
   display: none !important;
 }
 
@@ -301,19 +302,19 @@
   }
 
   .cl-card {
-    padding: 14.75rem 1.35rem 1.5rem !important;
+    padding: 13.9rem 1.35rem 1.5rem !important;
     border-radius: 24px !important;
   }
 
   .cl-card::before {
     width: calc(100% - 2rem);
-    min-height: 12.35rem;
+    min-height: 11.9rem;
     top: 1.15rem;
-    font-size: 1.18rem;
-    letter-spacing: 0.12em;
+    font-size: 1rem;
+    letter-spacing: 0.1em;
   }
 
   .cl-card::after {
-    top: 13.45rem;
+    top: 12.85rem;
   }
 }
