@@ -97,13 +97,13 @@
   -webkit-font-smoothing: antialiased;
 }
 
-/* Final IFS sign-in overrides: keep the active component stable, but force the requested brand assets and typography. */
+/* Final IFS sign-in overrides: use the local /logo.png asset and force the requested serif typography. */
 #gravity-center,
 img[alt="Intrinsic Therapeutic Solutions Logo"] {
-  content: url('https://sxjxsoakdsiifrmjsdeb.supabase.co/storage/v1/object/public/Logo/logo.png') !important;
   width: min(315px, 82vw) !important;
   max-height: 260px !important;
   object-fit: contain !important;
+  background: transparent !important;
 }
 
 #gravity-center + h1 {
@@ -120,8 +120,4 @@ img[alt="Intrinsic Therapeutic Solutions Logo"] {
   font-family: 'Noto Serif', Georgia, serif !important;
   letter-spacing: 0.22em !important;
   font-weight: 500 !important;
-}
-
-#gravity-center[src="/logo.png"] {
-  background: transparent !important;
 }
