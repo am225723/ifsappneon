@@ -1,0 +1,57 @@
+@font-face {
+  font-family: 'Sunday Best Local';
+  src: url('/fonts/SundayBest.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+#gravity-center + h1.ifs-title-sunday {
+  font-family: 'Sunday Best Local', 'Cinzel', 'Marcellus', Georgia, serif !important;
+  font-weight: 400 !important;
+  letter-spacing: 0.02em !important;
+  line-height: 0.92 !important;
+  font-size: clamp(2.65rem, 7.5vw, 5.2rem) !important;
+  text-transform: none !important;
+  display: flex !important;
+  align-items: baseline !important;
+  justify-content: center !important;
+  gap: 0.28em !important;
+  white-space: nowrap !important;
+}
+
+#gravity-center + h1.ifs-title-sunday .ifs-title-word {
+  display: inline-flex;
+  align-items: baseline;
+  line-height: 0.9;
+}
+
+#gravity-center + h1.ifs-title-sunday .ifs-title-initial {
+  font-size: 1em;
+  line-height: 0.88;
+  transform: translateY(0.02em);
+  text-shadow:
+    0 0 18px rgba(255, 239, 199, 0.52),
+    0 0 44px rgba(233, 193, 118, 0.36),
+    0 0 74px rgba(95, 214, 202, 0.18);
+}
+
+#gravity-center + h1.ifs-title-sunday .ifs-title-rest {
+  font-size: 0.58em;
+  letter-spacing: 0.08em;
+  margin-left: 0.02em;
+  opacity: 0.96;
+  transform: translateY(-0.03em);
+}
+
+@media (max-width: 520px) {
+  #gravity-center + h1.ifs-title-sunday {
+    font-size: clamp(2.25rem, 12vw, 3.65rem) !important;
+    gap: 0.22em !important;
+  }
+
+  #gravity-center + h1.ifs-title-sunday .ifs-title-rest {
+    font-size: 0.56em;
+    letter-spacing: 0.055em;
+  }
+}
