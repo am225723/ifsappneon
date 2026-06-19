@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
 import { useSignIn } from '@clerk/clerk-react';
 import './IFSLoginPage.css';
 
@@ -324,7 +323,7 @@ export default function IFSLoginPage() {
             <div className="ifs-login-actions">
               <button type="button" className="ifs-login-lost-key">Lost your key?</button>
               <div className="ifs-login-divider ifs-login-divider--small"><span>OR</span></div>
-              <Link to="/sign-up" className="ifs-login-new-journey">Initialize New Journey</Link>
+              <a href="/sign-up" className="ifs-login-new-journey">Initialize New Journey</a>
             </div>
           </div>
         </section>
