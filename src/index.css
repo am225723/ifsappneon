@@ -1,4 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..600;1,9..144,400&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Noto+Serif:wght@400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -51,5 +52,268 @@
 
   .part-card {
     @apply soft-card-interactive cursor-pointer;
+  }
+}
+
+/* Phase 18D: Ethereal IFS Clerk login treatment.
+   This keeps Clerk as the real authentication UI while turning the sign-in/sign-up
+   surface into the Luminous Self visual direction from the uploaded mockup. */
+.cl-rootBox {
+  position: relative;
+  z-index: 1;
+  width: min(100%, 430px) !important;
+  margin: clamp(1.25rem, 5vh, 3rem) auto !important;
+  font-family: 'Manrope', 'Plus Jakarta Sans', system-ui, sans-serif !important;
+  color: #e5e2db !important;
+}
+
+.cl-rootBox::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 18% 14%, rgba(233, 193, 118, 0.78) 0 7%, transparent 18%),
+    radial-gradient(circle at 82% 6%, rgba(70, 32, 112, 0.85) 0 11%, transparent 25%),
+    radial-gradient(circle at 78% 88%, rgba(197, 160, 89, 0.68) 0 8%, transparent 20%),
+    radial-gradient(circle at 8% 76%, rgba(98, 36, 141, 0.78) 0 14%, transparent 30%),
+    conic-gradient(from 110deg at 20% 20%, #0b274f, #e9c176, #173537, #4c1f73, #0b274f),
+    linear-gradient(145deg, #071324, #0d2c2e 42%, #241447 78%, #06111f);
+}
+
+.cl-rootBox::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.72;
+  background:
+    repeating-radial-gradient(ellipse at 18% 26%, transparent 0 18px, rgba(9, 37, 72, 0.72) 20px 25px, transparent 28px 44px),
+    repeating-radial-gradient(ellipse at 82% 70%, transparent 0 20px, rgba(8, 46, 48, 0.65) 23px 30px, transparent 34px 50px),
+    linear-gradient(180deg, rgba(0, 0, 0, 0.04), rgba(0, 0, 0, 0.42));
+  mix-blend-mode: multiply;
+}
+
+.cl-cardBox,
+.cl-card {
+  width: 100% !important;
+}
+
+.cl-card {
+  position: relative !important;
+  overflow: hidden !important;
+  padding: 15.25rem 1.9rem 2rem !important;
+  border-radius: 28px !important;
+  border: 1px solid rgba(197, 160, 89, 0.24) !important;
+  background:
+    linear-gradient(180deg, rgba(229, 226, 219, 0.06), rgba(229, 226, 219, 0.018)),
+    rgba(5, 26, 31, 0.76) !important;
+  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.48), inset 0 1px 0 rgba(255, 255, 255, 0.08) !important;
+  backdrop-filter: blur(24px) saturate(125%) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(125%) !important;
+}
+
+.cl-card::before {
+  content: 'INTRINSIC\A THERAPEUTIC SOLUTIONS\A\A IFS Healing\A THE LUMINOUS SELF';
+  position: absolute;
+  top: 1.7rem;
+  left: 50%;
+  width: min(82%, 330px);
+  min-height: 13rem;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 1.1rem;
+  border-radius: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background:
+    linear-gradient(180deg, rgba(3, 18, 28, 0.56), rgba(3, 18, 28, 0.78)),
+    radial-gradient(circle at 50% 26%, rgba(197, 160, 89, 0.22), transparent 38%),
+    rgba(12, 26, 38, 0.76);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.24);
+  color: #e5e2db;
+  font-family: 'Noto Serif', 'Fraunces', serif;
+  font-size: 1.45rem;
+  line-height: 1.75;
+  letter-spacing: 0.14em;
+  text-align: center;
+  white-space: pre;
+  text-shadow: 0 2px 18px rgba(0, 0, 0, 0.45);
+}
+
+.cl-card::after {
+  content: 'VERIFIED ACCESS';
+  position: absolute;
+  top: 14.25rem;
+  left: 50%;
+  z-index: 2;
+  transform: translateX(-50%) rotate(-2deg);
+  padding: 0.42rem 1.25rem;
+  border: 1px solid rgba(197, 160, 89, 0.22);
+  border-radius: 4px;
+  background: rgba(27, 67, 50, 0.86);
+  color: #e5e2db;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.28);
+  font-family: 'Noto Serif', 'Fraunces', serif;
+  font-size: 0.64rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.cl-header,
+.cl-navbar,
+.cl-internal-b3fm6y {
+  display: none !important;
+}
+
+.cl-main {
+  gap: 1.2rem !important;
+}
+
+.cl-socialButtonsBlockButton {
+  min-height: 3.25rem !important;
+  border: 1px solid rgba(197, 160, 89, 0.34) !important;
+  border-radius: 8px !important;
+  background: rgba(229, 226, 219, 0.07) !important;
+  color: #e5e2db !important;
+  letter-spacing: 0.12em !important;
+  text-transform: uppercase !important;
+  box-shadow: none !important;
+  transition: transform 180ms ease, background 180ms ease, border-color 180ms ease !important;
+}
+
+.cl-socialButtonsBlockButton:hover {
+  transform: translateY(-1px) !important;
+  border-color: rgba(197, 160, 89, 0.68) !important;
+  background: rgba(229, 226, 219, 0.13) !important;
+}
+
+.cl-socialButtonsBlockButtonText,
+.cl-dividerText,
+.cl-formFieldLabel,
+.cl-footerActionText,
+.cl-footerActionLink,
+.cl-formFieldAction {
+  font-family: 'Manrope', 'Plus Jakarta Sans', system-ui, sans-serif !important;
+}
+
+.cl-dividerLine {
+  background: linear-gradient(90deg, transparent, rgba(229, 226, 219, 0.18), transparent) !important;
+}
+
+.cl-dividerText {
+  color: rgba(229, 226, 219, 0.72) !important;
+  font-size: 0.64rem !important;
+  letter-spacing: 0.15em !important;
+  text-transform: uppercase !important;
+}
+
+.cl-formFieldLabel {
+  color: rgba(229, 226, 219, 0.78) !important;
+  font-size: 0.72rem !important;
+  letter-spacing: 0.1em !important;
+  text-transform: uppercase !important;
+}
+
+.cl-formFieldInput,
+.cl-otpCodeFieldInput {
+  min-height: 3.55rem !important;
+  border: 0 !important;
+  border-bottom: 2px solid rgba(139, 146, 146, 0.42) !important;
+  border-radius: 2px 2px 0 0 !important;
+  background: rgba(0, 45, 43, 0.74) !important;
+  color: #e5e2db !important;
+  box-shadow: none !important;
+  caret-color: #e9c176 !important;
+}
+
+.cl-formFieldInput:focus,
+.cl-otpCodeFieldInput:focus {
+  border-bottom-color: #c5a059 !important;
+  box-shadow: 0 8px 28px rgba(197, 160, 89, 0.11) !important;
+}
+
+.cl-formFieldInput::placeholder {
+  color: rgba(229, 226, 219, 0.48) !important;
+}
+
+.cl-formButtonPrimary {
+  position: relative !important;
+  min-height: 4rem !important;
+  margin-top: 0.8rem !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  border-radius: 8px !important;
+  background: linear-gradient(100deg, #073334 0%, #002d2b 56%, #c5a059 100%) !important;
+  color: #ffffff !important;
+  font-family: 'Noto Serif', 'Fraunces', serif !important;
+  font-size: 1.35rem !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.12em !important;
+  text-transform: uppercase !important;
+  box-shadow: 0 20px 44px rgba(0, 0, 0, 0.35) !important;
+  transform: rotate(-1.25deg) !important;
+  transition: transform 180ms ease, filter 180ms ease !important;
+}
+
+.cl-formButtonPrimary:hover {
+  filter: brightness(1.08) !important;
+  transform: rotate(-1.25deg) translateY(-1px) scale(1.01) !important;
+}
+
+.cl-formFieldAction,
+.cl-footerActionLink,
+.cl-formResendCodeLink,
+.cl-identityPreviewEditButton {
+  color: #e9c176 !important;
+  font-size: 0.72rem !important;
+  letter-spacing: 0.08em !important;
+  text-transform: uppercase !important;
+}
+
+.cl-footer {
+  background: transparent !important;
+  border-top: 1px solid rgba(229, 226, 219, 0.08) !important;
+}
+
+.cl-footerActionText {
+  color: rgba(229, 226, 219, 0.7) !important;
+}
+
+.cl-identityPreview,
+.cl-alert {
+  border: 1px solid rgba(197, 160, 89, 0.24) !important;
+  background: rgba(0, 45, 43, 0.56) !important;
+  color: #e5e2db !important;
+}
+
+.cl-formFieldErrorText,
+.cl-alertText {
+  color: #ffdad6 !important;
+}
+
+@media (max-width: 480px) {
+  .cl-rootBox {
+    width: calc(100vw - 24px) !important;
+    margin: 0.75rem auto 1.75rem !important;
+  }
+
+  .cl-card {
+    padding: 14.75rem 1.35rem 1.5rem !important;
+    border-radius: 24px !important;
+  }
+
+  .cl-card::before {
+    width: calc(100% - 2rem);
+    min-height: 12.35rem;
+    top: 1.15rem;
+    font-size: 1.18rem;
+    letter-spacing: 0.12em;
+  }
+
+  .cl-card::after {
+    top: 13.45rem;
   }
 }
