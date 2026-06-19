@@ -7,6 +7,7 @@ import { StatusBar } from '@capacitor/status-bar'
 import { Keyboard } from '@capacitor/keyboard'
 import './index.css'
 import App from './App.jsx'
+import AuthInteractiveBackground from './components/AuthInteractiveBackground.jsx'
 
 const clerkPublishableKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
@@ -31,6 +32,7 @@ async function initNativeApp() {
 
 const app = (
   <StrictMode>
+    <AuthInteractiveBackground />
     {clerkPublishableKey ? (
       <ClerkProvider publishableKey={clerkPublishableKey}>
         <App />

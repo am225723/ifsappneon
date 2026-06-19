@@ -1,0 +1,121 @@
+.auth-interactive-bg {
+  --auth-pointer-x: 50%;
+  --auth-pointer-y: 50%;
+  --auth-drift-x: 0px;
+  --auth-drift-y: 0px;
+  --auth-ripple-x: 0px;
+  --auth-ripple-y: 0px;
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+  opacity: 0;
+  transition: opacity 500ms ease;
+  background:
+    radial-gradient(circle at var(--auth-pointer-x) var(--auth-pointer-y), rgba(233, 193, 118, 0.42), transparent 18rem),
+    radial-gradient(circle at 18% 14%, rgba(233, 193, 118, 0.78) 0 7%, transparent 18%),
+    radial-gradient(circle at 82% 6%, rgba(70, 32, 112, 0.85) 0 11%, transparent 25%),
+    radial-gradient(circle at 78% 88%, rgba(197, 160, 89, 0.68) 0 8%, transparent 20%),
+    radial-gradient(circle at 8% 76%, rgba(98, 36, 141, 0.78) 0 14%, transparent 30%),
+    conic-gradient(from 110deg at 20% 20%, #0b274f, #e9c176, #173537, #4c1f73, #0b274f),
+    linear-gradient(145deg, #071324, #0d2c2e 42%, #241447 78%, #06111f);
+}
+
+body:has(.cl-rootBox) .auth-interactive-bg {
+  opacity: 1;
+}
+
+body:has(.auth-interactive-bg) .cl-rootBox {
+  z-index: 2;
+}
+
+body:has(.auth-interactive-bg) .cl-rootBox::before {
+  opacity: 0.12;
+}
+
+body:has(.auth-interactive-bg) .cl-rootBox::after {
+  opacity: 0.3;
+}
+
+.auth-interactive-bg__field,
+.auth-interactive-bg__rings,
+.auth-interactive-bg__glow {
+  position: absolute;
+  inset: -12%;
+  transform: translate3d(var(--auth-drift-x), var(--auth-drift-y), 0);
+  will-change: transform, background-position;
+}
+
+.auth-interactive-bg__field {
+  opacity: 0.82;
+  background:
+    radial-gradient(circle at var(--auth-pointer-x) var(--auth-pointer-y), rgba(255, 222, 165, 0.36), transparent 0 12rem),
+    radial-gradient(circle at calc(var(--auth-pointer-x) + 18%) calc(var(--auth-pointer-y) - 16%), rgba(158, 208, 203, 0.22), transparent 0 13rem),
+    radial-gradient(circle at calc(var(--auth-pointer-x) - 24%) calc(var(--auth-pointer-y) + 22%), rgba(108, 45, 148, 0.28), transparent 0 15rem);
+  filter: blur(12px) saturate(120%);
+  animation: authFieldBreath 11s ease-in-out infinite alternate;
+}
+
+.auth-interactive-bg__rings {
+  opacity: 0.62;
+  mix-blend-mode: multiply;
+  background:
+    repeating-radial-gradient(ellipse at 18% 26%, transparent 0 18px, rgba(9, 37, 72, 0.78) 20px 25px, transparent 28px 44px),
+    repeating-radial-gradient(ellipse at 82% 70%, transparent 0 20px, rgba(8, 46, 48, 0.72) 23px 30px, transparent 34px 50px),
+    repeating-radial-gradient(ellipse at var(--auth-pointer-x) var(--auth-pointer-y), transparent 0 28px, rgba(233, 193, 118, 0.22) 30px 34px, transparent 38px 66px);
+  background-position:
+    var(--auth-ripple-x) var(--auth-ripple-y),
+    calc(var(--auth-ripple-x) * -0.65) calc(var(--auth-ripple-y) * -0.65),
+    0 0;
+  filter: contrast(120%) saturate(120%);
+  animation: authRingDrift 18s ease-in-out infinite alternate;
+}
+
+.auth-interactive-bg__rings--two {
+  opacity: 0.38;
+  mix-blend-mode: screen;
+  transform: translate3d(calc(var(--auth-ripple-x) * 0.55), calc(var(--auth-ripple-y) * 0.55), 0) rotate(8deg) scale(1.08);
+  background:
+    repeating-radial-gradient(ellipse at 68% 18%, transparent 0 22px, rgba(197, 160, 89, 0.22) 24px 28px, transparent 32px 58px),
+    repeating-radial-gradient(ellipse at 28% 88%, transparent 0 18px, rgba(158, 208, 203, 0.16) 21px 26px, transparent 29px 48px);
+}
+
+.auth-interactive-bg__glow {
+  inset: 0;
+  opacity: 0.9;
+  transform: none;
+  background:
+    radial-gradient(circle at var(--auth-pointer-x) var(--auth-pointer-y), rgba(255, 255, 255, 0.11), transparent 0 10rem),
+    linear-gradient(180deg, rgba(0, 0, 0, 0.02), rgba(0, 0, 0, 0.45));
+}
+
+.cl-rootBox:hover ~ .auth-interactive-bg,
+.cl-rootBox:focus-within ~ .auth-interactive-bg {
+  opacity: 1;
+}
+
+@keyframes authFieldBreath {
+  from {
+    filter: blur(12px) saturate(115%) hue-rotate(0deg);
+  }
+  to {
+    filter: blur(16px) saturate(140%) hue-rotate(10deg);
+  }
+}
+
+@keyframes authRingDrift {
+  from {
+    transform: translate3d(calc(var(--auth-drift-x) * 0.55), calc(var(--auth-drift-y) * 0.55), 0) rotate(-2deg) scale(1.02);
+  }
+  to {
+    transform: translate3d(calc(var(--auth-drift-x) * -0.25), calc(var(--auth-drift-y) * -0.25), 0) rotate(3deg) scale(1.06);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auth-interactive-bg__field,
+  .auth-interactive-bg__rings {
+    animation: none;
+  }
+}
