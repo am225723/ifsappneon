@@ -71,9 +71,11 @@
 }
 
 @keyframes float {
-  0% { transform: translateY(0px) rotate(0deg); }
-  50% { transform: translateY(-20px) rotate(2deg); }
-  100% { transform: translateY(0px) rotate(0deg); }
+  0% { transform: translate3d(0, 0, 0) rotate(0deg); }
+  25% { transform: translate3d(9px, -12px, 0) rotate(1.4deg); }
+  50% { transform: translate3d(-6px, -21px, 0) rotate(2deg); }
+  75% { transform: translate3d(-10px, -8px, 0) rotate(-1deg); }
+  100% { transform: translate3d(0, 0, 0) rotate(0deg); }
 }
 
 .cursor-pointer-hand:hover {
@@ -104,6 +106,38 @@ img[alt="Intrinsic Therapeutic Solutions Logo"] {
   max-height: 260px !important;
   object-fit: contain !important;
   background: transparent !important;
+  pointer-events: auto !important;
+  cursor: pointer !important;
+  will-change: transform, filter;
+  transform-origin: center;
+  filter:
+    drop-shadow(0 0 16px rgba(255, 222, 165, 0.54))
+    drop-shadow(0 0 34px rgba(197, 160, 89, 0.42))
+    drop-shadow(0 0 56px rgba(14, 99, 118, 0.28)) !important;
+  transition: transform 220ms ease, filter 220ms ease;
+}
+
+#gravity-center:hover,
+img[alt="Intrinsic Therapeutic Solutions Logo"]:hover {
+  filter:
+    drop-shadow(0 0 20px rgba(255, 222, 165, 0.72))
+    drop-shadow(0 0 46px rgba(197, 160, 89, 0.62))
+    drop-shadow(0 0 74px rgba(110, 47, 166, 0.34)) !important;
+}
+
+#gravity-center:active,
+img[alt="Intrinsic Therapeutic Solutions Logo"]:active {
+  transform: scale(1.055) rotate(-1.2deg) !important;
+  filter:
+    drop-shadow(0 0 26px rgba(255, 244, 211, 0.95))
+    drop-shadow(0 0 58px rgba(233, 193, 118, 0.8))
+    drop-shadow(0 0 90px rgba(95, 214, 202, 0.45)) !important;
+  animation: logoHeldPulse 850ms ease-in-out infinite alternate;
+}
+
+@keyframes logoHeldPulse {
+  from { transform: scale(1.045) rotate(-1deg) translate3d(-2px, 0, 0); }
+  to { transform: scale(1.085) rotate(1.1deg) translate3d(2px, -3px, 0); }
 }
 
 #gravity-center + h1 {
@@ -120,4 +154,33 @@ img[alt="Intrinsic Therapeutic Solutions Logo"] {
   font-family: 'Noto Serif', Georgia, serif !important;
   letter-spacing: 0.22em !important;
   font-weight: 500 !important;
+}
+
+/* Scroll-performance mode for the login page: reduce expensive blur/shadow/filter repainting while the user is actively scrolling. */
+.ifs-login-is-scrolling #gravity-center,
+.ifs-login-is-scrolling img[alt="Intrinsic Therapeutic Solutions Logo"] {
+  animation-play-state: paused !important;
+  filter: drop-shadow(0 0 20px rgba(197, 160, 89, 0.35)) !important;
+}
+
+.ifs-login-is-scrolling .backdrop-blur-xl,
+.ifs-login-is-scrolling .backdrop-blur-md {
+  backdrop-filter: blur(6px) !important;
+  -webkit-backdrop-filter: blur(6px) !important;
+}
+
+.ifs-login-is-scrolling .shadow-2xl,
+.ifs-login-is-scrolling .shadow-xl,
+.ifs-login-is-scrolling .drop-shadow-lg,
+.ifs-login-is-scrolling .drop-shadow-md {
+  filter: none !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.32) !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .floating-element,
+  #gravity-center:active,
+  img[alt="Intrinsic Therapeutic Solutions Logo"]:active {
+    animation: none !important;
+  }
 }
