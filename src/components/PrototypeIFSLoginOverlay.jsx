@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import FinalIFSLoginPage from './FinalIFSLoginPage.jsx';
+import SundayBestLoginPage from './SundayBestLoginPage.jsx';
 
 export default function PrototypeIFSLoginOverlay() {
   const isSignInPath = window.location.pathname.startsWith('/sign-in');
@@ -34,7 +34,7 @@ export default function PrototypeIFSLoginOverlay() {
 
   return (
     <div className="fixed inset-0 z-[99999] overflow-y-auto bg-[#060e20]">
-      <FinalIFSLoginPage />
+      <SundayBestLoginPage />
     </div>
   );
 }
