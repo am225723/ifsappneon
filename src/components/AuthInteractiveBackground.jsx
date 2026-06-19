@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import './AuthInteractiveBackground.css';
 
 export default function AuthInteractiveBackground() {
   const backgroundRef = useRef(null);
