@@ -1,5 +1,5 @@
 import { useAuth } from '@clerk/clerk-react';
-import PrototypeIFSLoginPage from './PrototypeIFSLoginPage.jsx';
+import FinalIFSLoginPage from './FinalIFSLoginPage.jsx';
 
 export default function PrototypeIFSLoginOverlay() {
   const { isLoaded, isSignedIn } = useAuth();
@@ -11,7 +11,7 @@ export default function PrototypeIFSLoginOverlay() {
 
   return (
     <div className="fixed inset-0 z-[9999] overflow-y-auto bg-[#060e20]">
-      <PrototypeIFSLoginPage />
+      <FinalIFSLoginPage />
     </div>
   );
 }
