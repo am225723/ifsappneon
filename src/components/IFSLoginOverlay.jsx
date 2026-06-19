@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '@clerk/clerk-react';
 import IFSLoginPage from './IFSLoginPage.jsx';
+import './IFSLoginOverlay.css';
 
 function getCurrentPath() {
   return window.location.pathname;
