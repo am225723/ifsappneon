@@ -71,60 +71,41 @@ function WebGLAtmosphere() {
         return 130.0 * dot(m, g);
       }
 
-      float fbm(vec2 p) {
-        float value = 0.0;
-        float amp = 0.5;
-        for (int i = 0; i < 5; i++) {
-          value += amp * snoise(p);
-          p = mat2(1.72, 1.08, -1.08, 1.72) * p + 0.19;
-          amp *= 0.52;
-        }
-        return value;
-      }
-
       void main() {
-        vec2 uv = gl_FragCoord.xy / u_resolution.xy;
-        vec2 st = uv;
-        st.x *= u_resolution.x / u_resolution.y;
+        vec2 st = gl_FragCoord.xy/u_resolution.xy;
+        st.x *= u_resolution.x/u_resolution.y;
 
-        vec2 mouse = u_mouse / u_resolution.xy;
-        mouse.x *= u_resolution.x / u_resolution.y;
-        vec2 center = vec2(0.5 * u_resolution.x / u_resolution.y, 0.5);
+        vec2 mouse = u_mouse/u_resolution.xy;
+        mouse.x *= u_resolution.x/u_resolution.y;
 
-        float t = u_time * 0.075;
-        vec2 p = st * 1.45;
-        vec2 mouseDrift = (mouse - center) * 0.12;
-        p += mouseDrift;
+        vec2 pos = st * 3.0;
+        float t = u_time * 0.2;
 
-        float slow = fbm(p + vec2(t * 0.35, -t * 0.18));
-        float veil = fbm(p * 1.45 + vec2(slow * 0.58 - t * 0.22, slow * 0.35 + t * 0.28));
-        float silk = fbm(p * 2.15 + vec2(veil * 0.38 + t * 0.12, slow * 0.42 - t * 0.2));
+        float dist = distance(st, mouse);
+        vec2 dir = st - mouse;
+        if (length(dir) > 0.0) {
+          dir = normalize(dir);
+        }
+        pos += dir * exp(-dist * 3.0) * 0.5;
 
-        float bands = smoothstep(-0.42, 0.82, slow * 0.75 + veil * 0.42);
-        float sheen = smoothstep(0.18, 0.92, silk * 0.55 + veil * 0.28);
-        float goldVein = smoothstep(0.50, 0.82, veil + 0.22 * sin((st.x + st.y) * 2.6 + t * 2.0));
-        goldVein *= 0.32;
+        float q = snoise(pos + t * 0.5);
+        vec2 r = vec2(snoise(pos + q + t * 0.3), snoise(pos + q - t * 0.2));
+        float f = snoise(pos + r * 2.0 + t);
 
-        vec3 deepTeal = vec3(0.015, 0.095, 0.105);
-        vec3 blueInk = vec3(0.035, 0.125, 0.255);
-        vec3 plum = vec3(0.185, 0.095, 0.275);
-        vec3 softGold = vec3(0.78, 0.58, 0.29);
-        vec3 antiqueRose = vec3(0.36, 0.23, 0.31);
+        vec3 colorGreen = vec3(0.05, 0.17, 0.18);
+        vec3 colorBlue = vec3(0.10, 0.25, 0.50);
+        vec3 colorPurple = vec3(0.30, 0.15, 0.45);
+        vec3 colorGold = vec3(0.92, 0.74, 0.46);
 
-        vec3 color = mix(deepTeal, blueInk, smoothstep(0.18, 0.88, bands));
-        color = mix(color, plum, smoothstep(0.28, 0.9, veil) * 0.55);
-        color = mix(color, antiqueRose, smoothstep(0.35, 0.84, silk) * 0.16);
-        color = mix(color, softGold, goldVein + sheen * 0.08);
+        float n1 = clamp(q * 0.5 + 0.5, 0.0, 1.0);
+        float n2 = clamp(f * 0.5 + 0.5, 0.0, 1.0);
 
-        float spotlight = 1.0 - smoothstep(0.0, 0.95, distance(uv, vec2(0.5, 0.42)));
-        color += vec3(0.12, 0.105, 0.07) * spotlight * 0.32;
+        vec3 mix1 = mix(colorGreen, colorBlue, smoothstep(0.3, 0.7, n1));
+        vec3 mix2 = mix(colorPurple, colorGold, smoothstep(0.3, 0.7, n1));
+        vec3 color = mix(mix1, mix2, smoothstep(0.3, 0.7, n2));
 
-        float mouseGlow = 1.0 - smoothstep(0.0, 0.42, distance(st, mouse));
-        color += vec3(0.22, 0.16, 0.08) * mouseGlow * 0.11;
-
-        float vignette = smoothstep(0.98, 0.2, distance(uv, vec2(0.5, 0.5)));
-        color *= 0.48 + vignette * 0.76;
-        color = pow(color, vec3(0.92));
+        float vignette = 1.0 - smoothstep(0.4, 1.6, distance(gl_FragCoord.xy/u_resolution.xy, vec2(0.5)));
+        color *= vignette;
 
         gl_FragColor = vec4(color, 1.0);
       }
