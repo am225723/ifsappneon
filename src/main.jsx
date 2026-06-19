@@ -5,7 +5,7 @@ import { Capacitor } from '@capacitor/core'
 import { SplashScreen } from '@capacitor/splash-screen'
 import { StatusBar } from '@capacitor/status-bar'
 import { Keyboard } from '@capacitor/keyboard'
-import './index.css'
+import './global.css'
 import App from './App.jsx'
 import AuthInteractiveBackground from './components/AuthInteractiveBackground.jsx'
 import IFSLoginOverlay from './components/IFSLoginOverlay.jsx'
@@ -44,10 +44,6 @@ const app = (
     )}
   </StrictMode>
 );
-
-if (!clerkPublishableKey) {
-  console.warn('VITE_CLERK_PUBLISHABLE_KEY is missing. Clerk UI will be disabled and API auth may require ALLOW_PIN_AUTH_WITHOUT_CLERK=true.');
-}
 
 createRoot(document.getElementById('root')).render(app)
 
