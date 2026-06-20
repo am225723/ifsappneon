@@ -19,9 +19,18 @@ Duplicate basename found: `attachment-assessment-intro.mp3`.
 | Audio path | SHA-256 | References found | Recommendation |
 | --- | --- | --- | --- |
 | `public/audio/assessments/attachment-assessment-intro.mp3` | `6c0c5f07497340157ae1882a145b657a68ac05e7b95d12fdea940a7101221a4b` | Active assessment audio reference in `src/pages/Assessments.jsx`; recording-script references in `public/docs/assessment-recording-scripts.md`; filename references in `public/voice-scripts.txt`. | Keep. This is the active assessment-domain asset. |
-| `public/audio/meditations/attachment-assessment-intro.mp3` | `6c0c5f07497340157ae1882a145b657a68ac05e7b95d12fdea940a7101221a4b` | No active `src` reference found by basename search; basename appears in shared public documentation/script text. | Remove later only after manual approval. The file is checksum-identical to the active assessment asset, but it sits in a separate audio domain and was not deleted in this pass. |
+| `public/audio/meditations/attachment-assessment-intro.mp3` | `6c0c5f07497340157ae1882a145b657a68ac05e7b95d12fdea940a7101221a4b` | No active `src` reference found by basename search; basename appears in shared public documentation/script text. | Approved in Phase 18H and deleted after reference verification. |
 
-Result: the duplicate basename is a true byte-for-byte duplicate by checksum, but only the assessment path is actively referenced by app code. No audio files were deleted in Phase 18G because the meditations-domain copy may be a legacy/static asset requiring product-owner approval.
+Result: the duplicate basename is a true byte-for-byte duplicate by checksum, but only the assessment path is actively referenced by app code. No audio files were deleted in Phase 18G because the meditations-domain copy may be a legacy/static asset requiring product-owner approval. Phase 18H later approved and completed deletion of the meditations-domain duplicate after final reference verification.
+
+## Phase 18H approved duplicate audio cleanup
+
+- Approved duplicate cleanup completed: `public/audio/meditations/attachment-assessment-intro.mp3` was deleted.
+- Canonical asset retained: `public/audio/assessments/attachment-assessment-intro.mp3`.
+- SHA-256 verification before deletion confirmed both files matched exactly: `6c0c5f07497340157ae1882a145b657a68ac05e7b95d12fdea940a7101221a4b`.
+- Reference check before deletion found no active app-code references to the meditations-domain path; the active assessment reference remains `src/pages/Assessments.jsx` using `/audio/assessments/attachment-assessment-intro.mp3`.
+- Final asset reference verification found no remaining meditations-domain references to the deleted file.
+- Build verification after deletion passed.
 
 ## Phase 18G route alias policy review
 
@@ -75,5 +84,9 @@ Historical warning: documentation references are historical only. Do not impleme
 
 ## Phase 18G remaining deletion candidates requiring approval
 
-- `public/audio/meditations/attachment-assessment-intro.mp3` — byte-for-byte duplicate of `public/audio/assessments/attachment-assessment-intro.mp3`, but not removed because it is a meaningful public audio asset in a separate domain.
 - Historical documentation/data medication mentions — keep unless product owners approve repository-text cleanup beyond active UI/code removal.
+
+## Phase 18H remaining deletion candidates requiring approval
+
+- No remaining duplicate audio deletion candidates identified by this phase.
+- Historical documentation/data medication mentions remain out of scope and should be kept unless product owners approve repository-text cleanup beyond active UI/code removal.
