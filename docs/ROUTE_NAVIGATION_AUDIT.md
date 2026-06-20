@@ -332,3 +332,21 @@ Tools Directory
 - Tools Directory and navigation remain role-aware: Curriculum / IFS Path stays first in Core IFS Path, Life Integration appears as daily practice support, and Admin/Advisor tools remain role-limited and hidden from client-only navigation.
 - Security wrappers and API authorization patterns remain preserved, including client-only route wrappers, Advisor/Admin role wrappers, admin/supervisor checks, feature gates, self-owned data access, assigned-client authorization, and protected Advisor notes.
 - No SQL, migrations, or backfill scripts were added or run for Phase 17E.
+
+## Phase 18E Persistent Suggestions + Advisor Inner System Map Notes
+
+- SQL migration: `neon/034_create_ifs_part_suggestion_state.sql` with Supabase parity migration `supabase/migrations/038_create_ifs_part_suggestion_state.sql`.
+- New table: `public.ifs_part_suggestion_state` stores per-client review state for deterministic Inner System Map part and relationship suggestions.
+- Suggestion statuses: `dismissed`, `accepted`, `merged`, and `restored`.
+- Stable suggestion ID strategy: part IDs use `part:{sourceType}:{sourceId}:{normalizedName}:{normalizedType}`; relationship IDs use `relationship:{sourceType}:{sourceId}:{fromKey}:{toKey}:{relationshipType}`. Missing source IDs are derived from module IDs, row IDs, evidence summaries, legacy IDs, or relationship endpoints.
+- Dismissed suggestions stay hidden across reloads unless restored from the Suggested Parts panel.
+- Accepted and merged suggestions are persisted so they do not reappear as new suggestions even after edited names or merge decisions.
+- Relationship suggestion state persists with the same table and type scoping as part suggestion state.
+- Advisor read-only route: `/advisor/inner-system-map/:clientId`.
+- Advisor assignment scoping: the Advisor view checks active assigned clients for advisor/therapist users before loading the map; admin/supervisor elevated access follows existing role conventions.
+- Client map remains editable at canonical `/parts-relationships`; legacy `/parts-mapping`, `/parts-map`, and `/parts-relationship-map` continue to redirect.
+- Advisor notes exposure: the Advisor map intentionally does not query `ifs_therapist_notes` or render Advisor notes.
+- Medication: no medication routes, cards, or features were added.
+- Unsafe global client loading result: no new unscoped client loading was added; suggestion state helpers require explicit `clientId`, and the Advisor map uses assignment-scoped client access.
+- Build result: run `npm run build` after applying this phase.
+- SQL/manual migration notes: apply the new migration manually if the deployment workflow does not automatically run Neon/Supabase migrations. Do not backfill old session-local dismissals and do not run `neon/999_backfill_therapist_assignments.sql`.

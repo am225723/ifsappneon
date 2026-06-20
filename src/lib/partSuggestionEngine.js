@@ -20,6 +20,19 @@ export function normalizePartSuggestionName(value) {
   return String(value || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
 }
 
+function stableToken(value, fallback = 'unknown') {
+  const normalized = normalizePartSuggestionName(value).replace(/\s+/g, '-');
+  return normalized || fallback;
+}
+
+function stablePartSuggestionId(suggestion) {
+  return `part:${stableToken(suggestion.source || suggestion.sourceType, 'source')}:${stableToken(suggestion.sourceId || suggestion.source_id || suggestion.evidenceSummary || suggestion.name, 'evidence')}:${stableToken(suggestion.name, 'part')}:${stableToken(suggestion.type, 'unknown')}`;
+}
+
+function stableRelationshipSuggestionId({ source, sourceId, fromName, toName, relationshipType }) {
+  return `relationship:${stableToken(source, 'source')}:${stableToken(sourceId || `${fromName}-${toName}`, 'evidence')}:${stableToken(fromName, 'from')}:${stableToken(toName, 'to')}:${stableToken(relationshipType, 'unknown')}`;
+}
+
 function textFrom(value, depth = 0) {
   if (!value || depth > 3) return '';
   if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') return String(value);
@@ -42,7 +55,7 @@ function addSuggestion(map, suggestion, existingParts = []) {
   const duplicate = existingParts.some((part) => normalizePartSuggestionName(part.part_name || part.name) === normalized)
     || existingParts.some((part) => String(part.part_type || part.type || '').toLowerCase() === suggestion.type && normalizePartSuggestionName(part.role) === normalizePartSuggestionName(suggestion.role));
   if (duplicate) return;
-  const key = `${normalized}:${suggestion.type}:${suggestion.sourceId || suggestion.source}`;
+  const key = stablePartSuggestionId(suggestion);
   if (!map.has(key)) map.set(key, { id: key, confidence: 'possible signal', ...suggestion });
 }
 
@@ -107,12 +120,16 @@ export function buildPartSuggestions({ assessmentRows = [], interactiveRows = []
   const parts = Array.from(suggestions.values()).slice(0, 24);
   const relationshipSuggestions = [];
   const names = new Set(parts.map((part) => part.name));
+  const partIdByName = new Map(existingParts.map((part) => [normalizePartSuggestionName(part.part_name || part.name), String(part.id)]));
   const existingRelKeys = new Set(existingRelationships.map((rel) => `${rel.from_part_id}:${rel.relationship_type}:${rel.to_part_id}`));
   const pushRel = (fromName, toName, relationshipType, label, source = 'suggestion') => {
     if (!names.has(fromName) || !names.has(toName) || fromName === toName) return;
-    const key = `${fromName}:${relationshipType}:${toName}`;
-    if (existingRelKeys.has(key) || relationshipSuggestions.some((rel) => rel.id === key)) return;
-    relationshipSuggestions.push({ id: key, fromName, toName, relationshipType, label, source, confidence: 'possible signal', evidenceSummary: `${fromName} may ${label.toLowerCase()} ${toName}.` });
+    const fromExistingId = partIdByName.get(normalizePartSuggestionName(fromName));
+    const toExistingId = partIdByName.get(normalizePartSuggestionName(toName));
+    if (fromExistingId && toExistingId && existingRelKeys.has(`${fromExistingId}:${relationshipType}:${toExistingId}`)) return;
+    const key = stableRelationshipSuggestionId({ source, sourceId: `${fromName}-${toName}`, fromName, toName, relationshipType });
+    if (relationshipSuggestions.some((rel) => rel.id === key)) return;
+    relationshipSuggestions.push({ id: key, fromName, toName, relationshipType, label, source, sourceId: `${fromName}-${toName}`, confidence: 'possible signal', evidenceSummary: `${fromName} may ${label.toLowerCase()} ${toName}.` });
   };
   parts.filter((p) => p.type !== 'self').forEach((part) => pushRel('Self', part.name, 'supports', 'supports', part.source));
   pushRel('Manager Part', 'Part carrying shame', 'protects', 'protects', 'assessment');

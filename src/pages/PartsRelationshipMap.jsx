@@ -12,6 +12,16 @@ import { loadMyIFSProfile } from '../lib/myIFSProfile';
 import { importLegacyPartsMap, previewLegacyPartsImport } from '../lib/legacyPartsImport';
 import { buildPartSuggestions, normalizePartSuggestionName } from '../lib/partSuggestionEngine';
 import {
+  acceptPartSuggestion,
+  acceptRelationshipSuggestion,
+  applySuggestionState,
+  dismissPartSuggestion,
+  dismissRelationshipSuggestion,
+  loadPartSuggestionState,
+  mergePartSuggestion as saveMergedPartSuggestion,
+  restorePartSuggestion
+} from '../lib/partSuggestionState';
+import {
   createPartRelationship,
   deletePartRelationship,
   loadPartRelationships,
@@ -56,7 +66,8 @@ export default function PartsRelationshipMap() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
-  const [partSuggestions, setPartSuggestions] = useState({ parts: [], relationships: [] });
+  const [partSuggestions, setPartSuggestions] = useState({ parts: [], relationships: [], dismissedParts: [], dismissedRelationships: [], acceptedCount: 0, mergedCount: 0, dismissedCount: 0 });
+  const [suggestionWarning, setSuggestionWarning] = useState('');
 
   const mappedParts = useMemo(
     () => parts.map((part, index) => normalizeMapPart(part, index, localPositions)),
@@ -100,7 +111,8 @@ export default function PartsRelationshipMap() {
       { data: interactiveRows, error: interactiveError },
       { data: assessmentRows, error: assessmentError },
       { data: lifeRows, error: lifeError },
-      { data: journalRows, error: journalError }
+      { data: journalRows, error: journalError },
+      { data: suggestionStateRows, error: suggestionStateError }
     ] = await Promise.all([
       supabase
         .from('ifs_parts')
@@ -138,7 +150,8 @@ export default function PartsRelationshipMap() {
         .select('id, client_id, title, content, summary, created_at, updated_at')
         .eq('client_id', effectiveClientId)
         .order('updated_at', { ascending: false })
-        .limit(20)
+        .limit(20),
+      loadPartSuggestionState({ clientId: effectiveClientId })
     ]);
 
     const loadErrors = [
@@ -148,7 +161,8 @@ export default function PartsRelationshipMap() {
       interactiveError && { table: 'ifs_interactive_data', status: getSafeErrorStatus(interactiveError) },
       assessmentError && { table: 'ifs_assessment_results', status: getSafeErrorStatus(assessmentError) },
       lifeError && { table: 'ifs_life_integration_reflections', status: getSafeErrorStatus(lifeError) },
-      journalError && { table: 'ifs_journal_entries', status: getSafeErrorStatus(journalError) }
+      journalError && { table: 'ifs_journal_entries', status: getSafeErrorStatus(journalError) },
+      suggestionStateError && { table: 'ifs_part_suggestion_state', status: getSafeErrorStatus(suggestionStateError) }
     ].filter(Boolean);
 
     if (loadErrors.length) {
@@ -164,7 +178,7 @@ export default function PartsRelationshipMap() {
     setParts(partRows || []);
     setRelationships(relationshipRows || []);
     setLegacyPartsMap(partsMapRow || null);
-    setPartSuggestions(buildPartSuggestions({
+    const builtSuggestions = buildPartSuggestions({
       assessmentRows: (assessmentRows || []).map((row) => ({ ...row, module_id: row.assessment_type || row.module_id, data: row.data || row.results || row })),
       interactiveRows: interactiveRows || [],
       lifeIntegrationRows: lifeRows || [],
@@ -172,7 +186,8 @@ export default function PartsRelationshipMap() {
       legacyPartsMap: partsMapRow || null,
       existingParts: partRows || [],
       existingRelationships: relationshipRows || []
-    }));
+    });
+    setPartSuggestions(applySuggestionState(builtSuggestions, suggestionStateRows || []));
     setLegacyImportPreview(null);
     setLoading(false);
   }, []);
@@ -317,12 +332,19 @@ export default function PartsRelationshipMap() {
     setLegacyImportLoading(false);
   };
 
+  const persistSuggestionState = async (action) => {
+    const { error: stateError } = await action();
+    if (stateError) setSuggestionWarning('Suggestion review state could not be saved. Your current page choice will still apply for this session.');
+    else setSuggestionWarning('');
+  };
+
   const createSuggestedPart = async (suggestion) => {
     if (!effectiveClientId || !suggestion?.name) return null;
     const normalized = normalizePartSuggestionName(suggestion.name);
     const existing = parts.find((part) => normalizePartSuggestionName(part.part_name || part.name) === normalized);
     if (existing) {
       setSelectedPartId(existing.id);
+      await persistSuggestionState(() => acceptPartSuggestion({ clientId: effectiveClientId, suggestionId: suggestion.id, targetPartId: existing.id, metadata: { matchedExisting: true } }));
       return existing;
     }
     setSaving(true);
@@ -347,6 +369,7 @@ export default function PartsRelationshipMap() {
     if (data) {
       setParts((prev) => [data, ...prev]);
       setSelectedPartId(data.id);
+      await persistSuggestionState(() => acceptPartSuggestion({ clientId: effectiveClientId, suggestionId: suggestion.id, targetPartId: data.id, metadata: { source: suggestion.source, sourceId: suggestion.sourceId } }));
     }
     setSaving(false);
     return data;
@@ -368,6 +391,7 @@ export default function PartsRelationshipMap() {
     if (data) {
       setParts((prev) => prev.map((part) => (String(part.id) === String(data.id) ? data : part)));
       setSelectedPartId(data.id);
+      await persistSuggestionState(() => saveMergedPartSuggestion({ clientId: effectiveClientId, suggestionId: suggestion.id, targetPartId, metadata: { source: suggestion.source, sourceId: suggestion.sourceId } }));
     }
     setSaving(false);
   };
@@ -387,7 +411,10 @@ export default function PartsRelationshipMap() {
       description: suggestion.evidenceSummary || ''
     });
     if (relError) setError(relError.message || 'Unable to add suggested relationship.');
-    if (data) setRelationships((prev) => [data, ...prev]);
+    if (data) {
+      setRelationships((prev) => [data, ...prev]);
+      await persistSuggestionState(() => acceptRelationshipSuggestion({ clientId: effectiveClientId, suggestionId: suggestion.id, targetRelationshipId: data.id, metadata: { source: suggestion.source, sourceId: suggestion.sourceId } }));
+    }
     setSaving(false);
   };
 
@@ -448,14 +475,15 @@ export default function PartsRelationshipMap() {
           <p className="text-xs font-bold uppercase tracking-[0.22em] text-brand-emerald-700 dark:text-brand-emerald-100">Inner System Map</p>
           <h1 className="mt-2 text-3xl lg:text-4xl font-serif text-brand-stone-900 dark:text-slate-100">My Inner System Map</h1>
           <p className="mt-3 max-w-3xl text-brand-stone-700 dark:text-slate-300">
-            Your personal map of your parts, their relationships, and their connection to Self-energy.
+            Your personal map of your parts, their relationships, and their connection to Self-energy. Your Advisor can review this map to support your work together.
           </p>
           <p className="mt-3 rounded-2xl bg-brand-emerald-50 dark:bg-emerald-950/40 px-4 py-3 text-sm text-brand-emerald-900 dark:text-emerald-100">
-            This map belongs to you. Keep only what feels true for your inner system. Relationships can change over time, and there is no right or wrong map.
+            This map belongs to you. Keep only what feels true for your inner system. Suggestions come from your assessments, curriculum reflections, and daily-life practice responses. You choose which suggestions become part of your map.
           </p>
         </section>
 
         {error && <div className="rounded-2xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</div>}
+        {suggestionWarning && <div className="rounded-2xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">{suggestionWarning}</div>}
 
 
         {showNoLegacyImportMessage && (
@@ -646,7 +674,7 @@ export default function PartsRelationshipMap() {
                 <p className="mt-1">{selectedRelationships.length} relationship line{selectedRelationships.length === 1 ? '' : 's'} currently include this part.</p>
               </section>
             )}
-            <PartSuggestionPanel suggestions={partSuggestions.parts} relationshipSuggestions={partSuggestions.relationships} existingParts={parts} onAddPart={createSuggestedPart} onMergePart={mergeSuggestedPart} onAddRelationship={addSuggestedRelationship} disabled={saving} />
+            <PartSuggestionPanel suggestions={partSuggestions.parts} relationshipSuggestions={partSuggestions.relationships} dismissedSuggestions={partSuggestions.dismissedParts} dismissedRelationshipSuggestions={partSuggestions.dismissedRelationships} existingParts={parts} onAddPart={createSuggestedPart} onMergePart={mergeSuggestedPart} onDismissPart={(suggestion) => persistSuggestionState(() => dismissPartSuggestion({ clientId: effectiveClientId, suggestionId: suggestion.id }))} onRestorePart={(suggestion) => persistSuggestionState(() => restorePartSuggestion({ clientId: effectiveClientId, suggestionId: suggestion.id, suggestionType: 'part' })).then(loadMap)} onAddRelationship={addSuggestedRelationship} onDismissRelationship={(suggestion) => persistSuggestionState(() => dismissRelationshipSuggestion({ clientId: effectiveClientId, suggestionId: suggestion.id }))} onRestoreRelationship={(suggestion) => persistSuggestionState(() => restorePartSuggestion({ clientId: effectiveClientId, suggestionId: suggestion.id, suggestionType: 'relationship' })).then(loadMap)} disabled={saving} />
           </aside>
         </div>
       </div>

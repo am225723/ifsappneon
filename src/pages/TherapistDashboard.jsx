@@ -2934,6 +2934,7 @@ const TherapistDashboard = () => {
                       ['Draft Session Note', () => { setDraftNotePrefill({ clientId: selectedWorkspaceClient.id, sessionDate: new Date().toISOString().split('T')[0] }); setActiveTab('clinical-notes'); }],
                       ['Practice Generator', () => navigate('/advisor-homework')],
                       ['Open Growth Goals', () => setActiveTab('treatment-plans')],
+                      ['Open Inner System Map', () => navigate(`/advisor/inner-system-map/${selectedWorkspaceClient.id}`)],
                       ['Open Advisor Notes', () => { setNoteForm((form) => ({ ...form, clientId: selectedWorkspaceClient.id })); setActiveTab('clinical-notes'); }],
                       ['Start Live Guided Practice', () => navigate('/live-co-therapy')],
                       ['View Healing Timeline', () => { setSelectedInsightClient(selectedWorkspaceClient.id); setActiveTab('insights'); }],
@@ -3136,7 +3137,7 @@ const TherapistDashboard = () => {
                     ['Open Growth Goals', () => setActiveTab('treatment-plans')],
                     ['Open Advisor Notes', () => { setNoteForm((form) => ({ ...form, clientId: selectedWorkspaceClient.id })); setActiveTab('clinical-notes'); }],
                     ['Draft Session Note', () => { setDraftNotePrefill({ clientId: selectedWorkspaceClient.id, sessionDate: new Date().toISOString().split('T')[0] }); setActiveTab('clinical-notes'); }],
-                    ['View Inner System Map', () => setActiveTab('insights')],
+                    ['View Client Inner System', () => navigate(`/advisor/inner-system-map/${selectedWorkspaceClient.id}`)],
                     ['View Healing Timeline', () => setActiveTab('insights')],
                     ['Start Live Guided Practice', () => navigate('/live-co-therapy')],
                     ['Generate Report', () => navigate('/advisor-reports')]
