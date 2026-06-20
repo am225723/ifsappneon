@@ -3,19 +3,25 @@ import { CheckCircle2, Edit3, GitMerge, Link2, Plus, X } from 'lucide-react';
 
 const PART_TYPES = ['protector', 'manager', 'firefighter', 'exile', 'self', 'unknown'];
 
-export default function PartSuggestionPanel({ suggestions = [], relationshipSuggestions = [], existingParts = [], onAddPart, onMergePart, onAddRelationship, disabled = false }) {
+export default function PartSuggestionPanel({ suggestions = [], relationshipSuggestions = [], dismissedSuggestions = [], dismissedRelationshipSuggestions = [], existingParts = [], onAddPart, onMergePart, onDismissPart, onRestorePart, onAddRelationship, onDismissRelationship, onRestoreRelationship, readOnly = false, disabled = false }) {
   const [dismissed, setDismissed] = useState(new Set());
+  const [showDismissed, setShowDismissed] = useState(false);
   const [editing, setEditing] = useState(null);
   const [mergeTargets, setMergeTargets] = useState({});
   const visibleParts = useMemo(() => suggestions.filter((item) => !dismissed.has(item.id)), [suggestions, dismissed]);
   const visibleRelationships = useMemo(() => relationshipSuggestions.filter((item) => !dismissed.has(item.id)), [relationshipSuggestions, dismissed]);
+  const hiddenDismissedCount = dismissedSuggestions.length + dismissedRelationshipSuggestions.length;
 
-  const dismiss = (id) => setDismissed((prev) => new Set([...prev, id]));
+  const dismiss = async (item, type = 'part') => {
+    setDismissed((prev) => new Set([...prev, item.id]));
+    if (type === 'relationship') await onDismissRelationship?.(item);
+    else await onDismissPart?.(item);
+  };
   const startEdit = (suggestion) => setEditing({ ...suggestion });
   const addEdited = async () => {
     if (!editing) return;
     await onAddPart?.(editing);
-    dismiss(editing.id);
+    setDismissed((prev) => new Set([...prev, editing.id]));
     setEditing(null);
   };
 
@@ -29,8 +35,15 @@ export default function PartSuggestionPanel({ suggestions = [], relationshipSugg
         <CheckCircle2 className="h-5 w-5 text-brand-emerald-700" />
       </div>
       <p className="mt-2 text-sm text-brand-stone-600 dark:text-slate-400">
-        These suggestions come from your assessments, curriculum reflections, and daily-life practice responses. Review them before adding them to your Inner System Map.
+        Suggestions come from your assessments, curriculum reflections, and daily-life practice responses. You choose which suggestions become part of your map.
       </p>
+      <p className="mt-2 text-xs text-brand-stone-500 dark:text-slate-500">Dismissed suggestions will stay hidden unless you restore them.</p>
+      {hiddenDismissedCount > 0 && (
+        <div className="mt-3 flex items-center justify-between gap-2 rounded-2xl bg-brand-stone-50 p-2 text-xs dark:bg-slate-900">
+          <span>{hiddenDismissedCount} dismissed suggestion{hiddenDismissedCount === 1 ? '' : 's'} hidden.</span>
+          <button type="button" onClick={() => setShowDismissed((prev) => !prev)} className="font-semibold text-brand-emerald-700 dark:text-brand-emerald-100">{showDismissed ? 'Hide Dismissed' : 'Show Dismissed'}</button>
+        </div>
+      )}
 
       {editing && (
         <div className="mt-4 rounded-2xl border border-brand-gold-200 bg-brand-gold-50 p-3 dark:border-brand-gold-900/50 dark:bg-brand-gold-950/20">
@@ -55,15 +68,15 @@ export default function PartSuggestionPanel({ suggestions = [], relationshipSugg
                 <p className="font-semibold text-brand-stone-900 dark:text-slate-100">{suggestion.name}</p>
                 <p className="text-xs capitalize text-brand-stone-500 dark:text-slate-500">{suggestion.type || 'unknown'} • {suggestion.sourceLabel || suggestion.source} • {suggestion.confidence}</p>
               </div>
-              <button type="button" onClick={() => dismiss(suggestion.id)} className="text-brand-stone-400 hover:text-brand-stone-700"><X className="h-4 w-4" /></button>
+              {!readOnly && <button type="button" onClick={() => dismiss(suggestion, 'part')} className="text-brand-stone-400 hover:text-brand-stone-700"><X className="h-4 w-4" /></button>}
             </div>
             <p className="mt-2 text-brand-stone-600 dark:text-slate-400">{suggestion.evidenceSummary}</p>
             <div className="mt-3 flex flex-wrap gap-2">
-              <button type="button" onClick={async () => { await onAddPart?.(suggestion); dismiss(suggestion.id); }} disabled={disabled} className="btn-sanctuary-primary text-xs disabled:opacity-50"><Plus className="h-3.5 w-3.5" /> Add to Map</button>
-              <button type="button" onClick={() => startEdit(suggestion)} disabled={disabled} className="btn-sanctuary-secondary text-xs"><Edit3 className="h-3.5 w-3.5" /> Edit & Add</button>
-              {existingParts.length > 0 && <select value={mergeTargets[suggestion.id] || ''} onChange={(e) => setMergeTargets((prev) => ({ ...prev, [suggestion.id]: e.target.value }))} className="rounded-xl border px-2 py-1 text-xs dark:border-slate-700 dark:bg-slate-950"><option value="">Merge with Existing</option>{existingParts.map((part) => <option key={part.id} value={part.id}>{part.part_name || part.name}</option>)}</select>}
-              {mergeTargets[suggestion.id] && <button type="button" onClick={async () => { await onMergePart?.(suggestion, mergeTargets[suggestion.id]); dismiss(suggestion.id); }} disabled={disabled} className="btn-sanctuary-secondary text-xs"><GitMerge className="h-3.5 w-3.5" /> Merge</button>}
-              <button type="button" onClick={() => dismiss(suggestion.id)} className="btn-sanctuary-secondary text-xs">Dismiss</button>
+              {!readOnly && <button type="button" onClick={async () => { await onAddPart?.(suggestion); setDismissed((prev) => new Set([...prev, suggestion.id])); }} disabled={disabled} className="btn-sanctuary-primary text-xs disabled:opacity-50"><Plus className="h-3.5 w-3.5" /> Add to Map</button>}
+              {!readOnly && <button type="button" onClick={() => startEdit(suggestion)} disabled={disabled} className="btn-sanctuary-secondary text-xs"><Edit3 className="h-3.5 w-3.5" /> Edit & Add</button>}
+              {!readOnly && existingParts.length > 0 && <select value={mergeTargets[suggestion.id] || ''} onChange={(e) => setMergeTargets((prev) => ({ ...prev, [suggestion.id]: e.target.value }))} className="rounded-xl border px-2 py-1 text-xs dark:border-slate-700 dark:bg-slate-950"><option value="">Merge with Existing</option>{existingParts.map((part) => <option key={part.id} value={part.id}>{part.part_name || part.name}</option>)}</select>}
+              {!readOnly && mergeTargets[suggestion.id] && <button type="button" onClick={async () => { await onMergePart?.(suggestion, mergeTargets[suggestion.id]); setDismissed((prev) => new Set([...prev, suggestion.id])); }} disabled={disabled} className="btn-sanctuary-secondary text-xs"><GitMerge className="h-3.5 w-3.5" /> Merge</button>}
+              {!readOnly && <button type="button" onClick={() => dismiss(suggestion, 'part')} className="btn-sanctuary-secondary text-xs">Dismiss</button>}
             </div>
           </div>
         ))}
@@ -76,12 +89,27 @@ export default function PartSuggestionPanel({ suggestions = [], relationshipSugg
             <p className="font-medium text-brand-stone-900 dark:text-slate-100">{rel.fromName} → {rel.label} → {rel.toName}</p>
             <p className="mt-1 text-xs text-brand-stone-500 dark:text-slate-500">{rel.evidenceSummary}</p>
             <div className="mt-2 flex flex-wrap gap-2">
-              <button type="button" onClick={async () => { await onAddRelationship?.(rel); dismiss(rel.id); }} disabled={disabled} className="btn-sanctuary-secondary text-xs"><Link2 className="h-3.5 w-3.5" /> Add Relationship</button>
-              <button type="button" onClick={() => dismiss(rel.id)} className="btn-sanctuary-secondary text-xs">Dismiss</button>
+              {!readOnly && <button type="button" onClick={async () => { await onAddRelationship?.(rel); setDismissed((prev) => new Set([...prev, rel.id])); }} disabled={disabled} className="btn-sanctuary-secondary text-xs"><Link2 className="h-3.5 w-3.5" /> Add Relationship</button>}
+              {!readOnly && <button type="button" onClick={() => dismiss(rel, 'relationship')} className="btn-sanctuary-secondary text-xs">Dismiss</button>}
             </div>
           </div>)}
         </div>
       </div>}
+
+      {showDismissed && hiddenDismissedCount > 0 && (
+        <div className="mt-5 border-t border-brand-stone-100 pt-4 dark:border-slate-800">
+          <h3 className="font-semibold text-brand-stone-900 dark:text-slate-100">Dismissed Suggestions</h3>
+          <div className="mt-3 space-y-2">
+            {[...dismissedSuggestions.map((item) => ({ ...item, suggestionType: 'part' })), ...dismissedRelationshipSuggestions.map((item) => ({ ...item, suggestionType: 'relationship' }))].map((item) => (
+              <div key={`${item.suggestionType}:${item.id}`} className="rounded-2xl bg-brand-stone-50 p-3 text-sm dark:bg-slate-900">
+                <p className="font-medium text-brand-stone-900 dark:text-slate-100">{item.name || `${item.fromName} → ${item.toName}`}</p>
+                <p className="mt-1 text-xs text-brand-stone-500 dark:text-slate-500">{item.evidenceSummary}</p>
+                {!readOnly && <button type="button" onClick={() => item.suggestionType === 'relationship' ? onRestoreRelationship?.(item) : onRestorePart?.(item)} className="btn-sanctuary-secondary mt-2 text-xs">Restore Suggestion</button>}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </section>
   );
 }

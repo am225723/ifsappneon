@@ -45,6 +45,7 @@ import Notifications from './pages/Notifications';
 import NotificationPreferences from './pages/NotificationPreferences';
 import PreSessionCheckin from './components/PreSessionCheckin';
 import PartsRelationshipMap from './pages/PartsRelationshipMap';
+import AdvisorInnerSystemMap from './pages/AdvisorInnerSystemMap';
 import LifeIntegration from './pages/LifeIntegration';
 import LifeIntegrationReflectionDetail from './pages/LifeIntegrationReflectionDetail';
 import AdvisorSharedReflections from './pages/AdvisorSharedReflections';
@@ -580,6 +581,7 @@ function AppContent({ authChecked, clerkLoaded, clerkSignedIn, isAuthenticated, 
                 <Route path="/advisor-homework" element={therapistOnly(<TherapistHomework />)} />
                 <Route path="/advisor-reports" element={therapistOnly(<TherapistReports />)} />
                 <Route path="/advisor/shared-reflections" element={therapistOnly(<AdvisorSharedReflections />)} />
+                <Route path="/advisor/inner-system-map/:clientId" element={therapistOnly(<AdvisorInnerSystemMap />)} />
                 <Route path="/reports" element={therapistOnly(<TherapistReports />)} />
                 <Route path="/analytics" element={therapistOnly(<LongitudinalAnalytics />)} />
                 <Route path="/longitudinal-analytics" element={therapistOnly(<LongitudinalAnalytics />)} />
