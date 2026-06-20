@@ -3,12 +3,14 @@ import { Link } from 'react-router-dom';
 import { ArrowLeft, CheckCircle2, Edit3, Loader2, Plus, Save, Sparkles, Trash2 } from 'lucide-react';
 import InnerSystemMapCanvas, { pointerToSvgPoint } from '../components/parts/InnerSystemMapCanvas';
 import PartDetailPanel from '../components/parts/PartDetailPanel';
+import PartSuggestionPanel from '../components/parts/PartSuggestionPanel';
 import { normalizeMapPart, relationshipLabel, RELATIONSHIP_OPTIONS } from '../components/parts/mapConstants';
 import { clientAuth } from '../lib/supabasePersonalization';
 import { supabase } from '../lib/supabase';
 import { getPartsMapParts } from '../lib/interactiveResults';
 import { loadMyIFSProfile } from '../lib/myIFSProfile';
 import { importLegacyPartsMap, previewLegacyPartsImport } from '../lib/legacyPartsImport';
+import { buildPartSuggestions, normalizePartSuggestionName } from '../lib/partSuggestionEngine';
 import {
   createPartRelationship,
   deletePartRelationship,
@@ -54,6 +56,7 @@ export default function PartsRelationshipMap() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [partSuggestions, setPartSuggestions] = useState({ parts: [], relationships: [] });
 
   const mappedParts = useMemo(
     () => parts.map((part, index) => normalizeMapPart(part, index, localPositions)),
@@ -93,7 +96,11 @@ export default function PartsRelationshipMap() {
     const [
       { data: partRows, error: partsError },
       { data: relationshipRows, error: relationshipsError },
-      { data: partsMapRow, error: partsMapError }
+      { data: partsMapRow, error: partsMapError },
+      { data: interactiveRows, error: interactiveError },
+      { data: assessmentRows, error: assessmentError },
+      { data: lifeRows, error: lifeError },
+      { data: journalRows, error: journalError }
     ] = await Promise.all([
       supabase
         .from('ifs_parts')
@@ -106,13 +113,42 @@ export default function PartsRelationshipMap() {
         .select('id, data, updated_at')
         .eq('client_id', effectiveClientId)
         .eq('module_id', 'parts_map')
-        .maybeSingle()
+        .maybeSingle(),
+      supabase
+        .from('ifs_interactive_data')
+        .select('id, client_id, module_id, data, updated_at')
+        .eq('client_id', effectiveClientId)
+        .or('module_id.like.assessment_%,module_id.like.module%')
+        .order('updated_at', { ascending: false })
+        .limit(80),
+      supabase
+        .from('ifs_assessment_results')
+        .select('id, client_id, assessment_type, data, results, created_at, updated_at')
+        .eq('client_id', effectiveClientId)
+        .order('updated_at', { ascending: false })
+        .limit(20),
+      supabase
+        .from('ifs_life_integration_reflections')
+        .select('id, client_id, practice_id, reflection_type, data, responses, summary, created_at, updated_at')
+        .eq('client_id', effectiveClientId)
+        .order('updated_at', { ascending: false })
+        .limit(40),
+      supabase
+        .from('ifs_journal_entries')
+        .select('id, client_id, title, content, summary, created_at, updated_at')
+        .eq('client_id', effectiveClientId)
+        .order('updated_at', { ascending: false })
+        .limit(20)
     ]);
 
     const loadErrors = [
       partsError && { table: 'ifs_parts', status: getSafeErrorStatus(partsError) },
       relationshipsError && { table: 'ifs_part_relationships', status: getSafeErrorStatus(relationshipsError) },
-      partsMapError && { table: 'ifs_interactive_data', status: getSafeErrorStatus(partsMapError) }
+      partsMapError && { table: 'ifs_interactive_data', status: getSafeErrorStatus(partsMapError) },
+      interactiveError && { table: 'ifs_interactive_data', status: getSafeErrorStatus(interactiveError) },
+      assessmentError && { table: 'ifs_assessment_results', status: getSafeErrorStatus(assessmentError) },
+      lifeError && { table: 'ifs_life_integration_reflections', status: getSafeErrorStatus(lifeError) },
+      journalError && { table: 'ifs_journal_entries', status: getSafeErrorStatus(journalError) }
     ].filter(Boolean);
 
     if (loadErrors.length) {
@@ -128,6 +164,15 @@ export default function PartsRelationshipMap() {
     setParts(partRows || []);
     setRelationships(relationshipRows || []);
     setLegacyPartsMap(partsMapRow || null);
+    setPartSuggestions(buildPartSuggestions({
+      assessmentRows: (assessmentRows || []).map((row) => ({ ...row, module_id: row.assessment_type || row.module_id, data: row.data || row.results || row })),
+      interactiveRows: interactiveRows || [],
+      lifeIntegrationRows: lifeRows || [],
+      journalRows: journalRows || [],
+      legacyPartsMap: partsMapRow || null,
+      existingParts: partRows || [],
+      existingRelationships: relationshipRows || []
+    }));
     setLegacyImportPreview(null);
     setLoading(false);
   }, []);
@@ -272,6 +317,80 @@ export default function PartsRelationshipMap() {
     setLegacyImportLoading(false);
   };
 
+  const createSuggestedPart = async (suggestion) => {
+    if (!effectiveClientId || !suggestion?.name) return null;
+    const normalized = normalizePartSuggestionName(suggestion.name);
+    const existing = parts.find((part) => normalizePartSuggestionName(part.part_name || part.name) === normalized);
+    if (existing) {
+      setSelectedPartId(existing.id);
+      return existing;
+    }
+    setSaving(true);
+    const now = new Date().toISOString();
+    const payload = {
+      client_id: effectiveClientId,
+      name: suggestion.name.slice(0, 255),
+      part_name: suggestion.name.slice(0, 255),
+      type: suggestion.type || 'unknown',
+      part_type: suggestion.type || 'unknown',
+      role: String(suggestion.role || '').slice(0, 500) || null,
+      description: String(suggestion.evidenceSummary || '').slice(0, 500) || null,
+      notes: `Suggested from ${suggestion.sourceLabel || suggestion.source || 'IFS work'}. Review and edit as needed.`,
+      color: suggestion.color || null,
+      size: 60,
+      is_active: true,
+      created_at: now,
+      updated_at: now
+    };
+    const { data, error: insertError } = await supabase.from('ifs_parts').insert(payload).select().single();
+    if (insertError) setError(insertError.message || 'Unable to add suggested part.');
+    if (data) {
+      setParts((prev) => [data, ...prev]);
+      setSelectedPartId(data.id);
+    }
+    setSaving(false);
+    return data;
+  };
+
+  const mergeSuggestedPart = async (suggestion, targetPartId) => {
+    if (!effectiveClientId || !targetPartId) return;
+    const target = parts.find((part) => String(part.id) === String(targetPartId));
+    if (!target) return;
+    setSaving(true);
+    const mergedNotes = [target.notes, `Suggestion reviewed from ${suggestion.sourceLabel || suggestion.source}: ${suggestion.evidenceSummary || suggestion.name}`].filter(Boolean).join('\n');
+    const updates = {
+      role: target.role || suggestion.role || null,
+      notes: mergedNotes.slice(0, 2000),
+      updated_at: new Date().toISOString()
+    };
+    const { data, error: mergeError } = await supabase.from('ifs_parts').update(updates).eq('id', targetPartId).eq('client_id', effectiveClientId).select().single();
+    if (mergeError) setError(mergeError.message || 'Unable to merge suggested part.');
+    if (data) {
+      setParts((prev) => prev.map((part) => (String(part.id) === String(data.id) ? data : part)));
+      setSelectedPartId(data.id);
+    }
+    setSaving(false);
+  };
+
+  const addSuggestedRelationship = async (suggestion) => {
+    if (!effectiveClientId) return;
+    const fromPart = parts.find((part) => (part.part_name || part.name) === suggestion.fromName) || await createSuggestedPart({ name: suggestion.fromName, type: suggestion.fromName === 'Self' ? 'self' : 'unknown', role: 'Suggested relationship anchor', sourceLabel: suggestion.source, evidenceSummary: suggestion.evidenceSummary });
+    const toPart = parts.find((part) => (part.part_name || part.name) === suggestion.toName) || await createSuggestedPart({ name: suggestion.toName, type: 'unknown', role: 'Suggested relationship anchor', sourceLabel: suggestion.source, evidenceSummary: suggestion.evidenceSummary });
+    if (!fromPart?.id || !toPart?.id || String(fromPart.id) === String(toPart.id)) return;
+    setSaving(true);
+    const { data, error: relError } = await createPartRelationship({
+      client_id: effectiveClientId,
+      from_part_id: fromPart.id,
+      to_part_id: toPart.id,
+      relationship_type: suggestion.relationshipType || 'unknown',
+      label: suggestion.label || '',
+      description: suggestion.evidenceSummary || ''
+    });
+    if (relError) setError(relError.message || 'Unable to add suggested relationship.');
+    if (data) setRelationships((prev) => [data, ...prev]);
+    setSaving(false);
+  };
+
   const resetRelationshipForm = () => setRelationshipForm(emptyRelationshipForm);
 
   const handleRelationshipSubmit = async (event) => {
@@ -326,7 +445,7 @@ export default function PartsRelationshipMap() {
         </Link>
 
         <section className="rounded-3xl border border-brand-emerald-100 dark:border-slate-700 bg-white/85 dark:bg-slate-950/80 p-6 shadow-sm">
-          <p className="text-xs font-bold uppercase tracking-[0.22em] text-brand-emerald-700 dark:text-brand-emerald-100">Parts Map</p>
+          <p className="text-xs font-bold uppercase tracking-[0.22em] text-brand-emerald-700 dark:text-brand-emerald-100">Inner System Map</p>
           <h1 className="mt-2 text-3xl lg:text-4xl font-serif text-brand-stone-900 dark:text-slate-100">My Inner System Map</h1>
           <p className="mt-3 max-w-3xl text-brand-stone-700 dark:text-slate-300">
             Your personal map of your parts, their relationships, and their connection to Self-energy.
@@ -448,7 +567,7 @@ export default function PartsRelationshipMap() {
                 <Sparkles className="w-10 h-10 text-brand-emerald-600 mb-3" />
                 <h2 className="text-xl font-semibold text-brand-stone-900 dark:text-slate-100">Begin with one part</h2>
                 <p className="mt-2 max-w-md">Start with one part when you are ready, then return here to place it gently on your Inner System Map.</p>
-                <Link to="/parts-mapping" className="btn-sanctuary-primary mt-4"><Plus className="w-4 h-4" /> Create a part</Link>
+                <Link to="/parts-relationships" className="btn-sanctuary-primary mt-4"><Plus className="w-4 h-4" /> Create a part</Link>
               </div>
             ) : (
               <InnerSystemMapCanvas
@@ -527,6 +646,7 @@ export default function PartsRelationshipMap() {
                 <p className="mt-1">{selectedRelationships.length} relationship line{selectedRelationships.length === 1 ? '' : 's'} currently include this part.</p>
               </section>
             )}
+            <PartSuggestionPanel suggestions={partSuggestions.parts} relationshipSuggestions={partSuggestions.relationships} existingParts={parts} onAddPart={createSuggestedPart} onMergePart={mergeSuggestedPart} onAddRelationship={addSuggestedRelationship} disabled={saving} />
           </aside>
         </div>
       </div>

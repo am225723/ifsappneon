@@ -174,13 +174,13 @@ const resources = [
   },
   {
     id: 14,
-    title: 'Parts Mapping Exercise',
+    title: 'Inner System Map Exercise',
     author: 'In-App Exercise',
     type: 'exercise',
     wounds: ['abandonment', 'shame', 'neglect', 'betrayal', 'helplessness'],
     stage: 'understanding',
     description: 'Create a visual map of your internal parts system. Identify protectors, exiles, and their relationships.',
-    appLink: '/parts-mapping',
+    appLink: '/parts-relationships',
   },
   {
     id: 15,

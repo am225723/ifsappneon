@@ -14,7 +14,7 @@ const Navbar = ({ unreadCount = 0, messagePath = '/inbox', rightSlot = null, wor
     { path: '/', icon: Home, label: 'Home' },
     { path: '/curriculum', icon: BookOpen, label: 'Curriculum' },
     { path: '/life-integration', icon: Sparkles, label: 'Practice' },
-    { path: '/parts-mapping', icon: Compass, label: 'Parts' },
+    { path: '/parts-relationships', icon: Compass, label: 'Inner System' },
     { path: messagePath, icon: MessageSquare, label: 'Advisor', badge: unreadCount },
     { path: '/tools', icon: Grid3X3, label: 'Tools' },
     { path: '/profile', icon: Heart, label: 'Profile' },

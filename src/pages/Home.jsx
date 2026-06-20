@@ -534,7 +534,7 @@ const Home = ({ clientId, client, mode = 'home', selfProfile = null, selfProfile
   ];
 
   const curriculumSupportTiles = [
-    { to: '/parts-mapping', icon: Compass, title: 'Parts Map / Inner System Map', description: 'Map the parts you meet as the curriculum invites deeper parts work.', buttonLabel: 'Open Parts Map', tone: 'emerald' },
+    { to: '/parts-relationships', icon: Compass, title: 'Inner System Map', description: 'Map the parts you meet as the curriculum invites deeper parts work.', buttonLabel: 'Open Inner System Map', tone: 'emerald' },
     { to: '/parts-dialogue', icon: MessageSquare, title: 'Parts Dialogue', description: 'Practice curious, compassionate conversations with parts from your modules.', buttonLabel: 'Start Dialogue', tone: 'gold' },
     { to: '/journal', icon: BookOpen, title: 'Healing Journal', description: 'Reflect on module prompts, parts, needs, and insights.', buttonLabel: 'Open Journal', tone: 'stone' },
     { to: '/meditation', icon: Play, title: 'Guided Meditation', description: 'Use grounding and Self-energy practices alongside your lessons.', buttonLabel: 'Choose Meditation', tone: 'emerald' },

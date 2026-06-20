@@ -849,7 +849,7 @@ export default function Assessments() {
                       Your Identified Parts
                     </h3>
                     <p className={`text-sm mt-1 ${theme.isDark ? 'text-slate-400' : 'text-gray-500'}`}>
-                      Based on your responses, these parts appear most active. Add them to your Parts Map to track and work with them.
+                      Based on your responses, these parts appear most active. Add them to your Inner System Map to track and work with them.
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
@@ -870,7 +870,7 @@ export default function Assessments() {
                       className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-amber-600 to-emerald-600 text-white text-sm font-medium hover:from-amber-700 hover:to-emerald-700 transition-all"
                     >
                       <MapPin className="w-4 h-4" />
-                      View Parts Map
+                      View Inner System Map
                     </Link>
                   </div>
                 </div>

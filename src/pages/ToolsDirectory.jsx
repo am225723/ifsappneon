@@ -6,7 +6,6 @@ import {
   Brain,
   CalendarCheck,
   ClipboardCheck,
-  Compass,
   FileText,
   HeartPulse,
   Headphones,
@@ -67,7 +66,6 @@ const sections = [
     title: 'Parts Work',
     description: 'Map, listen to, and build relationship with parts of your inner system.',
     items: [
-      { label: 'Parts Map', to: '/parts-mapping', icon: Compass, roles: clientRoles },
       { label: 'Inner System Map', description: 'Place parts and relationships around Self-energy.', to: '/parts-relationships', icon: Map, roles: clientRoles },
       { label: 'Parts Dialogue', to: '/parts-dialogue', icon: MessageSquare, roles: clientRoles, feature: 'partsDialogue' },
       { label: 'Parts Cards', to: '/parts-cards', icon: ScrollText, roles: clientRoles, feature: 'partsCards' },
