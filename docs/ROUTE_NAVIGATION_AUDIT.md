@@ -350,3 +350,18 @@ Tools Directory
 - Unsafe global client loading result: no new unscoped client loading was added; suggestion state helpers require explicit `clientId`, and the Advisor map uses assignment-scoped client access.
 - Build result: run `npm run build` after applying this phase.
 - SQL/manual migration notes: apply the new migration manually if the deployment workflow does not automatically run Neon/Supabase migrations. Do not backfill old session-local dismissals and do not run `neon/999_backfill_therapist_assignments.sql`.
+
+## Phase 18G focused route alias policy follow-up
+
+Phase 18G re-checked the long-term alias policy against `src/App.jsx` after the approved Home backup cleanup.
+
+- Canonical Home route: `/`; legacy `/home` redirects to `/` with `replace`.
+- Canonical My IFS route: `/my-ifs`; legacy `/my-ifs-path` redirects to `/my-ifs` with `replace`.
+- Canonical Advisor Dashboard route: `/therapist-dashboard`; legacy `/therapist` redirects to `/therapist-dashboard` with `replace`.
+- Canonical Admin/Supervisor route: `/admin-hub`; legacy `/admin` redirects with `replace` to `/admin-hub` for admin/supervisor users and `/therapist-dashboard` otherwise.
+- Canonical Assigned IFS Practices route: `/assigned-practices`; legacy `/my-homework` and `/homework` redirect to `/assigned-practices` with `replace`.
+- Canonical guided meditation route: `/meditation`; legacy `/guided-meditation` redirects to `/meditation` with `replace`.
+- Canonical Inner System Map route: `/parts-relationships`; legacy `/parts-mapping`, `/parts-map`, and `/parts-relationship-map` redirect to `/parts-relationships` with `replace`.
+- No active medication aliases or medication-management routes were found.
+
+Policy result: keep these aliases as bookmark/deep-link compatibility shims unless product owners approve a future removal plan. Redirect aliases should continue to use `replace` to avoid browser Back loops or stale alias route states.
