@@ -717,7 +717,7 @@ const Journal = () => {
                   <div className="text-center py-8">
                     <Users className={`w-12 h-12 mx-auto mb-3 ${textTertiary}`} />
                     <p className={`${textSecondary} mb-2`}>No parts mapped yet</p>
-                    <p className={`text-sm ${textTertiary}`}>Visit Parts Mapping to identify your parts first, or write to a default part type below.</p>
+                    <p className={`text-sm ${textTertiary}`}>Visit the Inner System Map to identify your parts first, or write to a default part type below.</p>
                     <div className="flex flex-wrap gap-2 justify-center mt-4">
                       {[
                         { name: 'My Manager', type: 'manager' },

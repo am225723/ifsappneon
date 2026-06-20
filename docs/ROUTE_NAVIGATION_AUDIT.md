@@ -21,7 +21,7 @@ This audit documents the registered React/Vite routes in `src/App.jsx`, visible 
 | `/cheat-sheet` | `CheatSheet` | Auth-only | None | Tools Directory | Auth-only | Client-safe reference tool. |
 | `/wounds` | `Wounds` | Auth-only | None | Hidden | Hidden/direct-only | Legacy assessment/support page; not promoted to navigation. |
 | `/qualities` | `Qualities` | Auth-only | None | Tools Directory as Self-Energy Practice | Legacy | Retained as current route for Self-energy qualities; `/affirmations` is also visible. |
-| `/parts-mapping` | `PartsMapping` | Auth-only | None | Navbar / BottomNav Parts; Tools Directory | Auth-only | Primary Parts Map route. |
+| `/parts-mapping` | Redirect to `/parts-relationships` | Auth-only | None | Legacy Navbar / BottomNav Parts links | Auth-only | Legacy alias preserved for old links; canonical map experience is `/parts-relationships`. |
 | `/exercises` | `Exercises` | Feature-gated | `exercises` | Hidden from top nav; supported direct route | Feature-gated | Existing feature-gated practice page retained but not promoted over Daily Life. |
 | `/assessment` | `Assessment` | Auth-only | None | Hidden | Legacy | Legacy singular assessment route; `/assessments` is primary. |
 | `/assessments` | `Assessments` | Auth-only | None | Tools Directory; onboarding exception | Auth-only | Primary assessment route. |
@@ -65,7 +65,7 @@ This audit documents the registered React/Vite routes in `src/App.jsx`, visible 
 | `/mood-tracker` | `MoodTracker` | Auth-only | None | Tools Directory | Auth-only | Client-safe tracker route. |
 | `/gamification` | `GamificationHub` | Auth-only | None | Tools Directory | Auth-only | Achievements/progress route. |
 | `/parts-dialogue` | `PartsDialogue` | Feature-gated | `partsDialogue` | Home; Tools Directory | Feature-gated | Client-safe when feature is available. |
-| `/parts-relationships` | `PartsRelationshipMap` | Auth-only | None | Home; Tools Directory | Auth-only | Inner System Map route. |
+| `/parts-relationships` | `PartsRelationshipMap` | Auth-only | None | Home; Tools Directory; Navbar; My IFS Work | Auth-only | Canonical Inner System Map route with accepted parts, relationships, and reviewable suggestions. |
 | `/life-integration` | `LifeIntegration` | Client/self workspace | None | Navbar / BottomNav Daily Life; Tools Directory | Client | Primary Daily Life practice area. |
 | `/life-integration/reflections/:reflectionId` | `LifeIntegrationReflectionDetail` | Client/self workspace | None | Life Integration reflection links | Hidden/direct-only | Detail route reached from Life Integration. |
 | `/life-integration/notice-part` | `NoticePartPractice` | Client/self workspace | None | Life Integration cards | Client | Daily Life practice sub-route. |
@@ -95,7 +95,7 @@ Navbar (client)
   Curriculum -> /curriculum
   Daily Life -> /life-integration
   Journal -> /journal
-  Parts -> /parts-mapping
+  Inner System -> /parts-relationships
   Advisor Support -> /inbox
   Tools -> /tools
   Profile -> /profile
@@ -119,7 +119,7 @@ Admin Hub
 Mobile BottomNav (client)
   Home -> /
   Practice -> /life-integration
-  Parts -> /parts-mapping
+  Inner System -> /parts-relationships
   Advisor -> /inbox
   Tools -> /tools
 
@@ -146,7 +146,6 @@ Tools Directory
     Micro-Learning -> /micro-learning
     Mood Tracker -> /mood-tracker
   Parts Work
-    Parts Map -> /parts-mapping
     Inner System Map -> /parts-relationships
     Parts Dialogue -> /parts-dialogue
     Parts Cards -> /parts-cards
@@ -219,7 +218,7 @@ Tools Directory
 - `/analytics` and `/longitudinal-analytics` are grouped under Insights & Reports; `/longitudinal-analytics` is the primary named route for Longitudinal Insights.
 - `/qualities` remains supported for Self-Energy Practice while `/affirmations` is separately visible for affirmations.
 - `/resources` and `/resource-library` both remain supported; `/resource-library` is feature-gated and `/resources` remains a general resources route.
-- `/parts-relationships` remains the Inner System Map route while `/parts-mapping` remains the primary Parts Map route.
+- `/parts-relationships` is the canonical Inner System Map route; `/parts-mapping`, `/parts-map`, and `/parts-relationship-map` are legacy aliases that redirect to the canonical map.
 - `/mood-tracker` remains the tracker route and `/mood-analytics` remains the feature-gated analytics route.
 
 ## Security Notes
@@ -235,7 +234,7 @@ Tools Directory
 
 - `/my-ifs` uses self-owned profile resolution through `loadMyIFSProfile` and passes the resolved profile id as the effective client id for personal self-work data.
 - `/home` may render self-mode data when called from My IFS Work; direct Advisor/Admin `/home` access now points users toward My IFS Work for personal self-work or the Advisor/Admin workspace for operational workflows.
-- `/parts-relationships` supports a user-confirmed legacy `parts_map` import from `ifs_interactive_data`; preview is required, selected parts must be confirmed, and the legacy interactive row remains preserved.
+- `/parts-relationships` supports reviewable suggestions from assessments, curriculum/module reflections, Life Integration reflections, journal summaries/content, and legacy `parts_map` rows from `ifs_interactive_data`; accepted suggestions are added non-destructively to `ifs_parts` and relationship suggestions require confirmation before persisting to `ifs_part_relationships`.
 - `/tools` remains the main discoverability directory for Curriculum, Assessments, Inner System Map, reflections, Tools & Practices, and Advisor/Admin workflow links.
 - Admin/advisor dashboards stay separate from My IFS Work so assigned-client loading does not become self-work loading.
 - Self-owned API access allows app users to read their own client-scoped rows regardless of role when the requested client id matches the authenticated app user id.

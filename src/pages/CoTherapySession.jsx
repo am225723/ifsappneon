@@ -424,7 +424,7 @@ export default function CoTherapySession() {
               }`}
             >
               <Map className="w-3.5 h-3.5" />
-              Parts Map
+              Inner System Map
             </button>
           </div>
         </div>
@@ -524,7 +524,7 @@ export default function CoTherapySession() {
               <div className={`${cardBg} rounded-xl border ${cardBorder} p-5`}>
                 <h3 className={`font-semibold ${textPrimary} mb-3 flex items-center gap-2`}>
                   <Map className="w-4 h-4 text-violet-500" />
-                  Client's Parts Map
+                  Client's Inner System Map
                 </h3>
                 {clientWoundData?.primary_wound && (
                   <div className="mb-3">

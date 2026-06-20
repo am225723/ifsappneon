@@ -16,7 +16,6 @@ import LearningModuleRenderer from './components/LearningModuleRenderer';
 import CheatSheet from './pages/CheatSheet';
 import Wounds from './pages/Wounds';
 import Qualities from './pages/Qualities';
-import PartsMapping from './pages/PartsMapping';
 import Exercises from './pages/Exercises';
 import Assessment from './pages/Assessment';
 import Assessments from './pages/Assessments';
@@ -234,7 +233,7 @@ function BottomNav({ messagePath = '/inbox', advisorWorkspacePath = '/therapist-
   ] : [
     { path: '/', icon: HomeIcon, label: 'Home' },
     { path: '/curriculum', icon: BookOpen, label: 'Path' },
-    { path: '/parts-mapping', icon: CompassIcon, label: 'Parts' },
+    { path: '/parts-relationships', icon: CompassIcon, label: 'Inner System' },
     { path: messagePath, icon: MessageSquare, label: 'Advisor' },
     { path: '/tools', icon: Grid3X3, label: 'Tools' },
     { path: '/profile', icon: Handshake, label: 'Profile' },
@@ -548,8 +547,8 @@ function AppContent({ authChecked, clerkLoaded, clerkSignedIn, isAuthenticated, 
                 <Route path="/cheat-sheet" element={<CheatSheet />} />
                 <Route path="/wounds" element={<Wounds />} />
                 <Route path="/qualities" element={<Qualities />} />
-                <Route path="/parts-mapping" element={<PartsMapping />} />
-                <Route path="/parts-map" element={<Navigate to="/parts-mapping" replace />} />
+                <Route path="/parts-mapping" element={<Navigate to="/parts-relationships" replace />} />
+                <Route path="/parts-map" element={<Navigate to="/parts-relationships" replace />} />
                 <Route path="/exercises" element={<FeatureGate feature="exercises"><Exercises /></FeatureGate>} />
                 <Route path="/assessment" element={<Assessment />} />
                 <Route path="/assessments" element={<Assessments />} />

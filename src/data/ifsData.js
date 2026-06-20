@@ -189,7 +189,7 @@ export const partsCategories = [
 
 export const therapeuticTechniques = [
   {
-    title: "Parts Mapping",
+    title: "Inner System Map",
     description: "Clarify the internal system, identifying Part roles and dynamics."
   },
   {
