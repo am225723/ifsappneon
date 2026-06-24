@@ -1,8 +1,41 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import SundayBestLoginPage from './SundayBestLoginPage.jsx';
 
+function getCurrentPath() {
+  return window.location.pathname + window.location.search + window.location.hash;
+}
+
 export default function PrototypeIFSLoginOverlay() {
+  const [currentPath, setCurrentPath] = useState(getCurrentPath);
   const isSignInPath = window.location.pathname.startsWith('/sign-in');
+
+  useEffect(() => {
+    const updatePath = () => setCurrentPath(getCurrentPath());
+    const originalPushState = window.history.pushState;
+    const originalReplaceState = window.history.replaceState;
+
+    window.history.pushState = function patchedPushState(...args) {
+      const result = originalPushState.apply(this, args);
+      window.dispatchEvent(new Event('ifs-location-change'));
+      return result;
+    };
+
+    window.history.replaceState = function patchedReplaceState(...args) {
+      const result = originalReplaceState.apply(this, args);
+      window.dispatchEvent(new Event('ifs-location-change'));
+      return result;
+    };
+
+    window.addEventListener('popstate', updatePath);
+    window.addEventListener('ifs-location-change', updatePath);
+
+    return () => {
+      window.history.pushState = originalPushState;
+      window.history.replaceState = originalReplaceState;
+      window.removeEventListener('popstate', updatePath);
+      window.removeEventListener('ifs-location-change', updatePath);
+    };
+  }, []);
 
   useEffect(() => {
     if (!isSignInPath) return undefined;
@@ -26,7 +59,7 @@ export default function PrototypeIFSLoginOverlay() {
       window.removeEventListener('scroll', setScrolling);
       window.removeEventListener('touchmove', setScrolling);
     };
-  }, [isSignInPath]);
+  }, [isSignInPath, currentPath]);
 
   if (!isSignInPath) {
     return null;
