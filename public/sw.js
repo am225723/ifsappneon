@@ -1,6 +1,7 @@
-const CACHE_NAME = 'ifs-healing-v1';
+const CACHE_NAME = 'ifs-healing-v2';
 const STATIC_ASSETS = [
   '/',
+  '/index.html',
   '/manifest.json',
   '/icons/icon-192x192.png',
   '/icons/icon-512x512.png'
@@ -8,8 +9,16 @@ const STATIC_ASSETS = [
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(STATIC_ASSETS);
+    caches.open(CACHE_NAME).then(async (cache) => {
+      const results = await Promise.allSettled(
+        STATIC_ASSETS.map((asset) => cache.add(asset))
+      );
+
+      results.forEach((result, index) => {
+        if (result.status === 'rejected') {
+          console.warn('[SW] Failed to pre-cache asset:', STATIC_ASSETS[index], result.reason);
+        }
+      });
     })
   );
   self.skipWaiting();
@@ -23,9 +32,8 @@ self.addEventListener('activate', (event) => {
           .filter((name) => name !== CACHE_NAME)
           .map((name) => caches.delete(name))
       );
-    })
+    }).then(() => self.clients.claim())
   );
-  self.clients.claim();
 });
 
 self.addEventListener('fetch', (event) => {
@@ -45,14 +53,22 @@ self.addEventListener('fetch', (event) => {
         }
         return response;
       })
-      .catch(() => {
-        return caches.match(event.request).then((cachedResponse) => {
-          if (cachedResponse) return cachedResponse;
-          if (event.request.mode === 'navigate') {
-            return caches.match('/');
-          }
-          return new Response('Offline', { status: 503 });
-        });
+      .catch(async () => {
+        const cachedResponse = await caches.match(event.request);
+        if (cachedResponse) return cachedResponse;
+
+        if (event.request.mode === 'navigate') {
+          return (
+            await caches.match('/index.html') ||
+            await caches.match('/') ||
+            new Response('<!doctype html><title>IFS Healing</title><div id="root"></div>', {
+              status: 200,
+              headers: { 'Content-Type': 'text/html; charset=utf-8' }
+            })
+          );
+        }
+
+        return new Response('', { status: 204 });
       })
   );
 });
