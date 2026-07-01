@@ -189,6 +189,7 @@ function ClerkAuthRoutes({ onClaim }) {
 
 function FeatureGate({ feature, children }) {
   const { theme } = useTheme();
+
   if (!canAccessFeature(feature)) {
     return (
       <div className={`min-h-screen flex items-center justify-center ${theme.isDark ? 'text-slate-100' : ''}`}>
@@ -206,9 +207,9 @@ function FeatureGate({ feature, children }) {
       </div>
     );
   }
+
   return children;
 }
-
 
 function UnauthorizedRedirect({ currentClient, message = 'This area is not available for your role.' }) {
   return (
@@ -246,6 +247,7 @@ function BottomNav({ messagePath = '/inbox', advisorWorkspacePath = '/therapist-
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive = item.path === '/' ? location.pathname === '/' : location.pathname.startsWith(item.path);
+
           return (
             <Link
               key={item.path}
@@ -295,6 +297,7 @@ function App() {
 
       try {
         const client = await fetchLinkedClient(getToken);
+
         if (client) {
           persistClientSession(client);
           setIsAuthenticated(true);
@@ -320,6 +323,7 @@ function App() {
 
   useEffect(() => {
     if (!isAuthenticated || !currentClient) return;
+
     if (['therapist', 'advisor', 'admin', 'supervisor'].includes(currentClient.user_role)) {
       queueMicrotask(() => setOnboardingChecked(true));
       return;
@@ -340,8 +344,8 @@ function App() {
           return;
         }
 
-        const completedIds = (data || []).map(r => r.module_id);
-        const allDone = ['assessment_wounds', 'assessment_parts', 'assessment_self-energy'].every(id => completedIds.includes(id));
+        const completedIds = (data || []).map((row) => row.module_id);
+        const allDone = ['assessment_wounds', 'assessment_parts', 'assessment_self-energy'].every((id) => completedIds.includes(id));
 
         if (!allDone) {
           setShowOnboarding(true);
@@ -352,6 +356,7 @@ function App() {
         console.error('Error checking assessment status:', err);
         setShowOnboarding(true);
       }
+
       setOnboardingChecked(true);
     };
 
@@ -360,13 +365,23 @@ function App() {
 
   const handleClaim = async (pin) => {
     try {
+      if (!isLoaded) {
+        return { success: false, error: 'Authentication is still loading. Please try again.' };
+      }
+
+      if (!isSignedIn) {
+        return { success: false, error: 'Please sign in before claiming your account.' };
+      }
+
       const client = await claimClientWithPin(getToken, pin);
+
       persistClientSession(client);
       setIsAuthenticated(true);
       setCurrentClient(client);
       setShowOnboarding(false);
       setOnboardingChecked(false);
       initializePushNotifications(client);
+
       return { success: true };
     } catch (error) {
       return { success: false, error: error.message };
@@ -385,24 +400,24 @@ function App() {
 
   return (
     <ThemeProvider>
-    <PartsProvider>
-    <DataProvider>
-      <Router>
-        <AppContent
-          authChecked={authChecked}
-          clerkLoaded={isLoaded}
-          clerkSignedIn={!!isSignedIn}
-          isAuthenticated={isAuthenticated}
-          currentClient={currentClient}
-          handleClaim={handleClaim}
-          handleLogout={handleLogout}
-          showOnboarding={showOnboarding}
-          onboardingChecked={onboardingChecked}
-          onOnboardingComplete={() => setShowOnboarding(false)}
-        />
-      </Router>
-    </DataProvider>
-    </PartsProvider>
+      <PartsProvider>
+        <DataProvider>
+          <Router>
+            <AppContent
+              authChecked={authChecked}
+              clerkLoaded={isLoaded}
+              clerkSignedIn={!!isSignedIn}
+              isAuthenticated={isAuthenticated}
+              currentClient={currentClient}
+              handleClaim={handleClaim}
+              handleLogout={handleLogout}
+              showOnboarding={showOnboarding}
+              onboardingChecked={onboardingChecked}
+              onOnboardingComplete={() => setShowOnboarding(false)}
+            />
+          </Router>
+        </DataProvider>
+      </PartsProvider>
     </ThemeProvider>
   );
 }
@@ -425,26 +440,33 @@ function AppContent({ authChecked, clerkLoaded, clerkSignedIn, isAuthenticated, 
 
   const fetchUnreadCount = useCallback(async () => {
     if (!currentClient?.id) return;
+
     try {
-      const isTherapist = currentClient.user_role === 'therapist' || currentClient.user_role === 'advisor';
+      const isTherapistUser = currentClient.user_role === 'therapist' || currentClient.user_role === 'advisor';
       let query = supabase.from('ifs_messages').select('*');
-      if (isTherapist) {
+
+      if (isTherapistUser) {
         query = query.eq('therapist_id', currentClient.id).eq('sender_role', 'client');
       } else {
         query = query.eq('client_id', currentClient.id).eq('sender_role', 'therapist');
       }
+
       const { data, error } = await query;
+
       if (error) throw error;
+
       setUnreadMsgCount((data || []).filter((message) => !message.read_at).length);
-    } catch (e) {
-      console.error('Error fetching unread count:', e);
+    } catch (error) {
+      console.error('Error fetching unread count:', error);
     }
   }, [currentClient?.id, currentClient?.user_role]);
 
   useEffect(() => {
     if (!isAuthenticated || !currentClient?.id) return;
+
     fetchUnreadCount();
     const interval = setInterval(fetchUnreadCount, 15000);
+
     return () => clearInterval(interval);
   }, [isAuthenticated, currentClient?.id, fetchUnreadCount]);
 
@@ -466,7 +488,7 @@ function AppContent({ authChecked, clerkLoaded, clerkSignedIn, isAuthenticated, 
         ) : (
           <ClerkAuthRoutes onClaim={handleClaim} />
         )
-      ) : (isAuthenticated && !onboardingChecked) ? (
+      ) : isAuthenticated && !onboardingChecked ? (
         <LoadingScreen />
       ) : showOnboarding ? (
         location.pathname === '/assessments' ? (
@@ -503,7 +525,9 @@ function AppContent({ authChecked, clerkLoaded, clerkSignedIn, isAuthenticated, 
                     <ClipboardList className="w-5 h-5" />
                   </Link>
                 )}
+
                 <NotificationBell />
+
                 <Link
                   to="/settings"
                   className="p-2.5 rounded-xl transition-all text-brand-stone-500 dark:text-slate-400 hover:text-brand-gold-700 dark:hover:text-brand-gold-500 hover:bg-brand-gold-50 dark:hover:bg-slate-800/50"
@@ -511,6 +535,7 @@ function AppContent({ authChecked, clerkLoaded, clerkSignedIn, isAuthenticated, 
                 >
                   <SettingsIcon className="w-5 h-5" />
                 </Link>
+
                 <div className="px-1">
                   <UserButton afterSignOutUrl="/sign-in">
                     <UserButton.UserProfilePage
@@ -524,6 +549,7 @@ function AppContent({ authChecked, clerkLoaded, clerkSignedIn, isAuthenticated, 
                     </UserButton.UserProfilePage>
                   </UserButton>
                 </div>
+
                 <button
                   onClick={handleLogout}
                   className="p-2.5 rounded-xl transition-all text-brand-stone-500 dark:text-slate-400 hover:text-brand-stone-900 dark:hover:text-slate-100 hover:bg-brand-stone-100 dark:hover:bg-slate-800/50"
@@ -534,9 +560,9 @@ function AppContent({ authChecked, clerkLoaded, clerkSignedIn, isAuthenticated, 
               </>
             }
           />
-              
-              <div className="pb-20">
-              <RouteErrorBoundary resetKey={location.pathname}>
+
+          <div className="pb-20">
+            <RouteErrorBoundary resetKey={location.pathname}>
               <Routes>
                 <Route path="/" element={homeElement} />
                 <Route path="/home" element={<Navigate to="/" replace />} />
@@ -567,7 +593,7 @@ function AppContent({ authChecked, clerkLoaded, clerkSignedIn, isAuthenticated, 
                 <Route path="/micro-learning" element={<MicroLearning />} />
                 <Route path="/affirmations" element={<Affirmations />} />
                 <Route path="/therapy" element={<TherapyIntegration />} />
-                <Route path="/admin" element={<Navigate to={isAdminOrSupervisor ? "/admin-hub" : "/therapist-dashboard"} replace />} />
+                <Route path="/admin" element={<Navigate to={isAdminOrSupervisor ? '/admin-hub' : '/therapist-dashboard'} replace />} />
                 <Route path="/therapist" element={<Navigate to="/therapist-dashboard" replace />} />
                 <Route path="/therapist-dashboard" element={therapistOnly(<TherapistDashboard />)} />
                 <Route path="/treatment-plans" element={therapistOnly(<TreatmentPlans />)} />
@@ -628,13 +654,18 @@ function AppContent({ authChecked, clerkLoaded, clerkSignedIn, isAuthenticated, 
                 <Route path="/claim-account" element={<Navigate to="/" replace />} />
                 <Route path="*" element={<NotFound canAccessAdvisor={isTherapistRole} canAccessAdmin={isAdminOrSupervisor} />} />
               </Routes>
-              </RouteErrorBoundary>
-              </div>
+            </RouteErrorBoundary>
+          </div>
 
-              <BottomNav messagePath={messagePath} advisorWorkspacePath={advisorWorkspacePath} isTherapistRole={isTherapistRole} isAdminOrSupervisor={isAdminOrSupervisor} />
-            </>
-          )}
-        </div>
+          <BottomNav
+            messagePath={messagePath}
+            advisorWorkspacePath={advisorWorkspacePath}
+            isTherapistRole={isTherapistRole}
+            isAdminOrSupervisor={isAdminOrSupervisor}
+          />
+        </>
+      )}
+    </div>
   );
 }
 
