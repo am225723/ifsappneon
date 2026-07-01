@@ -18,7 +18,7 @@ function mediaMapToPractice(item) {
     duration: item.expectedDuration,
     durationSeconds: Number.parseInt(item.expectedDuration, 10) * 60 || 900,
     type: 'curriculum-practice',
-    audioUrl: null,
+    audioUrl: item.audioUrl || null,
     coverImageUrl: null,
     uploadThingFileKey: null,
     fallbackPractice: true,
@@ -89,7 +89,6 @@ export default function CurriculumGuidedPracticePanel({ activityId = null, pract
               <span className="mt-1 flex flex-wrap items-center gap-2 text-xs text-gray-500">
                 <Clock className="h-3.5 w-3.5" /> {practice.duration || practice.expectedDuration}
                 <span>{practice.audioUrl ? 'Audio mapped' : 'Audio not mapped'}</span>
-                <span>{practice.captionsPath ? 'Captions configured' : 'Captions pending'}</span>
               </span>
             </button>
           ))}
@@ -98,10 +97,7 @@ export default function CurriculumGuidedPracticePanel({ activityId = null, pract
         <article className={`rounded-2xl border border-gray-200 bg-white p-4 ${resolvedPracticeId ? 'lg:col-span-2' : ''}`}>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div>
-              <p className="text-xs font-bold uppercase tracking-wide text-amber-700">{activePractice.itemNumber} · {activePractice.mp3Filename}</p>
               <h3 className="mt-1 text-xl font-bold text-gray-900">{activePractice.title}</h3>
-              <p className="mt-1 text-sm text-gray-600">Transcript: {activePractice.transcriptPath}</p>
-              <p className="mt-1 text-sm text-gray-600">Captions: {activePractice.captionsPath || 'Captions are not available yet'}</p>
             </div>
             <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-700">{activePractice.duration}</span>
           </div>
