@@ -50,6 +50,8 @@ import { syncAssignedHomeworkCompletion } from '../lib/assignedHomework';
 import { getModuleSupportLinks } from '../lib/curriculumExperience';
 import { getNextModule } from '../data/curriculumData';
 import { saveCurriculumReflection } from '../lib/curriculumReflections';
+import { getCurriculumPracticeIdForActivity } from '../lib/curriculumGuidedPracticePlacement';
+import CurriculumGuidedPracticePanel from './CurriculumGuidedPracticePanel';
 
 const VoiceRecorder = ({ onRecordingComplete, label }) => {
   const [isRecording, setIsRecording] = useState(false);
@@ -884,6 +886,7 @@ const LearningModuleEnhanced = ({ module, onComplete, onBack, userProgress = {},
     const displayGuidedSteps = dynamicActivity?.guidedSteps || (isSixFsActivity && woundPers?.guidedSteps ? woundPers.guidedSteps : data.guidedSteps);
     const childName = dynamicActivity?.childName || woundPers?.childName || 'Inner Child';
     const isPersonalized = !!dynamicActivity;
+    const curriculumPracticeId = getCurriculumPracticeIdForActivity(data.id);
 
     const woundColor = woundContext?.primary === 'shame' ? 'purple' :
       woundContext?.primary === 'abandonment' ? 'blue' :
@@ -940,6 +943,10 @@ const LearningModuleEnhanced = ({ module, onComplete, onBack, userProgress = {},
         </div>
 
         {renderInteractiveElements(data)}
+
+        {curriculumPracticeId && (
+          <CurriculumGuidedPracticePanel activityId={data.id} />
+        )}
 
         {displayQuestions && displayQuestions.length > 0 && (
           <div className="space-y-4">

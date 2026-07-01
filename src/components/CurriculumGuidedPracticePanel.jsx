@@ -2,8 +2,9 @@ import { useEffect, useMemo, useState } from 'react';
 import { Clock, Headphones } from 'lucide-react';
 import TranscriptPanel from './TranscriptPanel';
 import AudioPracticePlayer from './AudioPracticePlayer';
-import { getGuidedPracticeMediaBySection } from '../lib/guidedPracticeMediaMap';
+import { getGuidedPracticeMedia, getGuidedPracticeMediaBySection } from '../lib/guidedPracticeMediaMap';
 import { loadActiveMeditationMedia, mergeMeditationMediaWithLibrary } from '../lib/meditationMedia';
+import { getCurriculumPracticeIdForActivity } from '../lib/curriculumGuidedPracticePlacement';
 
 const fallbackCopy = 'Audio is optional for curriculum guided practices. If the UploadThing URL has not been mapped yet, use the written transcript and fallback steps below.';
 
@@ -34,41 +35,48 @@ function mediaMapToPractice(item) {
   };
 }
 
-export default function CurriculumGuidedPracticePanel() {
-  const basePractices = useMemo(() => getGuidedPracticeMediaBySection('B').map(mediaMapToPractice), []);
-  const [practices, setPractices] = useState(basePractices);
-  const [activePracticeId, setActivePracticeId] = useState(basePractices[0]?.id || '');
+export default function CurriculumGuidedPracticePanel({ activityId = null, practiceId = null }) {
+  const resolvedPracticeId = practiceId || getCurriculumPracticeIdForActivity(activityId);
+  const basePractices = useMemo(() => {
+    const items = resolvedPracticeId
+      ? [getGuidedPracticeMedia(resolvedPracticeId)].filter(Boolean)
+      : getGuidedPracticeMediaBySection('B');
+    return items.map(mediaMapToPractice);
+  }, [resolvedPracticeId]);
+  const [mediaRows, setMediaRows] = useState([]);
+  const [activePracticeId, setActivePracticeId] = useState('');
+  const practices = useMemo(() => mergeMeditationMediaWithLibrary(basePractices, mediaRows), [basePractices, mediaRows]);
 
   useEffect(() => {
     let mounted = true;
     loadActiveMeditationMedia().then(({ data }) => {
       if (!mounted || !Array.isArray(data)) return;
-      setPractices(mergeMeditationMediaWithLibrary(basePractices, data));
+      setMediaRows(data);
     });
     return () => { mounted = false; };
-  }, [basePractices]);
+  }, []);
 
   const activePractice = practices.find((practice) => practice.id === activePracticeId) || practices[0];
 
   if (!activePractice) return null;
 
   return (
-    <section className="rounded-3xl border border-amber-100 bg-white/95 p-5 shadow-sm sm:p-6" aria-labelledby="curriculum-guided-practices-heading">
+    <section className="rounded-2xl border border-amber-100 bg-white/95 p-5 shadow-sm sm:p-6" aria-labelledby="curriculum-guided-practices-heading">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <p className="text-xs font-bold uppercase tracking-wide text-amber-700">Curriculum guided practices</p>
-          <h2 id="curriculum-guided-practices-heading" className="mt-1 text-2xl font-bold text-gray-900">Audio + transcript practice library</h2>
+          <h2 id="curriculum-guided-practices-heading" className="mt-1 text-xl font-bold text-gray-900">{resolvedPracticeId ? activePractice.title : 'Audio + transcript practice library'}</h2>
           <p className="mt-2 max-w-3xl text-sm leading-relaxed text-gray-600">
-            These Section B practices are available from the Curriculum area with transcripts always visible and UploadThing audio used only when mapped.
+            This practice belongs with the module activity. Use the transcript and written steps here, with UploadThing audio when mapped.
           </p>
         </div>
         <span className="inline-flex items-center gap-2 rounded-full bg-amber-50 px-3 py-1 text-xs font-bold text-amber-700">
-          <Headphones className="h-4 w-4" /> 11 practices
+          <Headphones className="h-4 w-4" /> {resolvedPracticeId ? activePractice.duration : `${practices.length} practices`}
         </span>
       </div>
 
       <div className="mt-5 grid gap-4 lg:grid-cols-[minmax(220px,0.45fr)_minmax(0,1fr)]">
-        <div className="space-y-2" role="list" aria-label="Curriculum guided practices">
+        {!resolvedPracticeId && <div className="space-y-2" role="list" aria-label="Curriculum guided practices">
           {practices.map((practice) => (
             <button
               type="button"
@@ -85,9 +93,9 @@ export default function CurriculumGuidedPracticePanel() {
               </span>
             </button>
           ))}
-        </div>
+        </div>}
 
-        <article className="rounded-3xl border border-gray-200 bg-white p-4">
+        <article className={`rounded-2xl border border-gray-200 bg-white p-4 ${resolvedPracticeId ? 'lg:col-span-2' : ''}`}>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div>
               <p className="text-xs font-bold uppercase tracking-wide text-amber-700">{activePractice.itemNumber} · {activePractice.mp3Filename}</p>
