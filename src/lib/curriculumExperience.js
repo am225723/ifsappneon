@@ -1,10 +1,19 @@
 import { curriculumModules, getNextModule } from '../data/curriculumData';
 import { isCurriculumInteractiveModule, normalizeInteractiveResult } from './interactiveResults';
 
+const hasExplicitCompletion = (row = {}) => {
+  const data = row.data && typeof row.data === 'object' ? row.data : {};
+  return row.completed === true
+    || row.is_completed === true
+    || data.completed === true
+    || data.is_completed === true
+    || Boolean(data.completedAt || data.completed_at);
+};
+
 export function getCompletedModuleIds(progressRows = [], curriculumModuleRows = []) {
   return Array.from(new Set([
-    ...progressRows.filter((row) => row.completed).map((row) => row.module_id),
-    ...curriculumModuleRows.map((row) => row.moduleId)
+    ...progressRows.filter(hasExplicitCompletion).map((row) => row.module_id || row.moduleId),
+    ...curriculumModuleRows.filter(hasExplicitCompletion).map((row) => row.moduleId || row.module_id)
   ].filter(Boolean)));
 }
 
