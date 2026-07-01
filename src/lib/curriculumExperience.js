@@ -5,10 +5,20 @@ const hasExplicitCompletion = (row = {}) => {
   const data = row.data && typeof row.data === 'object' ? row.data : {};
   return row.completed === true
     || row.is_completed === true
+    || Boolean(row.completed_at || row.completedAt)
     || data.completed === true
     || data.is_completed === true
     || Boolean(data.completedAt || data.completed_at);
 };
+
+function countAnswerFields(moduleAnswerRows = []) {
+  return moduleAnswerRows.reduce((total, row) => {
+    const answers = row?.answers || {};
+    if (Array.isArray(answers)) return total + answers.length;
+    if (answers && typeof answers === 'object') return total + Object.keys(answers).length;
+    return total;
+  }, 0);
+}
 
 export function getCompletedModuleIds(progressRows = [], curriculumModuleRows = []) {
   return Array.from(new Set([
@@ -40,20 +50,47 @@ export function getCurriculumPathSummary({ completedModuleIds = [] } = {}) {
   };
 }
 
-
-export function getCurriculumSummaryInputs({ progressRows = [], interactiveRows = [] } = {}) {
+export function getCurriculumSummaryInputs({ progressRows = [], interactiveRows = [], moduleAnswerRows = [] } = {}) {
   const normalizedInteractive = (interactiveRows || []).map((row) => row?.moduleId ? row : normalizeInteractiveResult(row));
   const curriculumModuleRows = normalizedInteractive.filter((row) => isCurriculumInteractiveModule(row.moduleId));
   const completedModuleIds = getCompletedModuleIds(progressRows, curriculumModuleRows);
-  return { progressRows, curriculumModuleRows, completedModuleIds, assignedPractices: [] };
+
+  const answerRows = moduleAnswerRows.length;
+  const answerFieldCount = countAnswerFields(moduleAnswerRows);
+  const modulesWithAnswers = new Set(
+    moduleAnswerRows
+      .map((row) => row.module_id || row.moduleId)
+      .filter(Boolean)
+  ).size;
+
+  return {
+    progressRows,
+    curriculumModuleRows,
+    completedModuleIds,
+    moduleAnswerRows,
+    answerRows,
+    answerFieldCount,
+    modulesWithAnswers,
+    assignedPractices: []
+  };
 }
 
-export function buildSharedCurriculumSummary({ progressRows = [], interactiveRows = [], assignedPractices = [] } = {}) {
-  const { completedModuleIds, curriculumModuleRows } = getCurriculumSummaryInputs({ progressRows, interactiveRows });
+export function buildSharedCurriculumSummary({ progressRows = [], interactiveRows = [], moduleAnswerRows = [], assignedPractices = [] } = {}) {
+  const {
+    completedModuleIds,
+    curriculumModuleRows,
+    answerRows,
+    answerFieldCount,
+    modulesWithAnswers
+  } = getCurriculumSummaryInputs({ progressRows, interactiveRows, moduleAnswerRows });
+
   return {
     ...getCurriculumPathSummary({ completedModuleIds }),
     completedModuleIds,
-    curriculumModuleRows
+    curriculumModuleRows,
+    answerRows,
+    answerFieldCount,
+    modulesWithAnswers
   };
 }
 

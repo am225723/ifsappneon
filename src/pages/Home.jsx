@@ -246,7 +246,11 @@ const Home = ({ clientId, client, mode = 'home', selfProfile = null, selfProfile
               .eq('client_id', effectiveClientId)],
             ['ifs_client_progress', supabase
               .from('ifs_client_progress')
-              .select('module_id, completed, current_step, updated_at')
+              .select('module_id, completed, current_step, completed_at, updated_at')
+              .eq('client_id', effectiveClientId)],
+            ['ifs_module_answers', supabase
+              .from('ifs_module_answers')
+              .select('id, client_id, module_id, step_id, answers, created_at, updated_at')
               .eq('client_id', effectiveClientId)],
             ['curriculum_reflections', loadCurriculumReflections({ clientId: effectiveClientId, limit: 20 })]
           ];
@@ -264,6 +268,7 @@ const Home = ({ clientId, client, mode = 'home', selfProfile = null, selfProfile
             timelineResult,
             journalResult,
             progressResult,
+            moduleAnswersResult,
             curriculumReflectionsResult
           ] = settledResults.map((settled, index) => settledDataResult(settled, optionalQueries[index][0]));
 
@@ -280,6 +285,7 @@ const Home = ({ clientId, client, mode = 'home', selfProfile = null, selfProfile
             healing_timeline: timelineResult,
             ifs_journal_entries: journalResult,
             ifs_client_progress: progressResult,
+            ifs_module_answers: moduleAnswersResult,
             curriculum_reflections: curriculumReflectionsResult
           }, effectiveClientId, selfProfileForLoad);
 
@@ -340,9 +346,12 @@ const Home = ({ clientId, client, mode = 'home', selfProfile = null, selfProfile
           setCurriculumReflections(curriculumReflectionsResult?.data || []);
 
           const progressRows = progressResult?.data || [];
+          const moduleAnswerRows = moduleAnswersResult?.data || [];
+
           setCurriculumSummary(buildSharedCurriculumSummary({
             progressRows,
             interactiveRows,
+            moduleAnswerRows,
             assignedPractices
           }));
 
@@ -672,7 +681,9 @@ const Home = ({ clientId, client, mode = 'home', selfProfile = null, selfProfile
             </div>
             <div className="mt-5 flex flex-wrap gap-2 text-xs">
               <span className="rounded-full bg-white/80 px-3 py-1 font-semibold shadow-sm" style={{ color: palette.primary }}>Curriculum-first IFS path</span>
-              <span className="rounded-full px-3 py-1 font-semibold" style={{ background: palette.softAccent, color: palette.primary }}>{curriculumSummary ? `${curriculumSummary.completedCount}/${curriculumSummary.totalModules} modules` : 'Ready to begin'}</span>
+              <span className="rounded-full px-3 py-1 font-semibold" style={{ background: palette.softAccent, color: palette.primary }}>{curriculumSummary
+  ? `${curriculumSummary.completedCount}/${curriculumSummary.totalModules} modules · ${curriculumSummary.modulesWithAnswers || 0} modules answered · ${curriculumSummary.answerFieldCount || 0} saved responses`
+  : 'Ready to begin'}</span>
               {activeAssignedPractice && <span className="rounded-full bg-brand-gold-50 px-3 py-1 font-semibold text-brand-gold-700 dark:bg-brand-gold-950/30 dark:text-brand-gold-500">Advisor-guided practice ready</span>}
             </div>
           </div>
