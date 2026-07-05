@@ -55,6 +55,22 @@ function buildWhere(filters = [], params) {
   if (!filters.length) return '';
   const clauses = filters.map((filter) => {
     if (filter.raw) return `(${filter.raw})`;
+    if (filter.op === 'or') {
+      const orClauses = (filter.conditions || []).map((condition) => {
+        const column = quoteIdent(condition.column);
+        if (condition.op === 'eq') {
+          params.push(condition.value);
+          return `${column} = $${params.length}`;
+        }
+        if (condition.op === 'like' || condition.op === 'ilike') {
+          params.push(condition.value);
+          return `${column} ${condition.op.toUpperCase()} $${params.length}`;
+        }
+        throw new Error(`Unsupported OR filter operation: ${condition.op}`);
+      });
+      if (!orClauses.length) return 'true';
+      return `(${orClauses.join(' OR ')})`;
+    }
     const column = quoteIdent(filter.column);
     if (filter.op === 'eq') {
       params.push(filter.value);

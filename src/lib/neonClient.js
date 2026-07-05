@@ -1,25 +1,30 @@
+import { getClerkBearerToken, missingAuthResponse } from './apiAuth.js';
+
 const API_PATH = import.meta.env.VITE_DATA_API_PATH || '/api/db';
 
 async function getAuthToken() {
-  try {
-    const clerk = window.Clerk;
-    if (clerk?.session?.getToken) return await clerk.session.getToken();
-  } catch (error) {
-    console.warn('Unable to read Clerk token:', error);
-  }
-  return null;
+  return getClerkBearerToken();
 }
 
 async function request(payload) {
   const token = await getAuthToken();
-  const response = await fetch(API_PATH, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {})
-    },
-    body: JSON.stringify(payload)
-  });
+  if (!token) {
+    return missingAuthResponse('Unable to reach your secure session yet. Please wait a moment and try again.');
+  }
+
+  let response;
+  try {
+    response = await fetch(API_PATH, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify(payload)
+    });
+  } catch (error) {
+    return { data: null, error: { message: error.message || 'Network request failed', status: 0 } };
+  }
 
   const json = await response.json().catch(() => ({}));
   if (!response.ok) {
@@ -91,6 +96,20 @@ class NeonQueryBuilder {
 
   ilike(column, value) {
     this.payload.filters.push({ op: 'ilike', column, value });
+    return this;
+  }
+
+  or(expression) {
+    const conditions = String(expression || '')
+      .split(',')
+      .map((part) => part.trim())
+      .filter(Boolean)
+      .map((part) => {
+        const [column, op, ...valueParts] = part.split('.');
+        return { column, op, value: valueParts.join('.') };
+      })
+      .filter((condition) => condition.column && condition.op && condition.value);
+    if (conditions.length) this.payload.filters.push({ op: 'or', conditions });
     return this;
   }
 

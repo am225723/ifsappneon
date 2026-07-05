@@ -83,6 +83,37 @@ const calculateAverageMood = (entries) => {
   return '😄';
 };
 
+const normalizeTags = (tags) => {
+  if (Array.isArray(tags)) {
+    return tags
+      .map((tag) => {
+        if (typeof tag === 'string') return tag;
+        if (tag && typeof tag === 'object') return tag.label || tag.name || tag.value || tag.id || '';
+        return '';
+      })
+      .map((tag) => String(tag).trim())
+      .filter(Boolean);
+  }
+  if (typeof tags === 'string') {
+    return tags
+      .split(',')
+      .map((tag) => tag.trim())
+      .filter(Boolean);
+  }
+  if (tags && typeof tags === 'object') {
+    return Object.values(tags)
+      .flat()
+      .map((tag) => {
+        if (typeof tag === 'string') return tag;
+        if (tag && typeof tag === 'object') return tag.label || tag.name || tag.value || tag.id || '';
+        return '';
+      })
+      .map((tag) => String(tag).trim())
+      .filter(Boolean);
+  }
+  return [];
+};
+
 const PARTS_PROMPTS = {
   manager: [
     'What are you trying to protect me from right now?',
@@ -277,7 +308,7 @@ const Journal = () => {
               id: row.id,
               title: row.title,
               content: row.content,
-              tags: row.tags || [],
+              tags: normalizeTags(row.tags),
               mood: row.mood || 'neutral',
               date: row.created_at,
               wordCount: row.content?.split(' ').length || 0,
@@ -335,7 +366,7 @@ const Journal = () => {
       id: Date.now(),
       title: entryTitle,
       content: entryContent,
-      tags: isPartsEntry ? [...entryTags, `part:${selectedPart.name}`] : entryTags,
+      tags: normalizeTags(isPartsEntry ? [...entryTags, `part:${selectedPart.name}`] : entryTags),
       mood: entryMood,
       date: new Date().toISOString(),
       wordCount: entryContent.split(' ').length,
@@ -352,7 +383,7 @@ const Journal = () => {
           title: entryTitle,
           content: entryContent,
           mood: entryMood,
-          tags: isPartsEntry ? [...entryTags, `part:${selectedPart.name}`] : entryTags,
+          tags: normalizeTags(isPartsEntry ? [...entryTags, `part:${selectedPart.name}`] : entryTags),
           created_at: new Date().toISOString()
         };
         if (isPartsEntry) {
@@ -1129,9 +1160,9 @@ const Journal = () => {
                     <div>{entry.wordCount} words</div>
                   </div>
 
-                  {entry.tags.length > 0 && (
+                  {normalizeTags(entry.tags).length > 0 && (
                     <div className="flex flex-wrap gap-1 mt-3">
-                      {entry.tags.slice(0, 3).map((tag, index) => (
+                      {normalizeTags(entry.tags).slice(0, 3).map((tag, index) => (
                         <span
                           key={index}
                           className="bg-amber-100 text-amber-700 px-2 py-1 rounded-full text-xs"
@@ -1139,8 +1170,8 @@ const Journal = () => {
                           #{tag}
                         </span>
                       ))}
-                      {entry.tags.length > 3 && (
-                        <span className={`text-xs ${textTertiary}`}>+{entry.tags.length - 3}</span>
+                      {normalizeTags(entry.tags).length > 3 && (
+                        <span className={`text-xs ${textTertiary}`}>+{normalizeTags(entry.tags).length - 3}</span>
                       )}
                     </div>
                   )}

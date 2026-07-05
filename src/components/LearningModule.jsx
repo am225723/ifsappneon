@@ -24,7 +24,7 @@ const LearningModule = ({ module, onComplete, onBack, userProgress = {} }) => {
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [completedSteps, setCompletedSteps] = useState([]);
   const [activityResponses, setActivityResponses] = useState({});
-  const [isCompleted, setIsCompleted] = useState(false);
+  const [, setIsCompleted] = useState(false);
   const [showCertificate, setShowCertificate] = useState(false);
   const [showIncompleteWarning, setShowIncompleteWarning] = useState(false);
   const [incompleteItems, setIncompleteItems] = useState([]);
@@ -107,13 +107,23 @@ const LearningModule = ({ module, onComplete, onBack, userProgress = {} }) => {
     }));
   };
 
-  const getStepRequirements = useCallback((step) => {
+  const getResponseValue = useCallback((stepIndex, type, index) => {
+    const scopedKey = `s${stepIndex}-${type}-${index}`;
+    if (activityResponses[scopedKey] !== undefined) return activityResponses[scopedKey];
+
+    // Older saved progress used unscoped keys. Only trust those on the first
+    // step so they cannot unlock later steps with different questions.
+    if (stepIndex === 0) return activityResponses[`${type}-${index}`];
+    return '';
+  }, [activityResponses]);
+
+  const getStepRequirements = useCallback((step, stepIndex = currentStepIndex) => {
     if (!step) return [];
     const missing = [];
     const data = step.data;
     if (step.type === 'learn' && data.reflectionPrompts) {
       data.reflectionPrompts.forEach((prompt, index) => {
-        const val = activityResponses[`reflection-${index}`];
+        const val = getResponseValue(stepIndex, 'reflection', index);
         if (!val || val.trim().length === 0) {
           missing.push(`Reflection question ${index + 1}`);
         }
@@ -121,24 +131,24 @@ const LearningModule = ({ module, onComplete, onBack, userProgress = {} }) => {
     }
     if (step.type === 'activity' && data.questions) {
       data.questions.forEach((q, index) => {
-        const val = activityResponses[`question-${index}`];
+        const val = getResponseValue(stepIndex, 'question', index);
         if (!val || val.trim().length === 0) {
           missing.push(`Question ${index + 1}`);
         }
       });
     }
     return missing;
-  }, [activityResponses]);
+  }, [currentStepIndex, getResponseValue]);
 
   const isCurrentStepComplete = useCallback(() => {
     if (!currentStep) return true;
     if (currentStep.type === 'result') return true;
-    return getStepRequirements(currentStep).length === 0;
-  }, [currentStep, getStepRequirements]);
+    return getStepRequirements(currentStep, currentStepIndex).length === 0;
+  }, [currentStep, currentStepIndex, getStepRequirements]);
 
   // Navigate to next step
   const nextStep = () => {
-    const missing = getStepRequirements(currentStep);
+    const missing = getStepRequirements(currentStep, currentStepIndex);
     if (missing.length > 0) {
       setIncompleteItems(missing);
       setShowIncompleteWarning(true);
@@ -265,8 +275,8 @@ const LearningModule = ({ module, onComplete, onBack, userProgress = {} }) => {
                     <p className="text-gray-700 italic">{prompt}</p>
                   </div>
                   <textarea
-                    value={activityResponses[`reflection-${index}`] || ''}
-                    onChange={(e) => handleActivityResponse(`reflection-${index}`, e.target.value)}
+                    value={getResponseValue(currentStepIndex, 'reflection', index) || ''}
+                    onChange={(e) => handleActivityResponse(`s${currentStepIndex}-reflection-${index}`, e.target.value)}
                     placeholder="Write your reflection here..."
                     className="w-full px-4 py-3 border border-yellow-200 rounded-lg focus:ring-2 focus:ring-yellow-400 focus:border-transparent bg-white/80 text-gray-700"
                     rows={3}
@@ -310,8 +320,8 @@ const LearningModule = ({ module, onComplete, onBack, userProgress = {} }) => {
                 </label>
                 <p className="text-gray-900 mb-3">{question}</p>
                 <textarea
-                  value={activityResponses[`question-${index}`] || ''}
-                  onChange={(e) => handleActivityResponse(`question-${index}`, e.target.value)}
+                  value={getResponseValue(currentStepIndex, 'question', index) || ''}
+                  onChange={(e) => handleActivityResponse(`s${currentStepIndex}-question-${index}`, e.target.value)}
                   placeholder="Share your thoughts and reflections here..."
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                   rows={4}

@@ -1,29 +1,37 @@
+import { getClerkBearerToken, missingAuthResponse } from './apiAuth';
+
 const NOTIFICATIONS_API_PATH = '/api/notifications';
 
 async function getAuthToken() {
-  try {
-    const clerk = window.Clerk;
-    if (clerk?.session?.getToken) return await clerk.session.getToken();
-  } catch (error) {
-    console.warn('Unable to read Clerk token:', error);
-  }
-  return null;
+  return getClerkBearerToken();
 }
 
 async function notificationsRequest(payload) {
   const token = await getAuthToken();
-  const response = await fetch(NOTIFICATIONS_API_PATH, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {})
-    },
-    body: JSON.stringify(payload)
-  });
+  if (!token) {
+    return missingAuthResponse('Unable to reach your secure session yet. Please wait a moment and try again.');
+  }
+
+  let response;
+  try {
+    response = await fetch(NOTIFICATIONS_API_PATH, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify(payload)
+    });
+  } catch (error) {
+    return { data: null, error: { message: error.message || 'Network request failed', status: 0 } };
+  }
 
   const json = await response.json().catch(() => ({}));
   if (!response.ok) {
-    return { data: null, error: json.error || { message: response.statusText || 'Notification request failed' } };
+    const message = typeof json.error === 'string'
+      ? json.error
+      : json.error?.message || response.statusText || 'Notification request failed';
+    return { data: null, error: { message, status: response.status } };
   }
   return { data: json.data, error: null };
 }

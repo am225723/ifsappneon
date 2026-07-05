@@ -1,25 +1,33 @@
 import { LIFE_REFLECTION_LABELS } from './lifeIntegrationDisplay';
+import { getClerkBearerToken, missingAuthResponse } from './apiAuth';
 
 const API_PATH = '/api/life-integration';
 
 export const LIFE_REFLECTION_TYPES = LIFE_REFLECTION_LABELS;
 
 async function getAuthToken() {
-  const clerk = window.Clerk;
-  if (clerk?.session?.getToken) return clerk.session.getToken();
-  return null;
+  return getClerkBearerToken();
 }
 
 async function lifeIntegrationRequest(payload) {
   const token = await getAuthToken();
-  const response = await fetch(API_PATH, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {})
-    },
-    body: JSON.stringify(payload)
-  });
+  if (!token) {
+    return missingAuthResponse('Unable to reach your secure session yet. Please wait a moment and try again.');
+  }
+
+  let response;
+  try {
+    response = await fetch(API_PATH, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify(payload)
+    });
+  } catch (error) {
+    return { data: null, error: { message: error.message || 'Network request failed', status: 0 } };
+  }
 
   const json = await response.json().catch(() => ({}));
   if (!response.ok) {
