@@ -1,4 +1,4 @@
-import { guidedPracticeMediaByPracticeId } from './guidedPracticeMediaMap';
+import { guidedPracticeMediaByPracticeId, guidedPracticeMediaMap } from './guidedPracticeMediaMap';
 export const PRACTICE_CATEGORY_ORDER = [
   'Quick Practices',
   'Self-Connection',
@@ -325,7 +325,43 @@ const baseGuidedPracticeLibrary = [
   },
 ];
 
-export const guidedPracticeLibrary = baseGuidedPracticeLibrary.map((practice) => ({
+const mediaOnlyCategoryByItem = (itemNumber = '') => {
+  const prefix = String(itemNumber).trim().charAt(0).toUpperCase();
+  if (prefix === 'A') return 'Self-Connection';
+  if (prefix === 'B') return 'Inner Child Work';
+  if (prefix === 'C') return 'Parts Work';
+  if (prefix === 'D') return 'Breathing Exercises';
+  return 'Self-Connection';
+};
+
+const mediaOnlySteps = (item) => makeSteps([
+  `Settle in and begin ${item.title || 'this guided practice'} when you feel ready.`,
+  'Let the guidance support you while you notice your breath, body, and any parts that are present.',
+  'If audio is unavailable, use the transcript and captions as written guidance.',
+  'Pause afterward to notice what changed and what your system may need next.',
+]);
+
+const basePracticeIds = new Set(baseGuidedPracticeLibrary.map((practice) => practice.id));
+const mediaOnlyPractices = guidedPracticeMediaMap
+  .filter((item) => item.practiceId && !basePracticeIds.has(item.practiceId))
+  .map((item) => ({
+    id: item.practiceId,
+    title: item.title,
+    description: `${item.title} guided IFS practice with transcript${item.audioUrl ? ' and audio' : ''}.`,
+    category: mediaOnlyCategoryByItem(item.itemNumber),
+    level: 'All levels',
+    duration: item.expectedDuration || '5 min',
+    durationSeconds: Math.max(60, (Number.parseInt(item.expectedDuration, 10) || 5) * 60),
+    type: item.itemNumber?.startsWith('D') ? 'breathing' : 'meditation',
+    route: `/meditation/${item.practiceId}`,
+    audioUrl: null,
+    coverImageUrl: null,
+    uploadThingFileKey: null,
+    fallbackPractice: true,
+    steps: mediaOnlySteps(item),
+  }));
+
+export const guidedPracticeLibrary = [...baseGuidedPracticeLibrary, ...mediaOnlyPractices].map((practice) => ({
   ...practice,
   ...(guidedPracticeMediaByPracticeId[practice.id] || {})
 }));

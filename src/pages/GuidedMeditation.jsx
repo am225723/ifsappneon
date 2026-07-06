@@ -185,7 +185,7 @@ function PracticePlayer({ practice, completed, onComplete }) {
           <AudioPracticePlayer
             audioUrl={practice.audioUrl}
             captionsPath={practice.captionsPath}
-             karaokePath={practice.karaokePath}
+            karaokePath={practice.karaokePath}
             title={practice.title}
             onPlayStateChange={setIsPlaying}
             onTimeChange={(time) => {
