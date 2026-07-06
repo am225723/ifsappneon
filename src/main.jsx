@@ -15,7 +15,9 @@ async function initNativeApp() {
   if (Capacitor.isNativePlatform()) {
     try {
       await StatusBar.setBackgroundColor({ color: '#d97706' });
-    } catch {}
+    } catch {
+      // Native status bar configuration can fail on unsupported platforms.
+    }
     try {
       Keyboard.addListener('keyboardWillShow', () => {
         document.body.classList.add('keyboard-open');
@@ -23,10 +25,14 @@ async function initNativeApp() {
       Keyboard.addListener('keyboardWillHide', () => {
         document.body.classList.remove('keyboard-open');
       });
-    } catch {}
+    } catch {
+      // Keyboard listeners are optional outside supported native shells.
+    }
     try {
       await SplashScreen.hide();
-    } catch {}
+    } catch {
+      // Splash screen may already be hidden or unavailable.
+    }
   }
 }
 

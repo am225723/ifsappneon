@@ -279,7 +279,7 @@ export const clientAuth = {
         }
         console.log(`🔄 PIN ${pin} already exists, trying again...`);
         attempts++;
-      } while (true);
+      } while (attempts <= maxAttempts);
 
       console.log('💾 Inserting new client into database...');
       const { data, error } = await supabase
@@ -383,7 +383,7 @@ export const clientAuth = {
               break;
             }
             attempts++;
-          } while (true);
+          } while (attempts <= 10);
 
           // Update the client with new PIN
           const { data: updatedClient, error: updateError } = await supabase
