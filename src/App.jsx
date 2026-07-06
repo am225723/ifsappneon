@@ -72,6 +72,7 @@ import PartsCards from './pages/PartsCards';
 import HealingTracker from './pages/HealingTracker';
 import ToolsDirectory from './pages/ToolsDirectory';
 import NotFound from './pages/NotFound';
+import Legal from './pages/Legal';
 import OnboardingFlow from './components/OnboardingFlow';
 import { initializePushNotifications } from './lib/pushNotifications';
 import ResourceLibrary from './pages/ResourceLibrary';
@@ -84,7 +85,7 @@ import { ThemeProvider } from './contexts/ThemeContext';
 import { PartsProvider } from './contexts/PartsContext';
 import { clientAuth } from './lib/supabasePersonalization';
 import { canAccessFeature } from './lib/accessControl';
-import { clearClientSession, claimClientWithPin, fetchLinkedClient, persistClientSession } from './lib/clerkClientAuth';
+import { clearClientSession, claimClientWithPin, createClientProfile, fetchLinkedClient, persistClientSession } from './lib/clerkClientAuth';
 import { Lock } from 'lucide-react';
 
 function LoadingScreen() {
@@ -98,10 +99,13 @@ function LoadingScreen() {
   );
 }
 
-function ClaimClientProfile({ onClaim }) {
+function ClaimClientProfile({ onClaim, onCreate }) {
   const [pin, setPin] = useState('');
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [mode, setMode] = useState('claim');
+  const [profileName, setProfileName] = useState('');
+  const [profileEmail, setProfileEmail] = useState('');
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -121,45 +125,92 @@ function ClaimClientProfile({ onClaim }) {
     }
   };
 
+  const handleCreate = async (event) => {
+    event.preventDefault();
+    setError('');
+
+    if (!profileName.trim()) {
+      setError('Enter your name to create a new profile.');
+      return;
+    }
+
+    setIsSubmitting(true);
+    const result = await onCreate({ name: profileName, email: profileEmail });
+    setIsSubmitting(false);
+
+    if (!result.success) {
+      setError(result.error || 'Unable to create your profile.');
+    }
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-brand-sanctuary dark:bg-brand-midnight px-4">
       <div className="w-full max-w-md soft-card p-8">
         <div className="text-center mb-6">
           <img src="/logo.png" alt="IFS" className="w-16 h-auto mx-auto mb-4" />
-          <h1 className="text-2xl font-serif font-semibold text-brand-stone-900 dark:text-slate-100">Link your IFS profile</h1>
+          <h1 className="text-2xl font-serif font-semibold text-brand-stone-900 dark:text-slate-100">Set up your IFS profile</h1>
           <p className="text-sm text-brand-stone-600 dark:text-slate-400 mt-2">
-            Enter your old 6-digit PIN once. We’ll connect your existing progress, assessments, journal entries, and messages to your Clerk login.
+            Have an old 6-digit PIN? Link it to keep existing progress. New here or no PIN? Create a fresh profile and continue right away.
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <input
-            value={pin}
-            onChange={(event) => setPin(event.target.value.replace(/\D/g, '').slice(0, 6))}
-            inputMode="numeric"
-            autoComplete="one-time-code"
-            placeholder="123456"
-            className="w-full rounded-2xl border border-brand-stone-200 dark:border-slate-700 bg-white/70 dark:bg-slate-900/60 px-4 py-3 text-center text-2xl tracking-[0.35em] font-semibold text-brand-stone-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-brand-gold-600"
-          />
-          {error && <p className="text-sm text-red-600 text-center">{error}</p>}
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="w-full btn-sanctuary-primary disabled:opacity-60"
-          >
-            {isSubmitting ? 'Linking…' : 'Link my profile'}
+        <div className="mb-5 grid grid-cols-2 gap-2 rounded-2xl bg-brand-stone-100 p-1 text-sm font-semibold dark:bg-slate-900">
+          <button type="button" onClick={() => { setMode('claim'); setError(''); }} className={`rounded-xl px-3 py-2 transition ${mode === 'claim' ? 'bg-white text-brand-stone-900 shadow-sm dark:bg-slate-800 dark:text-slate-100' : 'text-brand-stone-600 dark:text-slate-400'}`}>
+            I have a PIN
           </button>
-        </form>
+          <button type="button" onClick={() => { setMode('create'); setError(''); }} className={`rounded-xl px-3 py-2 transition ${mode === 'create' ? 'bg-white text-brand-stone-900 shadow-sm dark:bg-slate-800 dark:text-slate-100' : 'text-brand-stone-600 dark:text-slate-400'}`}>
+            No PIN yet
+          </button>
+        </div>
+
+        {mode === 'claim' ? (
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <input
+              value={pin}
+              onChange={(event) => setPin(event.target.value.replace(/\D/g, '').slice(0, 6))}
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              placeholder="123456"
+              className="w-full rounded-2xl border border-brand-stone-200 dark:border-slate-700 bg-white/70 dark:bg-slate-900/60 px-4 py-3 text-center text-2xl tracking-[0.35em] font-semibold text-brand-stone-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-brand-gold-600"
+            />
+            {error && <p className="text-sm text-red-600 text-center">{error}</p>}
+            <button type="submit" disabled={isSubmitting} className="w-full btn-sanctuary-primary disabled:opacity-60">
+              {isSubmitting ? 'Linking…' : 'Link my profile'}
+            </button>
+          </form>
+        ) : (
+          <form onSubmit={handleCreate} className="space-y-4">
+            <input
+              value={profileName}
+              onChange={(event) => setProfileName(event.target.value)}
+              autoComplete="name"
+              placeholder="Your name"
+              className="w-full rounded-2xl border border-brand-stone-200 dark:border-slate-700 bg-white/70 dark:bg-slate-900/60 px-4 py-3 text-brand-stone-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-brand-gold-600"
+            />
+            <input
+              value={profileEmail}
+              onChange={(event) => setProfileEmail(event.target.value)}
+              autoComplete="email"
+              type="email"
+              placeholder="Email (optional)"
+              className="w-full rounded-2xl border border-brand-stone-200 dark:border-slate-700 bg-white/70 dark:bg-slate-900/60 px-4 py-3 text-brand-stone-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-brand-gold-600"
+            />
+            {error && <p className="text-sm text-red-600 text-center">{error}</p>}
+            <button type="submit" disabled={isSubmitting} className="w-full btn-sanctuary-primary disabled:opacity-60">
+              {isSubmitting ? 'Creating…' : 'Create my profile'}
+            </button>
+          </form>
+        )}
 
         <p className="text-xs text-brand-stone-500 dark:text-slate-500 text-center mt-5">
-          Your app data stays linked to your existing client ID. Clerk only replaces the login method.
+          {mode === 'claim' ? 'Your existing app data stays linked to the same client ID.' : 'We will create a new secure profile and start onboarding next.'}
         </p>
       </div>
     </div>
   );
 }
 
-function ClerkAuthRoutes({ onClaim }) {
+function ClerkAuthRoutes({ onClaim, onCreate }) {
   return (
     <Routes>
       <Route
@@ -178,7 +229,9 @@ function ClerkAuthRoutes({ onClaim }) {
           </div>
         }
       />
-      <Route path="/claim-account" element={<ClaimClientProfile onClaim={onClaim} />} />
+      <Route path="/claim-account" element={<ClaimClientProfile onClaim={onClaim} onCreate={onCreate} />} />
+      <Route path="/privacy" element={<Legal type="privacy" />} />
+      <Route path="/terms" element={<Legal type="terms" />} />
       <Route path="/test-client" element={<TestClientCreator />} />
       <Route path="/diagnostic" element={<PINAuthDiagnostic />} />
       <Route path="/auth-debug" element={<AuthDebug />} />
@@ -388,6 +441,31 @@ function App() {
     }
   };
 
+  const handleCreateProfile = async (profile) => {
+    try {
+      if (!isLoaded) {
+        return { success: false, error: 'Authentication is still loading. Please try again.' };
+      }
+
+      if (!isSignedIn) {
+        return { success: false, error: 'Please sign in before creating your profile.' };
+      }
+
+      const client = await createClientProfile(getToken, profile);
+
+      persistClientSession(client);
+      setIsAuthenticated(true);
+      setCurrentClient(client);
+      setShowOnboarding(true);
+      setOnboardingChecked(true);
+      initializePushNotifications(client);
+
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  };
+
   const handleLogout = async () => {
     clientAuth.logout();
     clearClientSession();
@@ -410,6 +488,7 @@ function App() {
               isAuthenticated={isAuthenticated}
               currentClient={currentClient}
               handleClaim={handleClaim}
+              handleCreateProfile={handleCreateProfile}
               handleLogout={handleLogout}
               showOnboarding={showOnboarding}
               onboardingChecked={onboardingChecked}
@@ -422,7 +501,7 @@ function App() {
   );
 }
 
-function AppContent({ authChecked, clerkLoaded, clerkSignedIn, isAuthenticated, currentClient, handleClaim, handleLogout, showOnboarding, onboardingChecked, onOnboardingComplete }) {
+function AppContent({ authChecked, clerkLoaded, clerkSignedIn, isAuthenticated, currentClient, handleClaim, handleCreateProfile, handleLogout, showOnboarding, onboardingChecked, onOnboardingComplete }) {
   const location = useLocation();
   const bgClass = isAuthenticated ? 'bg-brand-sanctuary dark:bg-brand-midnight' : '';
   const [unreadMsgCount, setUnreadMsgCount] = useState(0);
@@ -479,14 +558,16 @@ function AppContent({ authChecked, clerkLoaded, clerkSignedIn, isAuthenticated, 
           <SSOCallback />
         ) : clerkSignedIn ? (
           <Routes>
-            <Route path="/claim-account" element={<ClaimClientProfile onClaim={handleClaim} />} />
+            <Route path="/claim-account" element={<ClaimClientProfile onClaim={handleClaim} onCreate={handleCreateProfile} />} />
+            <Route path="/privacy" element={<Legal type="privacy" />} />
+            <Route path="/terms" element={<Legal type="terms" />} />
             <Route path="/test-client" element={<TestClientCreator />} />
             <Route path="/diagnostic" element={<PINAuthDiagnostic />} />
             <Route path="/auth-debug" element={<AuthDebug />} />
             <Route path="*" element={<Navigate to="/claim-account" replace />} />
           </Routes>
         ) : (
-          <ClerkAuthRoutes onClaim={handleClaim} />
+          <ClerkAuthRoutes onClaim={handleClaim} onCreate={handleCreateProfile} />
         )
       ) : isAuthenticated && !onboardingChecked ? (
         <LoadingScreen />
@@ -652,6 +733,8 @@ function AppContent({ authChecked, clerkLoaded, clerkSignedIn, isAuthenticated, 
                 <Route path="/sign-in/*" element={<Navigate to="/" replace />} />
                 <Route path="/sign-up/*" element={<Navigate to="/" replace />} />
                 <Route path="/claim-account" element={<Navigate to="/" replace />} />
+                <Route path="/privacy" element={<Legal type="privacy" />} />
+                <Route path="/terms" element={<Legal type="terms" />} />
                 <Route path="*" element={<NotFound canAccessAdvisor={isTherapistRole} canAccessAdmin={isAdminOrSupervisor} />} />
               </Routes>
             </RouteErrorBoundary>

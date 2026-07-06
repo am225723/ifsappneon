@@ -56,3 +56,23 @@ export async function claimClientWithPin(getToken, pin) {
 
   return json.client;
 }
+
+export async function createClientProfile(getToken, profile) {
+  const token = await getToken();
+  const response = await fetch('/api/create-client-profile', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`
+    },
+    body: JSON.stringify(profile || {})
+  });
+
+  const json = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw new Error(json.error || 'Unable to create client profile.');
+  }
+
+  return json.client;
+}
