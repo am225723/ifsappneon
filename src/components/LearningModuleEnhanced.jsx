@@ -182,6 +182,7 @@ const LearningModuleEnhanced = ({ module, onComplete, onBack, userProgress = {},
   const [meditationStepTimer, setMeditationStepTimer] = useState(0);
   const [meditationCompleted, setMeditationCompleted] = useState(false);
   const [loading, setLoading] = useState(true);
+  const hasLoadedProgressRef = useRef(false);
   const [showIncompleteWarning, setShowIncompleteWarning] = useState(false);
   const [incompleteItems, setIncompleteItems] = useState([]);
   const [currAudioPlaying, setCurrAudioPlaying] = useState(false);
@@ -260,7 +261,7 @@ const LearningModuleEnhanced = ({ module, onComplete, onBack, userProgress = {},
       if (!userId) return;
       
       try {
-        setLoading(true);
+        if (!hasLoadedProgressRef.current) setLoading(true);
         const progress = await getModuleProgress(module.id);
         const interactiveDataSaved = await getInteractiveData(module.id);
         
@@ -287,6 +288,7 @@ const LearningModuleEnhanced = ({ module, onComplete, onBack, userProgress = {},
           setCompletedSteps(savedCompletedSteps);
         }
       } finally {
+        hasLoadedProgressRef.current = true;
         setLoading(false);
       }
     };

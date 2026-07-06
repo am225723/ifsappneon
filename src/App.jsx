@@ -88,6 +88,8 @@ import { canAccessFeature } from './lib/accessControl';
 import { clearClientSession, claimClientWithPin, createClientProfile, fetchLinkedClient, persistClientSession } from './lib/clerkClientAuth';
 import { Lock } from 'lucide-react';
 
+const EMPTY_USER_PROGRESS = Object.freeze({});
+
 function LoadingScreen() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-brand-sanctuary dark:bg-brand-midnight">
@@ -650,8 +652,8 @@ function AppContent({ authChecked, clerkLoaded, clerkSignedIn, isAuthenticated, 
                 <Route path="/my-ifs" element={myIFSWorkElement} />
                 <Route path="/my-ifs-path" element={<Navigate to="/my-ifs" replace />} />
                 <Route path="/my-ifs-work" element={<Navigate to="/my-ifs" replace />} />
-                <Route path="/curriculum" element={<CurriculumSystem clientId={currentClient?.id} userProgress={{}} />} />
-                <Route path="/curriculum/module/:moduleId" element={<LearningModuleRenderer userProgress={{}} />} />
+                <Route path="/curriculum" element={<CurriculumSystem clientId={currentClient?.id} userProgress={EMPTY_USER_PROGRESS} />} />
+                <Route path="/curriculum/module/:moduleId" element={<LearningModuleRenderer userProgress={EMPTY_USER_PROGRESS} />} />
                 <Route path="/cheat-sheet" element={<CheatSheet />} />
                 <Route path="/wounds" element={<Wounds />} />
                 <Route path="/qualities" element={<Qualities />} />
