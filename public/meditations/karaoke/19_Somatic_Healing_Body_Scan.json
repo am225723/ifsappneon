@@ -1,0 +1,4031 @@
+{
+  "segments": [
+    {
+      "start": 0.091,
+      "end": 2.432,
+      "text": " Welcome to the Somatic Healing Body Scan.",
+      "words": [
+        {
+          "word": "Welcome",
+          "start": 0.091,
+          "end": 0.491,
+          "score": 0.905
+        },
+        {
+          "word": "to",
+          "start": 0.531,
+          "end": 0.611,
+          "score": 0.952
+        },
+        {
+          "word": "the",
+          "start": 0.671,
+          "end": 0.751,
+          "score": 0.892
+        },
+        {
+          "word": "Somatic",
+          "start": 0.791,
+          "end": 1.232,
+          "score": 0.942
+        },
+        {
+          "word": "Healing",
+          "start": 1.252,
+          "end": 1.612,
+          "score": 0.869
+        },
+        {
+          "word": "Body",
+          "start": 1.652,
+          "end": 1.952,
+          "score": 0.949
+        },
+        {
+          "word": "Scan.",
+          "start": 1.992,
+          "end": 2.432,
+          "score": 0.861
+        }
+      ],
+      "avg_logprob": -0.04265536003830758
+    },
+    {
+      "start": 15.46,
+      "end": 22.285,
+      "text": "This practice invites you to listen to the body as a messenger of parts, protection, and emotion.",
+      "words": [
+        {
+          "word": "This",
+          "start": 15.46,
+          "end": 15.661,
+          "score": 0.766
+        },
+        {
+          "word": "practice",
+          "start": 15.741,
+          "end": 16.321,
+          "score": 0.745
+        },
+        {
+          "word": "invites",
+          "start": 16.461,
+          "end": 16.921,
+          "score": 0.734
+        },
+        {
+          "word": "you",
+          "start": 16.981,
+          "end": 17.161,
+          "score": 0.916
+        },
+        {
+          "word": "to",
+          "start": 17.221,
+          "end": 17.322,
+          "score": 0.788
+        },
+        {
+          "word": "listen",
+          "start": 17.382,
+          "end": 17.742,
+          "score": 0.895
+        },
+        {
+          "word": "to",
+          "start": 17.802,
+          "end": 17.902,
+          "score": 0.793
+        },
+        {
+          "word": "the",
+          "start": 17.942,
+          "end": 18.022,
+          "score": 1.0
+        },
+        {
+          "word": "body",
+          "start": 18.062,
+          "end": 18.442,
+          "score": 0.924
+        },
+        {
+          "word": "as",
+          "start": 18.622,
+          "end": 18.702,
+          "score": 0.694
+        },
+        {
+          "word": "a",
+          "start": 18.762,
+          "end": 18.802,
+          "score": 0.503
+        },
+        {
+          "word": "messenger",
+          "start": 18.862,
+          "end": 19.363,
+          "score": 0.87
+        },
+        {
+          "word": "of",
+          "start": 19.423,
+          "end": 19.503,
+          "score": 0.79
+        },
+        {
+          "word": "parts,",
+          "start": 19.603,
+          "end": 20.023,
+          "score": 0.951
+        },
+        {
+          "word": "protection,",
+          "start": 20.564,
+          "end": 21.204,
+          "score": 0.896
+        },
+        {
+          "word": "and",
+          "start": 21.624,
+          "end": 21.744,
+          "score": 0.682
+        },
+        {
+          "word": "emotion.",
+          "start": 21.804,
+          "end": 22.285,
+          "score": 0.873
+        }
+      ],
+      "avg_logprob": -0.04265536003830758
+    },
+    {
+      "start": 23.265,
+      "end": 24.926,
+      "text": "It is not a medical assessment.",
+      "words": [
+        {
+          "word": "It",
+          "start": 23.265,
+          "end": 23.325,
+          "score": 0.758
+        },
+        {
+          "word": "is",
+          "start": 23.405,
+          "end": 23.485,
+          "score": 0.667
+        },
+        {
+          "word": "not",
+          "start": 23.545,
+          "end": 23.745,
+          "score": 0.752
+        },
+        {
+          "word": "a",
+          "start": 23.785,
+          "end": 23.805,
+          "score": 1.0
+        },
+        {
+          "word": "medical",
+          "start": 23.866,
+          "end": 24.246,
+          "score": 0.958
+        },
+        {
+          "word": "assessment.",
+          "start": 24.326,
+          "end": 24.926,
+          "score": 0.953
+        }
+      ],
+      "avg_logprob": -0.04265536003830758
+    },
+    {
+      "start": 25.747,
+      "end": 27.668,
+      "text": "It is a gentle awareness practice.",
+      "words": [
+        {
+          "word": "It",
+          "start": 25.747,
+          "end": 25.807,
+          "score": 0.996
+        },
+        {
+          "word": "is",
+          "start": 25.867,
+          "end": 25.967,
+          "score": 0.824
+        },
+        {
+          "word": "a",
+          "start": 26.027,
+          "end": 26.047,
+          "score": 0.999
+        },
+        {
+          "word": "gentle",
+          "start": 26.127,
+          "end": 26.547,
+          "score": 0.808
+        },
+        {
+          "word": "awareness",
+          "start": 26.587,
+          "end": 27.087,
+          "score": 0.922
+        },
+        {
+          "word": "practice.",
+          "start": 27.128,
+          "end": 27.668,
+          "score": 0.924
+        }
+      ],
+      "avg_logprob": -0.04265536003830758
+    },
+    {
+      "start": 28.742,
+      "end": 30.303,
+      "text": " Begin by getting comfortable.",
+      "words": [
+        {
+          "word": "Begin",
+          "start": 28.742,
+          "end": 29.122,
+          "score": 0.681
+        },
+        {
+          "word": "by",
+          "start": 29.182,
+          "end": 29.322,
+          "score": 0.889
+        },
+        {
+          "word": "getting",
+          "start": 29.382,
+          "end": 29.663,
+          "score": 0.896
+        },
+        {
+          "word": "comfortable.",
+          "start": 29.743,
+          "end": 30.303,
+          "score": 0.801
+        }
+      ],
+      "avg_logprob": -0.05103641760069877
+    },
+    {
+      "start": 31.264,
+      "end": 32.865,
+      "text": "Let your body be supported.",
+      "words": [
+        {
+          "word": "Let",
+          "start": 31.264,
+          "end": 31.424,
+          "score": 0.923
+        },
+        {
+          "word": "your",
+          "start": 31.464,
+          "end": 31.624,
+          "score": 0.721
+        },
+        {
+          "word": "body",
+          "start": 31.664,
+          "end": 31.964,
+          "score": 1.0
+        },
+        {
+          "word": "be",
+          "start": 32.044,
+          "end": 32.184,
+          "score": 0.914
+        },
+        {
+          "word": "supported.",
+          "start": 32.284,
+          "end": 32.865,
+          "score": 0.979
+        }
+      ],
+      "avg_logprob": -0.05103641760069877
+    },
+    {
+      "start": 34.206,
+      "end": 46.514,
+      "text": "Take a slow breath in and let it out.",
+      "words": [
+        {
+          "word": "Take",
+          "start": 34.206,
+          "end": 34.406,
+          "score": 0.948
+        },
+        {
+          "word": "a",
+          "start": 34.446,
+          "end": 34.486,
+          "score": 0.5
+        },
+        {
+          "word": "slow",
+          "start": 34.586,
+          "end": 34.906,
+          "score": 0.918
+        },
+        {
+          "word": "breath",
+          "start": 34.986,
+          "end": 35.266,
+          "score": 0.861
+        },
+        {
+          "word": "in",
+          "start": 35.446,
+          "end": 35.566,
+          "score": 0.474
+        },
+        {
+          "word": "and",
+          "start": 45.733,
+          "end": 45.853,
+          "score": 0.887
+        },
+        {
+          "word": "let",
+          "start": 45.933,
+          "end": 46.113,
+          "score": 0.938
+        },
+        {
+          "word": "it",
+          "start": 46.153,
+          "end": 46.213,
+          "score": 0.91
+        },
+        {
+          "word": "out.",
+          "start": 46.354,
+          "end": 46.514,
+          "score": 0.852
+        }
+      ],
+      "avg_logprob": -0.05103641760069877
+    },
+    {
+      "start": 47.814,
+      "end": 49.936,
+      "text": "Now bring attention to the top of your head.",
+      "words": [
+        {
+          "word": "Now",
+          "start": 47.814,
+          "end": 47.955,
+          "score": 0.886
+        },
+        {
+          "word": "bring",
+          "start": 48.015,
+          "end": 48.235,
+          "score": 0.837
+        },
+        {
+          "word": "attention",
+          "start": 48.275,
+          "end": 48.795,
+          "score": 0.833
+        },
+        {
+          "word": "to",
+          "start": 48.875,
+          "end": 48.975,
+          "score": 0.832
+        },
+        {
+          "word": "the",
+          "start": 49.015,
+          "end": 49.095,
+          "score": 0.834
+        },
+        {
+          "word": "top",
+          "start": 49.135,
+          "end": 49.376,
+          "score": 0.929
+        },
+        {
+          "word": "of",
+          "start": 49.416,
+          "end": 49.476,
+          "score": 0.926
+        },
+        {
+          "word": "your",
+          "start": 49.516,
+          "end": 49.676,
+          "score": 0.829
+        },
+        {
+          "word": "head.",
+          "start": 49.716,
+          "end": 49.936,
+          "score": 0.913
+        }
+      ],
+      "avg_logprob": -0.05103641760069877
+    },
+    {
+      "start": 63.176,
+      "end": 66.577,
+      "text": " Notice any sensation there, no need to change it.",
+      "words": [
+        {
+          "word": "Notice",
+          "start": 63.176,
+          "end": 63.516,
+          "score": 0.9
+        },
+        {
+          "word": "any",
+          "start": 63.636,
+          "end": 63.796,
+          "score": 0.742
+        },
+        {
+          "word": "sensation",
+          "start": 63.876,
+          "end": 64.576,
+          "score": 0.822
+        },
+        {
+          "word": "there,",
+          "start": 64.636,
+          "end": 64.896,
+          "score": 0.848
+        },
+        {
+          "word": "no",
+          "start": 65.417,
+          "end": 65.557,
+          "score": 0.912
+        },
+        {
+          "word": "need",
+          "start": 65.617,
+          "end": 65.837,
+          "score": 0.88
+        },
+        {
+          "word": "to",
+          "start": 65.877,
+          "end": 65.977,
+          "score": 0.912
+        },
+        {
+          "word": "change",
+          "start": 66.037,
+          "end": 66.377,
+          "score": 0.717
+        },
+        {
+          "word": "it.",
+          "start": 66.457,
+          "end": 66.577,
+          "score": 0.803
+        }
+      ],
+      "avg_logprob": -0.0421075311574069
+    },
+    {
+      "start": 67.537,
+      "end": 73.318,
+      "text": "Move attention to your forehead, your eyes, your jaw, your mouth.",
+      "words": [
+        {
+          "word": "Move",
+          "start": 67.537,
+          "end": 67.797,
+          "score": 0.834
+        },
+        {
+          "word": "attention",
+          "start": 67.837,
+          "end": 68.397,
+          "score": 0.72
+        },
+        {
+          "word": "to",
+          "start": 68.477,
+          "end": 68.577,
+          "score": 0.828
+        },
+        {
+          "word": "your",
+          "start": 68.617,
+          "end": 68.757,
+          "score": 0.858
+        },
+        {
+          "word": "forehead,",
+          "start": 68.837,
+          "end": 69.337,
+          "score": 0.714
+        },
+        {
+          "word": "your",
+          "start": 70.118,
+          "end": 70.298,
+          "score": 0.724
+        },
+        {
+          "word": "eyes,",
+          "start": 70.538,
+          "end": 70.738,
+          "score": 0.824
+        },
+        {
+          "word": "your",
+          "start": 71.498,
+          "end": 71.678,
+          "score": 0.713
+        },
+        {
+          "word": "jaw,",
+          "start": 71.738,
+          "end": 72.138,
+          "score": 0.999
+        },
+        {
+          "word": "your",
+          "start": 72.758,
+          "end": 72.918,
+          "score": 0.714
+        },
+        {
+          "word": "mouth.",
+          "start": 72.978,
+          "end": 73.318,
+          "score": 0.791
+        }
+      ],
+      "avg_logprob": -0.0421075311574069
+    },
+    {
+      "start": 74.338,
+      "end": 78.419,
+      "text": "Notice softness, tension, numbness, or movement.",
+      "words": [
+        {
+          "word": "Notice",
+          "start": 74.338,
+          "end": 74.719,
+          "score": 0.917
+        },
+        {
+          "word": "softness,",
+          "start": 74.799,
+          "end": 75.459,
+          "score": 0.863
+        },
+        {
+          "word": "tension,",
+          "start": 75.919,
+          "end": 76.459,
+          "score": 0.91
+        },
+        {
+          "word": "numbness,",
+          "start": 76.939,
+          "end": 77.539,
+          "score": 0.708
+        },
+        {
+          "word": "or",
+          "start": 77.739,
+          "end": 77.839,
+          "score": 0.763
+        },
+        {
+          "word": "movement.",
+          "start": 77.919,
+          "end": 78.419,
+          "score": 0.838
+        }
+      ],
+      "avg_logprob": -0.0421075311574069
+    },
+    {
+      "start": 79.72,
+      "end": 80.46,
+      "text": "Now the throat.",
+      "words": [
+        {
+          "word": "Now",
+          "start": 79.72,
+          "end": 79.92,
+          "score": 0.914
+        },
+        {
+          "word": "the",
+          "start": 79.98,
+          "end": 80.08,
+          "score": 0.838
+        },
+        {
+          "word": "throat.",
+          "start": 80.12,
+          "end": 80.46,
+          "score": 0.862
+        }
+      ],
+      "avg_logprob": -0.0421075311574069
+    },
+    {
+      "start": 81.72,
+      "end": 85.541,
+      "text": "Ask, is there anything here that wants to be noticed?",
+      "words": [
+        {
+          "word": "Ask,",
+          "start": 81.72,
+          "end": 81.98,
+          "score": 0.873
+        },
+        {
+          "word": "is",
+          "start": 82.9,
+          "end": 82.98,
+          "score": 0.772
+        },
+        {
+          "word": "there",
+          "start": 83.02,
+          "end": 83.2,
+          "score": 0.639
+        },
+        {
+          "word": "anything",
+          "start": 83.34,
+          "end": 83.761,
+          "score": 0.87
+        },
+        {
+          "word": "here",
+          "start": 83.861,
+          "end": 84.121,
+          "score": 0.833
+        },
+        {
+          "word": "that",
+          "start": 84.221,
+          "end": 84.381,
+          "score": 0.914
+        },
+        {
+          "word": "wants",
+          "start": 84.441,
+          "end": 84.701,
+          "score": 0.921
+        },
+        {
+          "word": "to",
+          "start": 84.781,
+          "end": 84.861,
+          "score": 0.812
+        },
+        {
+          "word": "be",
+          "start": 84.901,
+          "end": 85.001,
+          "score": 0.849
+        },
+        {
+          "word": "noticed?",
+          "start": 85.061,
+          "end": 85.541,
+          "score": 0.81
+        }
+      ],
+      "avg_logprob": -0.0421075311574069
+    },
+    {
+      "start": 98.664,
+      "end": 99.825,
+      "text": " Move to the shoulders.",
+      "words": [
+        {
+          "word": "Move",
+          "start": 98.664,
+          "end": 98.964,
+          "score": 0.897
+        },
+        {
+          "word": "to",
+          "start": 99.024,
+          "end": 99.104,
+          "score": 0.999
+        },
+        {
+          "word": "the",
+          "start": 99.144,
+          "end": 99.244,
+          "score": 0.72
+        },
+        {
+          "word": "shoulders.",
+          "start": 99.304,
+          "end": 99.825,
+          "score": 0.858
+        }
+      ],
+      "avg_logprob": -0.055447395019074704
+    },
+    {
+      "start": 100.345,
+      "end": 101.765,
+      "text": "Notice what they carry.",
+      "words": [
+        {
+          "word": "Notice",
+          "start": 100.345,
+          "end": 100.805,
+          "score": 0.872
+        },
+        {
+          "word": "what",
+          "start": 100.925,
+          "end": 101.065,
+          "score": 0.769
+        },
+        {
+          "word": "they",
+          "start": 101.105,
+          "end": 101.265,
+          "score": 0.75
+        },
+        {
+          "word": "carry.",
+          "start": 101.325,
+          "end": 101.765,
+          "score": 0.919
+        }
+      ],
+      "avg_logprob": -0.055447395019074704
+    },
+    {
+      "start": 102.626,
+      "end": 103.606,
+      "text": "Move to the chest.",
+      "words": [
+        {
+          "word": "Move",
+          "start": 102.626,
+          "end": 102.866,
+          "score": 0.83
+        },
+        {
+          "word": "to",
+          "start": 102.906,
+          "end": 103.006,
+          "score": 0.834
+        },
+        {
+          "word": "the",
+          "start": 103.026,
+          "end": 103.126,
+          "score": 0.749
+        },
+        {
+          "word": "chest.",
+          "start": 103.166,
+          "end": 103.606,
+          "score": 0.879
+        }
+      ],
+      "avg_logprob": -0.055447395019074704
+    },
+    {
+      "start": 104.186,
+      "end": 110.929,
+      "text": "Notice breath, tightness, openness, heaviness, warmth or emptiness.",
+      "words": [
+        {
+          "word": "Notice",
+          "start": 104.186,
+          "end": 104.586,
+          "score": 0.878
+        },
+        {
+          "word": "breath,",
+          "start": 104.767,
+          "end": 105.227,
+          "score": 0.811
+        },
+        {
+          "word": "tightness,",
+          "start": 105.707,
+          "end": 106.347,
+          "score": 0.845
+        },
+        {
+          "word": "openness,",
+          "start": 106.867,
+          "end": 107.448,
+          "score": 0.802
+        },
+        {
+          "word": "heaviness,",
+          "start": 107.888,
+          "end": 108.488,
+          "score": 0.862
+        },
+        {
+          "word": "warmth",
+          "start": 108.988,
+          "end": 109.429,
+          "score": 0.669
+        },
+        {
+          "word": "or",
+          "start": 109.949,
+          "end": 110.109,
+          "score": 0.504
+        },
+        {
+          "word": "emptiness.",
+          "start": 110.309,
+          "end": 110.929,
+          "score": 0.728
+        }
+      ],
+      "avg_logprob": -0.055447395019074704
+    },
+    {
+      "start": 111.91,
+      "end": 113.05,
+      "text": "Move to the stomach.",
+      "words": [
+        {
+          "word": "Move",
+          "start": 111.91,
+          "end": 112.23,
+          "score": 0.844
+        },
+        {
+          "word": "to",
+          "start": 112.29,
+          "end": 112.37,
+          "score": 0.996
+        },
+        {
+          "word": "the",
+          "start": 112.41,
+          "end": 112.51,
+          "score": 0.689
+        },
+        {
+          "word": "stomach.",
+          "start": 112.57,
+          "end": 113.05,
+          "score": 0.857
+        }
+      ],
+      "avg_logprob": -0.055447395019074704
+    },
+    {
+      "start": 113.89,
+      "end": 117.672,
+      "text": "Notice any holding, churning, contraction or ease.",
+      "words": [
+        {
+          "word": "Notice",
+          "start": 113.89,
+          "end": 114.21,
+          "score": 0.962
+        },
+        {
+          "word": "any",
+          "start": 114.291,
+          "end": 114.451,
+          "score": 0.911
+        },
+        {
+          "word": "holding,",
+          "start": 114.551,
+          "end": 115.051,
+          "score": 0.847
+        },
+        {
+          "word": "churning,",
+          "start": 115.391,
+          "end": 115.851,
+          "score": 0.824
+        },
+        {
+          "word": "contraction",
+          "start": 116.111,
+          "end": 116.832,
+          "score": 0.83
+        },
+        {
+          "word": "or",
+          "start": 117.152,
+          "end": 117.252,
+          "score": 0.542
+        },
+        {
+          "word": "ease.",
+          "start": 117.432,
+          "end": 117.672,
+          "score": 0.843
+        }
+      ],
+      "avg_logprob": -0.055447395019074704
+    },
+    {
+      "start": 128.007,
+      "end": 128.987,
+      "text": " Move to the back.",
+      "words": [
+        {
+          "word": "Move",
+          "start": 128.007,
+          "end": 128.287,
+          "score": 0.921
+        },
+        {
+          "word": "to",
+          "start": 128.347,
+          "end": 128.427,
+          "score": 0.983
+        },
+        {
+          "word": "the",
+          "start": 128.467,
+          "end": 128.547,
+          "score": 0.834
+        },
+        {
+          "word": "back.",
+          "start": 128.607,
+          "end": 128.987,
+          "score": 0.9
+        }
+      ],
+      "avg_logprob": -0.026561822659439512
+    },
+    {
+      "start": 129.708,
+      "end": 131.728,
+      "text": "Notice support or strain.",
+      "words": [
+        {
+          "word": "Notice",
+          "start": 129.708,
+          "end": 130.148,
+          "score": 0.921
+        },
+        {
+          "word": "support",
+          "start": 130.328,
+          "end": 130.848,
+          "score": 0.859
+        },
+        {
+          "word": "or",
+          "start": 131.088,
+          "end": 131.168,
+          "score": 0.766
+        },
+        {
+          "word": "strain.",
+          "start": 131.268,
+          "end": 131.728,
+          "score": 0.865
+        }
+      ],
+      "avg_logprob": -0.026561822659439512
+    },
+    {
+      "start": 132.649,
+      "end": 134.45,
+      "text": "Move to the arms and hands.",
+      "words": [
+        {
+          "word": "Move",
+          "start": 132.649,
+          "end": 132.909,
+          "score": 0.945
+        },
+        {
+          "word": "to",
+          "start": 132.969,
+          "end": 133.049,
+          "score": 0.942
+        },
+        {
+          "word": "the",
+          "start": 133.089,
+          "end": 133.189,
+          "score": 0.686
+        },
+        {
+          "word": "arms",
+          "start": 133.389,
+          "end": 133.669,
+          "score": 0.861
+        },
+        {
+          "word": "and",
+          "start": 133.809,
+          "end": 133.929,
+          "score": 0.874
+        },
+        {
+          "word": "hands.",
+          "start": 133.989,
+          "end": 134.45,
+          "score": 0.836
+        }
+      ],
+      "avg_logprob": -0.026561822659439512
+    },
+    {
+      "start": 135.61,
+      "end": 142.513,
+      "text": "Notice whether they want to reach, hold, push away, protect, or rest.",
+      "words": [
+        {
+          "word": "Notice",
+          "start": 135.61,
+          "end": 136.03,
+          "score": 0.891
+        },
+        {
+          "word": "whether",
+          "start": 136.15,
+          "end": 136.41,
+          "score": 0.832
+        },
+        {
+          "word": "they",
+          "start": 136.45,
+          "end": 136.59,
+          "score": 0.756
+        },
+        {
+          "word": "want",
+          "start": 136.65,
+          "end": 136.851,
+          "score": 0.814
+        },
+        {
+          "word": "to",
+          "start": 136.891,
+          "end": 137.011,
+          "score": 0.52
+        },
+        {
+          "word": "reach,",
+          "start": 137.111,
+          "end": 137.491,
+          "score": 0.853
+        },
+        {
+          "word": "hold,",
+          "start": 137.971,
+          "end": 138.391,
+          "score": 0.839
+        },
+        {
+          "word": "push",
+          "start": 138.991,
+          "end": 139.251,
+          "score": 0.831
+        },
+        {
+          "word": "away,",
+          "start": 139.311,
+          "end": 139.692,
+          "score": 0.781
+        },
+        {
+          "word": "protect,",
+          "start": 140.372,
+          "end": 140.952,
+          "score": 0.848
+        },
+        {
+          "word": "or",
+          "start": 141.893,
+          "end": 141.973,
+          "score": 0.547
+        },
+        {
+          "word": "rest.",
+          "start": 142.073,
+          "end": 142.513,
+          "score": 0.965
+        }
+      ],
+      "avg_logprob": -0.026561822659439512
+    },
+    {
+      "start": 152.837,
+      "end": 155.678,
+      "text": "Move to the hips, legs, and feet.",
+      "words": [
+        {
+          "word": "Move",
+          "start": 152.837,
+          "end": 153.197,
+          "score": 0.766
+        },
+        {
+          "word": "to",
+          "start": 153.257,
+          "end": 153.357,
+          "score": 0.804
+        },
+        {
+          "word": "the",
+          "start": 153.397,
+          "end": 153.457,
+          "score": 1.0
+        },
+        {
+          "word": "hips,",
+          "start": 153.537,
+          "end": 153.917,
+          "score": 0.913
+        },
+        {
+          "word": "legs,",
+          "start": 154.357,
+          "end": 154.798,
+          "score": 0.942
+        },
+        {
+          "word": "and",
+          "start": 155.138,
+          "end": 155.298,
+          "score": 0.701
+        },
+        {
+          "word": "feet.",
+          "start": 155.418,
+          "end": 155.678,
+          "score": 0.985
+        }
+      ],
+      "avg_logprob": -0.026561822659439512
+    },
+    {
+      "start": 157.048,
+      "end": 159.23,
+      "text": " Notice grounding or restlessness.",
+      "words": [
+        {
+          "word": "Notice",
+          "start": 157.048,
+          "end": 157.408,
+          "score": 0.86
+        },
+        {
+          "word": "grounding",
+          "start": 157.468,
+          "end": 158.009,
+          "score": 0.813
+        },
+        {
+          "word": "or",
+          "start": 158.189,
+          "end": 158.289,
+          "score": 0.672
+        },
+        {
+          "word": "restlessness.",
+          "start": 158.349,
+          "end": 159.23,
+          "score": 0.799
+        }
+      ],
+      "avg_logprob": -0.038327583899864785
+    },
+    {
+      "start": 160.21,
+      "end": 163.573,
+      "text": "Now choose one body area that called your attention.",
+      "words": [
+        {
+          "word": "Now",
+          "start": 160.21,
+          "end": 160.37,
+          "score": 0.889
+        },
+        {
+          "word": "choose",
+          "start": 160.47,
+          "end": 160.851,
+          "score": 0.723
+        },
+        {
+          "word": "one",
+          "start": 161.091,
+          "end": 161.251,
+          "score": 0.629
+        },
+        {
+          "word": "body",
+          "start": 161.331,
+          "end": 161.671,
+          "score": 0.91
+        },
+        {
+          "word": "area",
+          "start": 161.791,
+          "end": 162.132,
+          "score": 0.806
+        },
+        {
+          "word": "that",
+          "start": 162.252,
+          "end": 162.412,
+          "score": 0.788
+        },
+        {
+          "word": "called",
+          "start": 162.472,
+          "end": 162.792,
+          "score": 0.884
+        },
+        {
+          "word": "your",
+          "start": 162.812,
+          "end": 162.992,
+          "score": 0.748
+        },
+        {
+          "word": "attention.",
+          "start": 163.032,
+          "end": 163.573,
+          "score": 0.895
+        }
+      ],
+      "avg_logprob": -0.038327583899864785
+    },
+    {
+      "start": 164.814,
+      "end": 168.856,
+      "text": "Ask, is there a part connected to this sensation?",
+      "words": [
+        {
+          "word": "Ask,",
+          "start": 164.814,
+          "end": 165.074,
+          "score": 0.988
+        },
+        {
+          "word": "is",
+          "start": 166.074,
+          "end": 166.175,
+          "score": 0.743
+        },
+        {
+          "word": "there",
+          "start": 166.215,
+          "end": 166.435,
+          "score": 0.717
+        },
+        {
+          "word": "a",
+          "start": 166.495,
+          "end": 166.515,
+          "score": 1.0
+        },
+        {
+          "word": "part",
+          "start": 166.575,
+          "end": 166.915,
+          "score": 0.767
+        },
+        {
+          "word": "connected",
+          "start": 167.015,
+          "end": 167.616,
+          "score": 0.91
+        },
+        {
+          "word": "to",
+          "start": 167.716,
+          "end": 167.816,
+          "score": 0.998
+        },
+        {
+          "word": "this",
+          "start": 167.876,
+          "end": 168.076,
+          "score": 0.871
+        },
+        {
+          "word": "sensation?",
+          "start": 168.136,
+          "end": 168.856,
+          "score": 0.801
+        }
+      ],
+      "avg_logprob": -0.038327583899864785
+    },
+    {
+      "start": 182.026,
+      "end": 184.508,
+      "text": "If yes, notice the part gently.",
+      "words": [
+        {
+          "word": "If",
+          "start": 182.026,
+          "end": 182.126,
+          "score": 0.778
+        },
+        {
+          "word": "yes,",
+          "start": 182.186,
+          "end": 182.526,
+          "score": 0.899
+        },
+        {
+          "word": "notice",
+          "start": 182.947,
+          "end": 183.367,
+          "score": 0.904
+        },
+        {
+          "word": "the",
+          "start": 183.467,
+          "end": 183.567,
+          "score": 0.898
+        },
+        {
+          "word": "part",
+          "start": 183.607,
+          "end": 183.907,
+          "score": 0.805
+        },
+        {
+          "word": "gently.",
+          "start": 184.027,
+          "end": 184.508,
+          "score": 0.769
+        }
+      ],
+      "avg_logprob": -0.038327583899864785
+    },
+    {
+      "start": 185.929,
+      "end": 186.369,
+      "text": "If no,",
+      "words": [
+        {
+          "word": "If",
+          "start": 185.929,
+          "end": 186.029,
+          "score": 0.875
+        },
+        {
+          "word": "no,",
+          "start": 186.109,
+          "end": 186.369,
+          "score": 0.9
+        }
+      ],
+      "avg_logprob": -0.038327583899864785
+    },
+    {
+      "start": 186.856,
+      "end": 188.638,
+      "text": " Simply stay with the body area.",
+      "words": [
+        {
+          "word": "Simply",
+          "start": 186.856,
+          "end": 187.236,
+          "score": 0.892
+        },
+        {
+          "word": "stay",
+          "start": 187.357,
+          "end": 187.577,
+          "score": 0.818
+        },
+        {
+          "word": "with",
+          "start": 187.617,
+          "end": 187.737,
+          "score": 0.75
+        },
+        {
+          "word": "the",
+          "start": 187.757,
+          "end": 187.837,
+          "score": 0.83
+        },
+        {
+          "word": "body",
+          "start": 187.857,
+          "end": 188.157,
+          "score": 1.0
+        },
+        {
+          "word": "area.",
+          "start": 188.277,
+          "end": 188.638,
+          "score": 0.925
+        }
+      ],
+      "avg_logprob": -0.060518551245331766
+    },
+    {
+      "start": 189.799,
+      "end": 192.381,
+      "text": "Ask, what do you want me to know?",
+      "words": [
+        {
+          "word": "Ask,",
+          "start": 189.799,
+          "end": 190.059,
+          "score": 0.871
+        },
+        {
+          "word": "what",
+          "start": 191.04,
+          "end": 191.22,
+          "score": 0.825
+        },
+        {
+          "word": "do",
+          "start": 191.26,
+          "end": 191.38,
+          "score": 0.903
+        },
+        {
+          "word": "you",
+          "start": 191.42,
+          "end": 191.54,
+          "score": 0.882
+        },
+        {
+          "word": "want",
+          "start": 191.58,
+          "end": 191.76,
+          "score": 0.735
+        },
+        {
+          "word": "me",
+          "start": 191.8,
+          "end": 191.921,
+          "score": 0.832
+        },
+        {
+          "word": "to",
+          "start": 192.001,
+          "end": 192.081,
+          "score": 0.95
+        },
+        {
+          "word": "know?",
+          "start": 192.141,
+          "end": 192.381,
+          "score": 0.803
+        }
+      ],
+      "avg_logprob": -0.060518551245331766
+    },
+    {
+      "start": 205.713,
+      "end": 206.033,
+      "text": "Listen.",
+      "words": [
+        {
+          "word": "Listen.",
+          "start": 205.713,
+          "end": 206.033,
+          "score": 0.97
+        }
+      ],
+      "avg_logprob": -0.060518551245331766
+    },
+    {
+      "start": 225.253,
+      "end": 229.396,
+      "text": " Ask, what would help you feel 1% safer?",
+      "words": [
+        {
+          "word": "Ask,",
+          "start": 225.253,
+          "end": 225.513,
+          "score": 0.95
+        },
+        {
+          "word": "what",
+          "start": 226.374,
+          "end": 226.554,
+          "score": 0.871
+        },
+        {
+          "word": "would",
+          "start": 226.594,
+          "end": 226.774,
+          "score": 0.72
+        },
+        {
+          "word": "help",
+          "start": 226.834,
+          "end": 227.054,
+          "score": 0.838
+        },
+        {
+          "word": "you",
+          "start": 227.114,
+          "end": 227.275,
+          "score": 0.809
+        },
+        {
+          "word": "feel",
+          "start": 227.375,
+          "end": 227.675,
+          "score": 0.83
+        },
+        {
+          "word": "1%",
+          "start": 227.695,
+          "end": 228.115,
+          "score": 0.714
+        },
+        {
+          "word": "safer?",
+          "start": 228.936,
+          "end": 229.396,
+          "score": 0.941
+        }
+      ],
+      "avg_logprob": -0.07191417287839086
+    },
+    {
+      "start": 242.466,
+      "end": 250.391,
+      "text": "Maybe breath, warmth, space, movement, a hand nearby, a boundary, or a kind phrase.",
+      "words": [
+        {
+          "word": "Maybe",
+          "start": 242.466,
+          "end": 242.786,
+          "score": 0.939
+        },
+        {
+          "word": "breath,",
+          "start": 242.866,
+          "end": 243.266,
+          "score": 0.9
+        },
+        {
+          "word": "warmth,",
+          "start": 243.707,
+          "end": 244.107,
+          "score": 0.776
+        },
+        {
+          "word": "space,",
+          "start": 244.547,
+          "end": 245.007,
+          "score": 0.769
+        },
+        {
+          "word": "movement,",
+          "start": 245.448,
+          "end": 246.008,
+          "score": 0.84
+        },
+        {
+          "word": "a",
+          "start": 246.529,
+          "end": 246.569,
+          "score": 0.989
+        },
+        {
+          "word": "hand",
+          "start": 246.629,
+          "end": 246.969,
+          "score": 0.866
+        },
+        {
+          "word": "nearby,",
+          "start": 247.129,
+          "end": 247.709,
+          "score": 0.827
+        },
+        {
+          "word": "a",
+          "start": 248.07,
+          "end": 248.09,
+          "score": 1.0
+        },
+        {
+          "word": "boundary,",
+          "start": 248.17,
+          "end": 248.73,
+          "score": 0.8
+        },
+        {
+          "word": "or",
+          "start": 249.13,
+          "end": 249.291,
+          "score": 0.58
+        },
+        {
+          "word": "a",
+          "start": 249.471,
+          "end": 249.491,
+          "score": 1.0
+        },
+        {
+          "word": "kind",
+          "start": 249.571,
+          "end": 249.891,
+          "score": 0.795
+        },
+        {
+          "word": "phrase.",
+          "start": 249.951,
+          "end": 250.391,
+          "score": 0.754
+        }
+      ],
+      "avg_logprob": -0.07191417287839086
+    },
+    {
+      "start": 251.332,
+      "end": 252.533,
+      "text": "Offer that gently.",
+      "words": [
+        {
+          "word": "Offer",
+          "start": 251.332,
+          "end": 251.592,
+          "score": 0.824
+        },
+        {
+          "word": "that",
+          "start": 251.652,
+          "end": 251.892,
+          "score": 0.792
+        },
+        {
+          "word": "gently.",
+          "start": 252.033,
+          "end": 252.533,
+          "score": 0.972
+        }
+      ],
+      "avg_logprob": -0.07191417287839086
+    },
+    {
+      "start": 254.212,
+      "end": 256.793,
+      "text": " Now notice if the sensation changes.",
+      "words": [
+        {
+          "word": "Now",
+          "start": 254.212,
+          "end": 254.372,
+          "score": 0.996
+        },
+        {
+          "word": "notice",
+          "start": 254.452,
+          "end": 254.852,
+          "score": 0.893
+        },
+        {
+          "word": "if",
+          "start": 255.032,
+          "end": 255.132,
+          "score": 0.875
+        },
+        {
+          "word": "the",
+          "start": 255.192,
+          "end": 255.313,
+          "score": 0.831
+        },
+        {
+          "word": "sensation",
+          "start": 255.373,
+          "end": 256.073,
+          "score": 0.811
+        },
+        {
+          "word": "changes.",
+          "start": 256.173,
+          "end": 256.793,
+          "score": 0.894
+        }
+      ],
+      "avg_logprob": -0.03517468846230595
+    },
+    {
+      "start": 257.654,
+      "end": 258.474,
+      "text": "It may soften.",
+      "words": [
+        {
+          "word": "It",
+          "start": 257.654,
+          "end": 257.694,
+          "score": 1.0
+        },
+        {
+          "word": "may",
+          "start": 257.754,
+          "end": 257.894,
+          "score": 0.861
+        },
+        {
+          "word": "soften.",
+          "start": 257.974,
+          "end": 258.474,
+          "score": 0.82
+        }
+      ],
+      "avg_logprob": -0.03517468846230595
+    },
+    {
+      "start": 259.414,
+      "end": 260.335,
+      "text": "It may increase.",
+      "words": [
+        {
+          "word": "It",
+          "start": 259.414,
+          "end": 259.474,
+          "score": 0.75
+        },
+        {
+          "word": "may",
+          "start": 259.514,
+          "end": 259.714,
+          "score": 0.684
+        },
+        {
+          "word": "increase.",
+          "start": 259.814,
+          "end": 260.335,
+          "score": 0.934
+        }
+      ],
+      "avg_logprob": -0.03517468846230595
+    },
+    {
+      "start": 261.235,
+      "end": 261.995,
+      "text": "It may move.",
+      "words": [
+        {
+          "word": "It",
+          "start": 261.235,
+          "end": 261.315,
+          "score": 0.5
+        },
+        {
+          "word": "may",
+          "start": 261.375,
+          "end": 261.535,
+          "score": 0.888
+        },
+        {
+          "word": "move.",
+          "start": 261.615,
+          "end": 261.995,
+          "score": 0.725
+        }
+      ],
+      "avg_logprob": -0.03517468846230595
+    },
+    {
+      "start": 262.936,
+      "end": 264.136,
+      "text": "It may stay the same.",
+      "words": [
+        {
+          "word": "It",
+          "start": 262.936,
+          "end": 262.996,
+          "score": 0.767
+        },
+        {
+          "word": "may",
+          "start": 263.056,
+          "end": 263.256,
+          "score": 0.838
+        },
+        {
+          "word": "stay",
+          "start": 263.336,
+          "end": 263.596,
+          "score": 0.813
+        },
+        {
+          "word": "the",
+          "start": 263.656,
+          "end": 263.756,
+          "score": 0.835
+        },
+        {
+          "word": "same.",
+          "start": 263.796,
+          "end": 264.136,
+          "score": 0.8
+        }
+      ],
+      "avg_logprob": -0.03517468846230595
+    },
+    {
+      "start": 265.537,
+      "end": 267.258,
+      "text": "All of that is okay.",
+      "words": [
+        {
+          "word": "All",
+          "start": 265.537,
+          "end": 265.717,
+          "score": 0.835
+        },
+        {
+          "word": "of",
+          "start": 265.857,
+          "end": 265.937,
+          "score": 0.795
+        },
+        {
+          "word": "that",
+          "start": 265.997,
+          "end": 266.297,
+          "score": 0.836
+        },
+        {
+          "word": "is",
+          "start": 266.637,
+          "end": 266.738,
+          "score": 0.674
+        },
+        {
+          "word": "okay.",
+          "start": 266.858,
+          "end": 267.258,
+          "score": 0.787
+        }
+      ],
+      "avg_logprob": -0.03517468846230595
+    },
+    {
+      "start": 268.918,
+      "end": 270.599,
+      "text": "Thank your body for communicating.",
+      "words": [
+        {
+          "word": "Thank",
+          "start": 268.918,
+          "end": 269.139,
+          "score": 0.883
+        },
+        {
+          "word": "your",
+          "start": 269.159,
+          "end": 269.299,
+          "score": 0.757
+        },
+        {
+          "word": "body",
+          "start": 269.339,
+          "end": 269.619,
+          "score": 0.937
+        },
+        {
+          "word": "for",
+          "start": 269.659,
+          "end": 269.799,
+          "score": 0.643
+        },
+        {
+          "word": "communicating.",
+          "start": 269.839,
+          "end": 270.599,
+          "score": 0.893
+        }
+      ],
+      "avg_logprob": -0.03517468846230595
+    },
+    {
+      "start": 271.4,
+      "end": 274.481,
+      "text": "Thank any parts that allowed themselves to be noticed.",
+      "words": [
+        {
+          "word": "Thank",
+          "start": 271.4,
+          "end": 271.66,
+          "score": 0.899
+        },
+        {
+          "word": "any",
+          "start": 271.82,
+          "end": 272.0,
+          "score": 0.869
+        },
+        {
+          "word": "parts",
+          "start": 272.08,
+          "end": 272.46,
+          "score": 0.85
+        },
+        {
+          "word": "that",
+          "start": 272.58,
+          "end": 272.72,
+          "score": 0.998
+        },
+        {
+          "word": "allowed",
+          "start": 272.78,
+          "end": 273.08,
+          "score": 0.919
+        },
+        {
+          "word": "themselves",
+          "start": 273.12,
+          "end": 273.661,
+          "score": 0.777
+        },
+        {
+          "word": "to",
+          "start": 273.741,
+          "end": 273.821,
+          "score": 0.76
+        },
+        {
+          "word": "be",
+          "start": 273.861,
+          "end": 273.961,
+          "score": 0.998
+        },
+        {
+          "word": "noticed.",
+          "start": 274.021,
+          "end": 274.481,
+          "score": 0.851
+        }
+      ],
+      "avg_logprob": -0.03517468846230595
+    },
+    {
+      "start": 275.581,
+      "end": 276.682,
+      "text": "Take a slow breath in.",
+      "words": [
+        {
+          "word": "Take",
+          "start": 275.581,
+          "end": 275.782,
+          "score": 0.814
+        },
+        {
+          "word": "a",
+          "start": 275.822,
+          "end": 275.842,
+          "score": 0.999
+        },
+        {
+          "word": "slow",
+          "start": 275.902,
+          "end": 276.182,
+          "score": 0.917
+        },
+        {
+          "word": "breath",
+          "start": 276.222,
+          "end": 276.482,
+          "score": 0.906
+        },
+        {
+          "word": "in.",
+          "start": 276.602,
+          "end": 276.682,
+          "score": 0.939
+        }
+      ],
+      "avg_logprob": -0.03517468846230595
+    },
+    {
+      "start": 286.885,
+      "end": 287.806,
+      "text": " and let it out.",
+      "words": [
+        {
+          "word": "and",
+          "start": 286.885,
+          "end": 287.005,
+          "score": 0.793
+        },
+        {
+          "word": "let",
+          "start": 287.145,
+          "end": 287.365,
+          "score": 0.874
+        },
+        {
+          "word": "it",
+          "start": 287.406,
+          "end": 287.486,
+          "score": 0.699
+        },
+        {
+          "word": "out.",
+          "start": 287.646,
+          "end": 287.806,
+          "score": 0.878
+        }
+      ],
+      "avg_logprob": -0.032671370382966664
+    },
+    {
+      "start": 288.807,
+      "end": 289.928,
+      "text": "Return to the room.",
+      "words": [
+        {
+          "word": "Return",
+          "start": 288.807,
+          "end": 289.267,
+          "score": 0.831
+        },
+        {
+          "word": "to",
+          "start": 289.347,
+          "end": 289.447,
+          "score": 0.83
+        },
+        {
+          "word": "the",
+          "start": 289.487,
+          "end": 289.567,
+          "score": 0.939
+        },
+        {
+          "word": "room.",
+          "start": 289.627,
+          "end": 289.928,
+          "score": 0.834
+        }
+      ],
+      "avg_logprob": -0.032671370382966664
+    },
+    {
+      "start": 299.976,
+      "end": 305.281,
+      "text": "Carry with you the reminder that the body can be listened to with patience, not force.",
+      "words": [
+        {
+          "word": "Carry",
+          "start": 299.976,
+          "end": 300.277,
+          "score": 0.933
+        },
+        {
+          "word": "with",
+          "start": 300.337,
+          "end": 300.517,
+          "score": 0.784
+        },
+        {
+          "word": "you",
+          "start": 300.557,
+          "end": 300.717,
+          "score": 0.914
+        },
+        {
+          "word": "the",
+          "start": 300.757,
+          "end": 300.857,
+          "score": 0.668
+        },
+        {
+          "word": "reminder",
+          "start": 300.897,
+          "end": 301.438,
+          "score": 0.864
+        },
+        {
+          "word": "that",
+          "start": 301.498,
+          "end": 301.638,
+          "score": 0.75
+        },
+        {
+          "word": "the",
+          "start": 301.678,
+          "end": 301.778,
+          "score": 0.833
+        },
+        {
+          "word": "body",
+          "start": 301.818,
+          "end": 302.138,
+          "score": 0.999
+        },
+        {
+          "word": "can",
+          "start": 302.198,
+          "end": 302.358,
+          "score": 0.917
+        },
+        {
+          "word": "be",
+          "start": 302.398,
+          "end": 302.499,
+          "score": 0.834
+        },
+        {
+          "word": "listened",
+          "start": 302.559,
+          "end": 302.939,
+          "score": 0.776
+        },
+        {
+          "word": "to",
+          "start": 302.959,
+          "end": 303.119,
+          "score": 0.832
+        },
+        {
+          "word": "with",
+          "start": 303.199,
+          "end": 303.359,
+          "score": 0.75
+        },
+        {
+          "word": "patience,",
+          "start": 303.439,
+          "end": 304.06,
+          "score": 0.886
+        },
+        {
+          "word": "not",
+          "start": 304.52,
+          "end": 304.74,
+          "score": 0.861
+        },
+        {
+          "word": "force.",
+          "start": 304.841,
+          "end": 305.281,
+          "score": 0.902
+        }
+      ],
+      "avg_logprob": -0.032671370382966664
+    }
+  ],
+  "word_segments": [
+    {
+      "word": "Welcome",
+      "start": 0.091,
+      "end": 0.491,
+      "score": 0.905
+    },
+    {
+      "word": "to",
+      "start": 0.531,
+      "end": 0.611,
+      "score": 0.952
+    },
+    {
+      "word": "the",
+      "start": 0.671,
+      "end": 0.751,
+      "score": 0.892
+    },
+    {
+      "word": "Somatic",
+      "start": 0.791,
+      "end": 1.232,
+      "score": 0.942
+    },
+    {
+      "word": "Healing",
+      "start": 1.252,
+      "end": 1.612,
+      "score": 0.869
+    },
+    {
+      "word": "Body",
+      "start": 1.652,
+      "end": 1.952,
+      "score": 0.949
+    },
+    {
+      "word": "Scan.",
+      "start": 1.992,
+      "end": 2.432,
+      "score": 0.861
+    },
+    {
+      "word": "This",
+      "start": 15.46,
+      "end": 15.661,
+      "score": 0.766
+    },
+    {
+      "word": "practice",
+      "start": 15.741,
+      "end": 16.321,
+      "score": 0.745
+    },
+    {
+      "word": "invites",
+      "start": 16.461,
+      "end": 16.921,
+      "score": 0.734
+    },
+    {
+      "word": "you",
+      "start": 16.981,
+      "end": 17.161,
+      "score": 0.916
+    },
+    {
+      "word": "to",
+      "start": 17.221,
+      "end": 17.322,
+      "score": 0.788
+    },
+    {
+      "word": "listen",
+      "start": 17.382,
+      "end": 17.742,
+      "score": 0.895
+    },
+    {
+      "word": "to",
+      "start": 17.802,
+      "end": 17.902,
+      "score": 0.793
+    },
+    {
+      "word": "the",
+      "start": 17.942,
+      "end": 18.022,
+      "score": 1.0
+    },
+    {
+      "word": "body",
+      "start": 18.062,
+      "end": 18.442,
+      "score": 0.924
+    },
+    {
+      "word": "as",
+      "start": 18.622,
+      "end": 18.702,
+      "score": 0.694
+    },
+    {
+      "word": "a",
+      "start": 18.762,
+      "end": 18.802,
+      "score": 0.503
+    },
+    {
+      "word": "messenger",
+      "start": 18.862,
+      "end": 19.363,
+      "score": 0.87
+    },
+    {
+      "word": "of",
+      "start": 19.423,
+      "end": 19.503,
+      "score": 0.79
+    },
+    {
+      "word": "parts,",
+      "start": 19.603,
+      "end": 20.023,
+      "score": 0.951
+    },
+    {
+      "word": "protection,",
+      "start": 20.564,
+      "end": 21.204,
+      "score": 0.896
+    },
+    {
+      "word": "and",
+      "start": 21.624,
+      "end": 21.744,
+      "score": 0.682
+    },
+    {
+      "word": "emotion.",
+      "start": 21.804,
+      "end": 22.285,
+      "score": 0.873
+    },
+    {
+      "word": "It",
+      "start": 23.265,
+      "end": 23.325,
+      "score": 0.758
+    },
+    {
+      "word": "is",
+      "start": 23.405,
+      "end": 23.485,
+      "score": 0.667
+    },
+    {
+      "word": "not",
+      "start": 23.545,
+      "end": 23.745,
+      "score": 0.752
+    },
+    {
+      "word": "a",
+      "start": 23.785,
+      "end": 23.805,
+      "score": 1.0
+    },
+    {
+      "word": "medical",
+      "start": 23.866,
+      "end": 24.246,
+      "score": 0.958
+    },
+    {
+      "word": "assessment.",
+      "start": 24.326,
+      "end": 24.926,
+      "score": 0.953
+    },
+    {
+      "word": "It",
+      "start": 25.747,
+      "end": 25.807,
+      "score": 0.996
+    },
+    {
+      "word": "is",
+      "start": 25.867,
+      "end": 25.967,
+      "score": 0.824
+    },
+    {
+      "word": "a",
+      "start": 26.027,
+      "end": 26.047,
+      "score": 0.999
+    },
+    {
+      "word": "gentle",
+      "start": 26.127,
+      "end": 26.547,
+      "score": 0.808
+    },
+    {
+      "word": "awareness",
+      "start": 26.587,
+      "end": 27.087,
+      "score": 0.922
+    },
+    {
+      "word": "practice.",
+      "start": 27.128,
+      "end": 27.668,
+      "score": 0.924
+    },
+    {
+      "word": "Begin",
+      "start": 28.742,
+      "end": 29.122,
+      "score": 0.681
+    },
+    {
+      "word": "by",
+      "start": 29.182,
+      "end": 29.322,
+      "score": 0.889
+    },
+    {
+      "word": "getting",
+      "start": 29.382,
+      "end": 29.663,
+      "score": 0.896
+    },
+    {
+      "word": "comfortable.",
+      "start": 29.743,
+      "end": 30.303,
+      "score": 0.801
+    },
+    {
+      "word": "Let",
+      "start": 31.264,
+      "end": 31.424,
+      "score": 0.923
+    },
+    {
+      "word": "your",
+      "start": 31.464,
+      "end": 31.624,
+      "score": 0.721
+    },
+    {
+      "word": "body",
+      "start": 31.664,
+      "end": 31.964,
+      "score": 1.0
+    },
+    {
+      "word": "be",
+      "start": 32.044,
+      "end": 32.184,
+      "score": 0.914
+    },
+    {
+      "word": "supported.",
+      "start": 32.284,
+      "end": 32.865,
+      "score": 0.979
+    },
+    {
+      "word": "Take",
+      "start": 34.206,
+      "end": 34.406,
+      "score": 0.948
+    },
+    {
+      "word": "a",
+      "start": 34.446,
+      "end": 34.486,
+      "score": 0.5
+    },
+    {
+      "word": "slow",
+      "start": 34.586,
+      "end": 34.906,
+      "score": 0.918
+    },
+    {
+      "word": "breath",
+      "start": 34.986,
+      "end": 35.266,
+      "score": 0.861
+    },
+    {
+      "word": "in",
+      "start": 35.446,
+      "end": 35.566,
+      "score": 0.474
+    },
+    {
+      "word": "and",
+      "start": 45.733,
+      "end": 45.853,
+      "score": 0.887
+    },
+    {
+      "word": "let",
+      "start": 45.933,
+      "end": 46.113,
+      "score": 0.938
+    },
+    {
+      "word": "it",
+      "start": 46.153,
+      "end": 46.213,
+      "score": 0.91
+    },
+    {
+      "word": "out.",
+      "start": 46.354,
+      "end": 46.514,
+      "score": 0.852
+    },
+    {
+      "word": "Now",
+      "start": 47.814,
+      "end": 47.955,
+      "score": 0.886
+    },
+    {
+      "word": "bring",
+      "start": 48.015,
+      "end": 48.235,
+      "score": 0.837
+    },
+    {
+      "word": "attention",
+      "start": 48.275,
+      "end": 48.795,
+      "score": 0.833
+    },
+    {
+      "word": "to",
+      "start": 48.875,
+      "end": 48.975,
+      "score": 0.832
+    },
+    {
+      "word": "the",
+      "start": 49.015,
+      "end": 49.095,
+      "score": 0.834
+    },
+    {
+      "word": "top",
+      "start": 49.135,
+      "end": 49.376,
+      "score": 0.929
+    },
+    {
+      "word": "of",
+      "start": 49.416,
+      "end": 49.476,
+      "score": 0.926
+    },
+    {
+      "word": "your",
+      "start": 49.516,
+      "end": 49.676,
+      "score": 0.829
+    },
+    {
+      "word": "head.",
+      "start": 49.716,
+      "end": 49.936,
+      "score": 0.913
+    },
+    {
+      "word": "Notice",
+      "start": 63.176,
+      "end": 63.516,
+      "score": 0.9
+    },
+    {
+      "word": "any",
+      "start": 63.636,
+      "end": 63.796,
+      "score": 0.742
+    },
+    {
+      "word": "sensation",
+      "start": 63.876,
+      "end": 64.576,
+      "score": 0.822
+    },
+    {
+      "word": "there,",
+      "start": 64.636,
+      "end": 64.896,
+      "score": 0.848
+    },
+    {
+      "word": "no",
+      "start": 65.417,
+      "end": 65.557,
+      "score": 0.912
+    },
+    {
+      "word": "need",
+      "start": 65.617,
+      "end": 65.837,
+      "score": 0.88
+    },
+    {
+      "word": "to",
+      "start": 65.877,
+      "end": 65.977,
+      "score": 0.912
+    },
+    {
+      "word": "change",
+      "start": 66.037,
+      "end": 66.377,
+      "score": 0.717
+    },
+    {
+      "word": "it.",
+      "start": 66.457,
+      "end": 66.577,
+      "score": 0.803
+    },
+    {
+      "word": "Move",
+      "start": 67.537,
+      "end": 67.797,
+      "score": 0.834
+    },
+    {
+      "word": "attention",
+      "start": 67.837,
+      "end": 68.397,
+      "score": 0.72
+    },
+    {
+      "word": "to",
+      "start": 68.477,
+      "end": 68.577,
+      "score": 0.828
+    },
+    {
+      "word": "your",
+      "start": 68.617,
+      "end": 68.757,
+      "score": 0.858
+    },
+    {
+      "word": "forehead,",
+      "start": 68.837,
+      "end": 69.337,
+      "score": 0.714
+    },
+    {
+      "word": "your",
+      "start": 70.118,
+      "end": 70.298,
+      "score": 0.724
+    },
+    {
+      "word": "eyes,",
+      "start": 70.538,
+      "end": 70.738,
+      "score": 0.824
+    },
+    {
+      "word": "your",
+      "start": 71.498,
+      "end": 71.678,
+      "score": 0.713
+    },
+    {
+      "word": "jaw,",
+      "start": 71.738,
+      "end": 72.138,
+      "score": 0.999
+    },
+    {
+      "word": "your",
+      "start": 72.758,
+      "end": 72.918,
+      "score": 0.714
+    },
+    {
+      "word": "mouth.",
+      "start": 72.978,
+      "end": 73.318,
+      "score": 0.791
+    },
+    {
+      "word": "Notice",
+      "start": 74.338,
+      "end": 74.719,
+      "score": 0.917
+    },
+    {
+      "word": "softness,",
+      "start": 74.799,
+      "end": 75.459,
+      "score": 0.863
+    },
+    {
+      "word": "tension,",
+      "start": 75.919,
+      "end": 76.459,
+      "score": 0.91
+    },
+    {
+      "word": "numbness,",
+      "start": 76.939,
+      "end": 77.539,
+      "score": 0.708
+    },
+    {
+      "word": "or",
+      "start": 77.739,
+      "end": 77.839,
+      "score": 0.763
+    },
+    {
+      "word": "movement.",
+      "start": 77.919,
+      "end": 78.419,
+      "score": 0.838
+    },
+    {
+      "word": "Now",
+      "start": 79.72,
+      "end": 79.92,
+      "score": 0.914
+    },
+    {
+      "word": "the",
+      "start": 79.98,
+      "end": 80.08,
+      "score": 0.838
+    },
+    {
+      "word": "throat.",
+      "start": 80.12,
+      "end": 80.46,
+      "score": 0.862
+    },
+    {
+      "word": "Ask,",
+      "start": 81.72,
+      "end": 81.98,
+      "score": 0.873
+    },
+    {
+      "word": "is",
+      "start": 82.9,
+      "end": 82.98,
+      "score": 0.772
+    },
+    {
+      "word": "there",
+      "start": 83.02,
+      "end": 83.2,
+      "score": 0.639
+    },
+    {
+      "word": "anything",
+      "start": 83.34,
+      "end": 83.761,
+      "score": 0.87
+    },
+    {
+      "word": "here",
+      "start": 83.861,
+      "end": 84.121,
+      "score": 0.833
+    },
+    {
+      "word": "that",
+      "start": 84.221,
+      "end": 84.381,
+      "score": 0.914
+    },
+    {
+      "word": "wants",
+      "start": 84.441,
+      "end": 84.701,
+      "score": 0.921
+    },
+    {
+      "word": "to",
+      "start": 84.781,
+      "end": 84.861,
+      "score": 0.812
+    },
+    {
+      "word": "be",
+      "start": 84.901,
+      "end": 85.001,
+      "score": 0.849
+    },
+    {
+      "word": "noticed?",
+      "start": 85.061,
+      "end": 85.541,
+      "score": 0.81
+    },
+    {
+      "word": "Move",
+      "start": 98.664,
+      "end": 98.964,
+      "score": 0.897
+    },
+    {
+      "word": "to",
+      "start": 99.024,
+      "end": 99.104,
+      "score": 0.999
+    },
+    {
+      "word": "the",
+      "start": 99.144,
+      "end": 99.244,
+      "score": 0.72
+    },
+    {
+      "word": "shoulders.",
+      "start": 99.304,
+      "end": 99.825,
+      "score": 0.858
+    },
+    {
+      "word": "Notice",
+      "start": 100.345,
+      "end": 100.805,
+      "score": 0.872
+    },
+    {
+      "word": "what",
+      "start": 100.925,
+      "end": 101.065,
+      "score": 0.769
+    },
+    {
+      "word": "they",
+      "start": 101.105,
+      "end": 101.265,
+      "score": 0.75
+    },
+    {
+      "word": "carry.",
+      "start": 101.325,
+      "end": 101.765,
+      "score": 0.919
+    },
+    {
+      "word": "Move",
+      "start": 102.626,
+      "end": 102.866,
+      "score": 0.83
+    },
+    {
+      "word": "to",
+      "start": 102.906,
+      "end": 103.006,
+      "score": 0.834
+    },
+    {
+      "word": "the",
+      "start": 103.026,
+      "end": 103.126,
+      "score": 0.749
+    },
+    {
+      "word": "chest.",
+      "start": 103.166,
+      "end": 103.606,
+      "score": 0.879
+    },
+    {
+      "word": "Notice",
+      "start": 104.186,
+      "end": 104.586,
+      "score": 0.878
+    },
+    {
+      "word": "breath,",
+      "start": 104.767,
+      "end": 105.227,
+      "score": 0.811
+    },
+    {
+      "word": "tightness,",
+      "start": 105.707,
+      "end": 106.347,
+      "score": 0.845
+    },
+    {
+      "word": "openness,",
+      "start": 106.867,
+      "end": 107.448,
+      "score": 0.802
+    },
+    {
+      "word": "heaviness,",
+      "start": 107.888,
+      "end": 108.488,
+      "score": 0.862
+    },
+    {
+      "word": "warmth",
+      "start": 108.988,
+      "end": 109.429,
+      "score": 0.669
+    },
+    {
+      "word": "or",
+      "start": 109.949,
+      "end": 110.109,
+      "score": 0.504
+    },
+    {
+      "word": "emptiness.",
+      "start": 110.309,
+      "end": 110.929,
+      "score": 0.728
+    },
+    {
+      "word": "Move",
+      "start": 111.91,
+      "end": 112.23,
+      "score": 0.844
+    },
+    {
+      "word": "to",
+      "start": 112.29,
+      "end": 112.37,
+      "score": 0.996
+    },
+    {
+      "word": "the",
+      "start": 112.41,
+      "end": 112.51,
+      "score": 0.689
+    },
+    {
+      "word": "stomach.",
+      "start": 112.57,
+      "end": 113.05,
+      "score": 0.857
+    },
+    {
+      "word": "Notice",
+      "start": 113.89,
+      "end": 114.21,
+      "score": 0.962
+    },
+    {
+      "word": "any",
+      "start": 114.291,
+      "end": 114.451,
+      "score": 0.911
+    },
+    {
+      "word": "holding,",
+      "start": 114.551,
+      "end": 115.051,
+      "score": 0.847
+    },
+    {
+      "word": "churning,",
+      "start": 115.391,
+      "end": 115.851,
+      "score": 0.824
+    },
+    {
+      "word": "contraction",
+      "start": 116.111,
+      "end": 116.832,
+      "score": 0.83
+    },
+    {
+      "word": "or",
+      "start": 117.152,
+      "end": 117.252,
+      "score": 0.542
+    },
+    {
+      "word": "ease.",
+      "start": 117.432,
+      "end": 117.672,
+      "score": 0.843
+    },
+    {
+      "word": "Move",
+      "start": 128.007,
+      "end": 128.287,
+      "score": 0.921
+    },
+    {
+      "word": "to",
+      "start": 128.347,
+      "end": 128.427,
+      "score": 0.983
+    },
+    {
+      "word": "the",
+      "start": 128.467,
+      "end": 128.547,
+      "score": 0.834
+    },
+    {
+      "word": "back.",
+      "start": 128.607,
+      "end": 128.987,
+      "score": 0.9
+    },
+    {
+      "word": "Notice",
+      "start": 129.708,
+      "end": 130.148,
+      "score": 0.921
+    },
+    {
+      "word": "support",
+      "start": 130.328,
+      "end": 130.848,
+      "score": 0.859
+    },
+    {
+      "word": "or",
+      "start": 131.088,
+      "end": 131.168,
+      "score": 0.766
+    },
+    {
+      "word": "strain.",
+      "start": 131.268,
+      "end": 131.728,
+      "score": 0.865
+    },
+    {
+      "word": "Move",
+      "start": 132.649,
+      "end": 132.909,
+      "score": 0.945
+    },
+    {
+      "word": "to",
+      "start": 132.969,
+      "end": 133.049,
+      "score": 0.942
+    },
+    {
+      "word": "the",
+      "start": 133.089,
+      "end": 133.189,
+      "score": 0.686
+    },
+    {
+      "word": "arms",
+      "start": 133.389,
+      "end": 133.669,
+      "score": 0.861
+    },
+    {
+      "word": "and",
+      "start": 133.809,
+      "end": 133.929,
+      "score": 0.874
+    },
+    {
+      "word": "hands.",
+      "start": 133.989,
+      "end": 134.45,
+      "score": 0.836
+    },
+    {
+      "word": "Notice",
+      "start": 135.61,
+      "end": 136.03,
+      "score": 0.891
+    },
+    {
+      "word": "whether",
+      "start": 136.15,
+      "end": 136.41,
+      "score": 0.832
+    },
+    {
+      "word": "they",
+      "start": 136.45,
+      "end": 136.59,
+      "score": 0.756
+    },
+    {
+      "word": "want",
+      "start": 136.65,
+      "end": 136.851,
+      "score": 0.814
+    },
+    {
+      "word": "to",
+      "start": 136.891,
+      "end": 137.011,
+      "score": 0.52
+    },
+    {
+      "word": "reach,",
+      "start": 137.111,
+      "end": 137.491,
+      "score": 0.853
+    },
+    {
+      "word": "hold,",
+      "start": 137.971,
+      "end": 138.391,
+      "score": 0.839
+    },
+    {
+      "word": "push",
+      "start": 138.991,
+      "end": 139.251,
+      "score": 0.831
+    },
+    {
+      "word": "away,",
+      "start": 139.311,
+      "end": 139.692,
+      "score": 0.781
+    },
+    {
+      "word": "protect,",
+      "start": 140.372,
+      "end": 140.952,
+      "score": 0.848
+    },
+    {
+      "word": "or",
+      "start": 141.893,
+      "end": 141.973,
+      "score": 0.547
+    },
+    {
+      "word": "rest.",
+      "start": 142.073,
+      "end": 142.513,
+      "score": 0.965
+    },
+    {
+      "word": "Move",
+      "start": 152.837,
+      "end": 153.197,
+      "score": 0.766
+    },
+    {
+      "word": "to",
+      "start": 153.257,
+      "end": 153.357,
+      "score": 0.804
+    },
+    {
+      "word": "the",
+      "start": 153.397,
+      "end": 153.457,
+      "score": 1.0
+    },
+    {
+      "word": "hips,",
+      "start": 153.537,
+      "end": 153.917,
+      "score": 0.913
+    },
+    {
+      "word": "legs,",
+      "start": 154.357,
+      "end": 154.798,
+      "score": 0.942
+    },
+    {
+      "word": "and",
+      "start": 155.138,
+      "end": 155.298,
+      "score": 0.701
+    },
+    {
+      "word": "feet.",
+      "start": 155.418,
+      "end": 155.678,
+      "score": 0.985
+    },
+    {
+      "word": "Notice",
+      "start": 157.048,
+      "end": 157.408,
+      "score": 0.86
+    },
+    {
+      "word": "grounding",
+      "start": 157.468,
+      "end": 158.009,
+      "score": 0.813
+    },
+    {
+      "word": "or",
+      "start": 158.189,
+      "end": 158.289,
+      "score": 0.672
+    },
+    {
+      "word": "restlessness.",
+      "start": 158.349,
+      "end": 159.23,
+      "score": 0.799
+    },
+    {
+      "word": "Now",
+      "start": 160.21,
+      "end": 160.37,
+      "score": 0.889
+    },
+    {
+      "word": "choose",
+      "start": 160.47,
+      "end": 160.851,
+      "score": 0.723
+    },
+    {
+      "word": "one",
+      "start": 161.091,
+      "end": 161.251,
+      "score": 0.629
+    },
+    {
+      "word": "body",
+      "start": 161.331,
+      "end": 161.671,
+      "score": 0.91
+    },
+    {
+      "word": "area",
+      "start": 161.791,
+      "end": 162.132,
+      "score": 0.806
+    },
+    {
+      "word": "that",
+      "start": 162.252,
+      "end": 162.412,
+      "score": 0.788
+    },
+    {
+      "word": "called",
+      "start": 162.472,
+      "end": 162.792,
+      "score": 0.884
+    },
+    {
+      "word": "your",
+      "start": 162.812,
+      "end": 162.992,
+      "score": 0.748
+    },
+    {
+      "word": "attention.",
+      "start": 163.032,
+      "end": 163.573,
+      "score": 0.895
+    },
+    {
+      "word": "Ask,",
+      "start": 164.814,
+      "end": 165.074,
+      "score": 0.988
+    },
+    {
+      "word": "is",
+      "start": 166.074,
+      "end": 166.175,
+      "score": 0.743
+    },
+    {
+      "word": "there",
+      "start": 166.215,
+      "end": 166.435,
+      "score": 0.717
+    },
+    {
+      "word": "a",
+      "start": 166.495,
+      "end": 166.515,
+      "score": 1.0
+    },
+    {
+      "word": "part",
+      "start": 166.575,
+      "end": 166.915,
+      "score": 0.767
+    },
+    {
+      "word": "connected",
+      "start": 167.015,
+      "end": 167.616,
+      "score": 0.91
+    },
+    {
+      "word": "to",
+      "start": 167.716,
+      "end": 167.816,
+      "score": 0.998
+    },
+    {
+      "word": "this",
+      "start": 167.876,
+      "end": 168.076,
+      "score": 0.871
+    },
+    {
+      "word": "sensation?",
+      "start": 168.136,
+      "end": 168.856,
+      "score": 0.801
+    },
+    {
+      "word": "If",
+      "start": 182.026,
+      "end": 182.126,
+      "score": 0.778
+    },
+    {
+      "word": "yes,",
+      "start": 182.186,
+      "end": 182.526,
+      "score": 0.899
+    },
+    {
+      "word": "notice",
+      "start": 182.947,
+      "end": 183.367,
+      "score": 0.904
+    },
+    {
+      "word": "the",
+      "start": 183.467,
+      "end": 183.567,
+      "score": 0.898
+    },
+    {
+      "word": "part",
+      "start": 183.607,
+      "end": 183.907,
+      "score": 0.805
+    },
+    {
+      "word": "gently.",
+      "start": 184.027,
+      "end": 184.508,
+      "score": 0.769
+    },
+    {
+      "word": "If",
+      "start": 185.929,
+      "end": 186.029,
+      "score": 0.875
+    },
+    {
+      "word": "no,",
+      "start": 186.109,
+      "end": 186.369,
+      "score": 0.9
+    },
+    {
+      "word": "Simply",
+      "start": 186.856,
+      "end": 187.236,
+      "score": 0.892
+    },
+    {
+      "word": "stay",
+      "start": 187.357,
+      "end": 187.577,
+      "score": 0.818
+    },
+    {
+      "word": "with",
+      "start": 187.617,
+      "end": 187.737,
+      "score": 0.75
+    },
+    {
+      "word": "the",
+      "start": 187.757,
+      "end": 187.837,
+      "score": 0.83
+    },
+    {
+      "word": "body",
+      "start": 187.857,
+      "end": 188.157,
+      "score": 1.0
+    },
+    {
+      "word": "area.",
+      "start": 188.277,
+      "end": 188.638,
+      "score": 0.925
+    },
+    {
+      "word": "Ask,",
+      "start": 189.799,
+      "end": 190.059,
+      "score": 0.871
+    },
+    {
+      "word": "what",
+      "start": 191.04,
+      "end": 191.22,
+      "score": 0.825
+    },
+    {
+      "word": "do",
+      "start": 191.26,
+      "end": 191.38,
+      "score": 0.903
+    },
+    {
+      "word": "you",
+      "start": 191.42,
+      "end": 191.54,
+      "score": 0.882
+    },
+    {
+      "word": "want",
+      "start": 191.58,
+      "end": 191.76,
+      "score": 0.735
+    },
+    {
+      "word": "me",
+      "start": 191.8,
+      "end": 191.921,
+      "score": 0.832
+    },
+    {
+      "word": "to",
+      "start": 192.001,
+      "end": 192.081,
+      "score": 0.95
+    },
+    {
+      "word": "know?",
+      "start": 192.141,
+      "end": 192.381,
+      "score": 0.803
+    },
+    {
+      "word": "Listen.",
+      "start": 205.713,
+      "end": 206.033,
+      "score": 0.97
+    },
+    {
+      "word": "Ask,",
+      "start": 225.253,
+      "end": 225.513,
+      "score": 0.95
+    },
+    {
+      "word": "what",
+      "start": 226.374,
+      "end": 226.554,
+      "score": 0.871
+    },
+    {
+      "word": "would",
+      "start": 226.594,
+      "end": 226.774,
+      "score": 0.72
+    },
+    {
+      "word": "help",
+      "start": 226.834,
+      "end": 227.054,
+      "score": 0.838
+    },
+    {
+      "word": "you",
+      "start": 227.114,
+      "end": 227.275,
+      "score": 0.809
+    },
+    {
+      "word": "feel",
+      "start": 227.375,
+      "end": 227.675,
+      "score": 0.83
+    },
+    {
+      "word": "1%",
+      "start": 227.695,
+      "end": 228.115,
+      "score": 0.714
+    },
+    {
+      "word": "safer?",
+      "start": 228.936,
+      "end": 229.396,
+      "score": 0.941
+    },
+    {
+      "word": "Maybe",
+      "start": 242.466,
+      "end": 242.786,
+      "score": 0.939
+    },
+    {
+      "word": "breath,",
+      "start": 242.866,
+      "end": 243.266,
+      "score": 0.9
+    },
+    {
+      "word": "warmth,",
+      "start": 243.707,
+      "end": 244.107,
+      "score": 0.776
+    },
+    {
+      "word": "space,",
+      "start": 244.547,
+      "end": 245.007,
+      "score": 0.769
+    },
+    {
+      "word": "movement,",
+      "start": 245.448,
+      "end": 246.008,
+      "score": 0.84
+    },
+    {
+      "word": "a",
+      "start": 246.529,
+      "end": 246.569,
+      "score": 0.989
+    },
+    {
+      "word": "hand",
+      "start": 246.629,
+      "end": 246.969,
+      "score": 0.866
+    },
+    {
+      "word": "nearby,",
+      "start": 247.129,
+      "end": 247.709,
+      "score": 0.827
+    },
+    {
+      "word": "a",
+      "start": 248.07,
+      "end": 248.09,
+      "score": 1.0
+    },
+    {
+      "word": "boundary,",
+      "start": 248.17,
+      "end": 248.73,
+      "score": 0.8
+    },
+    {
+      "word": "or",
+      "start": 249.13,
+      "end": 249.291,
+      "score": 0.58
+    },
+    {
+      "word": "a",
+      "start": 249.471,
+      "end": 249.491,
+      "score": 1.0
+    },
+    {
+      "word": "kind",
+      "start": 249.571,
+      "end": 249.891,
+      "score": 0.795
+    },
+    {
+      "word": "phrase.",
+      "start": 249.951,
+      "end": 250.391,
+      "score": 0.754
+    },
+    {
+      "word": "Offer",
+      "start": 251.332,
+      "end": 251.592,
+      "score": 0.824
+    },
+    {
+      "word": "that",
+      "start": 251.652,
+      "end": 251.892,
+      "score": 0.792
+    },
+    {
+      "word": "gently.",
+      "start": 252.033,
+      "end": 252.533,
+      "score": 0.972
+    },
+    {
+      "word": "Now",
+      "start": 254.212,
+      "end": 254.372,
+      "score": 0.996
+    },
+    {
+      "word": "notice",
+      "start": 254.452,
+      "end": 254.852,
+      "score": 0.893
+    },
+    {
+      "word": "if",
+      "start": 255.032,
+      "end": 255.132,
+      "score": 0.875
+    },
+    {
+      "word": "the",
+      "start": 255.192,
+      "end": 255.313,
+      "score": 0.831
+    },
+    {
+      "word": "sensation",
+      "start": 255.373,
+      "end": 256.073,
+      "score": 0.811
+    },
+    {
+      "word": "changes.",
+      "start": 256.173,
+      "end": 256.793,
+      "score": 0.894
+    },
+    {
+      "word": "It",
+      "start": 257.654,
+      "end": 257.694,
+      "score": 1.0
+    },
+    {
+      "word": "may",
+      "start": 257.754,
+      "end": 257.894,
+      "score": 0.861
+    },
+    {
+      "word": "soften.",
+      "start": 257.974,
+      "end": 258.474,
+      "score": 0.82
+    },
+    {
+      "word": "It",
+      "start": 259.414,
+      "end": 259.474,
+      "score": 0.75
+    },
+    {
+      "word": "may",
+      "start": 259.514,
+      "end": 259.714,
+      "score": 0.684
+    },
+    {
+      "word": "increase.",
+      "start": 259.814,
+      "end": 260.335,
+      "score": 0.934
+    },
+    {
+      "word": "It",
+      "start": 261.235,
+      "end": 261.315,
+      "score": 0.5
+    },
+    {
+      "word": "may",
+      "start": 261.375,
+      "end": 261.535,
+      "score": 0.888
+    },
+    {
+      "word": "move.",
+      "start": 261.615,
+      "end": 261.995,
+      "score": 0.725
+    },
+    {
+      "word": "It",
+      "start": 262.936,
+      "end": 262.996,
+      "score": 0.767
+    },
+    {
+      "word": "may",
+      "start": 263.056,
+      "end": 263.256,
+      "score": 0.838
+    },
+    {
+      "word": "stay",
+      "start": 263.336,
+      "end": 263.596,
+      "score": 0.813
+    },
+    {
+      "word": "the",
+      "start": 263.656,
+      "end": 263.756,
+      "score": 0.835
+    },
+    {
+      "word": "same.",
+      "start": 263.796,
+      "end": 264.136,
+      "score": 0.8
+    },
+    {
+      "word": "All",
+      "start": 265.537,
+      "end": 265.717,
+      "score": 0.835
+    },
+    {
+      "word": "of",
+      "start": 265.857,
+      "end": 265.937,
+      "score": 0.795
+    },
+    {
+      "word": "that",
+      "start": 265.997,
+      "end": 266.297,
+      "score": 0.836
+    },
+    {
+      "word": "is",
+      "start": 266.637,
+      "end": 266.738,
+      "score": 0.674
+    },
+    {
+      "word": "okay.",
+      "start": 266.858,
+      "end": 267.258,
+      "score": 0.787
+    },
+    {
+      "word": "Thank",
+      "start": 268.918,
+      "end": 269.139,
+      "score": 0.883
+    },
+    {
+      "word": "your",
+      "start": 269.159,
+      "end": 269.299,
+      "score": 0.757
+    },
+    {
+      "word": "body",
+      "start": 269.339,
+      "end": 269.619,
+      "score": 0.937
+    },
+    {
+      "word": "for",
+      "start": 269.659,
+      "end": 269.799,
+      "score": 0.643
+    },
+    {
+      "word": "communicating.",
+      "start": 269.839,
+      "end": 270.599,
+      "score": 0.893
+    },
+    {
+      "word": "Thank",
+      "start": 271.4,
+      "end": 271.66,
+      "score": 0.899
+    },
+    {
+      "word": "any",
+      "start": 271.82,
+      "end": 272.0,
+      "score": 0.869
+    },
+    {
+      "word": "parts",
+      "start": 272.08,
+      "end": 272.46,
+      "score": 0.85
+    },
+    {
+      "word": "that",
+      "start": 272.58,
+      "end": 272.72,
+      "score": 0.998
+    },
+    {
+      "word": "allowed",
+      "start": 272.78,
+      "end": 273.08,
+      "score": 0.919
+    },
+    {
+      "word": "themselves",
+      "start": 273.12,
+      "end": 273.661,
+      "score": 0.777
+    },
+    {
+      "word": "to",
+      "start": 273.741,
+      "end": 273.821,
+      "score": 0.76
+    },
+    {
+      "word": "be",
+      "start": 273.861,
+      "end": 273.961,
+      "score": 0.998
+    },
+    {
+      "word": "noticed.",
+      "start": 274.021,
+      "end": 274.481,
+      "score": 0.851
+    },
+    {
+      "word": "Take",
+      "start": 275.581,
+      "end": 275.782,
+      "score": 0.814
+    },
+    {
+      "word": "a",
+      "start": 275.822,
+      "end": 275.842,
+      "score": 0.999
+    },
+    {
+      "word": "slow",
+      "start": 275.902,
+      "end": 276.182,
+      "score": 0.917
+    },
+    {
+      "word": "breath",
+      "start": 276.222,
+      "end": 276.482,
+      "score": 0.906
+    },
+    {
+      "word": "in.",
+      "start": 276.602,
+      "end": 276.682,
+      "score": 0.939
+    },
+    {
+      "word": "and",
+      "start": 286.885,
+      "end": 287.005,
+      "score": 0.793
+    },
+    {
+      "word": "let",
+      "start": 287.145,
+      "end": 287.365,
+      "score": 0.874
+    },
+    {
+      "word": "it",
+      "start": 287.406,
+      "end": 287.486,
+      "score": 0.699
+    },
+    {
+      "word": "out.",
+      "start": 287.646,
+      "end": 287.806,
+      "score": 0.878
+    },
+    {
+      "word": "Return",
+      "start": 288.807,
+      "end": 289.267,
+      "score": 0.831
+    },
+    {
+      "word": "to",
+      "start": 289.347,
+      "end": 289.447,
+      "score": 0.83
+    },
+    {
+      "word": "the",
+      "start": 289.487,
+      "end": 289.567,
+      "score": 0.939
+    },
+    {
+      "word": "room.",
+      "start": 289.627,
+      "end": 289.928,
+      "score": 0.834
+    },
+    {
+      "word": "Carry",
+      "start": 299.976,
+      "end": 300.277,
+      "score": 0.933
+    },
+    {
+      "word": "with",
+      "start": 300.337,
+      "end": 300.517,
+      "score": 0.784
+    },
+    {
+      "word": "you",
+      "start": 300.557,
+      "end": 300.717,
+      "score": 0.914
+    },
+    {
+      "word": "the",
+      "start": 300.757,
+      "end": 300.857,
+      "score": 0.668
+    },
+    {
+      "word": "reminder",
+      "start": 300.897,
+      "end": 301.438,
+      "score": 0.864
+    },
+    {
+      "word": "that",
+      "start": 301.498,
+      "end": 301.638,
+      "score": 0.75
+    },
+    {
+      "word": "the",
+      "start": 301.678,
+      "end": 301.778,
+      "score": 0.833
+    },
+    {
+      "word": "body",
+      "start": 301.818,
+      "end": 302.138,
+      "score": 0.999
+    },
+    {
+      "word": "can",
+      "start": 302.198,
+      "end": 302.358,
+      "score": 0.917
+    },
+    {
+      "word": "be",
+      "start": 302.398,
+      "end": 302.499,
+      "score": 0.834
+    },
+    {
+      "word": "listened",
+      "start": 302.559,
+      "end": 302.939,
+      "score": 0.776
+    },
+    {
+      "word": "to",
+      "start": 302.959,
+      "end": 303.119,
+      "score": 0.832
+    },
+    {
+      "word": "with",
+      "start": 303.199,
+      "end": 303.359,
+      "score": 0.75
+    },
+    {
+      "word": "patience,",
+      "start": 303.439,
+      "end": 304.06,
+      "score": 0.886
+    },
+    {
+      "word": "not",
+      "start": 304.52,
+      "end": 304.74,
+      "score": 0.861
+    },
+    {
+      "word": "force.",
+      "start": 304.841,
+      "end": 305.281,
+      "score": 0.902
+    }
+  ],
+  "language": "en"
+}

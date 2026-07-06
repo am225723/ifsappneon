@@ -1,0 +1,1131 @@
+{
+  "segments": [
+    {
+      "start": 0.111,
+      "end": 9.02,
+      "text": " Before moving into the day, pause, take one slow breath in and let it out.",
+      "words": [
+        {
+          "word": "Before",
+          "start": 0.111,
+          "end": 0.471,
+          "score": 0.799
+        },
+        {
+          "word": "moving",
+          "start": 0.552,
+          "end": 0.832,
+          "score": 0.791
+        },
+        {
+          "word": "into",
+          "start": 0.872,
+          "end": 1.032,
+          "score": 0.982
+        },
+        {
+          "word": "the",
+          "start": 1.072,
+          "end": 1.152,
+          "score": 0.833
+        },
+        {
+          "word": "day,",
+          "start": 1.172,
+          "end": 1.392,
+          "score": 0.716
+        },
+        {
+          "word": "pause,",
+          "start": 1.733,
+          "end": 2.133,
+          "score": 0.941
+        },
+        {
+          "word": "take",
+          "start": 2.814,
+          "end": 3.014,
+          "score": 0.79
+        },
+        {
+          "word": "one",
+          "start": 3.214,
+          "end": 3.354,
+          "score": 0.579
+        },
+        {
+          "word": "slow",
+          "start": 3.454,
+          "end": 3.735,
+          "score": 0.776
+        },
+        {
+          "word": "breath",
+          "start": 3.795,
+          "end": 4.055,
+          "score": 0.809
+        },
+        {
+          "word": "in",
+          "start": 4.255,
+          "end": 4.375,
+          "score": 0.662
+        },
+        {
+          "word": "and",
+          "start": 4.395,
+          "end": 8.539,
+          "score": 0.866
+        },
+        {
+          "word": "let",
+          "start": 8.579,
+          "end": 8.72,
+          "score": 0.978
+        },
+        {
+          "word": "it",
+          "start": 8.76,
+          "end": 8.82,
+          "score": 0.766
+        },
+        {
+          "word": "out.",
+          "start": 8.92,
+          "end": 9.02,
+          "score": 1.0
+        }
+      ],
+      "avg_logprob": -0.0621378196137292
+    },
+    {
+      "start": 10.261,
+      "end": 15.126,
+      "text": "Ask yourself, what quality of self-energy do I want to practice today?",
+      "words": [
+        {
+          "word": "Ask",
+          "start": 10.261,
+          "end": 10.441,
+          "score": 0.917
+        },
+        {
+          "word": "yourself,",
+          "start": 10.461,
+          "end": 10.902,
+          "score": 0.804
+        },
+        {
+          "word": "what",
+          "start": 11.702,
+          "end": 11.863,
+          "score": 0.828
+        },
+        {
+          "word": "quality",
+          "start": 12.003,
+          "end": 12.463,
+          "score": 0.872
+        },
+        {
+          "word": "of",
+          "start": 12.563,
+          "end": 12.623,
+          "score": 0.75
+        },
+        {
+          "word": "self-energy",
+          "start": 12.723,
+          "end": 13.464,
+          "score": 0.753
+        },
+        {
+          "word": "do",
+          "start": 13.644,
+          "end": 13.765,
+          "score": 0.944
+        },
+        {
+          "word": "I",
+          "start": 13.825,
+          "end": 13.885,
+          "score": 0.667
+        },
+        {
+          "word": "want",
+          "start": 13.925,
+          "end": 14.125,
+          "score": 0.785
+        },
+        {
+          "word": "to",
+          "start": 14.145,
+          "end": 14.225,
+          "score": 0.696
+        },
+        {
+          "word": "practice",
+          "start": 14.285,
+          "end": 14.745,
+          "score": 0.818
+        },
+        {
+          "word": "today?",
+          "start": 14.806,
+          "end": 15.126,
+          "score": 0.936
+        }
+      ],
+      "avg_logprob": -0.0621378196137292
+    },
+    {
+      "start": 22.484,
+      "end": 29.967,
+      "text": " Maybe calm, curiosity, compassion, clarity, courage, confidence, creativity, or connectedness.",
+      "words": [
+        {
+          "word": "Maybe",
+          "start": 22.484,
+          "end": 22.744,
+          "score": 0.775
+        },
+        {
+          "word": "calm,",
+          "start": 22.784,
+          "end": 23.164,
+          "score": 0.841
+        },
+        {
+          "word": "curiosity,",
+          "start": 23.484,
+          "end": 24.205,
+          "score": 0.9
+        },
+        {
+          "word": "compassion,",
+          "start": 24.545,
+          "end": 25.205,
+          "score": 0.846
+        },
+        {
+          "word": "clarity,",
+          "start": 25.545,
+          "end": 25.965,
+          "score": 0.927
+        },
+        {
+          "word": "courage,",
+          "start": 26.285,
+          "end": 26.686,
+          "score": 0.93
+        },
+        {
+          "word": "confidence,",
+          "start": 27.046,
+          "end": 27.646,
+          "score": 0.883
+        },
+        {
+          "word": "creativity,",
+          "start": 28.006,
+          "end": 28.686,
+          "score": 0.847
+        },
+        {
+          "word": "or",
+          "start": 29.086,
+          "end": 29.186,
+          "score": 0.718
+        },
+        {
+          "word": "connectedness.",
+          "start": 29.246,
+          "end": 29.967,
+          "score": 0.879
+        }
+      ],
+      "avg_logprob": -0.03174316991741458
+    },
+    {
+      "start": 30.847,
+      "end": 31.387,
+      "text": "Choose one.",
+      "words": [
+        {
+          "word": "Choose",
+          "start": 30.847,
+          "end": 31.127,
+          "score": 0.729
+        },
+        {
+          "word": "one.",
+          "start": 31.267,
+          "end": 31.387,
+          "score": 0.852
+        }
+      ],
+      "avg_logprob": -0.03174316991741458
+    },
+    {
+      "start": 31.907,
+      "end": 34.768,
+      "text": "Now ask, where might I need this quality today?",
+      "words": [
+        {
+          "word": "Now",
+          "start": 31.907,
+          "end": 32.068,
+          "score": 0.804
+        },
+        {
+          "word": "ask,",
+          "start": 32.268,
+          "end": 32.488,
+          "score": 0.968
+        },
+        {
+          "word": "where",
+          "start": 32.928,
+          "end": 33.108,
+          "score": 0.914
+        },
+        {
+          "word": "might",
+          "start": 33.148,
+          "end": 33.308,
+          "score": 0.906
+        },
+        {
+          "word": "I",
+          "start": 33.368,
+          "end": 33.428,
+          "score": 0.667
+        },
+        {
+          "word": "need",
+          "start": 33.488,
+          "end": 33.668,
+          "score": 0.92
+        },
+        {
+          "word": "this",
+          "start": 33.708,
+          "end": 33.868,
+          "score": 0.85
+        },
+        {
+          "word": "quality",
+          "start": 33.948,
+          "end": 34.368,
+          "score": 0.861
+        },
+        {
+          "word": "today?",
+          "start": 34.428,
+          "end": 34.768,
+          "score": 0.662
+        }
+      ],
+      "avg_logprob": -0.03174316991741458
+    },
+    {
+      "start": 42.251,
+      "end": 44.212,
+      "text": "Let one situation come to mind.",
+      "words": [
+        {
+          "word": "Let",
+          "start": 42.251,
+          "end": 42.391,
+          "score": 0.884
+        },
+        {
+          "word": "one",
+          "start": 42.551,
+          "end": 42.691,
+          "score": 0.666
+        },
+        {
+          "word": "situation",
+          "start": 42.771,
+          "end": 43.432,
+          "score": 0.814
+        },
+        {
+          "word": "come",
+          "start": 43.512,
+          "end": 43.712,
+          "score": 0.871
+        },
+        {
+          "word": "to",
+          "start": 43.772,
+          "end": 43.852,
+          "score": 0.993
+        },
+        {
+          "word": "mind.",
+          "start": 43.892,
+          "end": 44.212,
+          "score": 0.884
+        }
+      ],
+      "avg_logprob": -0.03174316991741458
+    },
+    {
+      "start": 45.232,
+      "end": 47.073,
+      "text": "Imagine bringing that quality with you.",
+      "words": [
+        {
+          "word": "Imagine",
+          "start": 45.232,
+          "end": 45.652,
+          "score": 0.894
+        },
+        {
+          "word": "bringing",
+          "start": 45.712,
+          "end": 46.033,
+          "score": 0.893
+        },
+        {
+          "word": "that",
+          "start": 46.073,
+          "end": 46.213,
+          "score": 0.803
+        },
+        {
+          "word": "quality",
+          "start": 46.273,
+          "end": 46.673,
+          "score": 0.795
+        },
+        {
+          "word": "with",
+          "start": 46.733,
+          "end": 46.893,
+          "score": 0.715
+        },
+        {
+          "word": "you.",
+          "start": 46.933,
+          "end": 47.073,
+          "score": 1.0
+        }
+      ],
+      "avg_logprob": -0.03174316991741458
+    },
+    {
+      "start": 54.04,
+      "end": 56.305,
+      "text": " Not perfectly, just enough to remember.",
+      "words": [
+        {
+          "word": "Not",
+          "start": 54.04,
+          "end": 54.221,
+          "score": 0.721
+        },
+        {
+          "word": "perfectly,",
+          "start": 54.281,
+          "end": 54.802,
+          "score": 0.883
+        },
+        {
+          "word": "just",
+          "start": 55.243,
+          "end": 55.463,
+          "score": 0.882
+        },
+        {
+          "word": "enough",
+          "start": 55.523,
+          "end": 55.724,
+          "score": 0.754
+        },
+        {
+          "word": "to",
+          "start": 55.764,
+          "end": 55.844,
+          "score": 0.76
+        },
+        {
+          "word": "remember.",
+          "start": 55.904,
+          "end": 56.305,
+          "score": 0.907
+        }
+      ],
+      "avg_logprob": -0.07693726548126766
+    },
+    {
+      "start": 57.207,
+      "end": 64.223,
+      "text": "Silently say, today I will practice returning to this quality, one moment at a time.",
+      "words": [
+        {
+          "word": "Silently",
+          "start": 57.207,
+          "end": 57.708,
+          "score": 0.967
+        },
+        {
+          "word": "say,",
+          "start": 57.788,
+          "end": 58.069,
+          "score": 0.9
+        },
+        {
+          "word": "today",
+          "start": 59.452,
+          "end": 59.813,
+          "score": 0.686
+        },
+        {
+          "word": "I",
+          "start": 59.833,
+          "end": 59.853,
+          "score": 0.0
+        },
+        {
+          "word": "will",
+          "start": 60.294,
+          "end": 60.454,
+          "score": 0.882
+        },
+        {
+          "word": "practice",
+          "start": 60.494,
+          "end": 60.915,
+          "score": 0.752
+        },
+        {
+          "word": "returning",
+          "start": 60.975,
+          "end": 61.437,
+          "score": 0.788
+        },
+        {
+          "word": "to",
+          "start": 61.497,
+          "end": 61.577,
+          "score": 0.91
+        },
+        {
+          "word": "this",
+          "start": 61.617,
+          "end": 61.777,
+          "score": 0.906
+        },
+        {
+          "word": "quality,",
+          "start": 61.857,
+          "end": 62.298,
+          "score": 0.872
+        },
+        {
+          "word": "one",
+          "start": 63.16,
+          "end": 63.261,
+          "score": 0.728
+        },
+        {
+          "word": "moment",
+          "start": 63.321,
+          "end": 63.621,
+          "score": 0.795
+        },
+        {
+          "word": "at",
+          "start": 63.742,
+          "end": 63.822,
+          "score": 0.834
+        },
+        {
+          "word": "a",
+          "start": 63.862,
+          "end": 63.882,
+          "score": 0.998
+        },
+        {
+          "word": "time.",
+          "start": 63.942,
+          "end": 64.223,
+          "score": 0.899
+        }
+      ],
+      "avg_logprob": -0.07693726548126766
+    },
+    {
+      "start": 71.338,
+      "end": 73.082,
+      "text": "Take one more breath and begin.",
+      "words": [
+        {
+          "word": "Take",
+          "start": 71.338,
+          "end": 71.539,
+          "score": 0.729
+        },
+        {
+          "word": "one",
+          "start": 71.659,
+          "end": 71.779,
+          "score": 0.601
+        },
+        {
+          "word": "more",
+          "start": 71.819,
+          "end": 71.98,
+          "score": 0.75
+        },
+        {
+          "word": "breath",
+          "start": 72.04,
+          "end": 72.301,
+          "score": 0.782
+        },
+        {
+          "word": "and",
+          "start": 72.701,
+          "end": 72.802,
+          "score": 0.764
+        },
+        {
+          "word": "begin.",
+          "start": 72.842,
+          "end": 73.082,
+          "score": 0.972
+        }
+      ],
+      "avg_logprob": -0.07693726548126766
+    }
+  ],
+  "word_segments": [
+    {
+      "word": "Before",
+      "start": 0.111,
+      "end": 0.471,
+      "score": 0.799
+    },
+    {
+      "word": "moving",
+      "start": 0.552,
+      "end": 0.832,
+      "score": 0.791
+    },
+    {
+      "word": "into",
+      "start": 0.872,
+      "end": 1.032,
+      "score": 0.982
+    },
+    {
+      "word": "the",
+      "start": 1.072,
+      "end": 1.152,
+      "score": 0.833
+    },
+    {
+      "word": "day,",
+      "start": 1.172,
+      "end": 1.392,
+      "score": 0.716
+    },
+    {
+      "word": "pause,",
+      "start": 1.733,
+      "end": 2.133,
+      "score": 0.941
+    },
+    {
+      "word": "take",
+      "start": 2.814,
+      "end": 3.014,
+      "score": 0.79
+    },
+    {
+      "word": "one",
+      "start": 3.214,
+      "end": 3.354,
+      "score": 0.579
+    },
+    {
+      "word": "slow",
+      "start": 3.454,
+      "end": 3.735,
+      "score": 0.776
+    },
+    {
+      "word": "breath",
+      "start": 3.795,
+      "end": 4.055,
+      "score": 0.809
+    },
+    {
+      "word": "in",
+      "start": 4.255,
+      "end": 4.375,
+      "score": 0.662
+    },
+    {
+      "word": "and",
+      "start": 4.395,
+      "end": 8.539,
+      "score": 0.866
+    },
+    {
+      "word": "let",
+      "start": 8.579,
+      "end": 8.72,
+      "score": 0.978
+    },
+    {
+      "word": "it",
+      "start": 8.76,
+      "end": 8.82,
+      "score": 0.766
+    },
+    {
+      "word": "out.",
+      "start": 8.92,
+      "end": 9.02,
+      "score": 1.0
+    },
+    {
+      "word": "Ask",
+      "start": 10.261,
+      "end": 10.441,
+      "score": 0.917
+    },
+    {
+      "word": "yourself,",
+      "start": 10.461,
+      "end": 10.902,
+      "score": 0.804
+    },
+    {
+      "word": "what",
+      "start": 11.702,
+      "end": 11.863,
+      "score": 0.828
+    },
+    {
+      "word": "quality",
+      "start": 12.003,
+      "end": 12.463,
+      "score": 0.872
+    },
+    {
+      "word": "of",
+      "start": 12.563,
+      "end": 12.623,
+      "score": 0.75
+    },
+    {
+      "word": "self-energy",
+      "start": 12.723,
+      "end": 13.464,
+      "score": 0.753
+    },
+    {
+      "word": "do",
+      "start": 13.644,
+      "end": 13.765,
+      "score": 0.944
+    },
+    {
+      "word": "I",
+      "start": 13.825,
+      "end": 13.885,
+      "score": 0.667
+    },
+    {
+      "word": "want",
+      "start": 13.925,
+      "end": 14.125,
+      "score": 0.785
+    },
+    {
+      "word": "to",
+      "start": 14.145,
+      "end": 14.225,
+      "score": 0.696
+    },
+    {
+      "word": "practice",
+      "start": 14.285,
+      "end": 14.745,
+      "score": 0.818
+    },
+    {
+      "word": "today?",
+      "start": 14.806,
+      "end": 15.126,
+      "score": 0.936
+    },
+    {
+      "word": "Maybe",
+      "start": 22.484,
+      "end": 22.744,
+      "score": 0.775
+    },
+    {
+      "word": "calm,",
+      "start": 22.784,
+      "end": 23.164,
+      "score": 0.841
+    },
+    {
+      "word": "curiosity,",
+      "start": 23.484,
+      "end": 24.205,
+      "score": 0.9
+    },
+    {
+      "word": "compassion,",
+      "start": 24.545,
+      "end": 25.205,
+      "score": 0.846
+    },
+    {
+      "word": "clarity,",
+      "start": 25.545,
+      "end": 25.965,
+      "score": 0.927
+    },
+    {
+      "word": "courage,",
+      "start": 26.285,
+      "end": 26.686,
+      "score": 0.93
+    },
+    {
+      "word": "confidence,",
+      "start": 27.046,
+      "end": 27.646,
+      "score": 0.883
+    },
+    {
+      "word": "creativity,",
+      "start": 28.006,
+      "end": 28.686,
+      "score": 0.847
+    },
+    {
+      "word": "or",
+      "start": 29.086,
+      "end": 29.186,
+      "score": 0.718
+    },
+    {
+      "word": "connectedness.",
+      "start": 29.246,
+      "end": 29.967,
+      "score": 0.879
+    },
+    {
+      "word": "Choose",
+      "start": 30.847,
+      "end": 31.127,
+      "score": 0.729
+    },
+    {
+      "word": "one.",
+      "start": 31.267,
+      "end": 31.387,
+      "score": 0.852
+    },
+    {
+      "word": "Now",
+      "start": 31.907,
+      "end": 32.068,
+      "score": 0.804
+    },
+    {
+      "word": "ask,",
+      "start": 32.268,
+      "end": 32.488,
+      "score": 0.968
+    },
+    {
+      "word": "where",
+      "start": 32.928,
+      "end": 33.108,
+      "score": 0.914
+    },
+    {
+      "word": "might",
+      "start": 33.148,
+      "end": 33.308,
+      "score": 0.906
+    },
+    {
+      "word": "I",
+      "start": 33.368,
+      "end": 33.428,
+      "score": 0.667
+    },
+    {
+      "word": "need",
+      "start": 33.488,
+      "end": 33.668,
+      "score": 0.92
+    },
+    {
+      "word": "this",
+      "start": 33.708,
+      "end": 33.868,
+      "score": 0.85
+    },
+    {
+      "word": "quality",
+      "start": 33.948,
+      "end": 34.368,
+      "score": 0.861
+    },
+    {
+      "word": "today?",
+      "start": 34.428,
+      "end": 34.768,
+      "score": 0.662
+    },
+    {
+      "word": "Let",
+      "start": 42.251,
+      "end": 42.391,
+      "score": 0.884
+    },
+    {
+      "word": "one",
+      "start": 42.551,
+      "end": 42.691,
+      "score": 0.666
+    },
+    {
+      "word": "situation",
+      "start": 42.771,
+      "end": 43.432,
+      "score": 0.814
+    },
+    {
+      "word": "come",
+      "start": 43.512,
+      "end": 43.712,
+      "score": 0.871
+    },
+    {
+      "word": "to",
+      "start": 43.772,
+      "end": 43.852,
+      "score": 0.993
+    },
+    {
+      "word": "mind.",
+      "start": 43.892,
+      "end": 44.212,
+      "score": 0.884
+    },
+    {
+      "word": "Imagine",
+      "start": 45.232,
+      "end": 45.652,
+      "score": 0.894
+    },
+    {
+      "word": "bringing",
+      "start": 45.712,
+      "end": 46.033,
+      "score": 0.893
+    },
+    {
+      "word": "that",
+      "start": 46.073,
+      "end": 46.213,
+      "score": 0.803
+    },
+    {
+      "word": "quality",
+      "start": 46.273,
+      "end": 46.673,
+      "score": 0.795
+    },
+    {
+      "word": "with",
+      "start": 46.733,
+      "end": 46.893,
+      "score": 0.715
+    },
+    {
+      "word": "you.",
+      "start": 46.933,
+      "end": 47.073,
+      "score": 1.0
+    },
+    {
+      "word": "Not",
+      "start": 54.04,
+      "end": 54.221,
+      "score": 0.721
+    },
+    {
+      "word": "perfectly,",
+      "start": 54.281,
+      "end": 54.802,
+      "score": 0.883
+    },
+    {
+      "word": "just",
+      "start": 55.243,
+      "end": 55.463,
+      "score": 0.882
+    },
+    {
+      "word": "enough",
+      "start": 55.523,
+      "end": 55.724,
+      "score": 0.754
+    },
+    {
+      "word": "to",
+      "start": 55.764,
+      "end": 55.844,
+      "score": 0.76
+    },
+    {
+      "word": "remember.",
+      "start": 55.904,
+      "end": 56.305,
+      "score": 0.907
+    },
+    {
+      "word": "Silently",
+      "start": 57.207,
+      "end": 57.708,
+      "score": 0.967
+    },
+    {
+      "word": "say,",
+      "start": 57.788,
+      "end": 58.069,
+      "score": 0.9
+    },
+    {
+      "word": "today",
+      "start": 59.452,
+      "end": 59.813,
+      "score": 0.686
+    },
+    {
+      "word": "I",
+      "start": 59.833,
+      "end": 59.853,
+      "score": 0.0
+    },
+    {
+      "word": "will",
+      "start": 60.294,
+      "end": 60.454,
+      "score": 0.882
+    },
+    {
+      "word": "practice",
+      "start": 60.494,
+      "end": 60.915,
+      "score": 0.752
+    },
+    {
+      "word": "returning",
+      "start": 60.975,
+      "end": 61.437,
+      "score": 0.788
+    },
+    {
+      "word": "to",
+      "start": 61.497,
+      "end": 61.577,
+      "score": 0.91
+    },
+    {
+      "word": "this",
+      "start": 61.617,
+      "end": 61.777,
+      "score": 0.906
+    },
+    {
+      "word": "quality,",
+      "start": 61.857,
+      "end": 62.298,
+      "score": 0.872
+    },
+    {
+      "word": "one",
+      "start": 63.16,
+      "end": 63.261,
+      "score": 0.728
+    },
+    {
+      "word": "moment",
+      "start": 63.321,
+      "end": 63.621,
+      "score": 0.795
+    },
+    {
+      "word": "at",
+      "start": 63.742,
+      "end": 63.822,
+      "score": 0.834
+    },
+    {
+      "word": "a",
+      "start": 63.862,
+      "end": 63.882,
+      "score": 0.998
+    },
+    {
+      "word": "time.",
+      "start": 63.942,
+      "end": 64.223,
+      "score": 0.899
+    },
+    {
+      "word": "Take",
+      "start": 71.338,
+      "end": 71.539,
+      "score": 0.729
+    },
+    {
+      "word": "one",
+      "start": 71.659,
+      "end": 71.779,
+      "score": 0.601
+    },
+    {
+      "word": "more",
+      "start": 71.819,
+      "end": 71.98,
+      "score": 0.75
+    },
+    {
+      "word": "breath",
+      "start": 72.04,
+      "end": 72.301,
+      "score": 0.782
+    },
+    {
+      "word": "and",
+      "start": 72.701,
+      "end": 72.802,
+      "score": 0.764
+    },
+    {
+      "word": "begin.",
+      "start": 72.842,
+      "end": 73.082,
+      "score": 0.972
+    }
+  ],
+  "language": "en"
+}

@@ -1,0 +1,4723 @@
+{
+  "segments": [
+    {
+      "start": 0.111,
+      "end": 1.432,
+      "text": " Welcome to Box Breathing.",
+      "words": [
+        {
+          "word": "Welcome",
+          "start": 0.111,
+          "end": 0.491,
+          "score": 0.83
+        },
+        {
+          "word": "to",
+          "start": 0.531,
+          "end": 0.612,
+          "score": 0.986
+        },
+        {
+          "word": "Box",
+          "start": 0.652,
+          "end": 0.972,
+          "score": 0.956
+        },
+        {
+          "word": "Breathing.",
+          "start": 1.032,
+          "end": 1.432,
+          "score": 0.785
+        }
+      ],
+      "avg_logprob": -0.04438486526597221
+    },
+    {
+      "start": 2.133,
+      "end": 8.098,
+      "text": "This is a simple breathing practice that can help your system slow down and find a steadier rhythm.",
+      "words": [
+        {
+          "word": "This",
+          "start": 2.133,
+          "end": 2.293,
+          "score": 0.914
+        },
+        {
+          "word": "is",
+          "start": 2.353,
+          "end": 2.453,
+          "score": 0.66
+        },
+        {
+          "word": "a",
+          "start": 2.513,
+          "end": 2.533,
+          "score": 0.999
+        },
+        {
+          "word": "simple",
+          "start": 2.613,
+          "end": 2.994,
+          "score": 0.774
+        },
+        {
+          "word": "breathing",
+          "start": 3.074,
+          "end": 3.454,
+          "score": 0.726
+        },
+        {
+          "word": "practice",
+          "start": 3.514,
+          "end": 4.055,
+          "score": 0.764
+        },
+        {
+          "word": "that",
+          "start": 4.095,
+          "end": 4.215,
+          "score": 0.997
+        },
+        {
+          "word": "can",
+          "start": 4.235,
+          "end": 4.355,
+          "score": 0.971
+        },
+        {
+          "word": "help",
+          "start": 4.415,
+          "end": 4.595,
+          "score": 0.874
+        },
+        {
+          "word": "your",
+          "start": 4.615,
+          "end": 4.775,
+          "score": 0.878
+        },
+        {
+          "word": "system",
+          "start": 4.835,
+          "end": 5.216,
+          "score": 0.922
+        },
+        {
+          "word": "slow",
+          "start": 5.296,
+          "end": 5.616,
+          "score": 0.94
+        },
+        {
+          "word": "down",
+          "start": 5.676,
+          "end": 5.996,
+          "score": 0.814
+        },
+        {
+          "word": "and",
+          "start": 6.657,
+          "end": 6.757,
+          "score": 0.782
+        },
+        {
+          "word": "find",
+          "start": 6.837,
+          "end": 7.097,
+          "score": 0.744
+        },
+        {
+          "word": "a",
+          "start": 7.137,
+          "end": 7.177,
+          "score": 0.499
+        },
+        {
+          "word": "steadier",
+          "start": 7.217,
+          "end": 7.698,
+          "score": 0.895
+        },
+        {
+          "word": "rhythm.",
+          "start": 7.758,
+          "end": 8.098,
+          "score": 0.883
+        }
+      ],
+      "avg_logprob": -0.04438486526597221
+    },
+    {
+      "start": 8.939,
+      "end": 19.288,
+      "text": "We will breathe in for four counts, hold for four counts, breathe out for four counts, and hold again for four counts.",
+      "words": [
+        {
+          "word": "We",
+          "start": 8.939,
+          "end": 9.039,
+          "score": 0.983
+        },
+        {
+          "word": "will",
+          "start": 9.079,
+          "end": 9.239,
+          "score": 0.814
+        },
+        {
+          "word": "breathe",
+          "start": 9.279,
+          "end": 9.599,
+          "score": 0.737
+        },
+        {
+          "word": "in",
+          "start": 9.659,
+          "end": 9.76,
+          "score": 0.782
+        },
+        {
+          "word": "for",
+          "start": 9.84,
+          "end": 9.98,
+          "score": 0.832
+        },
+        {
+          "word": "four",
+          "start": 10.12,
+          "end": 10.42,
+          "score": 0.683
+        },
+        {
+          "word": "counts,",
+          "start": 10.52,
+          "end": 10.921,
+          "score": 0.846
+        },
+        {
+          "word": "hold",
+          "start": 11.841,
+          "end": 12.142,
+          "score": 0.749
+        },
+        {
+          "word": "for",
+          "start": 12.222,
+          "end": 12.362,
+          "score": 0.8
+        },
+        {
+          "word": "four",
+          "start": 12.442,
+          "end": 12.682,
+          "score": 0.672
+        },
+        {
+          "word": "counts,",
+          "start": 12.762,
+          "end": 13.142,
+          "score": 0.836
+        },
+        {
+          "word": "breathe",
+          "start": 14.083,
+          "end": 14.364,
+          "score": 0.806
+        },
+        {
+          "word": "out",
+          "start": 14.444,
+          "end": 14.564,
+          "score": 0.969
+        },
+        {
+          "word": "for",
+          "start": 14.624,
+          "end": 14.764,
+          "score": 0.783
+        },
+        {
+          "word": "four",
+          "start": 14.844,
+          "end": 15.064,
+          "score": 0.844
+        },
+        {
+          "word": "counts,",
+          "start": 15.164,
+          "end": 15.545,
+          "score": 0.827
+        },
+        {
+          "word": "and",
+          "start": 16.465,
+          "end": 16.565,
+          "score": 0.852
+        },
+        {
+          "word": "hold",
+          "start": 16.666,
+          "end": 17.026,
+          "score": 0.629
+        },
+        {
+          "word": "again",
+          "start": 17.266,
+          "end": 17.646,
+          "score": 0.866
+        },
+        {
+          "word": "for",
+          "start": 17.666,
+          "end": 17.726,
+          "score": 0.0
+        },
+        {
+          "word": "four",
+          "start": 18.567,
+          "end": 18.827,
+          "score": 0.718
+        },
+        {
+          "word": "counts.",
+          "start": 18.907,
+          "end": 19.288,
+          "score": 0.884
+        }
+      ],
+      "avg_logprob": -0.04438486526597221
+    },
+    {
+      "start": 26.361,
+      "end": 33.243,
+      "text": " If holding your breath does not feel good, you can simply breathe gently and skip the holds.",
+      "words": [
+        {
+          "word": "If",
+          "start": 26.361,
+          "end": 26.441,
+          "score": 0.996
+        },
+        {
+          "word": "holding",
+          "start": 26.541,
+          "end": 26.921,
+          "score": 0.781
+        },
+        {
+          "word": "your",
+          "start": 26.961,
+          "end": 27.121,
+          "score": 0.75
+        },
+        {
+          "word": "breath",
+          "start": 27.141,
+          "end": 27.501,
+          "score": 0.745
+        },
+        {
+          "word": "does",
+          "start": 27.661,
+          "end": 27.842,
+          "score": 0.706
+        },
+        {
+          "word": "not",
+          "start": 27.922,
+          "end": 28.122,
+          "score": 0.682
+        },
+        {
+          "word": "feel",
+          "start": 28.262,
+          "end": 28.602,
+          "score": 0.681
+        },
+        {
+          "word": "good,",
+          "start": 28.702,
+          "end": 29.002,
+          "score": 0.823
+        },
+        {
+          "word": "you",
+          "start": 29.762,
+          "end": 29.882,
+          "score": 0.841
+        },
+        {
+          "word": "can",
+          "start": 29.922,
+          "end": 30.082,
+          "score": 0.899
+        },
+        {
+          "word": "simply",
+          "start": 30.162,
+          "end": 30.542,
+          "score": 0.711
+        },
+        {
+          "word": "breathe",
+          "start": 30.622,
+          "end": 30.982,
+          "score": 0.725
+        },
+        {
+          "word": "gently",
+          "start": 31.083,
+          "end": 31.583,
+          "score": 0.795
+        },
+        {
+          "word": "and",
+          "start": 32.043,
+          "end": 32.143,
+          "score": 0.952
+        },
+        {
+          "word": "skip",
+          "start": 32.243,
+          "end": 32.563,
+          "score": 0.989
+        },
+        {
+          "word": "the",
+          "start": 32.643,
+          "end": 32.743,
+          "score": 0.84
+        },
+        {
+          "word": "holds.",
+          "start": 32.803,
+          "end": 33.243,
+          "score": 0.828
+        }
+      ],
+      "avg_logprob": -0.018335678121622873
+    },
+    {
+      "start": 40.425,
+      "end": 42.666,
+      "text": "Let this practice be flexible.",
+      "words": [
+        {
+          "word": "Let",
+          "start": 40.425,
+          "end": 40.625,
+          "score": 0.782
+        },
+        {
+          "word": "this",
+          "start": 40.686,
+          "end": 40.886,
+          "score": 0.736
+        },
+        {
+          "word": "practice",
+          "start": 40.986,
+          "end": 41.586,
+          "score": 0.829
+        },
+        {
+          "word": "be",
+          "start": 41.646,
+          "end": 41.806,
+          "score": 0.785
+        },
+        {
+          "word": "flexible.",
+          "start": 41.906,
+          "end": 42.666,
+          "score": 0.79
+        }
+      ],
+      "avg_logprob": -0.018335678121622873
+    },
+    {
+      "start": 43.867,
+      "end": 48.528,
+      "text": "Begin by settling into a comfortable position.",
+      "words": [
+        {
+          "word": "Begin",
+          "start": 43.867,
+          "end": 44.347,
+          "score": 0.806
+        },
+        {
+          "word": "by",
+          "start": 44.447,
+          "end": 44.647,
+          "score": 0.786
+        },
+        {
+          "word": "settling",
+          "start": 44.807,
+          "end": 45.467,
+          "score": 0.683
+        },
+        {
+          "word": "into",
+          "start": 45.807,
+          "end": 46.287,
+          "score": 0.818
+        },
+        {
+          "word": "a",
+          "start": 46.307,
+          "end": 46.327,
+          "score": 0.0
+        },
+        {
+          "word": "comfortable",
+          "start": 46.767,
+          "end": 47.428,
+          "score": 0.895
+        },
+        {
+          "word": "position.",
+          "start": 47.988,
+          "end": 48.528,
+          "score": 0.94
+        }
+      ],
+      "avg_logprob": -0.018335678121622873
+    },
+    {
+      "start": 49.653,
+      "end": 52.154,
+      "text": " Let your shoulders soften if they can.",
+      "words": [
+        {
+          "word": "Let",
+          "start": 49.653,
+          "end": 49.813,
+          "score": 0.928
+        },
+        {
+          "word": "your",
+          "start": 49.853,
+          "end": 50.033,
+          "score": 0.646
+        },
+        {
+          "word": "shoulders",
+          "start": 50.093,
+          "end": 50.553,
+          "score": 0.716
+        },
+        {
+          "word": "soften",
+          "start": 50.633,
+          "end": 51.173,
+          "score": 0.89
+        },
+        {
+          "word": "if",
+          "start": 51.473,
+          "end": 51.574,
+          "score": 0.832
+        },
+        {
+          "word": "they",
+          "start": 51.614,
+          "end": 51.774,
+          "score": 0.796
+        },
+        {
+          "word": "can.",
+          "start": 51.814,
+          "end": 52.154,
+          "score": 0.935
+        }
+      ],
+      "avg_logprob": -0.10282855655284638
+    },
+    {
+      "start": 53.354,
+      "end": 54.754,
+      "text": "Let your jaw loosen.",
+      "words": [
+        {
+          "word": "Let",
+          "start": 53.354,
+          "end": 53.534,
+          "score": 0.696
+        },
+        {
+          "word": "your",
+          "start": 53.554,
+          "end": 53.714,
+          "score": 0.662
+        },
+        {
+          "word": "jaw",
+          "start": 53.774,
+          "end": 54.154,
+          "score": 0.76
+        },
+        {
+          "word": "loosen.",
+          "start": 54.234,
+          "end": 54.754,
+          "score": 0.737
+        }
+      ],
+      "avg_logprob": -0.10282855655284638
+    },
+    {
+      "start": 56.015,
+      "end": 57.275,
+      "text": "Let your hands rest.",
+      "words": [
+        {
+          "word": "Let",
+          "start": 56.015,
+          "end": 56.155,
+          "score": 0.987
+        },
+        {
+          "word": "your",
+          "start": 56.195,
+          "end": 56.335,
+          "score": 0.978
+        },
+        {
+          "word": "hands",
+          "start": 56.395,
+          "end": 56.735,
+          "score": 0.722
+        },
+        {
+          "word": "rest.",
+          "start": 56.895,
+          "end": 57.275,
+          "score": 0.884
+        }
+      ],
+      "avg_logprob": -0.10282855655284638
+    },
+    {
+      "start": 58.715,
+      "end": 62.436,
+      "text": "Take one natural breath in and let it out.",
+      "words": [
+        {
+          "word": "Take",
+          "start": 58.715,
+          "end": 58.935,
+          "score": 0.85
+        },
+        {
+          "word": "one",
+          "start": 59.135,
+          "end": 59.276,
+          "score": 0.589
+        },
+        {
+          "word": "natural",
+          "start": 59.436,
+          "end": 59.876,
+          "score": 0.719
+        },
+        {
+          "word": "breath",
+          "start": 59.936,
+          "end": 60.216,
+          "score": 0.782
+        },
+        {
+          "word": "in",
+          "start": 60.356,
+          "end": 60.476,
+          "score": 0.776
+        },
+        {
+          "word": "and",
+          "start": 60.496,
+          "end": 60.556,
+          "score": 0.0
+        },
+        {
+          "word": "let",
+          "start": 61.856,
+          "end": 62.016,
+          "score": 0.847
+        },
+        {
+          "word": "it",
+          "start": 62.076,
+          "end": 62.136,
+          "score": 0.75
+        },
+        {
+          "word": "out.",
+          "start": 62.296,
+          "end": 62.436,
+          "score": 0.959
+        }
+      ],
+      "avg_logprob": -0.10282855655284638
+    },
+    {
+      "start": 63.417,
+      "end": 64.157,
+      "text": "Now we'll begin.",
+      "words": [
+        {
+          "word": "Now",
+          "start": 63.417,
+          "end": 63.557,
+          "score": 0.862
+        },
+        {
+          "word": "we'll",
+          "start": 63.597,
+          "end": 63.777,
+          "score": 0.818
+        },
+        {
+          "word": "begin.",
+          "start": 63.817,
+          "end": 64.157,
+          "score": 0.815
+        }
+      ],
+      "avg_logprob": -0.10282855655284638
+    },
+    {
+      "start": 65.197,
+      "end": 69.358,
+      "text": "Breathe in one, two, three, four, hold one,",
+      "words": [
+        {
+          "word": "Breathe",
+          "start": 65.197,
+          "end": 65.537,
+          "score": 0.84
+        },
+        {
+          "word": "in",
+          "start": 65.597,
+          "end": 65.637,
+          "score": 0.994
+        },
+        {
+          "word": "one,",
+          "start": 65.657,
+          "end": 65.737,
+          "score": 0.235
+        },
+        {
+          "word": "two,",
+          "start": 65.757,
+          "end": 65.837,
+          "score": 0.194
+        },
+        {
+          "word": "three,",
+          "start": 67.138,
+          "end": 67.298,
+          "score": 0.448
+        },
+        {
+          "word": "four,",
+          "start": 67.318,
+          "end": 68.218,
+          "score": 0.554
+        },
+        {
+          "word": "hold",
+          "start": 68.238,
+          "end": 68.478,
+          "score": 0.601
+        },
+        {
+          "word": "one,",
+          "start": 68.498,
+          "end": 69.358,
+          "score": 0.493
+        }
+      ],
+      "avg_logprob": -0.10282855655284638
+    },
+    {
+      "start": 79.913,
+      "end": 102.966,
+      "text": " two three four breathe out one two three four hold one two",
+      "words": [
+        {
+          "word": "two",
+          "start": 79.913,
+          "end": 80.253,
+          "score": 0.632
+        },
+        {
+          "word": "three",
+          "start": 81.194,
+          "end": 81.534,
+          "score": 0.75
+        },
+        {
+          "word": "four",
+          "start": 82.535,
+          "end": 82.915,
+          "score": 0.657
+        },
+        {
+          "word": "breathe",
+          "start": 83.795,
+          "end": 84.135,
+          "score": 0.878
+        },
+        {
+          "word": "out",
+          "start": 84.256,
+          "end": 84.416,
+          "score": 0.936
+        },
+        {
+          "word": "one",
+          "start": 85.296,
+          "end": 85.436,
+          "score": 0.712
+        },
+        {
+          "word": "two",
+          "start": 85.696,
+          "end": 86.037,
+          "score": 0.624
+        },
+        {
+          "word": "three",
+          "start": 87.097,
+          "end": 87.497,
+          "score": 0.757
+        },
+        {
+          "word": "four",
+          "start": 88.998,
+          "end": 89.378,
+          "score": 0.584
+        },
+        {
+          "word": "hold",
+          "start": 90.539,
+          "end": 90.859,
+          "score": 0.896
+        },
+        {
+          "word": "one",
+          "start": 90.879,
+          "end": 90.939,
+          "score": 0.0
+        },
+        {
+          "word": "two",
+          "start": 91.079,
+          "end": 102.966,
+          "score": 0.952
+        }
+      ],
+      "avg_logprob": -0.15010510958158052
+    },
+    {
+      "start": 105.13,
+      "end": 110.455,
+      "text": " Three, four, good, again, breathe in.",
+      "words": [
+        {
+          "word": "Three,",
+          "start": 105.13,
+          "end": 105.51,
+          "score": 0.797
+        },
+        {
+          "word": "four,",
+          "start": 106.451,
+          "end": 106.792,
+          "score": 0.806
+        },
+        {
+          "word": "good,",
+          "start": 107.592,
+          "end": 107.993,
+          "score": 0.902
+        },
+        {
+          "word": "again,",
+          "start": 109.114,
+          "end": 109.514,
+          "score": 0.834
+        },
+        {
+          "word": "breathe",
+          "start": 109.935,
+          "end": 110.255,
+          "score": 0.795
+        },
+        {
+          "word": "in.",
+          "start": 110.315,
+          "end": 110.455,
+          "score": 0.824
+        }
+      ],
+      "avg_logprob": -0.23374848474155774
+    },
+    {
+      "start": 113.178,
+      "end": 119.504,
+      "text": "One, two, three, four, hold.",
+      "words": [
+        {
+          "word": "One,",
+          "start": 113.178,
+          "end": 113.358,
+          "score": 0.671
+        },
+        {
+          "word": "two,",
+          "start": 113.638,
+          "end": 113.999,
+          "score": 0.834
+        },
+        {
+          "word": "three,",
+          "start": 115.04,
+          "end": 115.4,
+          "score": 0.767
+        },
+        {
+          "word": "four,",
+          "start": 116.341,
+          "end": 116.601,
+          "score": 0.825
+        },
+        {
+          "word": "hold.",
+          "start": 119.224,
+          "end": 119.504,
+          "score": 0.889
+        }
+      ],
+      "avg_logprob": -0.23374848474155774
+    },
+    {
+      "start": 122.263,
+      "end": 126.227,
+      "text": " One, two, three, four.",
+      "words": [
+        {
+          "word": "One,",
+          "start": 122.263,
+          "end": 122.443,
+          "score": 0.738
+        },
+        {
+          "word": "two,",
+          "start": 123.344,
+          "end": 123.625,
+          "score": 0.806
+        },
+        {
+          "word": "three,",
+          "start": 124.465,
+          "end": 124.886,
+          "score": 0.887
+        },
+        {
+          "word": "four.",
+          "start": 125.847,
+          "end": 126.227,
+          "score": 0.736
+        }
+      ],
+      "avg_logprob": -0.05399938348842704
+    },
+    {
+      "start": 127.128,
+      "end": 127.769,
+      "text": "Breathe out.",
+      "words": [
+        {
+          "word": "Breathe",
+          "start": 127.128,
+          "end": 127.448,
+          "score": 0.823
+        },
+        {
+          "word": "out.",
+          "start": 127.569,
+          "end": 127.769,
+          "score": 0.968
+        }
+      ],
+      "avg_logprob": -0.05399938348842704
+    },
+    {
+      "start": 128.61,
+      "end": 131.252,
+      "text": "One, two, three, four.",
+      "words": [
+        {
+          "word": "One,",
+          "start": 128.61,
+          "end": 128.75,
+          "score": 0.865
+        },
+        {
+          "word": "two,",
+          "start": 129.03,
+          "end": 129.33,
+          "score": 0.758
+        },
+        {
+          "word": "three,",
+          "start": 129.851,
+          "end": 130.251,
+          "score": 0.839
+        },
+        {
+          "word": "four.",
+          "start": 130.872,
+          "end": 131.252,
+          "score": 0.783
+        }
+      ],
+      "avg_logprob": -0.05399938348842704
+    },
+    {
+      "start": 132.433,
+      "end": 132.854,
+      "text": "Hold.",
+      "words": [
+        {
+          "word": "Hold.",
+          "start": 132.433,
+          "end": 132.854,
+          "score": 0.862
+        }
+      ],
+      "avg_logprob": -0.05399938348842704
+    },
+    {
+      "start": 134.355,
+      "end": 138.319,
+      "text": "One, two, three, four.",
+      "words": [
+        {
+          "word": "One,",
+          "start": 134.355,
+          "end": 134.555,
+          "score": 0.74
+        },
+        {
+          "word": "two,",
+          "start": 135.376,
+          "end": 135.677,
+          "score": 0.706
+        },
+        {
+          "word": "three,",
+          "start": 136.577,
+          "end": 137.018,
+          "score": 0.802
+        },
+        {
+          "word": "four.",
+          "start": 137.939,
+          "end": 138.319,
+          "score": 0.813
+        }
+      ],
+      "avg_logprob": -0.05399938348842704
+    },
+    {
+      "start": 139.761,
+      "end": 144.165,
+      "text": "Let your body follow the rhythm as much as it wants to.",
+      "words": [
+        {
+          "word": "Let",
+          "start": 139.761,
+          "end": 139.981,
+          "score": 0.856
+        },
+        {
+          "word": "your",
+          "start": 140.021,
+          "end": 140.201,
+          "score": 0.681
+        },
+        {
+          "word": "body",
+          "start": 140.281,
+          "end": 140.742,
+          "score": 0.859
+        },
+        {
+          "word": "follow",
+          "start": 140.982,
+          "end": 141.542,
+          "score": 0.804
+        },
+        {
+          "word": "the",
+          "start": 141.642,
+          "end": 141.783,
+          "score": 0.725
+        },
+        {
+          "word": "rhythm",
+          "start": 141.903,
+          "end": 142.383,
+          "score": 0.704
+        },
+        {
+          "word": "as",
+          "start": 142.864,
+          "end": 142.964,
+          "score": 0.857
+        },
+        {
+          "word": "much",
+          "start": 143.064,
+          "end": 143.264,
+          "score": 0.822
+        },
+        {
+          "word": "as",
+          "start": 143.324,
+          "end": 143.404,
+          "score": 0.906
+        },
+        {
+          "word": "it",
+          "start": 143.464,
+          "end": 143.544,
+          "score": 0.798
+        },
+        {
+          "word": "wants",
+          "start": 143.604,
+          "end": 143.885,
+          "score": 0.828
+        },
+        {
+          "word": "to.",
+          "start": 143.965,
+          "end": 144.165,
+          "score": 0.822
+        }
+      ],
+      "avg_logprob": -0.05399938348842704
+    },
+    {
+      "start": 145.406,
+      "end": 146.147,
+      "text": "Breathe in.",
+      "words": [
+        {
+          "word": "Breathe",
+          "start": 145.406,
+          "end": 145.847,
+          "score": 0.772
+        },
+        {
+          "word": "in.",
+          "start": 146.027,
+          "end": 146.147,
+          "score": 0.786
+        }
+      ],
+      "avg_logprob": -0.05399938348842704
+    },
+    {
+      "start": 159.233,
+      "end": 162.476,
+      "text": " One, two, three, four.",
+      "words": [
+        {
+          "word": "One,",
+          "start": 159.233,
+          "end": 159.333,
+          "score": 0.182
+        },
+        {
+          "word": "two,",
+          "start": 159.534,
+          "end": 159.914,
+          "score": 0.797
+        },
+        {
+          "word": "three,",
+          "start": 160.835,
+          "end": 161.255,
+          "score": 0.811
+        },
+        {
+          "word": "four.",
+          "start": 162.216,
+          "end": 162.476,
+          "score": 0.967
+        }
+      ],
+      "avg_logprob": -0.11480151046998799
+    },
+    {
+      "start": 164.078,
+      "end": 164.418,
+      "text": "Hold.",
+      "words": [
+        {
+          "word": "Hold.",
+          "start": 164.078,
+          "end": 164.418,
+          "score": 0.878
+        }
+      ],
+      "avg_logprob": -0.11480151046998799
+    },
+    {
+      "start": 167.0,
+      "end": 167.261,
+      "text": "On.",
+      "words": [
+        {
+          "word": "On.",
+          "start": 167.0,
+          "end": 167.261,
+          "score": 0.781
+        }
+      ],
+      "avg_logprob": -0.11480151046998799
+    },
+    {
+      "start": 167.581,
+      "end": 170.584,
+      "text": "Two, three, four.",
+      "words": [
+        {
+          "word": "Two,",
+          "start": 167.581,
+          "end": 167.921,
+          "score": 0.772
+        },
+        {
+          "word": "three,",
+          "start": 168.962,
+          "end": 169.282,
+          "score": 0.847
+        },
+        {
+          "word": "four.",
+          "start": 170.243,
+          "end": 170.584,
+          "score": 0.895
+        }
+      ],
+      "avg_logprob": -0.11480151046998799
+    },
+    {
+      "start": 173.987,
+      "end": 174.727,
+      "text": "Breathe out.",
+      "words": [
+        {
+          "word": "Breathe",
+          "start": 173.987,
+          "end": 174.387,
+          "score": 0.8
+        },
+        {
+          "word": "out.",
+          "start": 174.527,
+          "end": 174.727,
+          "score": 0.991
+        }
+      ],
+      "avg_logprob": -0.11480151046998799
+    },
+    {
+      "start": 175.868,
+      "end": 179.492,
+      "text": "One, two, three, four.",
+      "words": [
+        {
+          "word": "One,",
+          "start": 175.868,
+          "end": 176.048,
+          "score": 0.744
+        },
+        {
+          "word": "two,",
+          "start": 176.389,
+          "end": 176.689,
+          "score": 0.885
+        },
+        {
+          "word": "three,",
+          "start": 177.229,
+          "end": 177.63,
+          "score": 0.784
+        },
+        {
+          "word": "four.",
+          "start": 179.111,
+          "end": 179.492,
+          "score": 0.723
+        }
+      ],
+      "avg_logprob": -0.11480151046998799
+    },
+    {
+      "start": 180.673,
+      "end": 181.033,
+      "text": "Hold.",
+      "words": [
+        {
+          "word": "Hold.",
+          "start": 180.673,
+          "end": 181.033,
+          "score": 0.834
+        }
+      ],
+      "avg_logprob": -0.11480151046998799
+    },
+    {
+      "start": 183.96,
+      "end": 187.603,
+      "text": " One, two, three, four.",
+      "words": [
+        {
+          "word": "One,",
+          "start": 183.96,
+          "end": 184.12,
+          "score": 0.701
+        },
+        {
+          "word": "two,",
+          "start": 184.42,
+          "end": 184.741,
+          "score": 0.786
+        },
+        {
+          "word": "three,",
+          "start": 185.701,
+          "end": 186.142,
+          "score": 0.781
+        },
+        {
+          "word": "four.",
+          "start": 187.263,
+          "end": 187.603,
+          "score": 0.751
+        }
+      ],
+      "avg_logprob": -0.06935417310645182
+    },
+    {
+      "start": 188.544,
+      "end": 190.925,
+      "text": "If your mind wanders, that is okay.",
+      "words": [
+        {
+          "word": "If",
+          "start": 188.544,
+          "end": 188.604,
+          "score": 1.0
+        },
+        {
+          "word": "your",
+          "start": 188.664,
+          "end": 188.824,
+          "score": 0.717
+        },
+        {
+          "word": "mind",
+          "start": 188.884,
+          "end": 189.164,
+          "score": 0.802
+        },
+        {
+          "word": "wanders,",
+          "start": 189.264,
+          "end": 189.785,
+          "score": 0.814
+        },
+        {
+          "word": "that",
+          "start": 190.085,
+          "end": 190.245,
+          "score": 0.999
+        },
+        {
+          "word": "is",
+          "start": 190.305,
+          "end": 190.385,
+          "score": 0.514
+        },
+        {
+          "word": "okay.",
+          "start": 190.505,
+          "end": 190.925,
+          "score": 0.707
+        }
+      ],
+      "avg_logprob": -0.06935417310645182
+    },
+    {
+      "start": 191.906,
+      "end": 193.467,
+      "text": "Just come back to the next count.",
+      "words": [
+        {
+          "word": "Just",
+          "start": 191.906,
+          "end": 192.126,
+          "score": 0.849
+        },
+        {
+          "word": "come",
+          "start": 192.186,
+          "end": 192.326,
+          "score": 0.875
+        },
+        {
+          "word": "back",
+          "start": 192.366,
+          "end": 192.527,
+          "score": 0.868
+        },
+        {
+          "word": "to",
+          "start": 192.567,
+          "end": 192.647,
+          "score": 0.916
+        },
+        {
+          "word": "the",
+          "start": 192.687,
+          "end": 192.767,
+          "score": 0.832
+        },
+        {
+          "word": "next",
+          "start": 192.807,
+          "end": 193.007,
+          "score": 0.777
+        },
+        {
+          "word": "count.",
+          "start": 193.087,
+          "end": 193.467,
+          "score": 0.924
+        }
+      ],
+      "avg_logprob": -0.06935417310645182
+    },
+    {
+      "start": 194.508,
+      "end": 195.189,
+      "text": "Breathe in.",
+      "words": [
+        {
+          "word": "Breathe",
+          "start": 194.508,
+          "end": 195.109,
+          "score": 0.838
+        },
+        {
+          "word": "in.",
+          "start": 195.129,
+          "end": 195.189,
+          "score": 0.333
+        }
+      ],
+      "avg_logprob": -0.06935417310645182
+    },
+    {
+      "start": 196.57,
+      "end": 199.832,
+      "text": "One, two, three, four.",
+      "words": [
+        {
+          "word": "One,",
+          "start": 196.57,
+          "end": 196.75,
+          "score": 0.701
+        },
+        {
+          "word": "two,",
+          "start": 197.01,
+          "end": 197.35,
+          "score": 0.841
+        },
+        {
+          "word": "three,",
+          "start": 198.291,
+          "end": 198.651,
+          "score": 0.818
+        },
+        {
+          "word": "four.",
+          "start": 199.572,
+          "end": 199.832,
+          "score": 1.0
+        }
+      ],
+      "avg_logprob": -0.06935417310645182
+    },
+    {
+      "start": 202.454,
+      "end": 202.794,
+      "text": "Hold.",
+      "words": [
+        {
+          "word": "Hold.",
+          "start": 202.454,
+          "end": 202.794,
+          "score": 0.943
+        }
+      ],
+      "avg_logprob": -0.06935417310645182
+    },
+    {
+      "start": 205.456,
+      "end": 207.518,
+      "text": "One, two, three, four.",
+      "words": [
+        {
+          "word": "One,",
+          "start": 205.456,
+          "end": 205.617,
+          "score": 0.821
+        },
+        {
+          "word": "two,",
+          "start": 205.897,
+          "end": 206.177,
+          "score": 0.876
+        },
+        {
+          "word": "three,",
+          "start": 207.018,
+          "end": 207.398,
+          "score": 0.925
+        },
+        {
+          "word": "four.",
+          "start": 207.418,
+          "end": 207.518,
+          "score": 0.2
+        }
+      ],
+      "avg_logprob": -0.06935417310645182
+    },
+    {
+      "start": 212.136,
+      "end": 212.776,
+      "text": " Breathe out.",
+      "words": [
+        {
+          "word": "Breathe",
+          "start": 212.136,
+          "end": 212.476,
+          "score": 0.826
+        },
+        {
+          "word": "out.",
+          "start": 212.576,
+          "end": 212.776,
+          "score": 0.995
+        }
+      ],
+      "avg_logprob": -0.11390368991038378
+    },
+    {
+      "start": 213.637,
+      "end": 216.118,
+      "text": "One, two, three, four.",
+      "words": [
+        {
+          "word": "One,",
+          "start": 213.637,
+          "end": 213.797,
+          "score": 0.71
+        },
+        {
+          "word": "two,",
+          "start": 214.137,
+          "end": 214.477,
+          "score": 0.764
+        },
+        {
+          "word": "three,",
+          "start": 214.957,
+          "end": 215.277,
+          "score": 0.848
+        },
+        {
+          "word": "four.",
+          "start": 215.758,
+          "end": 216.118,
+          "score": 0.859
+        }
+      ],
+      "avg_logprob": -0.11390368991038378
+    },
+    {
+      "start": 217.298,
+      "end": 217.739,
+      "text": "Hold.",
+      "words": [
+        {
+          "word": "Hold.",
+          "start": 217.298,
+          "end": 217.739,
+          "score": 0.854
+        }
+      ],
+      "avg_logprob": -0.11390368991038378
+    },
+    {
+      "start": 228.283,
+      "end": 232.725,
+      "text": "One, two, three, four.",
+      "words": [
+        {
+          "word": "One,",
+          "start": 228.283,
+          "end": 228.463,
+          "score": 0.717
+        },
+        {
+          "word": "two,",
+          "start": 229.544,
+          "end": 229.904,
+          "score": 0.705
+        },
+        {
+          "word": "three,",
+          "start": 230.865,
+          "end": 231.305,
+          "score": 0.85
+        },
+        {
+          "word": "four.",
+          "start": 232.405,
+          "end": 232.725,
+          "score": 0.778
+        }
+      ],
+      "avg_logprob": -0.11390368991038378
+    },
+    {
+      "start": 233.586,
+      "end": 235.747,
+      "text": "Now let the counting become softer.",
+      "words": [
+        {
+          "word": "Now",
+          "start": 233.586,
+          "end": 233.766,
+          "score": 0.933
+        },
+        {
+          "word": "let",
+          "start": 233.826,
+          "end": 233.966,
+          "score": 0.952
+        },
+        {
+          "word": "the",
+          "start": 234.006,
+          "end": 234.086,
+          "score": 0.984
+        },
+        {
+          "word": "counting",
+          "start": 234.166,
+          "end": 234.646,
+          "score": 0.877
+        },
+        {
+          "word": "become",
+          "start": 234.706,
+          "end": 235.086,
+          "score": 0.815
+        },
+        {
+          "word": "softer.",
+          "start": 235.186,
+          "end": 235.747,
+          "score": 0.896
+        }
+      ],
+      "avg_logprob": -0.11390368991038378
+    },
+    {
+      "start": 236.987,
+      "end": 238.408,
+      "text": "Breathe in for four.",
+      "words": [
+        {
+          "word": "Breathe",
+          "start": 236.987,
+          "end": 237.327,
+          "score": 0.781
+        },
+        {
+          "word": "in",
+          "start": 237.407,
+          "end": 237.548,
+          "score": 0.6
+        },
+        {
+          "word": "for",
+          "start": 237.848,
+          "end": 238.008,
+          "score": 0.898
+        },
+        {
+          "word": "four.",
+          "start": 238.128,
+          "end": 238.408,
+          "score": 0.89
+        }
+      ],
+      "avg_logprob": -0.11390368991038378
+    },
+    {
+      "start": 244.16,
+      "end": 245.321,
+      "text": " Hold for four.",
+      "words": [
+        {
+          "word": "Hold",
+          "start": 244.16,
+          "end": 244.48,
+          "score": 0.806
+        },
+        {
+          "word": "for",
+          "start": 244.62,
+          "end": 244.78,
+          "score": 0.833
+        },
+        {
+          "word": "four.",
+          "start": 244.901,
+          "end": 245.321,
+          "score": 0.807
+        }
+      ],
+      "avg_logprob": -0.17006648540496827
+    },
+    {
+      "start": 250.264,
+      "end": 251.825,
+      "text": "Breathe out for four.",
+      "words": [
+        {
+          "word": "Breathe",
+          "start": 250.264,
+          "end": 250.664,
+          "score": 0.697
+        },
+        {
+          "word": "out",
+          "start": 250.784,
+          "end": 250.944,
+          "score": 0.876
+        },
+        {
+          "word": "for",
+          "start": 251.084,
+          "end": 251.264,
+          "score": 0.879
+        },
+        {
+          "word": "four.",
+          "start": 251.404,
+          "end": 251.825,
+          "score": 0.701
+        }
+      ],
+      "avg_logprob": -0.17006648540496827
+    },
+    {
+      "start": 252.725,
+      "end": 254.166,
+      "text": "Hold for four.",
+      "words": [
+        {
+          "word": "Hold",
+          "start": 252.725,
+          "end": 253.165,
+          "score": 0.724
+        },
+        {
+          "word": "for",
+          "start": 253.466,
+          "end": 253.646,
+          "score": 0.793
+        },
+        {
+          "word": "four.",
+          "start": 253.766,
+          "end": 254.166,
+          "score": 0.788
+        }
+      ],
+      "avg_logprob": -0.17006648540496827
+    },
+    {
+      "start": 259.129,
+      "end": 261.33,
+      "text": "Again breathe in.",
+      "words": [
+        {
+          "word": "Again",
+          "start": 259.129,
+          "end": 259.589,
+          "score": 0.301
+        },
+        {
+          "word": "breathe",
+          "start": 260.39,
+          "end": 260.89,
+          "score": 0.706
+        },
+        {
+          "word": "in.",
+          "start": 261.13,
+          "end": 261.33,
+          "score": 0.805
+        }
+      ],
+      "avg_logprob": -0.17006648540496827
+    },
+    {
+      "start": 266.133,
+      "end": 266.594,
+      "text": "Hold.",
+      "words": [
+        {
+          "word": "Hold.",
+          "start": 266.133,
+          "end": 266.594,
+          "score": 0.767
+        }
+      ],
+      "avg_logprob": -0.17006648540496827
+    },
+    {
+      "start": 271.557,
+      "end": 272.437,
+      "text": "Breathe out.",
+      "words": [
+        {
+          "word": "Breathe",
+          "start": 271.557,
+          "end": 271.977,
+          "score": 0.66
+        },
+        {
+          "word": "out.",
+          "start": 272.197,
+          "end": 272.437,
+          "score": 0.858
+        }
+      ],
+      "avg_logprob": -0.17006648540496827
+    },
+    {
+      "start": 273.258,
+      "end": 273.598,
+      "text": "Hold.",
+      "words": [
+        {
+          "word": "Hold.",
+          "start": 273.258,
+          "end": 273.598,
+          "score": 0.744
+        }
+      ],
+      "avg_logprob": -0.17006648540496827
+    },
+    {
+      "start": 278.599,
+      "end": 286.228,
+      "text": " Now release the counting, let your breathing return to whatever pace feels natural.",
+      "words": [
+        {
+          "word": "Now",
+          "start": 278.599,
+          "end": 278.819,
+          "score": 0.854
+        },
+        {
+          "word": "release",
+          "start": 278.939,
+          "end": 279.52,
+          "score": 0.811
+        },
+        {
+          "word": "the",
+          "start": 279.6,
+          "end": 279.72,
+          "score": 0.859
+        },
+        {
+          "word": "counting,",
+          "start": 279.78,
+          "end": 280.381,
+          "score": 0.777
+        },
+        {
+          "word": "let",
+          "start": 281.282,
+          "end": 281.483,
+          "score": 0.926
+        },
+        {
+          "word": "your",
+          "start": 281.523,
+          "end": 281.683,
+          "score": 0.822
+        },
+        {
+          "word": "breathing",
+          "start": 281.763,
+          "end": 282.223,
+          "score": 0.838
+        },
+        {
+          "word": "return",
+          "start": 282.303,
+          "end": 282.904,
+          "score": 0.776
+        },
+        {
+          "word": "to",
+          "start": 283.705,
+          "end": 283.845,
+          "score": 0.9
+        },
+        {
+          "word": "whatever",
+          "start": 283.905,
+          "end": 284.326,
+          "score": 0.839
+        },
+        {
+          "word": "pace",
+          "start": 284.426,
+          "end": 284.826,
+          "score": 0.915
+        },
+        {
+          "word": "feels",
+          "start": 285.167,
+          "end": 285.567,
+          "score": 0.79
+        },
+        {
+          "word": "natural.",
+          "start": 285.708,
+          "end": 286.228,
+          "score": 0.864
+        }
+      ],
+      "avg_logprob": -0.07876196019351482
+    },
+    {
+      "start": 296.58,
+      "end": 297.742,
+      "text": "Notice your body.",
+      "words": [
+        {
+          "word": "Notice",
+          "start": 296.58,
+          "end": 297.021,
+          "score": 0.922
+        },
+        {
+          "word": "your",
+          "start": 297.061,
+          "end": 297.261,
+          "score": 0.722
+        },
+        {
+          "word": "body.",
+          "start": 297.321,
+          "end": 297.742,
+          "score": 0.983
+        }
+      ],
+      "avg_logprob": -0.07876196019351482
+    },
+    {
+      "start": 310.688,
+      "end": 311.788,
+      "text": " Notice your breath.",
+      "words": [
+        {
+          "word": "Notice",
+          "start": 310.688,
+          "end": 311.128,
+          "score": 0.86
+        },
+        {
+          "word": "your",
+          "start": 311.168,
+          "end": 311.348,
+          "score": 0.84
+        },
+        {
+          "word": "breath.",
+          "start": 311.388,
+          "end": 311.788,
+          "score": 0.855
+        }
+      ],
+      "avg_logprob": -0.03509593891425872
+    },
+    {
+      "start": 312.609,
+      "end": 316.77,
+      "text": "Notice whether anything inside feels even slightly more settled.",
+      "words": [
+        {
+          "word": "Notice",
+          "start": 312.609,
+          "end": 312.949,
+          "score": 0.801
+        },
+        {
+          "word": "whether",
+          "start": 312.969,
+          "end": 313.229,
+          "score": 0.82
+        },
+        {
+          "word": "anything",
+          "start": 313.349,
+          "end": 313.689,
+          "score": 0.793
+        },
+        {
+          "word": "inside",
+          "start": 313.749,
+          "end": 314.249,
+          "score": 0.904
+        },
+        {
+          "word": "feels",
+          "start": 314.329,
+          "end": 314.669,
+          "score": 0.79
+        },
+        {
+          "word": "even",
+          "start": 314.889,
+          "end": 315.129,
+          "score": 0.796
+        },
+        {
+          "word": "slightly",
+          "start": 315.289,
+          "end": 315.83,
+          "score": 0.714
+        },
+        {
+          "word": "more",
+          "start": 315.91,
+          "end": 316.17,
+          "score": 0.634
+        },
+        {
+          "word": "settled.",
+          "start": 316.29,
+          "end": 316.77,
+          "score": 0.786
+        }
+      ],
+      "avg_logprob": -0.03509593891425872
+    },
+    {
+      "start": 317.91,
+      "end": 321.531,
+      "text": "If parts of you still feel activated, that is okay.",
+      "words": [
+        {
+          "word": "If",
+          "start": 317.91,
+          "end": 318.01,
+          "score": 0.875
+        },
+        {
+          "word": "parts",
+          "start": 318.09,
+          "end": 318.37,
+          "score": 0.8
+        },
+        {
+          "word": "of",
+          "start": 318.41,
+          "end": 318.45,
+          "score": 0.982
+        },
+        {
+          "word": "you",
+          "start": 318.49,
+          "end": 318.61,
+          "score": 0.912
+        },
+        {
+          "word": "still",
+          "start": 318.651,
+          "end": 318.891,
+          "score": 0.748
+        },
+        {
+          "word": "feel",
+          "start": 318.931,
+          "end": 319.151,
+          "score": 0.78
+        },
+        {
+          "word": "activated,",
+          "start": 319.351,
+          "end": 319.931,
+          "score": 0.864
+        },
+        {
+          "word": "that",
+          "start": 320.671,
+          "end": 320.851,
+          "score": 0.876
+        },
+        {
+          "word": "is",
+          "start": 320.911,
+          "end": 320.991,
+          "score": 0.669
+        },
+        {
+          "word": "okay.",
+          "start": 321.111,
+          "end": 321.531,
+          "score": 0.795
+        }
+      ],
+      "avg_logprob": -0.03509593891425872
+    },
+    {
+      "start": 322.552,
+      "end": 324.452,
+      "text": "The goal is not to force calm.",
+      "words": [
+        {
+          "word": "The",
+          "start": 322.552,
+          "end": 322.652,
+          "score": 0.826
+        },
+        {
+          "word": "goal",
+          "start": 322.712,
+          "end": 322.992,
+          "score": 0.875
+        },
+        {
+          "word": "is",
+          "start": 323.072,
+          "end": 323.152,
+          "score": 0.631
+        },
+        {
+          "word": "not",
+          "start": 323.232,
+          "end": 323.412,
+          "score": 0.667
+        },
+        {
+          "word": "to",
+          "start": 323.432,
+          "end": 323.532,
+          "score": 0.77
+        },
+        {
+          "word": "force",
+          "start": 323.632,
+          "end": 323.952,
+          "score": 0.751
+        },
+        {
+          "word": "calm.",
+          "start": 324.032,
+          "end": 324.452,
+          "score": 0.804
+        }
+      ],
+      "avg_logprob": -0.03509593891425872
+    },
+    {
+      "start": 325.253,
+      "end": 328.594,
+      "text": "The goal is to offer your system a steady rhythm.",
+      "words": [
+        {
+          "word": "The",
+          "start": 325.253,
+          "end": 325.353,
+          "score": 0.976
+        },
+        {
+          "word": "goal",
+          "start": 325.393,
+          "end": 325.713,
+          "score": 0.73
+        },
+        {
+          "word": "is",
+          "start": 325.793,
+          "end": 325.853,
+          "score": 0.956
+        },
+        {
+          "word": "to",
+          "start": 325.893,
+          "end": 325.973,
+          "score": 0.634
+        },
+        {
+          "word": "offer",
+          "start": 326.133,
+          "end": 326.413,
+          "score": 0.752
+        },
+        {
+          "word": "your",
+          "start": 326.453,
+          "end": 326.633,
+          "score": 0.824
+        },
+        {
+          "word": "system",
+          "start": 326.713,
+          "end": 327.153,
+          "score": 0.848
+        },
+        {
+          "word": "a",
+          "start": 327.173,
+          "end": 327.193,
+          "score": 0.0
+        },
+        {
+          "word": "steady",
+          "start": 327.593,
+          "end": 328.073,
+          "score": 0.914
+        },
+        {
+          "word": "rhythm.",
+          "start": 328.193,
+          "end": 328.594,
+          "score": 0.737
+        }
+      ],
+      "avg_logprob": -0.03509593891425872
+    },
+    {
+      "start": 329.754,
+      "end": 334.655,
+      "text": "Take one final breath in and let it out slowly.",
+      "words": [
+        {
+          "word": "Take",
+          "start": 329.754,
+          "end": 329.994,
+          "score": 0.773
+        },
+        {
+          "word": "one",
+          "start": 330.194,
+          "end": 330.354,
+          "score": 0.558
+        },
+        {
+          "word": "final",
+          "start": 330.514,
+          "end": 330.874,
+          "score": 0.873
+        },
+        {
+          "word": "breath",
+          "start": 330.934,
+          "end": 331.454,
+          "score": 0.8
+        },
+        {
+          "word": "in",
+          "start": 331.474,
+          "end": 331.514,
+          "score": 0.0
+        },
+        {
+          "word": "and",
+          "start": 333.255,
+          "end": 333.355,
+          "score": 0.863
+        },
+        {
+          "word": "let",
+          "start": 333.415,
+          "end": 333.595,
+          "score": 0.772
+        },
+        {
+          "word": "it",
+          "start": 333.635,
+          "end": 333.695,
+          "score": 0.756
+        },
+        {
+          "word": "out",
+          "start": 333.815,
+          "end": 333.955,
+          "score": 0.864
+        },
+        {
+          "word": "slowly.",
+          "start": 334.115,
+          "end": 334.655,
+          "score": 0.89
+        }
+      ],
+      "avg_logprob": -0.03509593891425872
+    },
+    {
+      "start": 335.496,
+      "end": 339.197,
+      "text": "When you are ready, return your attention to the room around you.",
+      "words": [
+        {
+          "word": "When",
+          "start": 335.496,
+          "end": 335.636,
+          "score": 0.855
+        },
+        {
+          "word": "you",
+          "start": 335.676,
+          "end": 335.776,
+          "score": 0.994
+        },
+        {
+          "word": "are",
+          "start": 335.856,
+          "end": 335.956,
+          "score": 0.873
+        },
+        {
+          "word": "ready,",
+          "start": 336.016,
+          "end": 336.296,
+          "score": 0.885
+        },
+        {
+          "word": "return",
+          "start": 336.516,
+          "end": 336.956,
+          "score": 0.764
+        },
+        {
+          "word": "your",
+          "start": 336.996,
+          "end": 337.136,
+          "score": 0.954
+        },
+        {
+          "word": "attention",
+          "start": 337.176,
+          "end": 337.676,
+          "score": 0.801
+        },
+        {
+          "word": "to",
+          "start": 337.976,
+          "end": 338.097,
+          "score": 0.814
+        },
+        {
+          "word": "the",
+          "start": 338.137,
+          "end": 338.237,
+          "score": 0.833
+        },
+        {
+          "word": "room",
+          "start": 338.317,
+          "end": 338.577,
+          "score": 0.916
+        },
+        {
+          "word": "around",
+          "start": 338.597,
+          "end": 339.017,
+          "score": 0.878
+        },
+        {
+          "word": "you.",
+          "start": 339.077,
+          "end": 339.197,
+          "score": 0.799
+        }
+      ],
+      "avg_logprob": -0.03509593891425872
+    },
+    {
+      "start": 340.497,
+      "end": 342.905,
+      "text": " Let this rhythm be something you can come back to.",
+      "words": [
+        {
+          "word": "Let",
+          "start": 340.497,
+          "end": 340.678,
+          "score": 0.708
+        },
+        {
+          "word": "this",
+          "start": 340.718,
+          "end": 340.899,
+          "score": 0.821
+        },
+        {
+          "word": "rhythm",
+          "start": 340.999,
+          "end": 341.3,
+          "score": 0.756
+        },
+        {
+          "word": "be",
+          "start": 341.34,
+          "end": 341.461,
+          "score": 0.857
+        },
+        {
+          "word": "something",
+          "start": 341.521,
+          "end": 341.822,
+          "score": 0.969
+        },
+        {
+          "word": "you",
+          "start": 341.862,
+          "end": 341.962,
+          "score": 0.995
+        },
+        {
+          "word": "can",
+          "start": 342.002,
+          "end": 342.143,
+          "score": 0.729
+        },
+        {
+          "word": "come",
+          "start": 342.183,
+          "end": 342.364,
+          "score": 0.75
+        },
+        {
+          "word": "back",
+          "start": 342.424,
+          "end": 342.624,
+          "score": 0.998
+        },
+        {
+          "word": "to.",
+          "start": 342.685,
+          "end": 342.905,
+          "score": 0.589
+        }
+      ],
+      "avg_logprob": -0.035808885822425016
+    },
+    {
+      "start": 344.25,
+      "end": 351.835,
+      "text": "Not as a command to calm down, but as a steady square of support your body can lean on when it is ready.",
+      "words": [
+        {
+          "word": "Not",
+          "start": 344.25,
+          "end": 344.41,
+          "score": 0.724
+        },
+        {
+          "word": "as",
+          "start": 344.471,
+          "end": 344.551,
+          "score": 0.816
+        },
+        {
+          "word": "a",
+          "start": 344.591,
+          "end": 344.631,
+          "score": 0.5
+        },
+        {
+          "word": "command",
+          "start": 344.671,
+          "end": 345.033,
+          "score": 0.896
+        },
+        {
+          "word": "to",
+          "start": 345.073,
+          "end": 345.153,
+          "score": 0.976
+        },
+        {
+          "word": "calm",
+          "start": 345.193,
+          "end": 345.554,
+          "score": 0.875
+        },
+        {
+          "word": "down,",
+          "start": 345.615,
+          "end": 345.996,
+          "score": 0.917
+        },
+        {
+          "word": "but",
+          "start": 346.638,
+          "end": 346.758,
+          "score": 0.995
+        },
+        {
+          "word": "as",
+          "start": 346.839,
+          "end": 346.919,
+          "score": 0.83
+        },
+        {
+          "word": "a",
+          "start": 346.979,
+          "end": 347.019,
+          "score": 0.524
+        },
+        {
+          "word": "steady",
+          "start": 347.18,
+          "end": 347.601,
+          "score": 0.934
+        },
+        {
+          "word": "square",
+          "start": 347.702,
+          "end": 348.123,
+          "score": 0.64
+        },
+        {
+          "word": "of",
+          "start": 348.163,
+          "end": 348.223,
+          "score": 0.75
+        },
+        {
+          "word": "support",
+          "start": 348.304,
+          "end": 348.845,
+          "score": 0.807
+        },
+        {
+          "word": "your",
+          "start": 348.946,
+          "end": 349.106,
+          "score": 0.711
+        },
+        {
+          "word": "body",
+          "start": 349.146,
+          "end": 349.488,
+          "score": 0.962
+        },
+        {
+          "word": "can",
+          "start": 349.568,
+          "end": 349.748,
+          "score": 0.834
+        },
+        {
+          "word": "lean",
+          "start": 349.809,
+          "end": 350.07,
+          "score": 0.842
+        },
+        {
+          "word": "on",
+          "start": 350.27,
+          "end": 350.391,
+          "score": 0.52
+        },
+        {
+          "word": "when",
+          "start": 351.093,
+          "end": 351.233,
+          "score": 0.891
+        },
+        {
+          "word": "it",
+          "start": 351.274,
+          "end": 351.334,
+          "score": 0.768
+        },
+        {
+          "word": "is",
+          "start": 351.414,
+          "end": 351.494,
+          "score": 0.684
+        },
+        {
+          "word": "ready.",
+          "start": 351.575,
+          "end": 351.835,
+          "score": 0.89
+        }
+      ],
+      "avg_logprob": -0.035808885822425016
+    }
+  ],
+  "word_segments": [
+    {
+      "word": "Welcome",
+      "start": 0.111,
+      "end": 0.491,
+      "score": 0.83
+    },
+    {
+      "word": "to",
+      "start": 0.531,
+      "end": 0.612,
+      "score": 0.986
+    },
+    {
+      "word": "Box",
+      "start": 0.652,
+      "end": 0.972,
+      "score": 0.956
+    },
+    {
+      "word": "Breathing.",
+      "start": 1.032,
+      "end": 1.432,
+      "score": 0.785
+    },
+    {
+      "word": "This",
+      "start": 2.133,
+      "end": 2.293,
+      "score": 0.914
+    },
+    {
+      "word": "is",
+      "start": 2.353,
+      "end": 2.453,
+      "score": 0.66
+    },
+    {
+      "word": "a",
+      "start": 2.513,
+      "end": 2.533,
+      "score": 0.999
+    },
+    {
+      "word": "simple",
+      "start": 2.613,
+      "end": 2.994,
+      "score": 0.774
+    },
+    {
+      "word": "breathing",
+      "start": 3.074,
+      "end": 3.454,
+      "score": 0.726
+    },
+    {
+      "word": "practice",
+      "start": 3.514,
+      "end": 4.055,
+      "score": 0.764
+    },
+    {
+      "word": "that",
+      "start": 4.095,
+      "end": 4.215,
+      "score": 0.997
+    },
+    {
+      "word": "can",
+      "start": 4.235,
+      "end": 4.355,
+      "score": 0.971
+    },
+    {
+      "word": "help",
+      "start": 4.415,
+      "end": 4.595,
+      "score": 0.874
+    },
+    {
+      "word": "your",
+      "start": 4.615,
+      "end": 4.775,
+      "score": 0.878
+    },
+    {
+      "word": "system",
+      "start": 4.835,
+      "end": 5.216,
+      "score": 0.922
+    },
+    {
+      "word": "slow",
+      "start": 5.296,
+      "end": 5.616,
+      "score": 0.94
+    },
+    {
+      "word": "down",
+      "start": 5.676,
+      "end": 5.996,
+      "score": 0.814
+    },
+    {
+      "word": "and",
+      "start": 6.657,
+      "end": 6.757,
+      "score": 0.782
+    },
+    {
+      "word": "find",
+      "start": 6.837,
+      "end": 7.097,
+      "score": 0.744
+    },
+    {
+      "word": "a",
+      "start": 7.137,
+      "end": 7.177,
+      "score": 0.499
+    },
+    {
+      "word": "steadier",
+      "start": 7.217,
+      "end": 7.698,
+      "score": 0.895
+    },
+    {
+      "word": "rhythm.",
+      "start": 7.758,
+      "end": 8.098,
+      "score": 0.883
+    },
+    {
+      "word": "We",
+      "start": 8.939,
+      "end": 9.039,
+      "score": 0.983
+    },
+    {
+      "word": "will",
+      "start": 9.079,
+      "end": 9.239,
+      "score": 0.814
+    },
+    {
+      "word": "breathe",
+      "start": 9.279,
+      "end": 9.599,
+      "score": 0.737
+    },
+    {
+      "word": "in",
+      "start": 9.659,
+      "end": 9.76,
+      "score": 0.782
+    },
+    {
+      "word": "for",
+      "start": 9.84,
+      "end": 9.98,
+      "score": 0.832
+    },
+    {
+      "word": "four",
+      "start": 10.12,
+      "end": 10.42,
+      "score": 0.683
+    },
+    {
+      "word": "counts,",
+      "start": 10.52,
+      "end": 10.921,
+      "score": 0.846
+    },
+    {
+      "word": "hold",
+      "start": 11.841,
+      "end": 12.142,
+      "score": 0.749
+    },
+    {
+      "word": "for",
+      "start": 12.222,
+      "end": 12.362,
+      "score": 0.8
+    },
+    {
+      "word": "four",
+      "start": 12.442,
+      "end": 12.682,
+      "score": 0.672
+    },
+    {
+      "word": "counts,",
+      "start": 12.762,
+      "end": 13.142,
+      "score": 0.836
+    },
+    {
+      "word": "breathe",
+      "start": 14.083,
+      "end": 14.364,
+      "score": 0.806
+    },
+    {
+      "word": "out",
+      "start": 14.444,
+      "end": 14.564,
+      "score": 0.969
+    },
+    {
+      "word": "for",
+      "start": 14.624,
+      "end": 14.764,
+      "score": 0.783
+    },
+    {
+      "word": "four",
+      "start": 14.844,
+      "end": 15.064,
+      "score": 0.844
+    },
+    {
+      "word": "counts,",
+      "start": 15.164,
+      "end": 15.545,
+      "score": 0.827
+    },
+    {
+      "word": "and",
+      "start": 16.465,
+      "end": 16.565,
+      "score": 0.852
+    },
+    {
+      "word": "hold",
+      "start": 16.666,
+      "end": 17.026,
+      "score": 0.629
+    },
+    {
+      "word": "again",
+      "start": 17.266,
+      "end": 17.646,
+      "score": 0.866
+    },
+    {
+      "word": "for",
+      "start": 17.666,
+      "end": 17.726,
+      "score": 0.0
+    },
+    {
+      "word": "four",
+      "start": 18.567,
+      "end": 18.827,
+      "score": 0.718
+    },
+    {
+      "word": "counts.",
+      "start": 18.907,
+      "end": 19.288,
+      "score": 0.884
+    },
+    {
+      "word": "If",
+      "start": 26.361,
+      "end": 26.441,
+      "score": 0.996
+    },
+    {
+      "word": "holding",
+      "start": 26.541,
+      "end": 26.921,
+      "score": 0.781
+    },
+    {
+      "word": "your",
+      "start": 26.961,
+      "end": 27.121,
+      "score": 0.75
+    },
+    {
+      "word": "breath",
+      "start": 27.141,
+      "end": 27.501,
+      "score": 0.745
+    },
+    {
+      "word": "does",
+      "start": 27.661,
+      "end": 27.842,
+      "score": 0.706
+    },
+    {
+      "word": "not",
+      "start": 27.922,
+      "end": 28.122,
+      "score": 0.682
+    },
+    {
+      "word": "feel",
+      "start": 28.262,
+      "end": 28.602,
+      "score": 0.681
+    },
+    {
+      "word": "good,",
+      "start": 28.702,
+      "end": 29.002,
+      "score": 0.823
+    },
+    {
+      "word": "you",
+      "start": 29.762,
+      "end": 29.882,
+      "score": 0.841
+    },
+    {
+      "word": "can",
+      "start": 29.922,
+      "end": 30.082,
+      "score": 0.899
+    },
+    {
+      "word": "simply",
+      "start": 30.162,
+      "end": 30.542,
+      "score": 0.711
+    },
+    {
+      "word": "breathe",
+      "start": 30.622,
+      "end": 30.982,
+      "score": 0.725
+    },
+    {
+      "word": "gently",
+      "start": 31.083,
+      "end": 31.583,
+      "score": 0.795
+    },
+    {
+      "word": "and",
+      "start": 32.043,
+      "end": 32.143,
+      "score": 0.952
+    },
+    {
+      "word": "skip",
+      "start": 32.243,
+      "end": 32.563,
+      "score": 0.989
+    },
+    {
+      "word": "the",
+      "start": 32.643,
+      "end": 32.743,
+      "score": 0.84
+    },
+    {
+      "word": "holds.",
+      "start": 32.803,
+      "end": 33.243,
+      "score": 0.828
+    },
+    {
+      "word": "Let",
+      "start": 40.425,
+      "end": 40.625,
+      "score": 0.782
+    },
+    {
+      "word": "this",
+      "start": 40.686,
+      "end": 40.886,
+      "score": 0.736
+    },
+    {
+      "word": "practice",
+      "start": 40.986,
+      "end": 41.586,
+      "score": 0.829
+    },
+    {
+      "word": "be",
+      "start": 41.646,
+      "end": 41.806,
+      "score": 0.785
+    },
+    {
+      "word": "flexible.",
+      "start": 41.906,
+      "end": 42.666,
+      "score": 0.79
+    },
+    {
+      "word": "Begin",
+      "start": 43.867,
+      "end": 44.347,
+      "score": 0.806
+    },
+    {
+      "word": "by",
+      "start": 44.447,
+      "end": 44.647,
+      "score": 0.786
+    },
+    {
+      "word": "settling",
+      "start": 44.807,
+      "end": 45.467,
+      "score": 0.683
+    },
+    {
+      "word": "into",
+      "start": 45.807,
+      "end": 46.287,
+      "score": 0.818
+    },
+    {
+      "word": "a",
+      "start": 46.307,
+      "end": 46.327,
+      "score": 0.0
+    },
+    {
+      "word": "comfortable",
+      "start": 46.767,
+      "end": 47.428,
+      "score": 0.895
+    },
+    {
+      "word": "position.",
+      "start": 47.988,
+      "end": 48.528,
+      "score": 0.94
+    },
+    {
+      "word": "Let",
+      "start": 49.653,
+      "end": 49.813,
+      "score": 0.928
+    },
+    {
+      "word": "your",
+      "start": 49.853,
+      "end": 50.033,
+      "score": 0.646
+    },
+    {
+      "word": "shoulders",
+      "start": 50.093,
+      "end": 50.553,
+      "score": 0.716
+    },
+    {
+      "word": "soften",
+      "start": 50.633,
+      "end": 51.173,
+      "score": 0.89
+    },
+    {
+      "word": "if",
+      "start": 51.473,
+      "end": 51.574,
+      "score": 0.832
+    },
+    {
+      "word": "they",
+      "start": 51.614,
+      "end": 51.774,
+      "score": 0.796
+    },
+    {
+      "word": "can.",
+      "start": 51.814,
+      "end": 52.154,
+      "score": 0.935
+    },
+    {
+      "word": "Let",
+      "start": 53.354,
+      "end": 53.534,
+      "score": 0.696
+    },
+    {
+      "word": "your",
+      "start": 53.554,
+      "end": 53.714,
+      "score": 0.662
+    },
+    {
+      "word": "jaw",
+      "start": 53.774,
+      "end": 54.154,
+      "score": 0.76
+    },
+    {
+      "word": "loosen.",
+      "start": 54.234,
+      "end": 54.754,
+      "score": 0.737
+    },
+    {
+      "word": "Let",
+      "start": 56.015,
+      "end": 56.155,
+      "score": 0.987
+    },
+    {
+      "word": "your",
+      "start": 56.195,
+      "end": 56.335,
+      "score": 0.978
+    },
+    {
+      "word": "hands",
+      "start": 56.395,
+      "end": 56.735,
+      "score": 0.722
+    },
+    {
+      "word": "rest.",
+      "start": 56.895,
+      "end": 57.275,
+      "score": 0.884
+    },
+    {
+      "word": "Take",
+      "start": 58.715,
+      "end": 58.935,
+      "score": 0.85
+    },
+    {
+      "word": "one",
+      "start": 59.135,
+      "end": 59.276,
+      "score": 0.589
+    },
+    {
+      "word": "natural",
+      "start": 59.436,
+      "end": 59.876,
+      "score": 0.719
+    },
+    {
+      "word": "breath",
+      "start": 59.936,
+      "end": 60.216,
+      "score": 0.782
+    },
+    {
+      "word": "in",
+      "start": 60.356,
+      "end": 60.476,
+      "score": 0.776
+    },
+    {
+      "word": "and",
+      "start": 60.496,
+      "end": 60.556,
+      "score": 0.0
+    },
+    {
+      "word": "let",
+      "start": 61.856,
+      "end": 62.016,
+      "score": 0.847
+    },
+    {
+      "word": "it",
+      "start": 62.076,
+      "end": 62.136,
+      "score": 0.75
+    },
+    {
+      "word": "out.",
+      "start": 62.296,
+      "end": 62.436,
+      "score": 0.959
+    },
+    {
+      "word": "Now",
+      "start": 63.417,
+      "end": 63.557,
+      "score": 0.862
+    },
+    {
+      "word": "we'll",
+      "start": 63.597,
+      "end": 63.777,
+      "score": 0.818
+    },
+    {
+      "word": "begin.",
+      "start": 63.817,
+      "end": 64.157,
+      "score": 0.815
+    },
+    {
+      "word": "Breathe",
+      "start": 65.197,
+      "end": 65.537,
+      "score": 0.84
+    },
+    {
+      "word": "in",
+      "start": 65.597,
+      "end": 65.637,
+      "score": 0.994
+    },
+    {
+      "word": "one,",
+      "start": 65.657,
+      "end": 65.737,
+      "score": 0.235
+    },
+    {
+      "word": "two,",
+      "start": 65.757,
+      "end": 65.837,
+      "score": 0.194
+    },
+    {
+      "word": "three,",
+      "start": 67.138,
+      "end": 67.298,
+      "score": 0.448
+    },
+    {
+      "word": "four,",
+      "start": 67.318,
+      "end": 68.218,
+      "score": 0.554
+    },
+    {
+      "word": "hold",
+      "start": 68.238,
+      "end": 68.478,
+      "score": 0.601
+    },
+    {
+      "word": "one,",
+      "start": 68.498,
+      "end": 69.358,
+      "score": 0.493
+    },
+    {
+      "word": "two",
+      "start": 79.913,
+      "end": 80.253,
+      "score": 0.632
+    },
+    {
+      "word": "three",
+      "start": 81.194,
+      "end": 81.534,
+      "score": 0.75
+    },
+    {
+      "word": "four",
+      "start": 82.535,
+      "end": 82.915,
+      "score": 0.657
+    },
+    {
+      "word": "breathe",
+      "start": 83.795,
+      "end": 84.135,
+      "score": 0.878
+    },
+    {
+      "word": "out",
+      "start": 84.256,
+      "end": 84.416,
+      "score": 0.936
+    },
+    {
+      "word": "one",
+      "start": 85.296,
+      "end": 85.436,
+      "score": 0.712
+    },
+    {
+      "word": "two",
+      "start": 85.696,
+      "end": 86.037,
+      "score": 0.624
+    },
+    {
+      "word": "three",
+      "start": 87.097,
+      "end": 87.497,
+      "score": 0.757
+    },
+    {
+      "word": "four",
+      "start": 88.998,
+      "end": 89.378,
+      "score": 0.584
+    },
+    {
+      "word": "hold",
+      "start": 90.539,
+      "end": 90.859,
+      "score": 0.896
+    },
+    {
+      "word": "one",
+      "start": 90.879,
+      "end": 90.939,
+      "score": 0.0
+    },
+    {
+      "word": "two",
+      "start": 91.079,
+      "end": 102.966,
+      "score": 0.952
+    },
+    {
+      "word": "Three,",
+      "start": 105.13,
+      "end": 105.51,
+      "score": 0.797
+    },
+    {
+      "word": "four,",
+      "start": 106.451,
+      "end": 106.792,
+      "score": 0.806
+    },
+    {
+      "word": "good,",
+      "start": 107.592,
+      "end": 107.993,
+      "score": 0.902
+    },
+    {
+      "word": "again,",
+      "start": 109.114,
+      "end": 109.514,
+      "score": 0.834
+    },
+    {
+      "word": "breathe",
+      "start": 109.935,
+      "end": 110.255,
+      "score": 0.795
+    },
+    {
+      "word": "in.",
+      "start": 110.315,
+      "end": 110.455,
+      "score": 0.824
+    },
+    {
+      "word": "One,",
+      "start": 113.178,
+      "end": 113.358,
+      "score": 0.671
+    },
+    {
+      "word": "two,",
+      "start": 113.638,
+      "end": 113.999,
+      "score": 0.834
+    },
+    {
+      "word": "three,",
+      "start": 115.04,
+      "end": 115.4,
+      "score": 0.767
+    },
+    {
+      "word": "four,",
+      "start": 116.341,
+      "end": 116.601,
+      "score": 0.825
+    },
+    {
+      "word": "hold.",
+      "start": 119.224,
+      "end": 119.504,
+      "score": 0.889
+    },
+    {
+      "word": "One,",
+      "start": 122.263,
+      "end": 122.443,
+      "score": 0.738
+    },
+    {
+      "word": "two,",
+      "start": 123.344,
+      "end": 123.625,
+      "score": 0.806
+    },
+    {
+      "word": "three,",
+      "start": 124.465,
+      "end": 124.886,
+      "score": 0.887
+    },
+    {
+      "word": "four.",
+      "start": 125.847,
+      "end": 126.227,
+      "score": 0.736
+    },
+    {
+      "word": "Breathe",
+      "start": 127.128,
+      "end": 127.448,
+      "score": 0.823
+    },
+    {
+      "word": "out.",
+      "start": 127.569,
+      "end": 127.769,
+      "score": 0.968
+    },
+    {
+      "word": "One,",
+      "start": 128.61,
+      "end": 128.75,
+      "score": 0.865
+    },
+    {
+      "word": "two,",
+      "start": 129.03,
+      "end": 129.33,
+      "score": 0.758
+    },
+    {
+      "word": "three,",
+      "start": 129.851,
+      "end": 130.251,
+      "score": 0.839
+    },
+    {
+      "word": "four.",
+      "start": 130.872,
+      "end": 131.252,
+      "score": 0.783
+    },
+    {
+      "word": "Hold.",
+      "start": 132.433,
+      "end": 132.854,
+      "score": 0.862
+    },
+    {
+      "word": "One,",
+      "start": 134.355,
+      "end": 134.555,
+      "score": 0.74
+    },
+    {
+      "word": "two,",
+      "start": 135.376,
+      "end": 135.677,
+      "score": 0.706
+    },
+    {
+      "word": "three,",
+      "start": 136.577,
+      "end": 137.018,
+      "score": 0.802
+    },
+    {
+      "word": "four.",
+      "start": 137.939,
+      "end": 138.319,
+      "score": 0.813
+    },
+    {
+      "word": "Let",
+      "start": 139.761,
+      "end": 139.981,
+      "score": 0.856
+    },
+    {
+      "word": "your",
+      "start": 140.021,
+      "end": 140.201,
+      "score": 0.681
+    },
+    {
+      "word": "body",
+      "start": 140.281,
+      "end": 140.742,
+      "score": 0.859
+    },
+    {
+      "word": "follow",
+      "start": 140.982,
+      "end": 141.542,
+      "score": 0.804
+    },
+    {
+      "word": "the",
+      "start": 141.642,
+      "end": 141.783,
+      "score": 0.725
+    },
+    {
+      "word": "rhythm",
+      "start": 141.903,
+      "end": 142.383,
+      "score": 0.704
+    },
+    {
+      "word": "as",
+      "start": 142.864,
+      "end": 142.964,
+      "score": 0.857
+    },
+    {
+      "word": "much",
+      "start": 143.064,
+      "end": 143.264,
+      "score": 0.822
+    },
+    {
+      "word": "as",
+      "start": 143.324,
+      "end": 143.404,
+      "score": 0.906
+    },
+    {
+      "word": "it",
+      "start": 143.464,
+      "end": 143.544,
+      "score": 0.798
+    },
+    {
+      "word": "wants",
+      "start": 143.604,
+      "end": 143.885,
+      "score": 0.828
+    },
+    {
+      "word": "to.",
+      "start": 143.965,
+      "end": 144.165,
+      "score": 0.822
+    },
+    {
+      "word": "Breathe",
+      "start": 145.406,
+      "end": 145.847,
+      "score": 0.772
+    },
+    {
+      "word": "in.",
+      "start": 146.027,
+      "end": 146.147,
+      "score": 0.786
+    },
+    {
+      "word": "One,",
+      "start": 159.233,
+      "end": 159.333,
+      "score": 0.182
+    },
+    {
+      "word": "two,",
+      "start": 159.534,
+      "end": 159.914,
+      "score": 0.797
+    },
+    {
+      "word": "three,",
+      "start": 160.835,
+      "end": 161.255,
+      "score": 0.811
+    },
+    {
+      "word": "four.",
+      "start": 162.216,
+      "end": 162.476,
+      "score": 0.967
+    },
+    {
+      "word": "Hold.",
+      "start": 164.078,
+      "end": 164.418,
+      "score": 0.878
+    },
+    {
+      "word": "On.",
+      "start": 167.0,
+      "end": 167.261,
+      "score": 0.781
+    },
+    {
+      "word": "Two,",
+      "start": 167.581,
+      "end": 167.921,
+      "score": 0.772
+    },
+    {
+      "word": "three,",
+      "start": 168.962,
+      "end": 169.282,
+      "score": 0.847
+    },
+    {
+      "word": "four.",
+      "start": 170.243,
+      "end": 170.584,
+      "score": 0.895
+    },
+    {
+      "word": "Breathe",
+      "start": 173.987,
+      "end": 174.387,
+      "score": 0.8
+    },
+    {
+      "word": "out.",
+      "start": 174.527,
+      "end": 174.727,
+      "score": 0.991
+    },
+    {
+      "word": "One,",
+      "start": 175.868,
+      "end": 176.048,
+      "score": 0.744
+    },
+    {
+      "word": "two,",
+      "start": 176.389,
+      "end": 176.689,
+      "score": 0.885
+    },
+    {
+      "word": "three,",
+      "start": 177.229,
+      "end": 177.63,
+      "score": 0.784
+    },
+    {
+      "word": "four.",
+      "start": 179.111,
+      "end": 179.492,
+      "score": 0.723
+    },
+    {
+      "word": "Hold.",
+      "start": 180.673,
+      "end": 181.033,
+      "score": 0.834
+    },
+    {
+      "word": "One,",
+      "start": 183.96,
+      "end": 184.12,
+      "score": 0.701
+    },
+    {
+      "word": "two,",
+      "start": 184.42,
+      "end": 184.741,
+      "score": 0.786
+    },
+    {
+      "word": "three,",
+      "start": 185.701,
+      "end": 186.142,
+      "score": 0.781
+    },
+    {
+      "word": "four.",
+      "start": 187.263,
+      "end": 187.603,
+      "score": 0.751
+    },
+    {
+      "word": "If",
+      "start": 188.544,
+      "end": 188.604,
+      "score": 1.0
+    },
+    {
+      "word": "your",
+      "start": 188.664,
+      "end": 188.824,
+      "score": 0.717
+    },
+    {
+      "word": "mind",
+      "start": 188.884,
+      "end": 189.164,
+      "score": 0.802
+    },
+    {
+      "word": "wanders,",
+      "start": 189.264,
+      "end": 189.785,
+      "score": 0.814
+    },
+    {
+      "word": "that",
+      "start": 190.085,
+      "end": 190.245,
+      "score": 0.999
+    },
+    {
+      "word": "is",
+      "start": 190.305,
+      "end": 190.385,
+      "score": 0.514
+    },
+    {
+      "word": "okay.",
+      "start": 190.505,
+      "end": 190.925,
+      "score": 0.707
+    },
+    {
+      "word": "Just",
+      "start": 191.906,
+      "end": 192.126,
+      "score": 0.849
+    },
+    {
+      "word": "come",
+      "start": 192.186,
+      "end": 192.326,
+      "score": 0.875
+    },
+    {
+      "word": "back",
+      "start": 192.366,
+      "end": 192.527,
+      "score": 0.868
+    },
+    {
+      "word": "to",
+      "start": 192.567,
+      "end": 192.647,
+      "score": 0.916
+    },
+    {
+      "word": "the",
+      "start": 192.687,
+      "end": 192.767,
+      "score": 0.832
+    },
+    {
+      "word": "next",
+      "start": 192.807,
+      "end": 193.007,
+      "score": 0.777
+    },
+    {
+      "word": "count.",
+      "start": 193.087,
+      "end": 193.467,
+      "score": 0.924
+    },
+    {
+      "word": "Breathe",
+      "start": 194.508,
+      "end": 195.109,
+      "score": 0.838
+    },
+    {
+      "word": "in.",
+      "start": 195.129,
+      "end": 195.189,
+      "score": 0.333
+    },
+    {
+      "word": "One,",
+      "start": 196.57,
+      "end": 196.75,
+      "score": 0.701
+    },
+    {
+      "word": "two,",
+      "start": 197.01,
+      "end": 197.35,
+      "score": 0.841
+    },
+    {
+      "word": "three,",
+      "start": 198.291,
+      "end": 198.651,
+      "score": 0.818
+    },
+    {
+      "word": "four.",
+      "start": 199.572,
+      "end": 199.832,
+      "score": 1.0
+    },
+    {
+      "word": "Hold.",
+      "start": 202.454,
+      "end": 202.794,
+      "score": 0.943
+    },
+    {
+      "word": "One,",
+      "start": 205.456,
+      "end": 205.617,
+      "score": 0.821
+    },
+    {
+      "word": "two,",
+      "start": 205.897,
+      "end": 206.177,
+      "score": 0.876
+    },
+    {
+      "word": "three,",
+      "start": 207.018,
+      "end": 207.398,
+      "score": 0.925
+    },
+    {
+      "word": "four.",
+      "start": 207.418,
+      "end": 207.518,
+      "score": 0.2
+    },
+    {
+      "word": "Breathe",
+      "start": 212.136,
+      "end": 212.476,
+      "score": 0.826
+    },
+    {
+      "word": "out.",
+      "start": 212.576,
+      "end": 212.776,
+      "score": 0.995
+    },
+    {
+      "word": "One,",
+      "start": 213.637,
+      "end": 213.797,
+      "score": 0.71
+    },
+    {
+      "word": "two,",
+      "start": 214.137,
+      "end": 214.477,
+      "score": 0.764
+    },
+    {
+      "word": "three,",
+      "start": 214.957,
+      "end": 215.277,
+      "score": 0.848
+    },
+    {
+      "word": "four.",
+      "start": 215.758,
+      "end": 216.118,
+      "score": 0.859
+    },
+    {
+      "word": "Hold.",
+      "start": 217.298,
+      "end": 217.739,
+      "score": 0.854
+    },
+    {
+      "word": "One,",
+      "start": 228.283,
+      "end": 228.463,
+      "score": 0.717
+    },
+    {
+      "word": "two,",
+      "start": 229.544,
+      "end": 229.904,
+      "score": 0.705
+    },
+    {
+      "word": "three,",
+      "start": 230.865,
+      "end": 231.305,
+      "score": 0.85
+    },
+    {
+      "word": "four.",
+      "start": 232.405,
+      "end": 232.725,
+      "score": 0.778
+    },
+    {
+      "word": "Now",
+      "start": 233.586,
+      "end": 233.766,
+      "score": 0.933
+    },
+    {
+      "word": "let",
+      "start": 233.826,
+      "end": 233.966,
+      "score": 0.952
+    },
+    {
+      "word": "the",
+      "start": 234.006,
+      "end": 234.086,
+      "score": 0.984
+    },
+    {
+      "word": "counting",
+      "start": 234.166,
+      "end": 234.646,
+      "score": 0.877
+    },
+    {
+      "word": "become",
+      "start": 234.706,
+      "end": 235.086,
+      "score": 0.815
+    },
+    {
+      "word": "softer.",
+      "start": 235.186,
+      "end": 235.747,
+      "score": 0.896
+    },
+    {
+      "word": "Breathe",
+      "start": 236.987,
+      "end": 237.327,
+      "score": 0.781
+    },
+    {
+      "word": "in",
+      "start": 237.407,
+      "end": 237.548,
+      "score": 0.6
+    },
+    {
+      "word": "for",
+      "start": 237.848,
+      "end": 238.008,
+      "score": 0.898
+    },
+    {
+      "word": "four.",
+      "start": 238.128,
+      "end": 238.408,
+      "score": 0.89
+    },
+    {
+      "word": "Hold",
+      "start": 244.16,
+      "end": 244.48,
+      "score": 0.806
+    },
+    {
+      "word": "for",
+      "start": 244.62,
+      "end": 244.78,
+      "score": 0.833
+    },
+    {
+      "word": "four.",
+      "start": 244.901,
+      "end": 245.321,
+      "score": 0.807
+    },
+    {
+      "word": "Breathe",
+      "start": 250.264,
+      "end": 250.664,
+      "score": 0.697
+    },
+    {
+      "word": "out",
+      "start": 250.784,
+      "end": 250.944,
+      "score": 0.876
+    },
+    {
+      "word": "for",
+      "start": 251.084,
+      "end": 251.264,
+      "score": 0.879
+    },
+    {
+      "word": "four.",
+      "start": 251.404,
+      "end": 251.825,
+      "score": 0.701
+    },
+    {
+      "word": "Hold",
+      "start": 252.725,
+      "end": 253.165,
+      "score": 0.724
+    },
+    {
+      "word": "for",
+      "start": 253.466,
+      "end": 253.646,
+      "score": 0.793
+    },
+    {
+      "word": "four.",
+      "start": 253.766,
+      "end": 254.166,
+      "score": 0.788
+    },
+    {
+      "word": "Again",
+      "start": 259.129,
+      "end": 259.589,
+      "score": 0.301
+    },
+    {
+      "word": "breathe",
+      "start": 260.39,
+      "end": 260.89,
+      "score": 0.706
+    },
+    {
+      "word": "in.",
+      "start": 261.13,
+      "end": 261.33,
+      "score": 0.805
+    },
+    {
+      "word": "Hold.",
+      "start": 266.133,
+      "end": 266.594,
+      "score": 0.767
+    },
+    {
+      "word": "Breathe",
+      "start": 271.557,
+      "end": 271.977,
+      "score": 0.66
+    },
+    {
+      "word": "out.",
+      "start": 272.197,
+      "end": 272.437,
+      "score": 0.858
+    },
+    {
+      "word": "Hold.",
+      "start": 273.258,
+      "end": 273.598,
+      "score": 0.744
+    },
+    {
+      "word": "Now",
+      "start": 278.599,
+      "end": 278.819,
+      "score": 0.854
+    },
+    {
+      "word": "release",
+      "start": 278.939,
+      "end": 279.52,
+      "score": 0.811
+    },
+    {
+      "word": "the",
+      "start": 279.6,
+      "end": 279.72,
+      "score": 0.859
+    },
+    {
+      "word": "counting,",
+      "start": 279.78,
+      "end": 280.381,
+      "score": 0.777
+    },
+    {
+      "word": "let",
+      "start": 281.282,
+      "end": 281.483,
+      "score": 0.926
+    },
+    {
+      "word": "your",
+      "start": 281.523,
+      "end": 281.683,
+      "score": 0.822
+    },
+    {
+      "word": "breathing",
+      "start": 281.763,
+      "end": 282.223,
+      "score": 0.838
+    },
+    {
+      "word": "return",
+      "start": 282.303,
+      "end": 282.904,
+      "score": 0.776
+    },
+    {
+      "word": "to",
+      "start": 283.705,
+      "end": 283.845,
+      "score": 0.9
+    },
+    {
+      "word": "whatever",
+      "start": 283.905,
+      "end": 284.326,
+      "score": 0.839
+    },
+    {
+      "word": "pace",
+      "start": 284.426,
+      "end": 284.826,
+      "score": 0.915
+    },
+    {
+      "word": "feels",
+      "start": 285.167,
+      "end": 285.567,
+      "score": 0.79
+    },
+    {
+      "word": "natural.",
+      "start": 285.708,
+      "end": 286.228,
+      "score": 0.864
+    },
+    {
+      "word": "Notice",
+      "start": 296.58,
+      "end": 297.021,
+      "score": 0.922
+    },
+    {
+      "word": "your",
+      "start": 297.061,
+      "end": 297.261,
+      "score": 0.722
+    },
+    {
+      "word": "body.",
+      "start": 297.321,
+      "end": 297.742,
+      "score": 0.983
+    },
+    {
+      "word": "Notice",
+      "start": 310.688,
+      "end": 311.128,
+      "score": 0.86
+    },
+    {
+      "word": "your",
+      "start": 311.168,
+      "end": 311.348,
+      "score": 0.84
+    },
+    {
+      "word": "breath.",
+      "start": 311.388,
+      "end": 311.788,
+      "score": 0.855
+    },
+    {
+      "word": "Notice",
+      "start": 312.609,
+      "end": 312.949,
+      "score": 0.801
+    },
+    {
+      "word": "whether",
+      "start": 312.969,
+      "end": 313.229,
+      "score": 0.82
+    },
+    {
+      "word": "anything",
+      "start": 313.349,
+      "end": 313.689,
+      "score": 0.793
+    },
+    {
+      "word": "inside",
+      "start": 313.749,
+      "end": 314.249,
+      "score": 0.904
+    },
+    {
+      "word": "feels",
+      "start": 314.329,
+      "end": 314.669,
+      "score": 0.79
+    },
+    {
+      "word": "even",
+      "start": 314.889,
+      "end": 315.129,
+      "score": 0.796
+    },
+    {
+      "word": "slightly",
+      "start": 315.289,
+      "end": 315.83,
+      "score": 0.714
+    },
+    {
+      "word": "more",
+      "start": 315.91,
+      "end": 316.17,
+      "score": 0.634
+    },
+    {
+      "word": "settled.",
+      "start": 316.29,
+      "end": 316.77,
+      "score": 0.786
+    },
+    {
+      "word": "If",
+      "start": 317.91,
+      "end": 318.01,
+      "score": 0.875
+    },
+    {
+      "word": "parts",
+      "start": 318.09,
+      "end": 318.37,
+      "score": 0.8
+    },
+    {
+      "word": "of",
+      "start": 318.41,
+      "end": 318.45,
+      "score": 0.982
+    },
+    {
+      "word": "you",
+      "start": 318.49,
+      "end": 318.61,
+      "score": 0.912
+    },
+    {
+      "word": "still",
+      "start": 318.651,
+      "end": 318.891,
+      "score": 0.748
+    },
+    {
+      "word": "feel",
+      "start": 318.931,
+      "end": 319.151,
+      "score": 0.78
+    },
+    {
+      "word": "activated,",
+      "start": 319.351,
+      "end": 319.931,
+      "score": 0.864
+    },
+    {
+      "word": "that",
+      "start": 320.671,
+      "end": 320.851,
+      "score": 0.876
+    },
+    {
+      "word": "is",
+      "start": 320.911,
+      "end": 320.991,
+      "score": 0.669
+    },
+    {
+      "word": "okay.",
+      "start": 321.111,
+      "end": 321.531,
+      "score": 0.795
+    },
+    {
+      "word": "The",
+      "start": 322.552,
+      "end": 322.652,
+      "score": 0.826
+    },
+    {
+      "word": "goal",
+      "start": 322.712,
+      "end": 322.992,
+      "score": 0.875
+    },
+    {
+      "word": "is",
+      "start": 323.072,
+      "end": 323.152,
+      "score": 0.631
+    },
+    {
+      "word": "not",
+      "start": 323.232,
+      "end": 323.412,
+      "score": 0.667
+    },
+    {
+      "word": "to",
+      "start": 323.432,
+      "end": 323.532,
+      "score": 0.77
+    },
+    {
+      "word": "force",
+      "start": 323.632,
+      "end": 323.952,
+      "score": 0.751
+    },
+    {
+      "word": "calm.",
+      "start": 324.032,
+      "end": 324.452,
+      "score": 0.804
+    },
+    {
+      "word": "The",
+      "start": 325.253,
+      "end": 325.353,
+      "score": 0.976
+    },
+    {
+      "word": "goal",
+      "start": 325.393,
+      "end": 325.713,
+      "score": 0.73
+    },
+    {
+      "word": "is",
+      "start": 325.793,
+      "end": 325.853,
+      "score": 0.956
+    },
+    {
+      "word": "to",
+      "start": 325.893,
+      "end": 325.973,
+      "score": 0.634
+    },
+    {
+      "word": "offer",
+      "start": 326.133,
+      "end": 326.413,
+      "score": 0.752
+    },
+    {
+      "word": "your",
+      "start": 326.453,
+      "end": 326.633,
+      "score": 0.824
+    },
+    {
+      "word": "system",
+      "start": 326.713,
+      "end": 327.153,
+      "score": 0.848
+    },
+    {
+      "word": "a",
+      "start": 327.173,
+      "end": 327.193,
+      "score": 0.0
+    },
+    {
+      "word": "steady",
+      "start": 327.593,
+      "end": 328.073,
+      "score": 0.914
+    },
+    {
+      "word": "rhythm.",
+      "start": 328.193,
+      "end": 328.594,
+      "score": 0.737
+    },
+    {
+      "word": "Take",
+      "start": 329.754,
+      "end": 329.994,
+      "score": 0.773
+    },
+    {
+      "word": "one",
+      "start": 330.194,
+      "end": 330.354,
+      "score": 0.558
+    },
+    {
+      "word": "final",
+      "start": 330.514,
+      "end": 330.874,
+      "score": 0.873
+    },
+    {
+      "word": "breath",
+      "start": 330.934,
+      "end": 331.454,
+      "score": 0.8
+    },
+    {
+      "word": "in",
+      "start": 331.474,
+      "end": 331.514,
+      "score": 0.0
+    },
+    {
+      "word": "and",
+      "start": 333.255,
+      "end": 333.355,
+      "score": 0.863
+    },
+    {
+      "word": "let",
+      "start": 333.415,
+      "end": 333.595,
+      "score": 0.772
+    },
+    {
+      "word": "it",
+      "start": 333.635,
+      "end": 333.695,
+      "score": 0.756
+    },
+    {
+      "word": "out",
+      "start": 333.815,
+      "end": 333.955,
+      "score": 0.864
+    },
+    {
+      "word": "slowly.",
+      "start": 334.115,
+      "end": 334.655,
+      "score": 0.89
+    },
+    {
+      "word": "When",
+      "start": 335.496,
+      "end": 335.636,
+      "score": 0.855
+    },
+    {
+      "word": "you",
+      "start": 335.676,
+      "end": 335.776,
+      "score": 0.994
+    },
+    {
+      "word": "are",
+      "start": 335.856,
+      "end": 335.956,
+      "score": 0.873
+    },
+    {
+      "word": "ready,",
+      "start": 336.016,
+      "end": 336.296,
+      "score": 0.885
+    },
+    {
+      "word": "return",
+      "start": 336.516,
+      "end": 336.956,
+      "score": 0.764
+    },
+    {
+      "word": "your",
+      "start": 336.996,
+      "end": 337.136,
+      "score": 0.954
+    },
+    {
+      "word": "attention",
+      "start": 337.176,
+      "end": 337.676,
+      "score": 0.801
+    },
+    {
+      "word": "to",
+      "start": 337.976,
+      "end": 338.097,
+      "score": 0.814
+    },
+    {
+      "word": "the",
+      "start": 338.137,
+      "end": 338.237,
+      "score": 0.833
+    },
+    {
+      "word": "room",
+      "start": 338.317,
+      "end": 338.577,
+      "score": 0.916
+    },
+    {
+      "word": "around",
+      "start": 338.597,
+      "end": 339.017,
+      "score": 0.878
+    },
+    {
+      "word": "you.",
+      "start": 339.077,
+      "end": 339.197,
+      "score": 0.799
+    },
+    {
+      "word": "Let",
+      "start": 340.497,
+      "end": 340.678,
+      "score": 0.708
+    },
+    {
+      "word": "this",
+      "start": 340.718,
+      "end": 340.899,
+      "score": 0.821
+    },
+    {
+      "word": "rhythm",
+      "start": 340.999,
+      "end": 341.3,
+      "score": 0.756
+    },
+    {
+      "word": "be",
+      "start": 341.34,
+      "end": 341.461,
+      "score": 0.857
+    },
+    {
+      "word": "something",
+      "start": 341.521,
+      "end": 341.822,
+      "score": 0.969
+    },
+    {
+      "word": "you",
+      "start": 341.862,
+      "end": 341.962,
+      "score": 0.995
+    },
+    {
+      "word": "can",
+      "start": 342.002,
+      "end": 342.143,
+      "score": 0.729
+    },
+    {
+      "word": "come",
+      "start": 342.183,
+      "end": 342.364,
+      "score": 0.75
+    },
+    {
+      "word": "back",
+      "start": 342.424,
+      "end": 342.624,
+      "score": 0.998
+    },
+    {
+      "word": "to.",
+      "start": 342.685,
+      "end": 342.905,
+      "score": 0.589
+    },
+    {
+      "word": "Not",
+      "start": 344.25,
+      "end": 344.41,
+      "score": 0.724
+    },
+    {
+      "word": "as",
+      "start": 344.471,
+      "end": 344.551,
+      "score": 0.816
+    },
+    {
+      "word": "a",
+      "start": 344.591,
+      "end": 344.631,
+      "score": 0.5
+    },
+    {
+      "word": "command",
+      "start": 344.671,
+      "end": 345.033,
+      "score": 0.896
+    },
+    {
+      "word": "to",
+      "start": 345.073,
+      "end": 345.153,
+      "score": 0.976
+    },
+    {
+      "word": "calm",
+      "start": 345.193,
+      "end": 345.554,
+      "score": 0.875
+    },
+    {
+      "word": "down,",
+      "start": 345.615,
+      "end": 345.996,
+      "score": 0.917
+    },
+    {
+      "word": "but",
+      "start": 346.638,
+      "end": 346.758,
+      "score": 0.995
+    },
+    {
+      "word": "as",
+      "start": 346.839,
+      "end": 346.919,
+      "score": 0.83
+    },
+    {
+      "word": "a",
+      "start": 346.979,
+      "end": 347.019,
+      "score": 0.524
+    },
+    {
+      "word": "steady",
+      "start": 347.18,
+      "end": 347.601,
+      "score": 0.934
+    },
+    {
+      "word": "square",
+      "start": 347.702,
+      "end": 348.123,
+      "score": 0.64
+    },
+    {
+      "word": "of",
+      "start": 348.163,
+      "end": 348.223,
+      "score": 0.75
+    },
+    {
+      "word": "support",
+      "start": 348.304,
+      "end": 348.845,
+      "score": 0.807
+    },
+    {
+      "word": "your",
+      "start": 348.946,
+      "end": 349.106,
+      "score": 0.711
+    },
+    {
+      "word": "body",
+      "start": 349.146,
+      "end": 349.488,
+      "score": 0.962
+    },
+    {
+      "word": "can",
+      "start": 349.568,
+      "end": 349.748,
+      "score": 0.834
+    },
+    {
+      "word": "lean",
+      "start": 349.809,
+      "end": 350.07,
+      "score": 0.842
+    },
+    {
+      "word": "on",
+      "start": 350.27,
+      "end": 350.391,
+      "score": 0.52
+    },
+    {
+      "word": "when",
+      "start": 351.093,
+      "end": 351.233,
+      "score": 0.891
+    },
+    {
+      "word": "it",
+      "start": 351.274,
+      "end": 351.334,
+      "score": 0.768
+    },
+    {
+      "word": "is",
+      "start": 351.414,
+      "end": 351.494,
+      "score": 0.684
+    },
+    {
+      "word": "ready.",
+      "start": 351.575,
+      "end": 351.835,
+      "score": 0.89
+    }
+  ],
+  "language": "en"
+}
