@@ -197,15 +197,15 @@ export default function KaraokeCaptionPlayer({ audioRef, currentTime = 0, captio
       ) : (
         <div>
           <p className="sr-only" aria-live="polite" aria-atomic="true">{activeCaption?.text}</p>
-          <div className={`mx-auto max-w-2xl rounded-3xl border border-white/70 bg-white/70 px-4 py-6 shadow-inner dark:border-slate-700/60 dark:bg-slate-900/70 ${hasAudioRef ? '' : 'opacity-90'}`} aria-hidden="true">
+          <div className={\`mx-auto max-w-2xl rounded-3xl border border-white/70 bg-white/70 px-4 py-6 shadow-inner dark:border-slate-700/60 dark:bg-slate-900/70 \${hasAudioRef ? '' : 'opacity-90'}\`} aria-hidden="true">
             <p className="font-serif text-2xl leading-[1.8] text-brand-stone-800 dark:text-slate-100 md:text-3xl">
               {activeCaption.words.map((word, index) => {
                 const text = typeof word === 'string' ? word : word.word;
                 const isActive = activeWord?.index === index;
                 return (
                   <span
-                    key={`${activeCaption.id}-${text}-${index}`}
-                    className={`mx-1 inline-block rounded-2xl px-1.5 py-0.5 ${transitionClass} ${isActive ? 'bg-brand-gold-200/80 text-brand-stone-950 shadow-[0_0_24px_rgba(217,164,65,0.35)] dark:bg-brand-gold-500/25 dark:text-brand-gold-100 md:scale-110' : 'text-brand-stone-700 dark:text-slate-200'}`}
+                    key={\`\${activeCaption.id}-\${text}-\${index}\`}
+                    className={\`mx-1 inline-block rounded-2xl px-1.5 py-0.5 \${transitionClass} \${isActive ? 'bg-brand-gold-200/80 text-brand-stone-950 shadow-[0_0_24px_rgba(217,164,65,0.35)] dark:bg-brand-gold-500/25 dark:text-brand-gold-100 md:scale-110' : 'text-brand-stone-700 dark:text-slate-200'}\`}
                   >
                     {text}
                   </span>

@@ -58,7 +58,7 @@ class PersonalizationAIService {
         continue;
       }
       
-      const cleanLine = line.replace(/^[\d\.\-\*\)\s]+/, '').trim();
+      const cleanLine = line.replace(/^[\d.*)\s-]+/, '').trim();
       
       switch (currentSection) {
         case 'summary':
