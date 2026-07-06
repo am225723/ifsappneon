@@ -72,6 +72,7 @@ import PartsCards from './pages/PartsCards';
 import HealingTracker from './pages/HealingTracker';
 import ToolsDirectory from './pages/ToolsDirectory';
 import NotFound from './pages/NotFound';
+import Legal from './pages/Legal';
 import OnboardingFlow from './components/OnboardingFlow';
 import { initializePushNotifications } from './lib/pushNotifications';
 import ResourceLibrary from './pages/ResourceLibrary';
@@ -179,6 +180,8 @@ function ClerkAuthRoutes({ onClaim }) {
         }
       />
       <Route path="/claim-account" element={<ClaimClientProfile onClaim={onClaim} />} />
+      <Route path="/privacy" element={<Legal type="privacy" />} />
+      <Route path="/terms" element={<Legal type="terms" />} />
       <Route path="/test-client" element={<TestClientCreator />} />
       <Route path="/diagnostic" element={<PINAuthDiagnostic />} />
       <Route path="/auth-debug" element={<AuthDebug />} />
@@ -480,6 +483,8 @@ function AppContent({ authChecked, clerkLoaded, clerkSignedIn, isAuthenticated, 
         ) : clerkSignedIn ? (
           <Routes>
             <Route path="/claim-account" element={<ClaimClientProfile onClaim={handleClaim} />} />
+            <Route path="/privacy" element={<Legal type="privacy" />} />
+            <Route path="/terms" element={<Legal type="terms" />} />
             <Route path="/test-client" element={<TestClientCreator />} />
             <Route path="/diagnostic" element={<PINAuthDiagnostic />} />
             <Route path="/auth-debug" element={<AuthDebug />} />
@@ -652,6 +657,8 @@ function AppContent({ authChecked, clerkLoaded, clerkSignedIn, isAuthenticated, 
                 <Route path="/sign-in/*" element={<Navigate to="/" replace />} />
                 <Route path="/sign-up/*" element={<Navigate to="/" replace />} />
                 <Route path="/claim-account" element={<Navigate to="/" replace />} />
+                <Route path="/privacy" element={<Legal type="privacy" />} />
+                <Route path="/terms" element={<Legal type="terms" />} />
                 <Route path="*" element={<NotFound canAccessAdvisor={isTherapistRole} canAccessAdmin={isAdminOrSupervisor} />} />
               </Routes>
             </RouteErrorBoundary>
