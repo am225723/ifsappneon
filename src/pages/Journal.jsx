@@ -401,13 +401,16 @@ const Journal = () => {
           .select()
           .single();
 
-        if (!error && data && data.id) {
+        if (error) throw error;
+        if (data?.id) {
           newEntry.id = data.id;
         }
 
       }
     } catch (err) {
       console.error('Error saving entry to Supabase:', err);
+      alert('We could not save your journal entry. Please try again.');
+      return;
     }
 
     const updatedEntries = [newEntry, ...entries];

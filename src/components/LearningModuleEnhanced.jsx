@@ -3008,6 +3008,8 @@ const LearningModuleEnhanced = ({ module, onComplete, onBack, userProgress = {},
 
           <button
             onClick={nextStep}
+            disabled={!isCurrentStepComplete()}
+            aria-disabled={!isCurrentStepComplete()}
             className={`px-6 py-3 rounded-lg font-medium transition-colors flex items-center space-x-2 shadow-lg ${
               isCurrentStepComplete()
                 ? 'bg-gradient-to-r from-amber-600 to-emerald-600 text-white hover:from-amber-700 hover:to-emerald-700'
