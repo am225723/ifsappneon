@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Headphones, Pause, Play, RotateCcw } from 'lucide-react';
 import KaraokeCaptionPlayer from './KaraokeCaptionPlayer';
 
-export default function AudioPracticePlayer({ audioUrl, captionsPath, title = 'Guided practice', className = '', onEnded, onPlayStateChange, onTimeChange }) {
+export default function AudioPracticePlayer({ audioUrl, captionsPath, karaokePath, title = 'Guided practice', className = '', onEnded, onPlayStateChange, onTimeChange }) {
   const audioRef = useRef(null);
   const frameRef = useRef(null);
   const [currentTime, setCurrentTime] = useState(0);
@@ -122,7 +122,7 @@ export default function AudioPracticePlayer({ audioUrl, captionsPath, title = 'G
         }}
       />
 
-      {captionsOn && <KaraokeCaptionPlayer audioRef={audioRef} currentTime={currentTime} captionsPath={captionsPath} />}
+      {captionsOn && <KaraokeCaptionPlayer audioRef={audioRef} currentTime={currentTime} captionsPath={captionsPath} karaokePath={karaokePath} />}
     </div>
   );
 }

@@ -1,4 +1,75 @@
-import { useEffect, useMemo, useState } from 'react';
+import fs from 'node:fs';
+
+function read(path) {
+  return fs.readFileSync(path, 'utf8');
+}
+
+function write(path, content) {
+  fs.writeFileSync(path, content);
+}
+
+// 1) Update guidedPracticeMediaMap paths to point at the new meditation assets.
+{
+  const path = 'src/lib/guidedPracticeMediaMap.js';
+  let text = read(path);
+
+  text = text.replace(
+    /(mp3Filename:\s*'([^']+)\.mp3',)([\s\S]*?)(?=\n\s*expectedDuration:)/g,
+    (match, mp3Line, baseName, between) => {
+      let cleaned = between
+        .replace(/\n\s*captionsPath:\s*'[^']+',?/g, '')
+        .replace(/\n\s*transcriptPath:\s*'[^']+',?/g, '')
+        .replace(/\n\s*karaokePath:\s*'[^']+',?/g, '');
+
+      return `${mp3Line}${cleaned}
+    captionsPath: '/meditations/captions/${baseName}.srt',
+    transcriptPath: '/meditations/transcripts/${baseName}.txt',
+    karaokePath: '/meditations/karaoke/${baseName}.json',`;
+    }
+  );
+
+  write(path, text);
+}
+
+// 2) Pass karaokePath from GuidedMeditation into AudioPracticePlayer.
+{
+  const path = 'src/pages/GuidedMeditation.jsx';
+  let text = read(path);
+
+  if (!text.includes('karaokePath={practice.karaokePath}')) {
+    text = text.replace(
+      /(\s+captionsPath=\{practice\.captionsPath\})/,
+      `$1
+             karaokePath={practice.karaokePath}`
+    );
+  }
+
+  write(path, text);
+}
+
+// 3) Update AudioPracticePlayer to accept and forward karaokePath.
+{
+  const path = 'src/components/AudioPracticePlayer.jsx';
+  let text = read(path);
+
+  text = text.replace(
+    'export default function AudioPracticePlayer({ audioUrl, captionsPath, title =',
+    'export default function AudioPracticePlayer({ audioUrl, captionsPath, karaokePath, title ='
+  );
+
+  text = text.replace(
+    '<KaraokeCaptionPlayer audioRef={audioRef} currentTime={currentTime} captionsPath={captionsPath} />',
+    '<KaraokeCaptionPlayer audioRef={audioRef} currentTime={currentTime} captionsPath={captionsPath} karaokePath={karaokePath} />'
+  );
+
+  write(path, text);
+}
+
+// 4) Replace KaraokeCaptionPlayer with JSON word-timing support plus SRT fallback.
+{
+  const path = 'src/components/KaraokeCaptionPlayer.jsx';
+
+  const content = `import { useEffect, useMemo, useState } from 'react';
 import { getActiveCaption, getApproximateActiveWord, parseSrtCaptions } from '../lib/srtCaptions';
 
 function usePrefersReducedMotion(forced) {
@@ -183,15 +254,15 @@ export default function KaraokeCaptionPlayer({
         <div>
           <p className="sr-only" aria-live="polite" aria-atomic="true">{activeText}</p>
 
-          <div className={`mx-auto max-w-2xl rounded-3xl border border-white/70 bg-white/70 px-4 py-6 shadow-inner dark:border-slate-700/60 dark:bg-slate-900/70 ${hasAudioRef ? '' : 'opacity-90'}`} aria-hidden="true">
+          <div className={\`mx-auto max-w-2xl rounded-3xl border border-white/70 bg-white/70 px-4 py-6 shadow-inner dark:border-slate-700/60 dark:bg-slate-900/70 \${hasAudioRef ? '' : 'opacity-90'}\`} aria-hidden="true">
             <p className="font-serif text-2xl leading-[1.8] text-brand-stone-800 dark:text-slate-100 md:text-3xl">
               {words.map((word, index) => {
                 const isActive = activeWordIndex === index;
 
                 return (
                   <span
-                    key={`${activeKaraokeSegment?.id || activeSrtCaption?.id || 'caption'}-${word.text}-${index}`}
-                    className={`mx-1 inline-block rounded-2xl px-1.5 py-0.5 ${transitionClass} ${isActive ? 'bg-brand-gold-200/80 text-brand-stone-950 shadow-[0_0_24px_rgba(217,164,65,0.35)] dark:bg-brand-gold-500/25 dark:text-brand-gold-100 md:scale-110' : 'text-brand-stone-700 dark:text-slate-200'}`}
+                    key={\`\${activeKaraokeSegment?.id || activeSrtCaption?.id || 'caption'}-\${word.text}-\${index}\`}
+                    className={\`mx-1 inline-block rounded-2xl px-1.5 py-0.5 \${transitionClass} \${isActive ? 'bg-brand-gold-200/80 text-brand-stone-950 shadow-[0_0_24px_rgba(217,164,65,0.35)] dark:bg-brand-gold-500/25 dark:text-brand-gold-100 md:scale-110' : 'text-brand-stone-700 dark:text-slate-200'}\`}
                   >
                     {word.text}
                   </span>
@@ -208,3 +279,9 @@ export default function KaraokeCaptionPlayer({
     </section>
   );
 }
+`;
+
+  write(path, content);
+}
+
+console.log('Meditation karaoke wiring fixed.');
