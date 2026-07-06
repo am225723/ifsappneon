@@ -320,7 +320,7 @@ export default function FinalIFSLoginPage() {
             </form>
 
             <div className="flex flex-col items-center gap-4 pt-4">
-              <a className="font-display text-on-surface/90 hover:text-on-surface transition-colors cursor-pointer-hand drop-shadow-sm" href="#">Lost your key?</a>
+              <a className="font-display text-on-surface/90 hover:text-on-surface transition-colors cursor-pointer-hand drop-shadow-sm" href="/sign-in">Lost your key?</a>
               <div className="w-full flex items-center gap-4 py-2">
                 <div className="h-px flex-grow bg-white/10" />
                 <span className="font-vintage text-[10px] text-on-surface/80">OR</span>
