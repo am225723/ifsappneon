@@ -2797,7 +2797,7 @@ const TherapistDashboard = () => {
             { id: 'actions', label: 'Curriculum & Assessments', icon: BookOpen },
             { id: 'practice-generator', label: 'Practice Generator', icon: Sparkles },
             { id: 'alerts', label: 'Review Queue', icon: ClipboardCheck },
-            { id: 'insights-reports', label: 'Insights & Reports', icon: BarChart3 },
+            { id: 'insights-reports', label: 'Client Review & Reports', icon: BarChart3 },
             { id: 'co-therapy', label: 'Live Practice', icon: Heart },
             { id: 'settings', label: 'Settings', icon: Shield }
           ].map(tab => {
@@ -3713,21 +3713,20 @@ const TherapistDashboard = () => {
       {activeTab === 'insights-reports' && (
         <div className="space-y-6">
           <section className={`${cardBg} rounded-3xl border ${glowStyles.blue} p-6`}>
-            <p className={`text-xs font-semibold uppercase tracking-[0.25em] ${textMuted}`}>Insights & Reports</p>
-            <h2 className={`mt-2 text-2xl font-serif ${textPrimary}`}>Insights & Reports</h2>
+            <p className={`text-xs font-semibold uppercase tracking-[0.25em] ${textMuted}`}>Client Review & Reports</p>
+            <h2 className={`mt-2 text-2xl font-serif ${textPrimary}`}>A clearer workspace for client answers, drafts, and reports</h2>
             <p className={`mt-2 max-w-3xl text-sm ${textSecondary}`}>
-              Review progress patterns, generate Advisor reports, and understand the client's IFS journey over time.
+              Start with a client, verify which app data was pulled, review module answers in context, draft a session note, and open report generation from one predictable flow.
             </p>
           </section>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {[
-              { label: 'Longitudinal Insights', desc: 'Open assigned-client trends for mood, parts, journals, practices, and Growth Goals.', icon: TrendingUp, onClick: () => navigate('/analytics') },
-              { label: 'Client Progress', desc: 'Review curriculum completion, latest activity, and IFS Path momentum.', icon: BarChart3, onClick: () => setActiveTab('progress') },
-              { label: 'Healing Timeline', desc: 'View client journey patterns and major IFS milestones.', icon: Heart, onClick: () => setActiveTab('insights') },
-              { label: 'Module Response Insights', desc: 'Generate AI themes and session-useful patterns from cleaned module responses.', icon: Sparkles, onClick: () => { setActiveTab('insights'); if (selectedWorkspaceClient?.id) setSelectedInsightClient(selectedWorkspaceClient.id); } },
-              { label: 'Reports', desc: 'Open generated Advisor reports for assigned clients.', icon: FileText, onClick: () => navigate('/advisor-reports') },
-              { label: 'Generate Report', desc: 'Create a current Advisor report from assigned-client progress data.', icon: Download, onClick: () => navigate('/advisor-reports') },
-              { label: 'Curriculum progress summaries', desc: 'Summarize IFS Path progress without making analytics the main workspace.', icon: BookOpen, onClick: () => setActiveTab('progress') }
+              { label: 'Review Client Answers', desc: 'Open module answers, assessments, timeline, mood, and journal context for the selected client.', icon: Eye, onClick: () => { setActiveTab('insights'); if (selectedWorkspaceClient?.id) setSelectedInsightClient(selectedWorkspaceClient.id); } },
+              { label: 'Draft Session Note', desc: 'Create an Advisor-only draft from your bullets and selected client context; review before saving.', icon: PenTool, onClick: () => { setDraftNotePrefill({ clientId: selectedWorkspaceClient?.id || '', sessionDate: new Date().toISOString().split('T')[0] }); setActiveTab('clinical-notes'); } },
+              { label: 'Generate Report', desc: 'Create a current report from assignment-scoped progress, notes, homework, mood, parts, and cleaned responses.', icon: Download, onClick: () => navigate('/advisor-reports') },
+              { label: 'Module Response AI Review', desc: 'Generate cautious themes and session questions from cleaned module answers only.', icon: Sparkles, onClick: () => { setActiveTab('insights'); if (selectedWorkspaceClient?.id) setSelectedInsightClient(selectedWorkspaceClient.id); } },
+              { label: 'Longitudinal Analytics', desc: 'Open assigned-client trends for mood, parts, journals, practices, and Growth Goals.', icon: TrendingUp, onClick: () => navigate('/analytics') },
+              { label: 'Curriculum Progress', desc: 'Review completion, latest activity, and IFS Path momentum.', icon: BarChart3, onClick: () => setActiveTab('progress') }
             ].map((item) => {
               const Icon = item.icon;
               return (
@@ -4985,8 +4984,8 @@ const TherapistDashboard = () => {
               <Eye className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h2 className={`text-lg font-semibold ${textPrimary}`}>Client Insights</h2>
-              <p className={`text-sm ${textSecondary}`}>Review client responses and prepare for sessions</p>
+              <h2 className={`text-lg font-semibold ${textPrimary}`}>Client Review Workspace</h2>
+              <p className={`text-sm ${textSecondary}`}>Verify pulled client data, review module answers, draft notes, and prepare reports</p>
             </div>
           </div>
 
@@ -5048,9 +5047,42 @@ const TherapistDashboard = () => {
             ].sort((a, b) => b.score - a.score) : [];
             const maxScore = 25;
             const clientGam = clientGamification[selectedInsightClient];
+            const moduleResponseCount = Object.values(clientInsights.moduleResponses || {}).reduce((sum, responses = []) => sum + responses.reduce((inner, response) => inner + Object.values(response.answers || {}).filter(isMeaningfulModuleResponse).length, 0), 0);
+            const dataSourceSummary = [
+              { label: 'Module answer records', value: moduleResponseCount, helper: 'from ifs_module_answers plus progress.responses fallback', icon: BookOpen },
+              { label: 'Timeline events', value: clientInsights.timeline?.length || 0, helper: 'progress, journals, assessments, check-ins, mood, homework', icon: Activity },
+              { label: 'Recent moods', value: clientInsights.recentMoods?.length || 0, helper: 'latest mood/energy logs pulled for this client', icon: Smile },
+              { label: 'Journal excerpts', value: clientInsights.journalEntries?.length || 0, helper: 'recent client-authored journal entries', icon: PenTool }
+            ];
 
             return (
               <div className="space-y-6">
+                <div className={`${cardBg} rounded-3xl border ${glowStyles.emerald} p-5`}>
+                  <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                    <div>
+                      <p className={`text-xs font-semibold uppercase tracking-[0.25em] ${textMuted}`}>Data Pull Verification</p>
+                      <h3 className={`mt-1 text-xl font-bold ${textPrimary}`}>{client?.name || 'Selected client'} review data is loaded from assigned-client records</h3>
+                      <p className={`mt-2 max-w-3xl text-sm ${textSecondary}`}>Module answers are cleaned for display without mutating stored responses. Advisor notes, generated reports, and messages stay in separate Advisor-only workflows so client communications are not mixed into clinical review.</p>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <button type="button" onClick={() => { setDraftNotePrefill({ clientId: selectedInsightClient, sessionDate: new Date().toISOString().split('T')[0] }); setActiveTab('clinical-notes'); }} className="inline-flex items-center gap-2 rounded-xl border border-brand-stone-200 px-4 py-2 text-sm font-semibold hover:bg-brand-stone-50 dark:border-slate-700 dark:hover:bg-slate-800"><PenTool className="h-4 w-4" /> Draft Note</button>
+                      <button type="button" onClick={() => navigate('/advisor-reports')} className="inline-flex items-center gap-2 rounded-xl bg-brand-emerald-700 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-emerald-800"><Download className="h-4 w-4" /> Open Reports</button>
+                    </div>
+                  </div>
+                  <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                    {dataSourceSummary.map((source) => {
+                      const Icon = source.icon;
+                      return (
+                        <div key={source.label} className={`rounded-2xl border ${cardBorder} p-4 ${isDark ? 'bg-slate-900/35' : 'bg-white/70'}`}>
+                          <div className="flex items-center justify-between gap-3"><p className={`text-xs font-semibold uppercase tracking-wide ${textMuted}`}>{source.label}</p><Icon className="h-4 w-4 text-brand-emerald-600" /></div>
+                          <p className={`mt-2 text-2xl font-bold ${textPrimary}`}>{source.value}</p>
+                          <p className={`mt-1 text-xs ${textSecondary}`}>{source.helper}</p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
                 {!assessment && !personalization && (
                   <div className={`${cardBg} rounded-2xl border ${isDark ? 'border-amber-700/40' : 'border-amber-200'} ${isDark ? 'bg-amber-900/10' : 'bg-amber-50'} p-6`}>
                     <div className="flex items-start gap-4">
