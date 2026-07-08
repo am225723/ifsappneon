@@ -42,7 +42,7 @@ const CurriculumSystem = ({ onModuleSelect, userProgress = {}, clientId }) => {
             .select('id, client_id, module_id, data, created_at, updated_at')
             .eq('client_id', id),
           supabase.from('ifs_client_progress')
-            .select('module_id, completed')
+            .select('module_id, completed, is_completed, completed_at, updated_at')
             .eq('client_id', id)
         ]);
 
@@ -123,7 +123,7 @@ const CurriculumSystem = ({ onModuleSelect, userProgress = {}, clientId }) => {
 
       await Promise.all([
         supabase.from('ifs_client_progress')
-          .update({ current_step: 0, completed: false })
+          .update({ current_step: 0, completed: false, is_completed: false, completed_at: null })
           .eq('client_id', client.id)
           .eq('module_id', module.id),
         supabase.from('ifs_interactive_data')

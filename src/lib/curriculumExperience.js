@@ -1,13 +1,13 @@
 import { curriculumModules, getNextModule } from '../data/curriculumData';
 import { isCurriculumInteractiveModule, normalizeInteractiveResult } from './interactiveResults';
 
-const hasExplicitCompletion = (row = {}) => {
+export const hasExplicitCompletion = (row = {}) => {
   const data = row.data && typeof row.data === 'object' ? row.data : {};
   return row.completed === true
     || row.is_completed === true
-    || Boolean(row.completed_at || row.completedAt)
     || data.completed === true
     || data.is_completed === true
+    || Boolean(row.completed_at || row.explicitCompletedAt || row.completionTimestamp)
     || Boolean(data.completedAt || data.completed_at);
 };
 
