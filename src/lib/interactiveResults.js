@@ -84,7 +84,8 @@ export function normalizeInteractiveResult(row) {
   const category = getInteractiveResultCategory(moduleId);
   const primary = displayInteractiveValue(data.primary);
   const secondary = displayInteractiveValue(data.secondary);
-  const completedAt = data.completedAt || data.completed_at || row?.updated_at || row?.created_at || null;
+  const explicitCompletedAt = data.completedAt || data.completed_at || row?.completed_at || row?.completedAt || null;
+  const completedAt = explicitCompletedAt || row?.updated_at || row?.created_at || null;
   const summaryParts = [];
 
   if (primary) summaryParts.push(`Primary: ${primary}`);
@@ -101,6 +102,10 @@ export function normalizeInteractiveResult(row) {
     categoryLabel: CATEGORY_LABELS[category] || humanizeModuleId(category),
     primary,
     secondary,
+    completed: row?.completed === true,
+    is_completed: row?.is_completed === true,
+    completed_at: row?.completed_at || null,
+    explicitCompletedAt,
     completedAt,
     updatedAt: row?.updated_at || null,
     summary: summaryParts.join(' • '),
