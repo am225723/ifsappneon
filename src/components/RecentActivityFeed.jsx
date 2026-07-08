@@ -10,23 +10,30 @@ function formatDate(value) {
   return new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }).format(date);
 }
 
-export default function RecentActivityFeed({ limit = 3, title = 'Recent Activity', className = '' }) {
+export default function RecentActivityFeed({ limit = 3, title = 'Recent Activity', className = '', excludeTypes = [] }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let isMounted = true;
     const load = async () => {
-      const { data, error } = await loadNotifications({ filter: 'all', limit });
+      const excludedTypes = new Set(excludeTypes);
+      const requestLimit = excludedTypes.size > 0 ? Math.min(limit + excludedTypes.size + 5, 100) : limit;
+      const { data, error } = await loadNotifications({ filter: 'all', limit: requestLimit });
       if (!isMounted) return;
-      if (!error) setItems(data || []);
+      if (!error) {
+        const visibleItems = excludedTypes.size > 0
+          ? (data || []).filter((item) => !excludedTypes.has(item.notification_type)).slice(0, limit)
+          : (data || []);
+        setItems(visibleItems);
+      }
       setLoading(false);
     };
     load();
     return () => {
       isMounted = false;
     };
-  }, [limit]);
+  }, [excludeTypes, limit]);
 
   return (
     <section className={`soft-card p-6 ${className}`}>
