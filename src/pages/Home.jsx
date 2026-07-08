@@ -804,7 +804,7 @@ const Home = ({ clientId, client, mode = 'home', selfProfile = null, selfProfile
       </section>
 
       <section className="mb-6">
-        <RecentActivityFeed limit={3} title="Recent Updates" className="mb-6" />
+        <RecentActivityFeed limit={3} title="Recent Updates" className="mb-6" excludeTypes={['report_generated']} />
       </section>
     </div>
   );
