@@ -520,7 +520,6 @@ const TherapistDashboard = () => {
   const [workspaceGrowthGoals, setWorkspaceGrowthGoals] = useState([]);
   const [notificationRows, setNotificationRows] = useState([]);
   const [liveSessionRows, setLiveSessionRows] = useState([]);
-  const [generatedReportRows, setGeneratedReportRows] = useState([]);
   const [sessionPrepRows, setSessionPrepRows] = useState([]);
   const [selectedPrepClientId, setSelectedPrepClientId] = useState('');
   const [draftNotePrefill, setDraftNotePrefill] = useState({ clientId: '', sessionDate: '' });
@@ -696,7 +695,6 @@ const TherapistDashboard = () => {
     setWorkspaceError('');
     try {
       const therapist = clientAuth.getCurrentClient();
-      const clientList = await loadAssignedClients(therapist?.id);
 
       if (!therapist?.id) {
         setClients([]);
@@ -708,11 +706,12 @@ const TherapistDashboard = () => {
         setWorkspaceGrowthGoals([]);
         setNotificationRows([]);
         setLiveSessionRows([]);
-        setGeneratedReportRows([]);
         setSelectedWorkspaceClientId('');
         setLoading(false);
         return;
       }
+
+      const clientList = await loadAssignedClients(therapist.id);
 
       if (clientList.length === 0) {
         setClients([]);
@@ -724,7 +723,6 @@ const TherapistDashboard = () => {
         setWorkspaceGrowthGoals([]);
         setNotificationRows([]);
         setLiveSessionRows([]);
-        setGeneratedReportRows([]);
         setSelectedWorkspaceClientId('');
         setLoading(false);
         return;
@@ -749,8 +747,7 @@ const TherapistDashboard = () => {
         { data: therapistNotesRaw },
         { data: assignedHomeworkRaw },
         { data: notificationRaw },
-        { data: liveSessionsRaw },
-        { data: generatedReportsRaw }
+        { data: liveSessionsRaw }
       ] = await Promise.all([
         supabase
           .from('ifs_assessment_results')
@@ -829,14 +826,7 @@ const TherapistDashboard = () => {
           .in('client_id', clientIds)
           .in('status', ['active', 'paused'])
           .order('updated_at', { ascending: false })
-          .limit(50),
-        supabase
-          .from('ifs_generated_reports')
-          .select('id, client_id, report_type, created_at')
-          .eq('therapist_id', therapist.id)
-          .in('client_id', clientIds)
-          .order('created_at', { ascending: false })
-          .limit(20)
+          .limit(50)
       ]);
 
 
@@ -844,7 +834,6 @@ const TherapistDashboard = () => {
       setWorkspaceGrowthGoals(treatmentPlansRaw || []);
       setNotificationRows(notificationRaw || []);
       setLiveSessionRows(liveSessionsRaw || []);
-      setGeneratedReportRows(generatedReportsRaw || []);
 
       const reviewSoonCutoff = new Date();
       reviewSoonCutoff.setDate(reviewSoonCutoff.getDate() + 14);
@@ -2749,27 +2738,16 @@ const TherapistDashboard = () => {
   ];
 
   const safeActivityItems = [
-    ...notificationRows.slice(0, 6).map((notification) => ({
-      id: `notification-${notification.id}`,
-      title: notification.title || 'Advisor update',
-      detail: latestClientById[notification.client_id]?.name || 'Advisor workspace',
-      time: notification.created_at,
-      icon: Mail
-    })),
-    ...generatedReportRows.slice(0, 3).map((report) => ({
-      id: `report-${report.id}`,
-      title: 'Advisor report generated',
-      detail: latestClientById[report.client_id]?.name || 'Assigned client',
-      time: report.created_at,
-      icon: Download
-    })),
-    ...recentTaggedNotes.slice(0, 3).map((note) => ({
-      id: `note-${note.id}`,
-      title: 'Advisor note saved',
-      detail: note.clientName || 'Assigned client',
-      time: note.created_at,
-      icon: FileText
-    }))
+    ...notificationRows
+      .filter((notification) => !['advisor_note_draft_generated', 'advisor_note_saved', 'therapist_note_saved', 'generated_note'].includes(notification.notification_type))
+      .slice(0, 8)
+      .map((notification) => ({
+        id: `notification-${notification.id}`,
+        title: notification.title || 'Advisor update',
+        detail: latestClientById[notification.client_id]?.name || 'Advisor workspace',
+        time: notification.created_at,
+        icon: Mail
+      }))
   ].sort((a, b) => new Date(b.time || 0) - new Date(a.time || 0)).slice(0, 8);
 
   const normalizeAssessmentScore = (value) => {
@@ -3973,8 +3951,8 @@ const TherapistDashboard = () => {
               { label: 'Completed Assigned IFS Practices', value: practicesAwaitingReview.length, action: 'Review Practice', icon: CheckCircle, onClick: () => navigate('/advisor-homework') },
               { label: 'Assessment results needing review', value: stats.assessmentsCompleted, action: 'Review Assessment', icon: FileText, onClick: () => navigate('/assessment-builder') },
               { label: 'Growth Goals due soon', value: growthGoalsDue.length, action: 'Review Growth Goal', icon: Target, onClick: () => setActiveTab('treatment-plans') },
-              { label: 'Draft Advisor notes', value: recentTaggedNotes.length, action: 'Continue Draft Note', icon: PenTool, onClick: () => setActiveTab('clinical-notes') },
-              { label: 'Recent reports generated', value: generatedReportRows.length, action: 'Open Report', icon: Download, onClick: () => navigate('/advisor-reports') }
+              { label: 'Unread Advisor updates', value: unreadUpdates.length, action: 'Open Messages', icon: Mail, onClick: () => navigate('/advisor-messages') },
+              { label: 'Active live practices', value: activeLiveSessions.length, action: 'Join Live Practice', icon: Heart, onClick: () => navigate('/live-co-therapy') }
             ].map((item) => {
               const Icon = item.icon;
               return (
