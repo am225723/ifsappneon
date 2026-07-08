@@ -298,7 +298,10 @@ function BottomNav({ messagePath = '/inbox', advisorWorkspacePath = '/therapist-
 
   return (
     <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 backdrop-blur-lg border-t shadow-[0_-2px_10px_rgba(120,80,40,0.06)] bg-white/90 dark:bg-brand-midnight/90 border-brand-stone-200/50 dark:border-slate-800/60">
-      <div className="max-w-lg mx-auto flex items-center h-16 gap-1 overflow-x-auto px-2">
+      <div
+        className="mx-auto grid h-16 w-full max-w-lg items-stretch gap-0 px-1.5"
+        style={{ gridTemplateColumns: `repeat(${navItems.length}, minmax(0, 1fr))` }}
+      >
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive = item.path === '/' ? location.pathname === '/' : location.pathname.startsWith(item.path);
@@ -307,7 +310,7 @@ function BottomNav({ messagePath = '/inbox', advisorWorkspacePath = '/therapist-
             <Link
               key={item.path}
               to={item.path}
-              className={`flex flex-col items-center justify-center gap-0.5 px-2.5 py-1.5 rounded-xl transition-all duration-200 min-w-[58px] shrink-0 ${
+              className={`flex min-w-0 flex-col items-center justify-center gap-0.5 rounded-xl px-1 py-1.5 text-center transition-all duration-200 ${
                 isActive
                   ? 'text-brand-gold-700 dark:text-brand-gold-500'
                   : 'text-brand-stone-400 dark:text-slate-500 hover:text-brand-stone-600 dark:hover:text-slate-300'
@@ -316,7 +319,7 @@ function BottomNav({ messagePath = '/inbox', advisorWorkspacePath = '/therapist-
               <div className={`p-1 rounded-lg transition-all duration-200 ${isActive ? 'bg-brand-gold-50 dark:bg-brand-gold-950/30' : ''}`}>
                 <Icon className={`w-5 h-5 ${isActive ? 'stroke-[2.5]' : ''}`} />
               </div>
-              <span className={`text-[10px] leading-tight ${isActive ? 'font-semibold' : 'font-medium'}`}>
+              <span className={`w-full truncate text-[9px] leading-tight sm:text-[10px] ${isActive ? 'font-semibold' : 'font-medium'}`}>
                 {item.label}
               </span>
             </Link>
