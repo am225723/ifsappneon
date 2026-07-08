@@ -533,6 +533,7 @@ const TherapistDashboard = () => {
   const [moduleInsightError, setModuleInsightError] = useState('');
   const [sessionSnapshotState, setSessionSnapshotState] = useState({ loading: false, data: null, error: '' });
   const [clientGamification, setClientGamification] = useState({});
+  const [assessmentSnapshots, setAssessmentSnapshots] = useState({});
 
   const [activeAction, setActiveAction] = useState(null);
   const [newClientForm, setNewClientForm] = useState({ name: '', email: '', phone: '', pin: '', role: 'client' });
@@ -741,6 +742,7 @@ const TherapistDashboard = () => {
         { data: activityRows },
         { data: gamificationRows },
         { data: interactiveWoundData },
+        { data: interactiveAssessmentRows },
         { data: moodEntries },
         { data: checkinData },
         { data: treatmentPlansRaw },
@@ -777,6 +779,12 @@ const TherapistDashboard = () => {
           .select('client_id, data, updated_at')
           .in('client_id', clientIds)
           .eq('module_id', 'assessment_wounds'),
+        supabase
+          .from('ifs_interactive_data')
+          .select('client_id, module_id, data, updated_at')
+          .in('client_id', clientIds)
+          .in('module_id', ['assessment_wounds', 'assessment_parts', 'assessment_self-energy', 'assessment_attachment'])
+          .order('updated_at', { ascending: false }),
         supabase
           .from('ifs_mood_entries')
           .select('client_id, mood, energy, date')
@@ -861,6 +869,15 @@ const TherapistDashboard = () => {
         assessmentsByClient[a.client_id].push(a);
       });
 
+
+      const interactiveAssessmentsByClient = {};
+      (interactiveAssessmentRows || []).forEach((row) => {
+        if (!interactiveAssessmentsByClient[row.client_id]) interactiveAssessmentsByClient[row.client_id] = {};
+        if (!interactiveAssessmentsByClient[row.client_id][row.module_id]) {
+          interactiveAssessmentsByClient[row.client_id][row.module_id] = row;
+        }
+      });
+
       const progressByClient = {};
       (progressRows || []).forEach(p => {
         if (!progressByClient[p.client_id]) progressByClient[p.client_id] = [];
@@ -896,6 +913,33 @@ const TherapistDashboard = () => {
         if (!checkinsByClient[c.client_id]) checkinsByClient[c.client_id] = [];
         checkinsByClient[c.client_id].push(c.updated_at);
       });
+
+
+      const nextAssessmentSnapshots = {};
+      clientIds.forEach((clientId) => {
+        const latestAssessment = assessmentsByClient[clientId]?.[0] || null;
+        const interactive = interactiveAssessmentsByClient[clientId] || {};
+        const woundInteractive = interactive.assessment_wounds?.data || interactiveWoundsByClient[clientId] || null;
+        const woundScores = latestAssessment ? {
+          abandonment: latestAssessment.abandonment_score || 0,
+          shame: latestAssessment.shame_score || 0,
+          neglect: latestAssessment.neglect_score || 0,
+          betrayal: latestAssessment.betrayal_score || 0,
+          helplessness: latestAssessment.helplessness_score || 0
+        } : (woundInteractive?.scores ? Object.fromEntries(Object.entries(woundInteractive.scores).map(([key, value]) => [key, value?.total || value?.score || value || 0])) : {});
+        nextAssessmentSnapshots[clientId] = {
+          wound: latestAssessment || woundInteractive ? {
+            primary: latestAssessment?.primary_wound || woundInteractive?.primary || null,
+            secondary: latestAssessment?.secondary_wound || woundInteractive?.secondary || null,
+            scores: woundScores,
+            completedAt: latestAssessment?.created_at || woundInteractive?.completedAt || interactive.assessment_wounds?.updated_at || null
+          } : null,
+          parts: interactive.assessment_parts ? { data: interactive.assessment_parts.data || {}, completedAt: interactive.assessment_parts.updated_at } : null,
+          selfEnergy: interactive['assessment_self-energy'] ? { data: interactive['assessment_self-energy'].data || {}, completedAt: interactive['assessment_self-energy'].updated_at } : null,
+          attachment: interactive.assessment_attachment ? { data: interactive.assessment_attachment.data || {}, completedAt: interactive.assessment_attachment.updated_at } : null
+        };
+      });
+      setAssessmentSnapshots(nextAssessmentSnapshots);
 
       const enrichedClients = clientList.map(c => {
         const clientAssessments = assessmentsByClient[c.id] || [];
@@ -968,7 +1012,8 @@ const TherapistDashboard = () => {
           growthGoalsCount: clientGoals.length,
           recentAdvisorNotesCount: (therapistNotesRaw || []).filter((note) => note.client_id === c.id).length,
           latestAdvisorNoteAt: latestNote?.created_at || null,
-          accessRestrictions: c.access_restrictions || null
+          accessRestrictions: c.access_restrictions || null,
+          assessmentSnapshot: nextAssessmentSnapshots[c.id] || null
         };
       });
 
@@ -2727,6 +2772,48 @@ const TherapistDashboard = () => {
     }))
   ].sort((a, b) => new Date(b.time || 0) - new Date(a.time || 0)).slice(0, 8);
 
+  const normalizeAssessmentScore = (value) => {
+    const numeric = Number(value || 0);
+    if (!Number.isFinite(numeric)) return 0;
+    return numeric <= 5 ? Math.round(numeric * 5) : Math.round(numeric);
+  };
+
+  const assessmentReviewRows = clients.map((client) => {
+    const snapshot = assessmentSnapshots[client.id] || client.assessmentSnapshot || {};
+    const woundScores = Object.entries(snapshot.wound?.scores || {})
+      .map(([type, score]) => ({ type, score: normalizeAssessmentScore(score) }))
+      .sort((a, b) => b.score - a.score);
+    const selfScores = snapshot.selfEnergy?.data?.scores || snapshot.selfEnergy?.data?.qualities || {};
+    const selfEnergyAverage = Object.values(selfScores).length
+      ? Math.round(Object.values(selfScores).reduce((sum, value) => {
+        const score = typeof value === 'number' ? value : (value?.average || value?.score || 0);
+        return sum + ((Number(score) || 0) / 5) * 100;
+      }, 0) / Object.values(selfScores).length)
+      : null;
+    const partsAnswers = snapshot.parts?.data?.answers || {};
+    const activePartCount = Object.values(partsAnswers).filter((value) => Number(value) >= 4).length;
+    const attachmentStyle = snapshot.attachment?.data?.primaryStyle || snapshot.attachment?.data?.style || null;
+    return {
+      client,
+      woundScores,
+      primaryWound: snapshot.wound?.primary || client.primaryWound,
+      secondaryWound: snapshot.wound?.secondary || client.secondaryWound,
+      assessmentDate: snapshot.wound?.completedAt || snapshot.parts?.completedAt || snapshot.selfEnergy?.completedAt || snapshot.attachment?.completedAt,
+      selfEnergyAverage,
+      activePartCount,
+      attachmentStyle,
+      hasAnyAssessment: Boolean(snapshot.wound || snapshot.parts || snapshot.selfEnergy || snapshot.attachment)
+    };
+  });
+
+  const systemFlowSteps = [
+    { label: 'Assessments', icon: ClipboardCheck, text: 'Wound, parts, Self-energy, and attachment scores reveal the client\'s current internal system.' },
+    { label: 'Parts map', icon: Shield, text: 'Protectors, firefighters, managers, and exiles are translated into an inner-system picture.' },
+    { label: 'Curriculum', icon: BookOpen, text: 'The IFS path adapts module emphasis, exercises, and pacing around the assessment profile.' },
+    { label: 'Session work', icon: Heart, text: 'Check-ins, notes, practices, and reports keep the plan connected between sessions.' }
+  ];
+
+
   if (loading) {
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
@@ -2863,6 +2950,97 @@ const TherapistDashboard = () => {
                 );
               })}
             </div>
+          </section>
+
+          <section className={`${cardBg} rounded-3xl border ${glowStyles.emerald} p-4 sm:p-6`}>
+            <div className="mb-5 flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+              <div>
+                <p className={`text-xs font-semibold uppercase tracking-[0.25em] ${textMuted}`}>Mobile client review</p>
+                <h2 className={`mt-1 text-2xl font-serif ${textPrimary}`}>Assessment results for every client</h2>
+                <p className={`mt-2 max-w-3xl text-sm ${textSecondary}`}>
+                  Scan the whole caseload on desktop or phone, then open the client review workspace for complete responses, module answers, timeline, and reports.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setActiveTab('insights')}
+                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-brand-emerald-700 px-4 py-3 text-sm font-semibold text-white hover:bg-brand-emerald-800"
+              >
+                Open detailed review <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="mb-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              {systemFlowSteps.map((step, index) => {
+                const Icon = step.icon;
+                return (
+                  <div key={step.label} className={`rounded-2xl border ${cardBorder} ${isDark ? 'bg-slate-900/35' : 'bg-white/75'} p-4`}>
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-gold-100 text-brand-emerald-800 dark:bg-brand-gold-900/30 dark:text-brand-gold-200"><Icon className="h-5 w-5" /></div>
+                      <div>
+                        <p className={`text-[10px] font-bold uppercase tracking-wider ${textMuted}`}>Step {index + 1}</p>
+                        <p className={`font-semibold ${textPrimary}`}>{step.label}</p>
+                      </div>
+                    </div>
+                    <p className={`mt-3 text-xs leading-relaxed ${textSecondary}`}>{step.text}</p>
+                  </div>
+                );
+              })}
+            </div>
+
+            {assessmentReviewRows.length === 0 ? (
+              <div className={`rounded-2xl border ${cardBorder} p-8 text-center ${textSecondary}`}>No assigned clients to review yet.</div>
+            ) : (
+              <div className="grid gap-4 lg:grid-cols-2">
+                {assessmentReviewRows.map((row) => (
+                  <article key={row.client.id} className={`rounded-2xl border ${cardBorder} ${isDark ? 'bg-slate-900/35' : 'bg-brand-cream-50/80'} p-4`}>
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                      <div>
+                        <h3 className={`text-lg font-bold ${textPrimary}`}>{row.client.name}</h3>
+                        <p className={`text-xs ${textMuted}`}>{row.assessmentDate ? `Last assessment ${formatDate(row.assessmentDate)}` : 'No assessment completed yet'}</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => { setSelectedInsightClient(row.client.id); setActiveTab('insights'); }}
+                        className="rounded-xl border border-brand-emerald-200 px-3 py-2 text-xs font-semibold text-brand-emerald-700 hover:bg-brand-emerald-50 dark:border-brand-emerald-800 dark:text-brand-emerald-200 dark:hover:bg-brand-emerald-950/40"
+                      >
+                        Review details
+                      </button>
+                    </div>
+                    <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                      <div className={`rounded-xl border ${cardBorder} bg-white/60 p-3 dark:bg-slate-950/30`}>
+                        <p className={`text-[10px] font-bold uppercase tracking-wider ${textMuted}`}>Wound profile</p>
+                        <p className={`mt-1 text-sm font-semibold capitalize ${textPrimary}`}>{row.primaryWound && row.primaryWound !== 'unknown' ? row.primaryWound : 'Not assessed'}</p>
+                        <p className={`text-xs ${textMuted}`}>{row.secondaryWound ? `Secondary: ${row.secondaryWound}` : 'Secondary not set'}</p>
+                      </div>
+                      <div className={`rounded-xl border ${cardBorder} bg-white/60 p-3 dark:bg-slate-950/30`}>
+                        <p className={`text-[10px] font-bold uppercase tracking-wider ${textMuted}`}>Parts activity</p>
+                        <p className={`mt-1 text-sm font-semibold ${textPrimary}`}>{row.activePartCount ? `${row.activePartCount} active signals` : 'Not assessed'}</p>
+                        <p className={`text-xs ${textMuted}`}>Manager / firefighter / exile indicators</p>
+                      </div>
+                      <div className={`rounded-xl border ${cardBorder} bg-white/60 p-3 dark:bg-slate-950/30`}>
+                        <p className={`text-[10px] font-bold uppercase tracking-wider ${textMuted}`}>Self & attachment</p>
+                        <p className={`mt-1 text-sm font-semibold ${textPrimary}`}>{row.selfEnergyAverage !== null ? `${row.selfEnergyAverage}% Self-energy` : 'Self-energy not assessed'}</p>
+                        <p className={`text-xs capitalize ${textMuted}`}>{row.attachmentStyle ? `${row.attachmentStyle} attachment` : 'Attachment not assessed'}</p>
+                      </div>
+                    </div>
+                    <div className="mt-4 space-y-2">
+                      {(row.woundScores.length ? row.woundScores : [{ type: 'assessment pending', score: 0 }]).slice(0, 5).map((score) => (
+                        <div key={score.type}>
+                          <div className="mb-1 flex items-center justify-between text-xs">
+                            <span className={`capitalize ${textSecondary}`}>{score.type}</span>
+                            <span className={`font-semibold ${textPrimary}`}>{score.score}/25</span>
+                          </div>
+                          <div className="h-2 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
+                            <div className="h-full rounded-full bg-gradient-to-r from-brand-gold-500 to-brand-emerald-700" style={{ width: `${Math.min(100, (score.score / 25) * 100)}%` }} />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </article>
+                ))}
+              </div>
+            )}
           </section>
 
           <div className="grid grid-cols-1 xl:grid-cols-[1fr_0.95fr] gap-6">
