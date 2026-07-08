@@ -620,6 +620,16 @@ export const supabaseHelpers = {
     return data || [];
   },
 
+  async getTherapistFeedbackByTherapist(therapistId) {
+    const { data, error } = await supabase
+      .from('ifs_therapist_feedback')
+      .select('*')
+      .eq('therapist_id', therapistId)
+      .order('created_at', { ascending: false });
+    if (error) console.error('Error fetching advisor feedback:', error);
+    return data || [];
+  },
+
   async saveTherapistNotes(therapistId, clientId, notes) {
     const { data, error } = await supabase
       .from('ifs_therapist_notes')
@@ -648,6 +658,16 @@ export const supabaseHelpers = {
       .eq('client_id', clientId)
       .order('created_at', { ascending: false });
     if (error) console.error('Error fetching therapist notes:', error);
+    return data || [];
+  },
+
+  async getTherapistNotesByTherapist(therapistId) {
+    const { data, error } = await supabase
+      .from('ifs_therapist_notes')
+      .select('*')
+      .eq('therapist_id', therapistId)
+      .order('created_at', { ascending: false });
+    if (error) console.error('Error fetching advisor notes:', error);
     return data || [];
   },
 

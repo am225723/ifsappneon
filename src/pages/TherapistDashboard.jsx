@@ -1061,8 +1061,8 @@ const TherapistDashboard = () => {
       if (!therapistId) return;
       try {
         const [notesData, feedbackData] = await Promise.all([
-          supabaseHelpers.getTherapistNotes(therapistId),
-          supabaseHelpers.getTherapistFeedback(therapistId)
+          supabaseHelpers.getTherapistNotesByTherapist(therapistId),
+          supabaseHelpers.getTherapistFeedbackByTherapist(therapistId)
         ]);
         if (notesData && notesData.length > 0) {
           const formattedNotes = notesData.map(n => {
