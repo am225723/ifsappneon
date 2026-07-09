@@ -6,6 +6,7 @@ import { supabaseHelpers } from '../lib/supabase';
 import PreSessionCheckin from '../components/PreSessionCheckin';
 import GuidedBreathing from '../components/GuidedBreathing';
 import { clientAuth } from '../lib/supabasePersonalization';
+import { getClerkBearerToken } from '../lib/apiAuth';
 
 const therapistClientActivities = [
   {
@@ -429,15 +430,16 @@ export default function TherapyIntegration() {
 
   useEffect(() => {
     let disposed = false;
-    const client = clientAuth.getCurrentClient();
-    const room = client?.therapy_room || client?.id || 'default';
 
-    const connect = () => {
+    const connect = async () => {
       if (disposed) return;
       setConnectionState('connecting');
       eventSourceRef.current?.close();
 
-      const events = new EventSource(`/api/sse-therapy-sync?room=${encodeURIComponent(room)}`);
+      const token = await getClerkBearerToken();
+      if (disposed) return;
+      const query = token ? `?token=${encodeURIComponent(token)}` : '';
+      const events = new EventSource(`/api/sse-therapy-sync${query}`);
       eventSourceRef.current = events;
 
       events.onopen = () => {
@@ -496,13 +498,16 @@ export default function TherapyIntegration() {
 
   const startActivity = (activity) => {
     if (activity.id === 'grounding-breath' || /breath/i.test(activity.title)) {
-      const client = clientAuth.getCurrentClient();
-      const room = client?.therapy_room || client?.id || 'default';
-      fetch(`/api/sse-therapy-sync?room=${encodeURIComponent(room)}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: 'start-exercise', exercise: 'guided-breathing', activityId: activity.id })
-      }).catch(() => {});
+      getClerkBearerToken().then((token) => {
+        fetch('/api/sse-therapy-sync', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {})
+          },
+          body: JSON.stringify({ type: 'start-exercise', exercise: 'guided-breathing', activityId: activity.id })
+        }).catch(() => {});
+      });
       setShowGuidedBreathing(true);
     }
     setActiveActivity(activity);
