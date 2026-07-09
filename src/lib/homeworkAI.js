@@ -1,12 +1,4 @@
-async function getAuthToken() {
-  try {
-    const clerk = window.Clerk;
-    if (clerk?.session?.getToken) return await clerk.session.getToken();
-  } catch (error) {
-    console.warn('Unable to read Clerk token:', error);
-  }
-  return null;
-}
+import { getClerkToken } from './apiAuth.js';
 
 function normalizeApiError(response, payload) {
   const apiError = payload?.error;
@@ -14,7 +6,7 @@ function normalizeApiError(response, payload) {
 }
 
 async function requestPracticeDraft(body) {
-  const token = await getAuthToken();
+  const token = await getClerkToken();
   const response = await fetch('/api/ai-assigned-practice', {
     method: 'POST',
     headers: {

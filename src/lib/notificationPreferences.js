@@ -1,17 +1,9 @@
+import { getClerkToken } from './apiAuth.js';
+
 const NOTIFICATION_PREFERENCES_API_PATH = '/api/notification-preferences';
 
-async function getAuthToken() {
-  try {
-    const clerk = window.Clerk;
-    if (clerk?.session?.getToken) return await clerk.session.getToken();
-  } catch (error) {
-    console.warn('Unable to read Clerk token:', error);
-  }
-  return null;
-}
-
 async function notificationPreferencesRequest(payload) {
-  const token = await getAuthToken();
+  const token = await getClerkToken();
   const response = await fetch(NOTIFICATION_PREFERENCES_API_PATH, {
     method: 'POST',
     headers: {

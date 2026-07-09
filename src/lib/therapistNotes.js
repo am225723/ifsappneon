@@ -1,9 +1,7 @@
 import { supabase } from './supabase';
+import { normalizeError as normalizeErrorBase } from './normalizeError.js';
 
-function normalizeError(error, fallback = 'Therapist note request failed') {
-  if (!error) return null;
-  return typeof error === 'string' ? { message: error } : error.message ? error : { message: fallback };
-}
+const normalizeError = (error) => normalizeErrorBase(error, 'Therapist note request failed');
 
 function compactTags(tags) {
   return Array.isArray(tags)
