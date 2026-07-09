@@ -14,26 +14,39 @@ export default function RecentActivityFeed({ limit = 3, title = 'Recent Activity
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  const excludeKey = excludeTypes.join('|');
+
   useEffect(() => {
     let isMounted = true;
     const load = async () => {
-      const excludedTypes = new Set(excludeTypes);
-      const requestLimit = excludedTypes.size > 0 ? Math.min(limit + excludedTypes.size + 5, 100) : limit;
-      const { data, error } = await loadNotifications({ filter: 'all', limit: requestLimit });
-      if (!isMounted) return;
-      if (!error) {
-        const visibleItems = excludedTypes.size > 0
-          ? (data || []).filter((item) => !excludedTypes.has(item.notification_type)).slice(0, limit)
-          : (data || []);
-        setItems(visibleItems);
+      const excludedTypes = new Set(excludeKey ? excludeKey.split('|') : []);
+      let visibleItems = [];
+      if (excludedTypes.size === 0) {
+        const { data, error } = await loadNotifications({ filter: 'all', limit });
+        if (!error) visibleItems = data || [];
+      } else {
+        // The notifications API only supports a `limit` (no offset), so a bounded
+        // fetch could under-fill the feed when many top rows are excluded. Grow the
+        // fetch size until we have enough visible items or the server has no more rows.
+        let requestLimit = Math.min(limit + excludedTypes.size + 5, 100);
+        while (true) {
+          const { data, error } = await loadNotifications({ filter: 'all', limit: requestLimit });
+          if (error) break;
+          const rows = data || [];
+          visibleItems = rows.filter((item) => !excludedTypes.has(item.notification_type)).slice(0, limit);
+          if (visibleItems.length >= limit || rows.length < requestLimit || requestLimit >= 100) break;
+          requestLimit = Math.min(requestLimit * 2, 100);
+        }
       }
+      if (!isMounted) return;
+      setItems(visibleItems);
       setLoading(false);
     };
     load();
     return () => {
       isMounted = false;
     };
-  }, [excludeTypes, limit]);
+  }, [excludeKey, limit]);
 
   return (
     <section className={`soft-card p-6 ${className}`}>

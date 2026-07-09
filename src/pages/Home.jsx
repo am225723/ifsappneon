@@ -171,6 +171,8 @@ const PaletteSelector = ({ paletteKey, setPaletteKey }) => {
   );
 };
 
+const HOME_FEED_EXCLUDED_TYPES = ['report_generated'];
+
 const Home = ({ clientId, client, mode = 'home', selfProfile = null, selfProfileResult = null }) => {
   const navigate = useNavigate();
   const [savedAssessment, setSavedAssessment] = useState(null);
@@ -804,7 +806,7 @@ const Home = ({ clientId, client, mode = 'home', selfProfile = null, selfProfile
       </section>
 
       <section className="mb-6">
-        <RecentActivityFeed limit={3} title="Recent Updates" className="mb-6" excludeTypes={['report_generated']} />
+        <RecentActivityFeed limit={3} title="Recent Updates" className="mb-6" excludeTypes={HOME_FEED_EXCLUDED_TYPES} />
       </section>
     </div>
   );
