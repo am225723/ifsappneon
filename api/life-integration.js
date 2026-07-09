@@ -332,7 +332,11 @@ export default async function handler(req, res) {
 
     return res.status(200).json({ data });
   } catch (error) {
-    const status = error.statusCode || 400;
-    return res.status(status).json({ error: error.message });
+    const status = error.statusCode || 500;
+    if (status >= 500) {
+      console.error('[api/life-integration] request failed:', error);
+    }
+    const message = status >= 500 ? 'Life Integration request failed.' : error.message;
+    return res.status(status).json({ error: message });
   }
 }

@@ -36,8 +36,12 @@ const TABLES = new Set([
 
 const IDENT = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
 
+function badRequest(message) {
+  return Object.assign(new Error(message), { statusCode: 400 });
+}
+
 function quoteIdent(identifier) {
-  if (!IDENT.test(identifier)) throw new Error(`Invalid identifier: ${identifier}`);
+  if (!IDENT.test(identifier)) throw badRequest(`Invalid identifier: ${identifier}`);
   return `"${identifier}"`;
 }
 
@@ -66,7 +70,7 @@ function buildWhere(filters = [], params) {
           params.push(condition.value);
           return `${column} ${condition.op.toUpperCase()} $${params.length}`;
         }
-        throw new Error(`Unsupported OR filter operation: ${condition.op}`);
+        throw badRequest(`Unsupported OR filter operation: ${condition.op}`);
       });
       if (!orClauses.length) return 'true';
       return `(${orClauses.join(' OR ')})`;
@@ -97,9 +101,9 @@ function buildWhere(filters = [], params) {
       if (filter.value === null) return `${column} IS NULL`;
       if (filter.value === true) return `${column} IS TRUE`;
       if (filter.value === false) return `${column} IS FALSE`;
-      throw new Error('Unsupported IS filter value');
+      throw badRequest('Unsupported IS filter value');
     }
-    throw new Error(`Unsupported filter operation: ${filter.op}`);
+    throw badRequest(`Unsupported filter operation: ${filter.op}`);
   });
   return ` WHERE ${clauses.join(' AND ')}`;
 }
@@ -126,9 +130,9 @@ function ensureValues(values) {
 
 function buildInsert(table, values, params) {
   const rows = ensureValues(values);
-  if (!rows.length) throw new Error('Insert requires at least one row');
+  if (!rows.length) throw badRequest('Insert requires at least one row');
   const keys = Object.keys(rows[0]);
-  if (!keys.length) throw new Error('Insert requires values');
+  if (!keys.length) throw badRequest('Insert requires values');
 
   const columns = keys.map(quoteIdent).join(', ');
   const rowSql = rows.map((row) => {
@@ -144,7 +148,7 @@ function buildInsert(table, values, params) {
 
 function buildUpdate(table, values, filters, params) {
   const keys = Object.keys(values || {});
-  if (!keys.length) throw new Error('Update requires values');
+  if (!keys.length) throw badRequest('Update requires values');
   const assignments = keys.map((key) => {
     params.push(values[key] ?? null);
     return `${quoteIdent(key)} = $${params.length}`;
@@ -157,9 +161,9 @@ function buildDelete(table, filters, params) {
 }
 
 function buildUpsert(table, values, onConflict, params) {
-  if (!onConflict) throw new Error('Upsert requires onConflict');
+  if (!onConflict) throw badRequest('Upsert requires onConflict');
   const rows = ensureValues(values);
-  if (!rows.length) throw new Error('Upsert requires at least one row');
+  if (!rows.length) throw badRequest('Upsert requires at least one row');
   const keys = Object.keys(rows[0]);
   const conflictKeys = onConflict.split(',').map((key) => key.trim()).filter(Boolean);
   const updateKeys = keys.filter((key) => !conflictKeys.includes(key));
@@ -992,7 +996,7 @@ export default async function handler(req, res) {
   try {
     const appUser = await getCurrentAppUserFromClerk(req);
     const { table, action, columns = '*', filters = [], order = [], limit, values, onConflict, single, maybeSingle } = req.body || {};
-    if (!TABLES.has(table)) throw new Error(`Unsupported table: ${table}`);
+    if (!TABLES.has(table)) throw badRequest(`Unsupported table: ${table}`);
     await authorizePayload({ appUser, table, action, filters, values });
 
     const params = [];
@@ -1010,7 +1014,7 @@ export default async function handler(req, res) {
     } else if (action === 'upsert') {
       query = buildUpsert(table, values, onConflict, params);
     } else {
-      throw new Error(`Unsupported action: ${action}`);
+      throw badRequest(`Unsupported action: ${action}`);
     }
 
     const rows = await sql.query(query, params);
@@ -1032,7 +1036,11 @@ export default async function handler(req, res) {
 
     return res.status(200).json({ data: normalizeRows(rows, single, maybeSingle) });
   } catch (error) {
-    const status = error.statusCode || 400;
-    return res.status(status).json({ error: { message: error.message } });
+    const status = error.statusCode || 500;
+    if (status >= 500) {
+      console.error('[api/db] request failed:', error);
+    }
+    const message = status >= 500 ? 'Database request failed.' : error.message;
+    return res.status(status).json({ error: { message } });
   }
 }
