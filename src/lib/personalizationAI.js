@@ -1,17 +1,9 @@
-async function getAuthToken() {
-  try {
-    const clerk = window.Clerk;
-    if (clerk?.session?.getToken) return await clerk.session.getToken();
-  } catch (error) {
-    console.warn('Unable to read Clerk token:', error);
-  }
-  return null;
-}
+import { getClerkToken } from './apiAuth.js';
 
 class PersonalizationAIService {
   async generatePersonalizedGuidance(woundProfile) {
     try {
-      const token = await getAuthToken();
+      const token = await getClerkToken();
       const response = await fetch('/api/ai-personalization', {
         method: 'POST',
         headers: {

@@ -1,19 +1,10 @@
 import { supabase } from './supabase';
+import { getClerkToken } from './apiAuth.js';
 
 const API_PATH = '/api/parts-import';
 
-async function getAuthToken() {
-  try {
-    const clerk = window.Clerk;
-    if (clerk?.session?.getToken) return await clerk.session.getToken();
-  } catch (error) {
-    console.warn('Unable to read Clerk token for legacy parts import:', error);
-  }
-  return null;
-}
-
 async function callPartsImportApi(payload) {
-  const token = await getAuthToken();
+  const token = await getClerkToken();
   const response = await fetch(API_PATH, {
     method: 'POST',
     headers: {

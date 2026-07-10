@@ -1,18 +1,9 @@
 import { guidedPracticeMediaByPracticeId } from './guidedPracticeMediaMap';
+import { getClerkToken } from './apiAuth.js';
 const API_PATH = '/api/meditation-media';
 
-async function getAuthToken() {
-  try {
-    const clerk = window.Clerk;
-    if (clerk?.session?.getToken) return await clerk.session.getToken();
-  } catch (error) {
-    if (import.meta.env.DEV) console.warn('[meditationMedia] Clerk token unavailable', { message: error?.message || 'token lookup failed' });
-  }
-  return null;
-}
-
 async function meditationMediaRequest(payload) {
-  const token = await getAuthToken();
+  const token = await getClerkToken();
   const response = await fetch(API_PATH, {
     method: 'POST',
     headers: {

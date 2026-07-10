@@ -1,12 +1,4 @@
-async function getAuthToken() {
-  try {
-    const clerk = window.Clerk;
-    if (clerk?.session?.getToken) return await clerk.session.getToken();
-  } catch (error) {
-    console.warn('Unable to read Clerk token:', error);
-  }
-  return null;
-}
+import { getClerkToken } from './apiAuth.js';
 
 function normalizeApiError(response, payload) {
   const apiError = payload?.error;
@@ -29,7 +21,7 @@ export async function generateSessionPrepSummary({ clientId, rangeDays = 7 } = {
     return { data: null, error: { code: 'missing_client_id', message: 'Select a client before generating an AI prep summary.' } };
   }
 
-  const token = await getAuthToken();
+  const token = await getClerkToken();
   const response = await fetch('/api/ai-session-summary', {
     method: 'POST',
     headers: {

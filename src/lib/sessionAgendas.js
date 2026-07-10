@@ -1,12 +1,10 @@
 import { supabase } from './supabase';
 import { loadAssignedClients, loadAssignedTherapists } from './therapistAssignments';
+import { normalizeError as normalizeErrorBase } from './normalizeError.js';
 
 const AGENDA_COLUMNS = '*';
 
-function normalizeError(error, fallback = 'Session agenda request failed') {
-  if (!error) return null;
-  return typeof error === 'string' ? { message: error } : error.message ? error : { message: fallback };
-}
+const normalizeError = (error) => normalizeErrorBase(error, 'Session agenda request failed');
 
 function toAgendaPayload(input = {}, status = 'submitted') {
   return {

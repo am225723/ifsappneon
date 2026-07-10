@@ -1,11 +1,9 @@
 import { supabase } from './supabase';
+import { normalizeError as normalizeErrorBase } from './normalizeError.js';
 
 const TREATMENT_PLAN_COLUMNS = '*';
 
-function normalizeError(error, fallback = 'Treatment plan request failed') {
-  if (!error) return null;
-  return typeof error === 'string' ? { message: error } : error.message ? error : { message: fallback };
-}
+const normalizeError = (error) => normalizeErrorBase(error, 'Treatment plan request failed');
 
 function compactList(value) {
   if (!value) return [];
