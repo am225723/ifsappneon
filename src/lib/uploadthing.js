@@ -1,16 +1,11 @@
 import { UploadButton, UploadDropzone } from '@uploadthing/react';
+import { getClerkToken } from './apiAuth.js';
 
 export { UploadButton, UploadDropzone };
 
 export async function getUploadThingAuthHeaders() {
-  try {
-    const clerk = window.Clerk;
-    const token = clerk?.session?.getToken ? await clerk.session.getToken() : null;
-    return token ? { Authorization: `Bearer ${token}` } : {};
-  } catch (error) {
-    if (import.meta.env.DEV) console.warn('[uploadthing] Unable to attach Clerk token', { message: error?.message || 'token lookup failed' });
-    return {};
-  }
+  const token = await getClerkToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
 export function getUploadThingFileUrl(file) {

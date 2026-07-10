@@ -1,17 +1,9 @@
+import { getClerkToken } from './apiAuth.js';
+
 const LIVE_SESSION_API_PATH = '/api/live-session';
 
-async function getAuthToken() {
-  try {
-    const clerk = window.Clerk;
-    if (clerk?.session?.getToken) return await clerk.session.getToken();
-  } catch (error) {
-    console.warn('Unable to read Clerk token:', error);
-  }
-  return null;
-}
-
 export async function liveSessionRequest(payload) {
-  const token = await getAuthToken();
+  const token = await getClerkToken();
   const response = await fetch(LIVE_SESSION_API_PATH, {
     method: 'POST',
     headers: {

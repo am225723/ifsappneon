@@ -247,10 +247,14 @@ export default async function handler(req, res) {
 
     return res.status(400).json({ error: { message: 'Unsupported parts import action' } });
   } catch (error) {
-    const status = error.statusCode || 400;
+    const status = error.statusCode || 500;
+    if (status >= 500) {
+      console.error('[api/parts-import] request failed:', error);
+    }
+    const message = status >= 500 ? 'Parts import request failed.' : error.message;
     return res.status(status).json({
-      error: { message: error.message },
-      data: { imported: [], skipped: [], errors: [{ message: error.message }], legacyPreserved: true }
+      error: { message },
+      data: { imported: [], skipped: [], errors: [{ message }], legacyPreserved: true }
     });
   }
 }

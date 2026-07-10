@@ -39,6 +39,16 @@ export async function getClerkBearerToken({ waitMs = TOKEN_WAIT_TIMEOUT_MS } = {
   return null;
 }
 
+export async function getClerkToken() {
+  try {
+    const clerk = typeof window !== 'undefined' ? window.Clerk : null;
+    if (clerk?.session?.getToken) return await clerk.session.getToken();
+  } catch (error) {
+    console.warn('Unable to read Clerk token:', error);
+  }
+  return null;
+}
+
 export function missingAuthResponse(message) {
   if (typeof window !== 'undefined' && window.navigator?.onLine === false) {
     return localAuthError('You appear to be offline. Your changes can be retried once the connection returns.');

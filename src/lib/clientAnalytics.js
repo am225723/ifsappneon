@@ -1,12 +1,4 @@
-async function getAuthToken() {
-  try {
-    const clerk = window.Clerk;
-    if (clerk?.session?.getToken) return await clerk.session.getToken();
-  } catch (error) {
-    console.warn('Unable to read Clerk token for analytics:', error);
-  }
-  return null;
-}
+import { getClerkToken } from './apiAuth.js';
 
 export async function loadClientAnalytics({ clientId, range = '3M' } = {}) {
   if (!clientId) {
@@ -14,7 +6,7 @@ export async function loadClientAnalytics({ clientId, range = '3M' } = {}) {
   }
 
   try {
-    const token = await getAuthToken();
+    const token = await getClerkToken();
     const response = await fetch('/api/analytics/client', {
       method: 'POST',
       headers: {

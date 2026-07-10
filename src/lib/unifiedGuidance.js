@@ -1,11 +1,7 @@
+import { getClerkToken } from './apiAuth.js';
+
 const API_PATH = '/api/ai-unified-guidance';
 const CACHE_TTL_MS = 10 * 60 * 1000;
-
-async function getClerkToken() {
-  const clerk = typeof window !== 'undefined' ? window.Clerk : null;
-  if (clerk?.session?.getToken) return await clerk.session.getToken();
-  return null;
-}
 
 function cacheKey(clientId) {
   return `ifs_next_best_step:${clientId}`;

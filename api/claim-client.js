@@ -44,7 +44,10 @@ export default async function handler(req, res) {
 
     return res.status(200).json({ client: updated[0] });
   } catch (error) {
-    const status = error.statusCode || 401;
-    return res.status(status).json({ error: status === 500 ? 'Server environment is not configured.' : error.message });
+    const status = error.statusCode || 500;
+    if (status >= 500) {
+      console.error('[api/claim-client] request failed:', error);
+    }
+    return res.status(status).json({ error: status >= 500 ? 'Unable to link your account right now.' : error.message });
   }
 }

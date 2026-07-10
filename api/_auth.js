@@ -45,10 +45,19 @@ export async function verifyClerkUser(req) {
   const token = auth.startsWith('Bearer ') ? auth.slice(7) : null;
   if (!token) throw Object.assign(new Error('Missing Clerk bearer token'), { statusCode: 401 });
 
-  const payload = await verifyToken(token, {
-    secretKey: requiredServerEnv('CLERK_SECRET_KEY'),
-    authorizedParties: getAuthorizedParties()
-  });
+  const secretKey = requiredServerEnv('CLERK_SECRET_KEY');
+  let payload;
+  try {
+    payload = await verifyToken(token, {
+      secretKey,
+      authorizedParties: getAuthorizedParties()
+    });
+  } catch (error) {
+    throw Object.assign(new Error('Invalid or expired Clerk session token'), {
+      statusCode: 401,
+      cause: error
+    });
+  }
   return payload.sub;
 }
 
