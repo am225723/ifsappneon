@@ -1055,13 +1055,10 @@ const TherapistDashboard = () => {
         ]);
         if (notesData && notesData.length > 0) {
           const formattedNotes = notesData.map(n => {
-            const noteClient = clients.length > 0
-              ? clients.find(c => c.id === n.client_id)
-              : null;
             return {
               id: n.id,
               clientId: n.client_id,
-              clientName: noteClient?.name || n.client_id?.substring(0, 8) || 'Unknown',
+              clientName: n.client_id?.substring(0, 8) || 'Unknown',
               date: n.session_date || n.created_at,
               sessionType: n.note_type || 'Individual',
               notes: n.content,
@@ -1073,8 +1070,10 @@ const TherapistDashboard = () => {
         }
         if (feedbackData && feedbackData.length > 0) {
           const feedbackObj = {};
+          // Rows arrive newest-first; keep the first seen per client so the most
+          // recent feedback wins instead of being overwritten by older rows.
           feedbackData.forEach(fb => {
-            if (fb.client_id) feedbackObj[fb.client_id] = fb.feedback;
+            if (fb.client_id && !(fb.client_id in feedbackObj)) feedbackObj[fb.client_id] = fb.feedback;
           });
           setTherapistFeedback(feedbackObj);
         }
@@ -3761,7 +3760,7 @@ const TherapistDashboard = () => {
                 sessionNotes.map(note => (
                   <div key={note.id} className={`${cardBg} rounded-xl border ${cardBorder} p-4`}>
                     <div className="flex items-center justify-between mb-2">
-                      <span className={`font-medium ${textPrimary}`}>{note.clientName}</span>
+                      <span className={`font-medium ${textPrimary}`}>{latestClientById[note.clientId]?.name || note.clientName}</span>
                       <div className="flex items-center gap-2">
                         <span className="text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">{note.sessionType}</span>
                         <span className={`text-xs ${textMuted}`}>{formatDate(note.date)}</span>
