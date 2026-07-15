@@ -76,6 +76,10 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
   // detail merges are ignored without cancelling still-valid sibling requests.
   const genRef = useRef(0);
   useEffect(() => () => { genRef.current += 1; }, []);
+  // Same capture-and-compare pattern as genRef, scoped to document generation:
+  // bumped on every onGenerateDoc call so a slower request for a since-changed
+  // client/type/date-range can't overwrite a newer one's preview.
+  const docGenRef = useRef(0);
   // setState-compatible merge helper (accepts object or updater fn)
   const set = (patch) => setS((prev) => ({ ...prev, ...(typeof patch === 'function' ? patch(prev) : patch) }));
 
@@ -322,10 +326,13 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
     const { docForm, docSources } = S;
     if (!docForm.clientId) { set({ docError: 'Select a client first.' }); return; }
     set({ docGenerating: true, docError: '', generatedDoc: null });
+    docGenRef.current += 1;
+    const gen = docGenRef.current;
     generateWorkspaceReport({
       clientId: docForm.clientId, reportType: docForm.type,
       dateRangeStart: docForm.dateRangeStart, dateRangeEnd: docForm.dateRangeEnd, sections: docSources,
     }).then(({ data, error }) => {
+      if (docGenRef.current !== gen) return;
       if (error) { set({ docGenerating: false, docError: error.message || 'Unable to generate document.' }); return; }
       set({ docGenerating: false, generatedDoc: data });
       refreshClientReports(docForm.clientId);
