@@ -1,11 +1,15 @@
-import { useEffect, useState } from 'react';
-import { buildView, WorkspaceShell, EmptyCaseload } from './AdvisorWorkspaceView.jsx';
+import { useEffect, useRef, useState } from 'react';
+import { buildView, WorkspaceShell, EmptyCaseload, WorkspaceStatus } from './AdvisorWorkspaceView.jsx';
 import {
   WOUND_META, LIGHT, DARK, CLIENTS, TEMPLATE_OPTIONS, PRACTICE_TYPE_META, PLAN_PHASES,
   DOC_TYPES, NAV_CONFIG,
 } from './advisorWorkspaceData.js';
+import {
+  loadWorkspaceCaseload, loadWorkspaceClientDetail, sendWorkspaceMessage, persistTherapistNote,
+} from '../lib/advisorWorkspaceLoader.js';
 
 export const INITIAL_STATE = {
+  baseClients: CLIENTS,
   activeTab: 'overview', isDark: false, expandedGroups: {}, viewMode: 'command',
   selectedClientId: 'c1', activeClientTab: 'overview',
   search: '', filterWound: 'all', reviewedIds: {}, sessionPrepOpenId: null,
@@ -48,10 +52,76 @@ export const INITIAL_STATE = {
 
 const FONT_LINK_ID = 'aw-google-fonts';
 
-function AdvisorWorkspace({ isAdmin = false }) {
+function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
+  const therapistId = currentClient?.id || null;
+  // Demo mode (no therapist context) keeps the seeded sample caseload; with a
+  // real therapist we load their actual assigned clients.
+  const isDemo = !therapistId;
   const [S, setS] = useState(INITIAL_STATE);
+  const [loadPhase, setLoadPhase] = useState(isDemo ? 'ready' : 'loading');
+  const detailRequested = useRef(new Set());
+  // Generation guard: bumped on therapist change / unmount so stale in-flight
+  // detail merges are ignored without cancelling still-valid sibling requests.
+  const genRef = useRef(0);
+  useEffect(() => () => { genRef.current += 1; }, []);
   // setState-compatible merge helper (accepts object or updater fn)
   const set = (patch) => setS((prev) => ({ ...prev, ...(typeof patch === 'function' ? patch(prev) : patch) }));
+
+  // Load the therapist's real caseload, resetting demo-only collections.
+  useEffect(() => {
+    if (!therapistId) { setLoadPhase('ready'); return; }
+    genRef.current += 1;
+    let cancelled = false;
+    setLoadPhase('loading');
+    detailRequested.current = new Set();
+    (async () => {
+      try {
+        const clients = await loadWorkspaceCaseload(therapistId);
+        if (cancelled) return;
+        const firstId = clients[0]?.id || '';
+        setS((prev) => ({
+          ...prev,
+          baseClients: clients,
+          extraClients: [], deletedIds: {}, savedNotes: [],
+          tasks: [], notifications: [], liveSessions: [], coTherapyThread: [],
+          selectedClientId: firstId, activeThreadId: firstId, planClientId: firstId,
+          newTaskClientId: firstId,
+          noteDraft: { ...prev.noteDraft, clientId: firstId },
+          practiceForm: { ...prev.practiceForm, clientId: firstId },
+          docForm: { ...prev.docForm, clientId: firstId },
+        }));
+        setLoadPhase('ready');
+      } catch (error) {
+        console.error('Failed to load advisor caseload:', error);
+        if (!cancelled) setLoadPhase('error');
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [therapistId]);
+
+  // Enrich each client with its real detail records (analytics, notes, plans,
+  // messages), merging incrementally so the overview and profile fill in as
+  // each client resolves. The selected client is prioritised first.
+  useEffect(() => {
+    if (isDemo || loadPhase !== 'ready') return;
+    const pending = (S.baseClients || []).filter((c) => !c._detailLoaded && !detailRequested.current.has(c.id));
+    if (pending.length === 0) return;
+    const ordered = [...pending].sort((a, b) => (a.id === S.selectedClientId ? -1 : 0) - (b.id === S.selectedClientId ? -1 : 0));
+    const gen = genRef.current;
+    ordered.forEach((base) => {
+      detailRequested.current.add(base.id);
+      loadWorkspaceClientDetail(base, therapistId)
+        .then(({ client, noteEntries }) => {
+          if (genRef.current !== gen) return;
+          setS((prev) => ({
+            ...prev,
+            baseClients: (prev.baseClients || []).map((c) => (c.id === client.id ? client : c)),
+            savedNotes: [...noteEntries, ...prev.savedNotes.filter((n) => n.clientId !== client.id)],
+          }));
+        })
+        .catch((error) => console.error('Failed to load client detail:', error));
+    });
+  }, [isDemo, loadPhase, S.selectedClientId, S.baseClients, therapistId]);
 
   useEffect(() => {
     if (!document.getElementById(FONT_LINK_ID)) {
@@ -65,7 +135,7 @@ function AdvisorWorkspace({ isAdmin = false }) {
 
   const theme = S.isDark ? DARK : LIGHT;
 
-  const allClients = () => CLIENTS.concat(S.extraClients || []).filter((c) => !S.deletedIds[c.id]);
+  const allClients = () => (S.baseClients || []).concat(S.extraClients || []).filter((c) => !S.deletedIds[c.id]);
 
   // ---- handlers -----------------------------------------------------------
   const setTab = (id) => set({ activeTab: id });
@@ -87,6 +157,11 @@ function AdvisorWorkspace({ isAdmin = false }) {
     const tmpl = TEMPLATE_OPTIONS.find((t) => t.id === noteDraft.template);
     const entry = { clientId: noteDraft.clientId, clientName: client ? client.name : 'Client', templateLabel: tmpl ? tmpl.label : 'Note', text: noteDraft.text, date: 'Just now', status };
     set((s) => ({ savedNotes: [entry, ...s.savedNotes], noteDraft: { ...s.noteDraft, text: '' } }));
+    // Persist to the client's real note record when connected to a therapist.
+    if (!isDemo && noteDraft.clientId) {
+      persistTherapistNote({ therapistId, clientId: noteDraft.clientId, content: noteDraft.text, status: status === 'Signed & Locked' ? 'final' : 'draft' })
+        .catch((error) => console.error('Failed to persist note:', error));
+    }
   };
   const onSaveNote = () => saveNoteInternal('Draft');
   const onSignNote = () => saveNoteInternal('Signed & Locked');
@@ -150,6 +225,10 @@ function AdvisorWorkspace({ isAdmin = false }) {
       const extra = s.clientMessages[clientId] || [];
       return { clientMessages: { ...s.clientMessages, [clientId]: [...extra, { from: 'advisor', text, date: 'Just now' }] }, clientMessageDraft: '' };
     });
+    // Persist to the real message thread when connected to a therapist session.
+    if (!isDemo && clientId) {
+      sendWorkspaceMessage(therapistId, clientId, text).catch((error) => console.error('Failed to send message:', error));
+    }
   };
   const setActiveThread = (id) => set((s) => ({ activeThreadId: id, activeTab: 'messages', readThreads: { ...s.readThreads, [id]: true } }));
   const addTaskFromMessage = () => {
@@ -260,8 +339,15 @@ function AdvisorWorkspace({ isAdmin = false }) {
     };
   };
 
+  if (!isDemo && loadPhase === 'loading') {
+    return <WorkspaceStatus theme={theme} message="Loading your caseload…" spinner />;
+  }
+  if (!isDemo && loadPhase === 'error') {
+    return <WorkspaceStatus theme={theme} message="We couldn’t load your caseload. Please refresh and try again." />;
+  }
+
   if (allClients().length === 0) {
-    return <EmptyCaseload theme={theme} onReset={() => set(INITIAL_STATE)} />;
+    return <EmptyCaseload theme={theme} onReset={isDemo ? () => set(INITIAL_STATE) : undefined} />;
   }
 
   const view = buildView({
