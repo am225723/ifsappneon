@@ -34,6 +34,12 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
   const modeBtnStyle = (active) => ({ flex: 1, padding: '8px 6px', borderRadius: '9px', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: '11.5px', fontWeight: 700, background: active ? theme.surface : 'transparent', color: active ? theme.text : theme.muted, boxShadow: active ? theme.shadow : 'none' });
   const modeToggle = { onCommand: () => H.setViewMode('command'), onJourney: () => H.setViewMode('journey'), commandStyle: modeBtnStyle(viewMode === 'command'), journeyStyle: modeBtnStyle(viewMode === 'journey') };
   const ALL_CLIENTS = allClients();
+  // Caseload workflows (stats, review, safety, tasks, MBC, curriculum, etc. —
+  // including their nav badges) only cover clients actually assigned to this
+  // Advisor. Unassigned clients (e.g. fresh signups) still show up in the raw
+  // client picker with a Claim action, but shouldn't count toward or clutter
+  // a caseload that isn't theirs yet.
+  const assignedClients = ALL_CLIENTS.filter((c) => !c.unassigned);
 
   function getSafety(client) {
     const override = safetyOverrides[client.id] || {};
@@ -43,11 +49,11 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
   }
   function reviewCount() {
     let n = 0;
-    ALL_CLIENTS.forEach((c) => { if (c.risk && !reviewedIds['risk-' + c.id]) n++; if (c.pendingReview && !reviewedIds['practice-' + c.id]) n++; });
+    assignedClients.forEach((c) => { if (c.risk && !reviewedIds['risk-' + c.id]) n++; if (c.pendingReview && !reviewedIds['practice-' + c.id]) n++; });
     return n;
   }
   const badgeCount = reviewCount();
-  const safetyBadge = ALL_CLIENTS.filter((c) => (c.safety.riskLevel === 'high' || c.safety.riskLevel === 'urgent') && !getSafety(c).acknowledged).length;
+  const safetyBadge = assignedClients.filter((c) => (c.safety.riskLevel === 'high' || c.safety.riskLevel === 'urgent') && !getSafety(c).acknowledged).length;
   const readThreads = S.readThreads || {};
   const hasUnreadFor = (c) => (c.messages || []).some((m) => m.from === 'client') && !readThreads[c.id];
   const unreadMessages = ALL_CLIENTS.filter(hasUnreadFor).length;
@@ -87,15 +93,17 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
   const themeKnobStyle = { width: '18px', height: '18px', borderRadius: '50%', background: '#fff' };
 
   const enrichedClients = ALL_CLIENTS.map((c) => ({ ...c, lastActiveText: daysAgoText(c.lastActiveDays) }));
-  const needsAttentionRaw = enrichedClients.filter((c) => c.risk && !reviewedIds['risk-' + c.id]).map((c) => ({
+  const needsAttentionRaw = assignedClients.filter((c) => c.risk && !reviewedIds['risk-' + c.id]).map((c) => ({
     id: c.id, name: c.name, detail: c.risk.detail,
     sevDot: { width: '9px', height: '9px', borderRadius: '50%', background: c.risk.level === 'high' ? 'var(--risk-high-text)' : 'var(--risk-med-text)', flexShrink: 0 },
     sevChip: severityStyle(theme, c.risk.level), sevLabel: c.risk.level === 'high' ? 'High' : 'Medium', onClick: () => H.selectClient(c.id),
   }));
+  const unassignedCount = enrichedClients.filter((c) => c.unassigned).length;
   const stats = {
-    caseload: enrichedClients.filter((c) => c.status === 'active').length, needsAttention: needsAttentionRaw.length,
-    upcomingSessions: enrichedClients.filter((c) => c.session.status === 'submitted').length,
-    pendingReviews: enrichedClients.filter((c) => c.pendingReview && !reviewedIds['practice-' + c.id]).length,
+    caseload: assignedClients.filter((c) => c.status === 'active').length, needsAttention: needsAttentionRaw.length,
+    upcomingSessions: assignedClients.filter((c) => c.session.status === 'submitted').length,
+    pendingReviews: assignedClients.filter((c) => c.pendingReview && !reviewedIds['practice-' + c.id]).length,
+    unassigned: unassignedCount,
   };
   const quickActions = [
     { label: '+ Add client', onClick: () => H.setTab('clients-caseload') },
@@ -106,11 +114,11 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
     { label: 'Review safety alerts', onClick: () => H.setTab('safety') },
   ].map((q) => ({ ...q, style: secondaryBtnStyle }));
 
-  const todaysSessions = enrichedClients.filter((c) => c.session.status !== 'none').map((c) => ({
+  const todaysSessions = assignedClients.filter((c) => c.session.status !== 'none').map((c) => ({
     id: c.id, name: c.name, time: c.session.when, statusLabel: 'Check-in ready', statusStyle: severityStyle(theme, 'low'),
     onClick: () => H.openPrepFor(c.id),
   }));
-  const caseloadSnapshot = enrichedClients.map((c) => ({
+  const caseloadSnapshot = assignedClients.map((c) => ({
     id: c.id, initial: c.initial, name: c.name, woundChip: woundChip(c.primaryWound, isDark, true), woundLabel: WOUND_META[c.primaryWound].label,
     barStyle: { width: c.progressPct + '%', height: '100%', borderRadius: '4px', background: `linear-gradient(90deg, ${theme.accent2}, ${theme.emerald2})` },
     progressLabel: c.progressPct + '% through curriculum', onClick: () => H.selectClient(c.id),
@@ -129,8 +137,10 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
       return {
         id: c.id, name: c.name, initial: c.initial, lastActiveText: c.lastActiveText,
         woundChip: woundChip(c.primaryWound, isDark, true), woundLabel: WOUND_META[c.primaryWound].label, hasRisk: !!c.risk,
-        rowStyle: { display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', borderRadius: '16px', cursor: 'pointer', background: selected ? 'var(--surface-2)' : 'transparent', border: '1px solid ' + (selected ? theme.border : 'transparent') },
+        unassigned: !!c.unassigned, unassignedChip: severityStyle(theme, 'medium'),
+        rowStyle: { display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', borderRadius: '16px', cursor: 'pointer', background: selected ? 'var(--surface-2)' : 'transparent', border: '1px solid ' + (selected ? theme.border : (c.unassigned ? theme.riskMedBorder : 'transparent')) },
         onClick: () => H.selectClient(c.id),
+        onClaim: () => H.onClaimClient(c.id),
       };
     });
 
@@ -143,12 +153,18 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
 
   let selectedClient = null;
   if (rawSelected) {
+    // Write-oriented actions (notes, session prep, treatment plans, practice
+    // generation, safety acknowledgment, deletion) are only available once a
+    // client has been claimed — an Advisor shouldn't be able to write
+    // clinical content for a client that isn't (yet) theirs.
+    const canWrite = !rawSelected.unassigned;
     const rawSafety = getSafety(rawSelected);
     const rawExtraMsgs = clientMessages[rawSelected.id] || [];
     const allMsgs = [...rawSelected.messages, ...rawExtraMsgs];
     selectedClient = {
       id: rawSelected.id, name: rawSelected.name, initial: rawSelected.initial, email: rawSelected.email, phone: rawSelected.phone,
       statusLabel: rawSelected.status === 'active' ? 'Active' : 'Inactive', statusChip: severityStyle(theme, rawSelected.status === 'active' ? 'low' : 'medium'),
+      unassigned: !!rawSelected.unassigned, onClaim: () => H.onClaimClient(rawSelected.id),
       woundChip: woundChip(rawSelected.primaryWound, isDark, false), woundLabel: WOUND_META[rawSelected.primaryWound].label,
       secondaryChip: woundChip(rawSelected.secondaryWound, isDark, true), secondaryLabel: WOUND_META[rawSelected.secondaryWound].label,
       lastActiveText: rawSelected.lastActiveText.toLowerCase(), streak: rawSelected.streak, level: rawSelected.level, modulesLabel: rawSelected.modulesCompleted + '/12',
@@ -186,23 +202,27 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
         ackStatusText: rawSafety.acknowledged ? 'Acknowledged by Dr. Rivera' : 'Awaiting Advisor acknowledgment',
         ackBtnLabel: rawSafety.acknowledged ? 'Acknowledged' : 'Acknowledge review',
         ackBtnStyle: rawSafety.acknowledged ? secondaryBtnStyle : primaryBtnStyle,
-        onAcknowledge: () => H.onAcknowledgeSafety(rawSelected.id), onCreatePlan: () => H.onCreateSafetyPlan(rawSelected.id),
+        onAcknowledge: canWrite ? () => H.onAcknowledgeSafety(rawSelected.id) : undefined,
+        onCreatePlan: canWrite ? () => H.onCreateSafetyPlan(rawSelected.id) : undefined,
       },
       messages: allMsgs.map((m, idx) => ({ idx, authorLabel: m.from === 'client' ? rawSelected.name : 'You', text: m.text, date: m.date, readTick: m.from === 'advisor' ? '✓✓' : '', onDelete: () => H.onDeleteMessage(rawSelected.id, idx), bubbleStyle: { alignSelf: m.from === 'advisor' ? 'flex-end' : 'flex-start', maxWidth: '85%', padding: '10px 14px', borderRadius: '14px', background: m.from === 'advisor' ? theme.accent2 : theme.surface2, color: m.from === 'advisor' ? '#fff' : theme.text } })).filter((m) => !((deletedMessageIdx[rawSelected.id] || {})[m.idx])),
-      onDraftNote: () => H.draftNoteFor(rawSelected.id), onOpenPrep: () => H.openPrepFor(rawSelected.id),
-      onOpenPlan: () => H.openPlanFor(rawSelected.id), onOpenPractice: () => H.openPracticeFor(rawSelected.id),
-      onStartDelete: () => H.onStartDelete(rawSelected.id),
+      canWrite,
+      onDraftNote: canWrite ? () => H.draftNoteFor(rawSelected.id) : undefined,
+      onOpenPrep: canWrite ? () => H.openPrepFor(rawSelected.id) : undefined,
+      onOpenPlan: canWrite ? () => H.openPlanFor(rawSelected.id) : undefined,
+      onOpenPractice: canWrite ? () => H.openPracticeFor(rawSelected.id) : undefined,
+      onStartDelete: canWrite ? () => H.onStartDelete(rawSelected.id) : undefined,
     };
   }
 
   const reviewItems = [];
-  enrichedClients.forEach((c) => {
+  assignedClients.forEach((c) => {
     if (c.risk && !reviewedIds['risk-' + c.id]) reviewItems.push({ id: 'risk-' + c.id, sevChip: severityStyle(theme, c.risk.level), sevLabel: c.risk.level === 'high' ? 'High' : 'Medium', title: c.risk.type === 'concerning_language' ? 'Concerning language detected' : 'Extended inactivity', detail: c.risk.detail, clientName: c.name, when: daysAgoText(c.risk.daysAgo), actionLabel: 'Mark reviewed', onResolve: () => H.markReviewed('risk-' + c.id), onOpenClient: () => H.selectClient(c.id) });
     if (c.pendingReview && !reviewedIds['practice-' + c.id]) reviewItems.push({ id: 'practice-' + c.id, sevChip: severityStyle(theme, 'low'), sevLabel: 'Practice', title: c.pendingReview.label + ' submitted', detail: 'Awaiting your review and feedback.', clientName: c.name, when: daysAgoText(c.pendingReview.daysAgo), actionLabel: 'Mark reviewed', onResolve: () => H.markReviewed('practice-' + c.id), onOpenClient: () => H.selectClient(c.id) });
   });
   const reviewQueueEmpty = reviewItems.length === 0;
 
-  const safetyRows = enrichedClients.map((c) => {
+  const safetyRows = assignedClients.map((c) => {
     const s = getSafety(c);
     return {
       id: c.id, initial: c.initial, name: c.name, riskFactorsSummary: s.riskFactors.length ? s.riskFactors.slice(0, 2).join('; ') : 'No active risk factors',
@@ -213,18 +233,22 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
     };
   }).sort((a, b) => (a.levelLabel === 'High' ? -1 : 1) - (b.levelLabel === 'High' ? -1 : 1));
 
-  const prepList = enrichedClients.filter((c) => c.session.status !== 'none').map((c) => ({
+  const prepList = assignedClients.filter((c) => c.session.status !== 'none').map((c) => ({
     id: c.id, initial: c.initial, name: c.name, time: c.session.when, statusStyle: severityStyle(theme, 'low'), statusLabel: 'Submitted',
     isExpanded: sessionPrepOpenId === c.id, qaAnswers: c.qaAnswers, onToggle: () => H.toggleSessionPrep(c.id), onDraftNote: () => H.draftNoteFor(c.id),
   }));
 
-  const coTherapyClient = enrichedClients.find((c) => c.id === 'c2') || enrichedClients[0];
-  const coTherapy = {
+  // Never fall back to an unassigned client for co-therapy — an Advisor
+  // shouldn't be able to open a shared-case thread for a client that isn't
+  // (yet) theirs.
+  const coTherapyClient = assignedClients.find((c) => c.id === 'c2') || assignedClients[0] || null;
+  const hasCoTherapyClient = !!coTherapyClient;
+  const coTherapy = coTherapyClient ? {
     collabName: 'Dr. Patel · Clinical Supervisor', collabInitial: 'DP', clientName: coTherapyClient.name, thread: coTherapyThread,
     onToggleShare: H.toggleCoTherapyShare,
     shareTrackStyle: { width: '40px', height: '22px', borderRadius: '999px', border: 'none', cursor: 'pointer', background: coTherapyShare ? theme.emerald2 : theme.border, position: 'relative', padding: '3px', display: 'flex', justifyContent: coTherapyShare ? 'flex-end' : 'flex-start' },
     shareKnobStyle: { width: '16px', height: '16px', borderRadius: '50%', background: '#fff' }, onRequestConsult: () => H.onSendCoTherapyMessage(),
-  };
+  } : null;
 
   const threadList = enrichedClients.filter((c) => c.messages.length > 0 || (clientMessages[c.id] || []).length > 0).map((c) => {
     const all = [...c.messages, ...(clientMessages[c.id] || [])];
@@ -256,55 +280,59 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
   });
   const noTasks = taskRows.length === 0;
 
-  const clientOptions = enrichedClients.map((c) => ({ id: c.id, name: c.name }));
+  const clientOptions = assignedClients.map((c) => ({ id: c.id, name: c.name }));
   const currentTemplate = TEMPLATE_OPTIONS.find((t) => t.id === noteDraft.template) || TEMPLATE_OPTIONS[0];
-  const allGoals = enrichedClients.flatMap((c) => c.goals.map((g) => ({ clientName: c.name, title: g.title, reviewLabel: 'Review in ' + g.reviewInDays + 'd', style: { fontSize: '11px', fontWeight: 700, color: g.reviewInDays <= 7 ? theme.riskMedText : theme.muted, whiteSpace: 'nowrap' } })));
-  const planClient = enrichedClients.find((c) => c.id === planClientId) || enrichedClients[0];
-  const treatmentPlan = buildTreatmentPlan(planClient);
+  const allGoals = assignedClients.flatMap((c) => c.goals.map((g) => ({ clientName: c.name, title: g.title, reviewLabel: 'Review in ' + g.reviewInDays + 'd', style: { fontSize: '11px', fontWeight: 700, color: g.reviewInDays <= 7 ? theme.riskMedText : theme.muted, whiteSpace: 'nowrap' } })));
+  // Never fall back to an unassigned client for treatment-plan creation.
+  const planClient = assignedClients.find((c) => c.id === planClientId) || assignedClients[0] || null;
+  const hasPlanClient = !!planClient;
+  const treatmentPlan = planClient ? buildTreatmentPlan(planClient) : null;
 
   const woundOptions = Object.keys(WOUND_META).map((k) => ({ id: k, label: WOUND_META[k].label }));
   const practiceTypeOptions = Object.keys(PRACTICE_TYPE_META).map((k) => ({ id: k, label: PRACTICE_TYPE_META[k].label }));
 
   const lessons = LESSON_TITLES.map((title, i) => {
     const num = i + 1;
-    const completedCount = enrichedClients.filter((c) => c.modulesCompleted >= num).length;
-    const total = Math.max(1, enrichedClients.length);
+    const completedCount = assignedClients.filter((c) => c.modulesCompleted >= num).length;
+    const total = Math.max(1, assignedClients.length);
     const assigned = !!assignedLessons[i];
-    return { number: num, title, completionLabel: completedCount + '/' + enrichedClients.length + ' completed', barStyle: { width: Math.round((completedCount / total) * 100) + '%', height: '100%', borderRadius: '4px', background: theme.emerald2 }, assignLabel: assigned ? 'Assigned to caseload' : 'Assign to caseload', onToggleAssign: () => H.toggleAssignLesson(i), assignBtnStyle: { marginTop: '4px', background: assigned ? theme.emerald2 : 'var(--surface-2)', color: assigned ? '#fff' : theme.text2, border: '1px solid ' + (assigned ? theme.emerald2 : theme.border), padding: '8px 14px', borderRadius: '10px', fontWeight: 600, fontSize: '12.5px', cursor: 'pointer', fontFamily: 'inherit' } };
+    return { number: num, title, completionLabel: completedCount + '/' + assignedClients.length + ' completed', barStyle: { width: Math.round((completedCount / total) * 100) + '%', height: '100%', borderRadius: '4px', background: theme.emerald2 }, assignLabel: assigned ? 'Assigned to caseload' : 'Assign to caseload', onToggleAssign: () => H.toggleAssignLesson(i), assignBtnStyle: { marginTop: '4px', background: assigned ? theme.emerald2 : 'var(--surface-2)', color: assigned ? '#fff' : theme.text2, border: '1px solid ' + (assigned ? theme.emerald2 : theme.border), padding: '8px 14px', borderRadius: '10px', fontWeight: 600, fontSize: '12.5px', cursor: 'pointer', fontFamily: 'inherit' } };
   });
 
-  const mbcCaseloadRows = enrichedClients.map((c) => {
+  const mbcCaseloadRows = assignedClients.map((c) => {
     const primary = c.mbc[0];
     const change = primary ? primary.current - primary.previous : 0;
     return { id: c.id, name: c.name, onClick: () => { H.selectClient(c.id); H.setClientTab('mbc'); }, summary: primary ? `${primary.name}: ${primary.current} (${primary.severity})` : 'No measures on file', trendLabel: change > 0 ? 'Worsening' : (change < 0 ? 'Improving' : 'Stable'), trendChip: severityStyle(theme, change > 0 ? 'high' : (change < 0 ? 'low' : 'medium')) };
   });
 
-  const partsClientFilters = [{ id: 'all', label: 'All clients' }].concat(enrichedClients.map((c) => ({ id: c.id, label: c.name }))).map((f) => ({ id: f.id, label: f.label, onClick: () => H.setPartsClientFilter(f.id), style: { padding: '6px 12px', borderRadius: '999px', border: '1px solid ' + (partsClientFilter === f.id ? theme.accent2 : theme.border), background: partsClientFilter === f.id ? theme.accent2 : 'transparent', color: partsClientFilter === f.id ? '#fff' : theme.text2, fontSize: '12px', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' } }));
-  const partsAllRows = enrichedClients.filter((c) => partsClientFilter === 'all' || c.id === partsClientFilter).flatMap((c) => c.parts.map((p) => ({ ...p, clientName: c.name, catChip: partChip(p.category, isDark), catLabel: PART_CAT_META[p.category].label, barStyle: { width: p.activation + '%', height: '100%', borderRadius: '4px', background: PART_CAT_META[p.category].color } })));
+  const partsClientFilters = [{ id: 'all', label: 'All clients' }].concat(assignedClients.map((c) => ({ id: c.id, label: c.name }))).map((f) => ({ id: f.id, label: f.label, onClick: () => H.setPartsClientFilter(f.id), style: { padding: '6px 12px', borderRadius: '999px', border: '1px solid ' + (partsClientFilter === f.id ? theme.accent2 : theme.border), background: partsClientFilter === f.id ? theme.accent2 : 'transparent', color: partsClientFilter === f.id ? '#fff' : theme.text2, fontSize: '12px', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' } }));
+  const partsAllRows = assignedClients.filter((c) => partsClientFilter === 'all' || c.id === partsClientFilter).flatMap((c) => c.parts.map((p) => ({ ...p, clientName: c.name, catChip: partChip(p.category, isDark), catLabel: PART_CAT_META[p.category].label, barStyle: { width: p.activation + '%', height: '100%', borderRadius: '4px', background: PART_CAT_META[p.category].color } })));
 
   const docTypeOptions = DOC_TYPES;
   const docSourceRows = DOC_SOURCES.map((s) => ({ id: s.id, label: s.label, checked: docSources[s.id], onToggle: () => H.toggleDocSource(s.id) }));
 
-  const total = Math.max(1, enrichedClients.length);
-  const woundDistribution = Object.keys(WOUND_META).map((k) => { const count = enrichedClients.filter((c) => c.primaryWound === k).length; return { label: WOUND_META[k].label, count, barStyle: { width: Math.round((count / total) * 100) + '%', height: '100%', borderRadius: '5px', background: theme.accent2 } }; });
-  const maxStreak = Math.max(1, ...enrichedClients.map((c) => c.streak));
-  const engagementList = [...enrichedClients].sort((a, b) => b.streak - a.streak).map((c) => ({ name: c.name, streakLabel: c.streak + ' days', barStyle: { width: Math.round((c.streak / maxStreak) * 100) + '%', height: '100%', borderRadius: '5px', background: theme.emerald2 } }));
+  const total = Math.max(1, assignedClients.length);
+  const woundDistribution = Object.keys(WOUND_META).map((k) => { const count = assignedClients.filter((c) => c.primaryWound === k).length; return { label: WOUND_META[k].label, count, barStyle: { width: Math.round((count / total) * 100) + '%', height: '100%', borderRadius: '5px', background: theme.accent2 } }; });
+  const maxStreak = Math.max(1, ...assignedClients.map((c) => c.streak));
+  const engagementList = [...assignedClients].sort((a, b) => b.streak - a.streak).map((c) => ({ name: c.name, streakLabel: c.streak + ' days', barStyle: { width: Math.round((c.streak / maxStreak) * 100) + '%', height: '100%', borderRadius: '5px', background: theme.emerald2 } }));
   const moodPattern = [6, 6.5, 5, 6, 7, 7.5];
   const moodTrend = moodPattern.map((v, i) => ({ label: 'Wk ' + (i + 1), barStyle: { width: '60%', height: Math.round((v / 10) * 100) + '%', borderRadius: '6px 6px 0 0', background: `linear-gradient(180deg, ${theme.accent2}, ${theme.emerald2})` } }));
-  const mostImproved = [...enrichedClients].sort((a, b) => b.progressPct - a.progressPct)[0];
-  const leastEngaged = [...enrichedClients].sort((a, b) => b.lastActiveDays - a.lastActiveDays)[0];
+  const mostImproved = [...assignedClients].sort((a, b) => b.progressPct - a.progressPct)[0];
+  const leastEngaged = [...assignedClients].sort((a, b) => b.lastActiveDays - a.lastActiveDays)[0];
   const insightBulletsRaw = [
     { text: `${needsAttentionRaw.length} client${needsAttentionRaw.length === 1 ? '' : 's'} currently flagged for risk — review before their next session.`, level: needsAttentionRaw.length > 0 ? 'high' : 'low' },
-    { text: `${mostImproved.name} is furthest along at ${mostImproved.progressPct}% through the curriculum.`, level: 'low' },
-    { text: `${leastEngaged.name} has been inactive for ${leastEngaged.lastActiveDays} days — consider a check-in nudge.`, level: leastEngaged.lastActiveDays >= 7 ? 'medium' : 'low' },
-    { text: `Caseload average Self-Energy trended up from ${moodPattern[0]}/10 to ${moodPattern[moodPattern.length - 1]}/10 over 6 weeks.`, level: 'low' },
   ];
+  if (mostImproved) insightBulletsRaw.push({ text: `${mostImproved.name} is furthest along at ${mostImproved.progressPct}% through the curriculum.`, level: 'low' });
+  if (leastEngaged) insightBulletsRaw.push({ text: `${leastEngaged.name} has been inactive for ${leastEngaged.lastActiveDays} days — consider a check-in nudge.`, level: leastEngaged.lastActiveDays >= 7 ? 'medium' : 'low' });
+  insightBulletsRaw.push({ text: `Caseload average Self-Energy trended up from ${moodPattern[0]}/10 to ${moodPattern[moodPattern.length - 1]}/10 over 6 weeks.`, level: 'low' });
+  if (unassignedCount > 0) insightBulletsRaw.unshift({ text: `${unassignedCount} client${unassignedCount === 1 ? '' : 's'} signed up and ${unassignedCount === 1 ? 'is' : 'are'} waiting to be added to a caseload — see Clients → Caseload.`, level: 'medium' });
   const insightBullets = insightBulletsRaw.map((b) => ({ text: b.text, dotStyle: { width: '8px', height: '8px', borderRadius: '50%', marginTop: '4px', flexShrink: 0, background: b.level === 'high' ? theme.riskHighText : (b.level === 'medium' ? theme.riskMedText : theme.emerald2) } }));
 
-  const engagementRows = enrichedClients.filter((c) => !engagementDismissed[c.id]).map((c) => {
+  const engagementRows = assignedClients.filter((c) => !engagementDismissed[c.id]).map((c) => {
     const status = engagementStatusFor(c.lastActiveDays);
     const sev = status === 'Highly engaged' || status === 'Engaged' ? 'low' : (status === 'Reduced engagement' ? 'medium' : 'high');
-    return { id: c.id, initial: c.initial, name: c.name, indicatorsSummary: `${c.lastActiveDays}d since last activity · ${c.pendingReview ? '1 pending review' : 'no pending items'}`, statusLabel: status, statusChip: severityStyle(theme, sev), onOutreach: () => H.setActiveThread(c.id), dismissLabel: 'Dismiss flag', onDismiss: () => H.onDismissEngagement(c.id) };
+    const activitySummary = c.lastActiveDays >= 900 ? 'No activity recorded' : `${c.lastActiveDays}d since last activity`;
+    return { id: c.id, initial: c.initial, name: c.name, indicatorsSummary: `${activitySummary} · ${c.pendingReview ? '1 pending review' : 'no pending items'}`, statusLabel: status, statusChip: severityStyle(theme, sev), onOutreach: () => H.setActiveThread(c.id), dismissLabel: 'Dismiss flag', onDismiss: () => H.onDismissEngagement(c.id) };
   });
 
   const settingsTogglesList = Object.keys(TOGGLE_META).map((key) => {
@@ -364,14 +392,14 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
     isClientTabPractices: activeClientTab === 'practices', isClientTabSafety: activeClientTab === 'safety', isClientTabMessages: activeClientTab === 'messages',
     primaryBtnStyle, secondaryBtnStyle, selectStyle,
     reviewItems, reviewQueueEmpty, safetyRows,
-    prepList, coTherapy, coTherapyMessage, onCoTherapyMessageChange: H.onCoTherapyMessageChange, onSendCoTherapyMessage: H.onSendCoTherapyMessage,
+    prepList, coTherapy, hasCoTherapyClient, coTherapyMessage, onCoTherapyMessageChange: H.onCoTherapyMessageChange, onSendCoTherapyMessage: H.onSendCoTherapyMessage,
     clientMessageDraft, onClientMessageChange: H.onClientMessageChange, onSendClientMessage: H.onSendClientMessage,
     threadList, activeThread,
     taskFilters, taskRows, noTasks, newTaskTitle, newTaskClientId, onNewTaskTitleChange: H.onNewTaskTitleChange, onNewTaskClientChange: H.onNewTaskClientChange, onAddTask: H.onAddTask,
     noteDraft: { ...noteDraft, placeholder: currentTemplate.placeholder }, clientOptions, templateOptions: TEMPLATE_OPTIONS,
     onNoteClientChange: H.onNoteClientChange, onNoteTemplateChange: H.onNoteTemplateChange, onNoteTextChange: H.onNoteTextChange, onSaveNote: H.onSaveNote, onSignNote: H.onSignNote,
     savedNotes: savedNotes.map((n) => ({ ...n, statusStyle: severityStyle(theme, n.status === 'Signed & Locked' ? 'low' : 'medium'), statusLabel: n.status })), allGoals,
-    planClientId, onPlanClientChange: H.onPlanClientChange, treatmentPlan,
+    planClientId, onPlanClientChange: H.onPlanClientChange, treatmentPlan, hasPlanClient,
     practiceForm, woundOptions, practiceTypeOptions, onPracticeClientChange: H.onPracticeClientChange, onPracticeWoundChange: H.onPracticeWoundChange, onPracticeTypeChange: H.onPracticeTypeChange,
     onGeneratePractice: H.onGeneratePractice, hasGeneratedPractice: !!generatedPractice, generatedPractice, onAssignPractice: H.onAssignPractice, assignedPractices, noAssignedPractices: assignedPractices.length === 0,
     lessons, mbcCaseloadRows, partsClientFilters, partsAllRows,
@@ -520,9 +548,10 @@ function Overview({ v }) {
     { key: 'upcoming', color: 'var(--emerald)', value: v.stats.upcomingSessions, label: 'Upcoming sessions' },
     { key: 'pending', color: 'var(--risk-med-text)', value: v.stats.pendingReviews, label: 'Pending reviews' },
   ];
+  const hasUnassigned = (v.stats.unassigned || 0) > 0;
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '22px' }}>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '16px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: `repeat(${hasUnassigned ? 5 : 4},1fr)`, gap: '16px' }}>
         {statCards.map((s) => (
           <div key={s.key} style={{ ...CARD, borderRadius: '18px', padding: '18px 20px' }}>
             <div style={{ width: '8px', height: '8px', borderRadius: '2px', background: s.color, marginBottom: '10px' }} />
@@ -530,6 +559,13 @@ function Overview({ v }) {
             <div style={{ fontSize: '12.5px', color: 'var(--muted)', marginTop: '2px' }}>{s.label}</div>
           </div>
         ))}
+        {hasUnassigned && (
+          <button type="button" onClick={v.goToClients} style={{ ...CARD, borderRadius: '18px', padding: '18px 20px', textAlign: 'left', cursor: 'pointer', font: 'inherit' }}>
+            <div style={{ width: '8px', height: '8px', borderRadius: '2px', background: 'var(--risk-med-text)', marginBottom: '10px' }} />
+            <div style={{ fontSize: '26px', fontWeight: 700, color: 'var(--text)', fontFamily: "'Fraunces',serif" }}>{v.stats.unassigned}</div>
+            <div style={{ fontSize: '12.5px', color: 'var(--muted)', marginTop: '2px' }}>New — awaiting claim</div>
+          </button>
+        )}
       </div>
 
       <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
@@ -626,17 +662,26 @@ function ClientsCaseload({ v }) {
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
           {v.clientListFiltered.map((c) => (
-            <button key={c.id} type="button" onClick={c.onClick} style={{ ...c.rowStyle, width: '100%', textAlign: 'left', font: 'inherit' }}>
-              <div style={{ width: '38px', height: '38px', borderRadius: '50%', background: 'var(--accent-2)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '13px', flexShrink: 0 }}>{c.initial}</div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text)' }}>{c.name}</div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '3px' }}>
-                  <span style={c.woundChip}>{c.woundLabel}</span>
-                  <span style={{ fontSize: '11.5px', color: 'var(--muted)' }}>{c.lastActiveText}</span>
+            <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <button type="button" onClick={c.onClick} style={{ ...c.rowStyle, flex: 1, minWidth: 0, textAlign: 'left', font: 'inherit' }}>
+                <div style={{ width: '38px', height: '38px', borderRadius: '50%', background: 'var(--accent-2)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '13px', flexShrink: 0 }}>{c.initial}</div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text)' }}>{c.name}</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '3px' }}>
+                    {c.unassigned ? (
+                      <span style={c.unassignedChip}>Unassigned</span>
+                    ) : (
+                      <span style={c.woundChip}>{c.woundLabel}</span>
+                    )}
+                    <span style={{ fontSize: '11.5px', color: 'var(--muted)' }}>{c.lastActiveText}</span>
+                  </div>
                 </div>
-              </div>
-              {c.hasRisk && <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--risk-high-text)', flexShrink: 0 }} />}
-            </button>
+                {c.hasRisk && <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--risk-high-text)', flexShrink: 0 }} />}
+              </button>
+              {c.unassigned && (
+                <button type="button" onClick={c.onClaim} title="Add this client to my caseload" style={{ flexShrink: 0, fontSize: '11px', fontWeight: 700, padding: '8px 10px', borderRadius: '10px', border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text-2)', cursor: 'pointer', fontFamily: 'inherit' }}>Claim</button>
+              )}
+            </div>
           ))}
         </div>
       </div>
@@ -658,10 +703,16 @@ function ClientsCaseload({ v }) {
                 </div>
               </div>
               <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                <button className="aw-primary" onClick={sc.onDraftNote} style={v.primaryBtnStyle}>Draft session note</button>
-                <button onClick={sc.onOpenPrep} style={v.secondaryBtnStyle}>Session prep</button>
+                <button className="aw-primary" onClick={sc.onDraftNote} disabled={!sc.canWrite} style={{ ...v.primaryBtnStyle, opacity: sc.canWrite ? 1 : 0.5, cursor: sc.canWrite ? 'pointer' : 'not-allowed' }}>Draft session note</button>
+                <button onClick={sc.onOpenPrep} disabled={!sc.canWrite} style={{ ...v.secondaryBtnStyle, opacity: sc.canWrite ? 1 : 0.5, cursor: sc.canWrite ? 'pointer' : 'not-allowed' }}>Session prep</button>
               </div>
             </div>
+            {sc.unassigned && (
+              <div style={{ marginTop: '14px', padding: '12px 14px', borderRadius: '14px', background: 'var(--risk-med-bg)', border: '1px solid var(--risk-med-border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
+                <span style={{ fontSize: '12.5px', color: 'var(--risk-med-text)' }}>This client isn’t assigned to an Advisor yet — clinical detail is limited until claimed.</span>
+                <button type="button" onClick={sc.onClaim} style={v.primaryBtnStyle}>Add to my caseload</button>
+              </div>
+            )}
             <div style={{ display: 'flex', gap: '22px', marginTop: '18px', flexWrap: 'wrap' }}>
               <div><span style={{ fontSize: '19px', fontWeight: 700, color: 'var(--text)' }}>{sc.streak}</span><span style={{ fontSize: '12px', color: 'var(--muted)' }}> day streak</span></div>
               <div><span style={{ fontSize: '19px', fontWeight: 700, color: 'var(--text)' }}>{sc.level}</span><span style={{ fontSize: '12px', color: 'var(--muted)' }}> level</span></div>
@@ -694,7 +745,7 @@ function ClientsCaseload({ v }) {
             <div style={CARD}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <span style={{ ...FR, fontSize: '15px' }}>Session notes</span>
-                <button onClick={sc.onDraftNote} style={v.secondaryBtnStyle}>New note</button>
+                <button onClick={sc.onDraftNote} disabled={!sc.canWrite} style={{ ...v.secondaryBtnStyle, opacity: sc.canWrite ? 1 : 0.5, cursor: sc.canWrite ? 'pointer' : 'not-allowed' }}>New note</button>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '14px' }}>
                 {sc.clientNotes.map((n, i) => (
@@ -715,7 +766,7 @@ function ClientsCaseload({ v }) {
             <div style={CARD}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <span style={{ ...FR, fontSize: '15px' }}>Assigned practices</span>
-                <button onClick={sc.onOpenPractice} style={v.secondaryBtnStyle}>Generate new</button>
+                <button onClick={sc.onOpenPractice} disabled={!sc.canWrite} style={{ ...v.secondaryBtnStyle, opacity: sc.canWrite ? 1 : 0.5, cursor: sc.canWrite ? 'pointer' : 'not-allowed' }}>Generate new</button>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '14px' }}>
                 {sc.clientPractices.map((a, i) => (
@@ -788,7 +839,7 @@ function ClientOverviewTab({ v, sc }) {
       <div style={{ border: '1px solid var(--risk-high-border)', borderRadius: '20px', padding: '20px', background: 'var(--risk-high-bg)' }}>
         <span style={{ fontSize: '13.5px', fontWeight: 700, color: 'var(--risk-high-text)' }}>Danger zone</span>
         <div style={{ fontSize: '12.5px', color: 'var(--text-2)', marginTop: '4px' }}>Permanently remove this client and all associated records.</div>
-        <button onClick={sc.onStartDelete} style={{ marginTop: '10px', background: 'var(--risk-high-text)', color: '#fff', border: 'none', padding: '9px 16px', borderRadius: '10px', fontWeight: 600, fontSize: '13px', cursor: 'pointer', fontFamily: 'inherit' }}>Delete client</button>
+        <button onClick={sc.onStartDelete} disabled={!sc.canWrite} style={{ marginTop: '10px', background: 'var(--risk-high-text)', color: '#fff', border: 'none', padding: '9px 16px', borderRadius: '10px', fontWeight: 600, fontSize: '13px', cursor: sc.canWrite ? 'pointer' : 'not-allowed', fontFamily: 'inherit', opacity: sc.canWrite ? 1 : 0.5 }}>Delete client</button>
         {v.deletingClientId && (
           <div style={{ marginTop: '14px', padding: '14px', borderRadius: '14px', background: 'var(--surface)', border: '1px solid var(--border)' }}>
             <div style={{ fontSize: '12.5px', color: 'var(--text-2)' }}>Type <strong>{v.deletingClientName}</strong> to confirm deletion.</div>
@@ -908,7 +959,7 @@ function ClientSafetyTab({ v, sc }) {
         {s.noPlan && (
           <div style={{ padding: '14px', borderRadius: '14px', background: 'var(--surface-2)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <span style={{ fontSize: '12.5px', color: 'var(--muted)' }}>No safety plan on file.</span>
-            <button onClick={s.onCreatePlan} style={v.secondaryBtnStyle}>Create safety plan</button>
+            <button onClick={s.onCreatePlan} disabled={!sc.canWrite} style={{ ...v.secondaryBtnStyle, opacity: sc.canWrite ? 1 : 0.5, cursor: sc.canWrite ? 'pointer' : 'not-allowed' }}>Create safety plan</button>
           </div>
         )}
         <div>
@@ -920,7 +971,7 @@ function ClientSafetyTab({ v, sc }) {
         </div>
         <div style={{ borderTop: '1px solid var(--border)', paddingTop: '12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
           <div style={{ fontSize: '12.5px', color: 'var(--muted)' }}>{s.ackStatusText}</div>
-          <button onClick={s.onAcknowledge} style={s.ackBtnStyle}>{s.ackBtnLabel}</button>
+          <button onClick={s.onAcknowledge} disabled={!sc.canWrite} style={{ ...s.ackBtnStyle, opacity: sc.canWrite ? 1 : 0.5, cursor: sc.canWrite ? 'pointer' : 'not-allowed' }}>{s.ackBtnLabel}</button>
         </div>
       </div>
     </div>
@@ -936,13 +987,19 @@ function ClientMessagesTab({ v, sc }) {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '14px', maxHeight: '260px', overflowY: 'auto' }}>
           {sc.messages.map((m) => (<MessageBubble key={m.idx} m={m} />))}
         </div>
-        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginTop: '12px' }}>
-          {v.quickMessages.map((q, i) => (<button key={i} onClick={q.onClick} style={chipBtn()}>{q.text}</button>))}
-        </div>
-        <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
-          <input value={v.clientMessageDraft} onChange={v.onClientMessageChange} placeholder="Message this client..." style={{ flex: 1, padding: '10px 14px', borderRadius: '12px', border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text)', fontSize: '13.5px', fontFamily: 'inherit' }} />
-          <button className="aw-primary" onClick={v.onSendClientMessage} style={v.primaryBtnStyle}>Send</button>
-        </div>
+        {sc.canWrite ? (
+          <>
+            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginTop: '12px' }}>
+              {v.quickMessages.map((q, i) => (<button key={i} onClick={q.onClick} style={chipBtn()}>{q.text}</button>))}
+            </div>
+            <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
+              <input value={v.clientMessageDraft} onChange={v.onClientMessageChange} placeholder="Message this client..." style={{ flex: 1, padding: '10px 14px', borderRadius: '12px', border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text)', fontSize: '13.5px', fontFamily: 'inherit' }} />
+              <button className="aw-primary" onClick={v.onSendClientMessage} style={v.primaryBtnStyle}>Send</button>
+            </div>
+          </>
+        ) : (
+          <div style={{ marginTop: '12px', fontSize: '12.5px', color: 'var(--muted)' }}>Add this client to your caseload to send a message.</div>
+        )}
       </div>
     </div>
   );
@@ -1147,6 +1204,9 @@ function SessionsPrepView({ v }) {
 }
 
 function CoTherapyView({ v }) {
+  if (!v.hasCoTherapyClient) {
+    return <div style={{ padding: '32px', textAlign: 'center', color: 'var(--muted)', fontSize: '14px' }}>Add a client to your caseload to start a co-therapy thread.</div>;
+  }
   const c = v.coTherapy;
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '1.1fr 1fr', gap: '20px', alignItems: 'start', maxWidth: '1000px' }}>
@@ -1260,6 +1320,9 @@ function ClinicalNotesView({ v }) {
 }
 
 function PlansView({ v }) {
+  if (!v.hasPlanClient) {
+    return <div style={{ padding: '32px', textAlign: 'center', color: 'var(--muted)', fontSize: '14px' }}>Add a client to your caseload to create a treatment plan.</div>;
+  }
   return (
     <div style={{ maxWidth: '760px', display: 'flex', flexDirection: 'column', gap: '18px' }}>
       <select value={v.planClientId} onChange={v.onPlanClientChange} style={{ ...v.selectStyle, maxWidth: '260px' }}>

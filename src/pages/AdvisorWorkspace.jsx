@@ -5,8 +5,11 @@ import {
   DOC_TYPES, NAV_CONFIG,
 } from './advisorWorkspaceData.js';
 import {
-  loadWorkspaceCaseload, loadWorkspaceClientDetail, sendWorkspaceMessage, persistTherapistNote,
+  loadWorkspaceCaseload, loadWorkspaceCaseloadWithStatus, loadWorkspaceClientDetail, sendWorkspaceMessage, persistTherapistNote,
+  claimWorkspaceClient, mergeCaseloadRefresh,
 } from '../lib/advisorWorkspaceLoader.js';
+
+const CASELOAD_REFRESH_MS = 45000;
 
 export const INITIAL_STATE = {
   baseClients: CLIENTS,
@@ -116,12 +119,51 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
           setS((prev) => ({
             ...prev,
             baseClients: (prev.baseClients || []).map((c) => (c.id === client.id ? client : c)),
-            savedNotes: [...noteEntries, ...prev.savedNotes.filter((n) => n.clientId !== client.id)],
+            savedNotes: [...noteEntries, ...prev.savedNotes.filter((n) => n.clientId !== client.id || n._isLocal)],
           }));
         })
         .catch((error) => console.error('Failed to load client detail:', error));
     });
   }, [isDemo, loadPhase, S.selectedClientId, S.baseClients, therapistId]);
+
+  // Periodically refresh the caseload so clients who sign up after this page
+  // is already open (or get assigned by another Advisor/admin) appear without
+  // a manual reload. Already-loaded client detail is preserved on merge.
+  useEffect(() => {
+    if (isDemo || loadPhase !== 'ready') return;
+    const gen = genRef.current;
+    const interval = setInterval(() => {
+      loadWorkspaceCaseloadWithStatus(therapistId)
+        .then(({ clients, complete }) => {
+          if (genRef.current !== gen) return;
+          if (!complete) {
+            // A degraded/partial fetch (e.g. the fallback chain hit an error
+            // partway through) is not an authoritative snapshot — applying it
+            // would silently drop clients already visible in the workspace.
+            console.warn('Skipping caseload refresh: fetch was incomplete.');
+            return;
+          }
+          setS((prev) => ({ ...prev, baseClients: mergeCaseloadRefresh(prev.baseClients, clients) }));
+        })
+        .catch((error) => console.error('Failed to refresh caseload:', error));
+    }, CASELOAD_REFRESH_MS);
+    return () => clearInterval(interval);
+  }, [isDemo, loadPhase, therapistId]);
+
+  // Claim an unassigned client (e.g. a fresh signup) into this Advisor's
+  // caseload, then force a fresh detail load now that the assignment exists.
+  const onClaimClient = (clientId) => {
+    if (!therapistId || !clientId) return;
+    const client = allClients().find((c) => c.id === clientId);
+    claimWorkspaceClient(therapistId, clientId, { clientName: client?.name })
+      .then(({ error }) => {
+        if (error) { console.error('Failed to claim client:', error); return; }
+        detailRequested.current.delete(clientId);
+        set((s) => ({
+          baseClients: (s.baseClients || []).map((c) => (c.id === clientId ? { ...c, unassigned: false, _detailLoaded: false } : c)),
+        }));
+      });
+  };
 
   useEffect(() => {
     if (!document.getElementById(FONT_LINK_ID)) {
@@ -155,7 +197,9 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
     if (!noteDraft.text.trim()) return;
     const client = allClients().find((c) => c.id === noteDraft.clientId);
     const tmpl = TEMPLATE_OPTIONS.find((t) => t.id === noteDraft.template);
-    const entry = { clientId: noteDraft.clientId, clientName: client ? client.name : 'Client', templateLabel: tmpl ? tmpl.label : 'Note', text: noteDraft.text, date: 'Just now', status };
+    // _isLocal notes survive the detail-load merge below (see loadWorkspaceClientDetail
+    // effect) so a note saved while that client's records are still loading isn't wiped.
+    const entry = { clientId: noteDraft.clientId, clientName: client ? client.name : 'Client', templateLabel: tmpl ? tmpl.label : 'Note', text: noteDraft.text, date: 'Just now', status, _isLocal: true };
     set((s) => ({ savedNotes: [entry, ...s.savedNotes], noteDraft: { ...s.noteDraft, text: '' } }));
     // Persist to the client's real note record when connected to a therapist.
     if (!isDemo && noteDraft.clientId) {
@@ -353,7 +397,7 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
   const view = buildView({
     S, theme, allClients, buildTreatmentPlan, isAdmin,
     handlers: {
-      setTab, setViewMode, toggleTheme, selectClient, setClientTab, onSearch, setFilterWound, markReviewed, toggleSessionPrep,
+      setTab, setViewMode, toggleTheme, selectClient, setClientTab, onSearch, setFilterWound, markReviewed, toggleSessionPrep, onClaimClient,
       onNoteClientChange, onNoteTemplateChange, onNoteTextChange, onSaveNote, onSignNote, toggleSetting, draftNoteFor, openPrepFor, openPlanFor, openPracticeFor,
       onPlanClientChange, onPracticeClientChange, onPracticeWoundChange, onPracticeTypeChange, onGeneratePractice, onAssignPractice, toggleAssignLesson,
       onCoTherapyMessageChange, onSendCoTherapyMessage, toggleCoTherapyShare, onGenerateReport, isGroupExpanded, toggleGroup,

@@ -7,7 +7,7 @@
 // source (e.g. MBC measures, structured safety plans) degrade to neutral empty
 // states rather than inventing data.
 
-import { loadAssignedClients } from './therapistAssignments';
+import { loadAssignedClients, loadAssignedClientsWithStatus, assignClientToTherapist } from './therapistAssignments';
 import { loadClientAnalytics } from './clientAnalytics';
 import { loadTherapistNotesForClient, createTherapistNote } from './therapistNotes';
 import { loadActiveTreatmentPlansForClient } from './treatmentPlans';
@@ -63,8 +63,15 @@ export function mapClientRow(row) {
 
   let risk = null;
   if (effectiveDays >= 9) {
-    risk = { type: 'inactivity', level: effectiveDays >= 21 ? 'high' : 'medium', detail: `No login or activity in ${effectiveDays} days.`, daysAgo: effectiveDays };
+    const detail = lastActiveDays === null ? 'No login or activity has been recorded yet.' : `No login or activity in ${effectiveDays} days.`;
+    risk = { type: 'inactivity', level: effectiveDays >= 21 ? 'high' : 'medium', detail, daysAgo: effectiveDays };
   }
+
+  // `assignment_status` is only present when the caseload was loaded with
+  // unassigned clients included (see loadWorkspaceCaseload). When present and
+  // null, this client has no Advisor assignment yet — e.g. a fresh signup.
+  const hasAssignmentStatus = Object.prototype.hasOwnProperty.call(row, 'assignment_status');
+  const unassigned = hasAssignmentStatus ? row.assignment_status == null : false;
 
   return {
     id: row.id,
@@ -73,6 +80,7 @@ export function mapClientRow(row) {
     email: row.email || '',
     phone: row.phone || '',
     status,
+    unassigned,
     supportPriority: 'standard',
     primaryWound: 'abandonment',
     secondaryWound: 'shame',
@@ -159,7 +167,8 @@ function mapGoals(planRows) {
   return planRows
     .filter((p) => (p.status || 'active') === 'active')
     .map((p) => {
-      const until = p.review_date ? Math.max(0, Math.ceil((new Date(p.review_date).getTime() - Date.now()) / 86400000)) : 30;
+      const parsed = p.review_date ? new Date(p.review_date).getTime() : NaN;
+      const until = Number.isNaN(parsed) ? 30 : Math.max(0, Math.ceil((parsed - Date.now()) / 86400000));
       return { title: p.goal_title || 'Treatment goal', reviewInDays: until };
     });
 }
@@ -237,9 +246,47 @@ async function loadClientMessages(therapistId, clientId) {
   }
 }
 
+const CASELOAD_COLUMNS = 'id, name, pin, email, phone, status, last_active, created_at, user_role, access_restrictions, assignment_status';
+
 export async function loadWorkspaceCaseload(therapistId) {
-  const rows = await loadAssignedClients(therapistId);
+  // includeUnassigned surfaces clients with no Advisor assignment yet (e.g.
+  // fresh signups) so they don't silently disappear from the workspace.
+  const rows = await loadAssignedClients(therapistId, CASELOAD_COLUMNS, { includeUnassigned: true });
   return (rows || []).map(mapClientRow);
+}
+
+// Same as loadWorkspaceCaseload, but reports whether the fetch was a
+// complete snapshot. A periodic background refresh must check this before
+// merging — applying a degraded/partial result (e.g. one Supabase query in
+// the fallback chain failed) would otherwise silently drop clients that are
+// already visible in the workspace.
+export async function loadWorkspaceCaseloadWithStatus(therapistId) {
+  const { data, complete } = await loadAssignedClientsWithStatus(therapistId, CASELOAD_COLUMNS, { includeUnassigned: true });
+  return { clients: (data || []).map(mapClientRow), complete };
+}
+
+export async function claimWorkspaceClient(therapistId, clientId, names = {}) {
+  if (!therapistId || !clientId) return { error: { message: 'Missing therapist or client id' } };
+  const { error } = await assignClientToTherapist(therapistId, clientId, 'active', names);
+  return { error: error || null };
+}
+
+// Merge a freshly-loaded caseload into the previously-loaded one: new clients
+// (e.g. a signup that landed after the page opened) are added as-is; clients
+// that already had their detail records loaded keep that enrichment and only
+// have their base identity/status fields refreshed, so a periodic refresh
+// never wipes out analytics, notes, parts, etc. already fetched for them.
+export function mergeCaseloadRefresh(prevBaseClients, freshRows) {
+  const prevById = new Map((prevBaseClients || []).map((c) => [c.id, c]));
+  return (freshRows || []).map((fresh) => {
+    const prev = prevById.get(fresh.id);
+    if (!prev) return fresh;
+    return {
+      ...prev,
+      name: fresh.name, initial: fresh.initial, email: fresh.email, phone: fresh.phone,
+      status: fresh.status, lastActiveDays: fresh.lastActiveDays, risk: fresh.risk, unassigned: fresh.unassigned,
+    };
+  });
 }
 
 export async function loadWorkspaceClientDetail(base, therapistId) {
