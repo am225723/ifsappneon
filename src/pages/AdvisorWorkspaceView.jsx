@@ -1548,9 +1548,25 @@ export function EmptyCaseload({ theme, onReset }) {
         <div style={{ fontSize: '13.5px', color: theme.muted, marginTop: '8px', lineHeight: 1.6 }}>
           There are no clients in this workspace. Add a client from the Caseload view to get started.
         </div>
-        <button type="button" onClick={onReset} style={{ marginTop: '18px', background: `linear-gradient(135deg, ${theme.accent2}, ${theme.emerald2})`, color: '#fff', border: 'none', padding: '10px 18px', borderRadius: '12px', fontWeight: 600, fontSize: '13px', cursor: 'pointer', fontFamily: 'inherit' }}>
-          Restore sample caseload
-        </button>
+        {onReset && (
+          <button type="button" onClick={onReset} style={{ marginTop: '18px', background: `linear-gradient(135deg, ${theme.accent2}, ${theme.emerald2})`, color: '#fff', border: 'none', padding: '10px 18px', borderRadius: '12px', fontWeight: 600, fontSize: '13px', cursor: 'pointer', fontFamily: 'inherit' }}>
+            Restore sample caseload
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export function WorkspaceStatus({ theme, message, spinner = false }) {
+  return (
+    <div className="aw-root" style={{ minHeight: '100vh', background: theme.bg, color: theme.text, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Plus Jakarta Sans', sans-serif", padding: '32px' }}>
+      <style>{'@keyframes aw-spin{to{transform:rotate(360deg)}}'}</style>
+      <div style={{ textAlign: 'center' }}>
+        {spinner && (
+          <div style={{ width: '32px', height: '32px', margin: '0 auto 16px', borderRadius: '50%', border: '3px solid ' + theme.border, borderTopColor: theme.accent2, animation: 'aw-spin 0.8s linear infinite' }} />
+        )}
+        <div style={{ fontSize: '14px', color: theme.muted, maxWidth: '360px', lineHeight: 1.6 }}>{message}</div>
       </div>
     </div>
   );
