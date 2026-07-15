@@ -28,6 +28,7 @@ import MicroLearning from './pages/MicroLearning';
 import Affirmations from './pages/Affirmations';
 import TherapyIntegration from './pages/TherapyIntegration';
 import TherapistDashboard from './pages/TherapistDashboard';
+import AdvisorWorkspace from './pages/AdvisorWorkspace';
 import TreatmentPlans from './pages/TreatmentPlans';
 import CoTherapySession from './pages/CoTherapySession';
 import ProgressTimeline from './pages/ProgressTimeline';
@@ -598,6 +599,7 @@ function AppContent({ authChecked, clerkLoaded, clerkSignedIn, isAuthenticated, 
             unreadCount={unreadMsgCount}
             messagePath={messagePath}
             workspaceLinks={isTherapistRole ? [
+              { path: '/advisor-workspace', label: 'Advisor Workspace' },
               { path: '/my-ifs', label: 'My IFS Work' }
             ] : []}
             rightSlot={
@@ -682,6 +684,7 @@ function AppContent({ authChecked, clerkLoaded, clerkSignedIn, isAuthenticated, 
                 <Route path="/admin" element={<Navigate to={isAdminOrSupervisor ? '/admin-hub' : '/therapist-dashboard'} replace />} />
                 <Route path="/therapist" element={<Navigate to="/therapist-dashboard" replace />} />
                 <Route path="/therapist-dashboard" element={therapistOnly(<TherapistDashboard />)} />
+                <Route path="/advisor-workspace" element={therapistOnly(<AdvisorWorkspace />)} />
                 <Route path="/treatment-plans" element={therapistOnly(<TreatmentPlans />)} />
                 <Route path="/admin-hub" element={isAdminOrSupervisor ? <AdminHub /> : <UnauthorizedRedirect currentClient={currentClient} message="Admin or supervisor access is required for this page." />} />
                 <Route path="/co-therapy" element={therapistOnly(<CoTherapySession />)} />
