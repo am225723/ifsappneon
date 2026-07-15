@@ -12,6 +12,7 @@ import { loadClientAnalytics } from './clientAnalytics';
 import { loadTherapistNotesForClient, createTherapistNote } from './therapistNotes';
 import { loadActiveTreatmentPlansForClient } from './treatmentPlans';
 import { supabase } from './supabase';
+import { getClerkToken } from './apiAuth.js';
 
 export const WORKSPACE_WOUNDS = ['abandonment', 'shame', 'neglect', 'betrayal', 'helplessness'];
 
@@ -318,4 +319,51 @@ export async function sendWorkspaceMessage(therapistId, clientId, text) {
     therapist_id: therapistId, client_id: clientId, sender_role: 'therapist', body, is_urgent: false,
   });
   return { error: error || null };
+}
+
+// Generates a real clinical/progress report via api/generate-report.js, which
+// aggregates the client's actual treatment plans, notes, session agendas,
+// homework, parts, mood entries, journals, and module responses into an HTML
+// document, and persists an audit row (id, title, sections, date range,
+// timestamp) to ifs_generated_reports server-side as part of the same call —
+// there is no separate "approve" step to wire up, generating IS saving.
+export async function generateWorkspaceReport({ clientId, reportType = 'clinical_summary', dateRangeStart, dateRangeEnd, sections }) {
+  if (!clientId) return { data: null, error: { message: 'Select a client before generating a document.' } };
+  try {
+    const token = await getClerkToken();
+    const response = await fetch('/api/generate-report', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      body: JSON.stringify({ clientId, reportType, dateRangeStart, dateRangeEnd, sections, format: 'html_print' }),
+    });
+    const json = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      const message = json?.error?.message || json?.error || 'Unable to generate document.';
+      return { data: null, error: { message } };
+    }
+    return { data: json.data || null, error: null };
+  } catch (error) {
+    return { data: null, error: { message: error.message || 'Unable to generate document.' } };
+  }
+}
+
+// Real generation history for a client — audit metadata only (title, type,
+// sections, date range, generated_at). The endpoint deliberately does not
+// store the rendered HTML itself, so a past entry can't be "reopened" — only
+// regenerated — and this list reflects that honestly rather than offering a
+// download link that doesn't work.
+export async function loadWorkspaceReports(clientId, limit = 8) {
+  if (!clientId) return [];
+  try {
+    const { data, error } = await supabase
+      .from('ifs_generated_reports')
+      .select('id, report_type, title, sections_included, date_range_start, date_range_end, generated_at')
+      .eq('client_id', clientId)
+      .order('generated_at', { ascending: false })
+      .limit(limit);
+    if (error) return [];
+    return data || [];
+  } catch {
+    return [];
+  }
 }

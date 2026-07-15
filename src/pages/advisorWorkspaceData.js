@@ -230,20 +230,33 @@ export const PLAN_PHASES = [
   { key: 'processing', label: 'Processing', desc: 'Working directly with exiles and burdened protectors.' },
   { key: 'integration', label: 'Integration', desc: 'Unburdening, consolidating Self-leadership, and relapse prevention.' },
 ];
+// Mirrors REPORT_TYPES in api/generate-report.js — the only two document
+// types that endpoint actually knows how to produce. Keep in sync.
 export const DOC_TYPES = [
-  { id: 'progress_summary', label: 'Progress Summary' },
-  { id: 'treatment_plan_summary', label: 'Treatment Plan Summary' },
-  { id: 'safety_plan', label: 'Safety Plan' },
-  { id: 'referral_letter', label: 'Referral Letter' },
-  { id: 'discharge_summary', label: 'Discharge Summary' },
-  { id: 'client_facing_summary', label: 'Client-Facing Summary' },
+  { id: 'clinical_summary', label: 'Clinical Summary Report' },
+  { id: 'client_progress_summary', label: 'Client Progress Summary' },
 ];
+// Mirrors DEFAULT_SECTIONS/SECTION_LABELS in api/generate-report.js (and the
+// section picker in ClinicalReportBuilder.jsx) — each key is a real toggle
+// the backend understands, pulling from real client records.
 export const DOC_SOURCES = [
-  { id: 'notes', label: 'Session notes' },
-  { id: 'assessments', label: 'Assessments / MBC results' },
-  { id: 'plan', label: 'Treatment plan' },
-  { id: 'practices', label: 'Assigned practices' },
+  { id: 'includeTreatmentPlans', label: 'Growth goals', desc: 'Active/completed goals, objectives, interventions, target parts/wounds, and review date.' },
+  { id: 'includeTaggedNotes', label: 'Tagged Advisor notes', desc: 'Note date/type, Advisor summary, tagged parts, and tagged goals.' },
+  { id: 'includeSessionAgendas', label: 'Session agendas', desc: 'Topics, active parts, stuck points, mood/stress, and safety-related content.' },
+  { id: 'includeAssignedHomework', label: 'Assigned practices', desc: 'Module title, status, assigned/completed/reviewed dates, and Advisor feedback.' },
+  { id: 'includeParts', label: 'Parts summary', desc: 'Part names plus lightweight roles, burdens, and status.' },
+  { id: 'includeMoodEntries', label: 'Mood summary', desc: 'Recent mood and energy values.' },
+  { id: 'includeJournals', label: 'Journal excerpts', desc: 'Client journal titles and truncated excerpts. Off by default.' },
+  { id: 'includeHealingTimeline', label: 'Healing timeline summary', desc: 'Client-safe milestones from goals, practices, and parts status.' },
+  { id: 'includeAnalyticsSummary', label: 'Insights summary', desc: 'Compact Advisor insights summary.' },
+  { id: 'includeModuleResponses', label: 'Cleaned module responses', desc: 'Meaningful curriculum reflections, with placeholders filtered out.' },
+  { id: 'includeFullNoteText', label: 'Full Advisor note text', desc: 'Full note body excerpts. Off by default — use only when appropriate.' },
 ];
+export const DOC_SOURCES_DEFAULT = {
+  includeTreatmentPlans: true, includeTaggedNotes: true, includeSessionAgendas: true, includeAssignedHomework: true,
+  includeParts: true, includeMoodEntries: true, includeJournals: false, includeHealingTimeline: false,
+  includeAnalyticsSummary: false, includeModuleResponses: true, includeFullNoteText: false,
+};
 
 export const NAV_CONFIG = [
   { id: 'overview', label: 'Overview', swatch: 'var(--accent)' },

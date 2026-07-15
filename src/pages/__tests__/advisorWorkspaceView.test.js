@@ -233,3 +233,39 @@ describe('buildView — write actions are gated until a client is claimed', () =
     expect(typeof sc.safety.onAcknowledge).toBe('function');
   });
 });
+
+describe('buildView — Document Creator reflects the real report-generation backend', () => {
+  it('only offers the document types and sections api/generate-report.js actually supports', () => {
+    const v = makeView();
+    expect(v.docTypeOptions.map((t) => t.id).sort()).toEqual(['client_progress_summary', 'clinical_summary']);
+    expect(v.docSourceRows.map((s) => s.id)).toContain('includeTreatmentPlans');
+    expect(v.docSourceRows.every((s) => typeof s.desc === 'string' && s.desc.length > 0)).toBe(true);
+  });
+
+  it('surfaces generation loading/error state and the generated document for preview', () => {
+    const loading = makeView({ docGenerating: true });
+    expect(loading.docGenerating).toBe(true);
+    expect(loading.hasGeneratedDoc).toBe(false);
+
+    const errored = makeView({ docError: 'Client is not assigned to this therapist' });
+    expect(errored.docError).toBe('Client is not assigned to this therapist');
+
+    const withDoc = makeView({ generatedDoc: { html: '<html>x</html>', reportId: 'r1', title: 'Clinical Summary Report' } });
+    expect(withDoc.hasGeneratedDoc).toBe(true);
+    expect(withDoc.generatedDoc.html).toContain('x');
+  });
+
+  it('maps real report audit rows for the client-history list', () => {
+    const v = makeView({
+      clientReports: [
+        { id: 'r1', report_type: 'clinical_summary', title: 'Clinical Summary — Maya Chen', sections_included: ['Growth Goals'], generated_at: '2026-07-01T00:00:00Z' },
+      ],
+    });
+    expect(v.clientReportRows).toHaveLength(1);
+    expect(v.clientReportRows[0].title).toBe('Clinical Summary — Maya Chen');
+    expect(v.noClientReports).toBe(false);
+
+    const empty = makeView({ clientReports: [] });
+    expect(empty.noClientReports).toBe(true);
+  });
+});

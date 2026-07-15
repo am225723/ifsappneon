@@ -13,7 +13,7 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
     sessionPrepOpenId, noteDraft, savedNotes, planClientId, practiceForm, generatedPractice, assignedPractices,
     assignedLessons, coTherapyShare, coTherapyMessage, coTherapyThread, reports, settingsToggles, clientMessages,
     clientMessageDraft, activeThreadId, safetyOverrides, engagementDismissed, partsClientFilter, tasks, taskFilter,
-    newTaskTitle, newTaskClientId, docForm, docSources, generatedDoc, deletedMessageIdx,
+    newTaskTitle, newTaskClientId, docForm, docSources, generatedDoc, docGenerating, docError, clientReports, clientReportsLoading, deletedMessageIdx,
   } = S;
 
   const rootStyle = {
@@ -309,7 +309,14 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
   const partsAllRows = assignedClients.filter((c) => partsClientFilter === 'all' || c.id === partsClientFilter).flatMap((c) => c.parts.map((p) => ({ ...p, clientName: c.name, catChip: partChip(p.category, isDark), catLabel: PART_CAT_META[p.category].label, barStyle: { width: p.activation + '%', height: '100%', borderRadius: '4px', background: PART_CAT_META[p.category].color } })));
 
   const docTypeOptions = DOC_TYPES;
-  const docSourceRows = DOC_SOURCES.map((s) => ({ id: s.id, label: s.label, checked: docSources[s.id], onToggle: () => H.toggleDocSource(s.id) }));
+  const docSourceRows = DOC_SOURCES.map((s) => ({ id: s.id, label: s.label, desc: s.desc, checked: !!docSources[s.id], onToggle: () => H.toggleDocSource(s.id) }));
+  const clientReportRows = (clientReports || []).map((r) => ({
+    id: r.id,
+    title: r.title || (DOC_TYPES.find((t) => t.id === r.report_type)?.label || 'Report'),
+    date: r.generated_at ? new Date(r.generated_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—',
+    sectionsSummary: Array.isArray(r.sections_included) ? r.sections_included.join(', ') : '',
+  }));
+  const noClientReports = !clientReportsLoading && clientReportRows.length === 0;
 
   const total = Math.max(1, assignedClients.length);
   const woundDistribution = Object.keys(WOUND_META).map((k) => { const count = assignedClients.filter((c) => c.primaryWound === k).length; return { label: WOUND_META[k].label, count, barStyle: { width: Math.round((count / total) * 100) + '%', height: '100%', borderRadius: '5px', background: theme.accent2 } }; });
@@ -403,7 +410,11 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
     practiceForm, woundOptions, practiceTypeOptions, onPracticeClientChange: H.onPracticeClientChange, onPracticeWoundChange: H.onPracticeWoundChange, onPracticeTypeChange: H.onPracticeTypeChange,
     onGeneratePractice: H.onGeneratePractice, hasGeneratedPractice: !!generatedPractice, generatedPractice, onAssignPractice: H.onAssignPractice, assignedPractices, noAssignedPractices: assignedPractices.length === 0,
     lessons, mbcCaseloadRows, partsClientFilters, partsAllRows,
-    docForm, docTypeOptions, docSourceRows, onDocClientChange: H.onDocClientChange, onDocTypeChange: H.onDocTypeChange, onGenerateDoc: H.onGenerateDoc, onApproveDoc: H.onApproveDoc, hasGeneratedDoc: !!generatedDoc, noGeneratedDoc: !generatedDoc, generatedDoc,
+    docForm, docTypeOptions, docSourceRows,
+    onDocClientChange: H.onDocClientChange, onDocTypeChange: H.onDocTypeChange, onDocDateChange: H.onDocDateChange,
+    onGenerateDoc: H.onGenerateDoc, onOpenGeneratedDoc: H.onOpenGeneratedDoc,
+    hasGeneratedDoc: !!generatedDoc, generatedDoc, docGenerating: !!docGenerating, docError,
+    clientReportRows, noClientReports, clientReportsLoading: !!clientReportsLoading,
     woundDistribution, engagementList, moodTrend, insightBullets, reports, onGenerateReport: H.onGenerateReport,
     engagementRows,
     settingsToggles: settingsTogglesList,
@@ -1455,42 +1466,68 @@ function LessonsView({ v }) {
 
 function DocsView({ v }) {
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.1fr', gap: '20px', alignItems: 'start' }}>
-      <div style={{ ...CARD, display: 'flex', flexDirection: 'column', gap: '14px' }}>
-        <span style={{ ...FR, fontSize: '16px' }}>Document Creator</span>
-        <div>
-          <div style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '6px' }}>1. Client</div>
-          <select value={v.docForm.clientId} onChange={v.onDocClientChange} style={{ ...v.selectStyle, width: '100%' }}>{v.clientOptions.map((o) => (<option key={o.id} value={o.id}>{o.name}</option>))}</select>
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.3fr', gap: '20px', alignItems: 'start' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+        <div style={{ ...CARD, display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          <span style={{ ...FR, fontSize: '16px' }}>Document Creator</span>
+          <div>
+            <div style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '6px' }}>1. Client</div>
+            <select value={v.docForm.clientId} onChange={v.onDocClientChange} style={{ ...v.selectStyle, width: '100%' }}>{v.clientOptions.map((o) => (<option key={o.id} value={o.id}>{o.name}</option>))}</select>
+          </div>
+          <div>
+            <div style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '6px' }}>2. Document type</div>
+            <select value={v.docForm.type} onChange={v.onDocTypeChange} style={{ ...v.selectStyle, width: '100%' }}>{v.docTypeOptions.map((t) => (<option key={t.id} value={t.id}>{t.label}</option>))}</select>
+          </div>
+          <div>
+            <div style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '6px' }}>3. Date range</div>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <input type="date" value={v.docForm.dateRangeStart || ''} onChange={v.onDocDateChange('dateRangeStart')} style={{ ...inp(), flex: 1 }} />
+              <input type="date" value={v.docForm.dateRangeEnd || ''} onChange={v.onDocDateChange('dateRangeEnd')} style={{ ...inp(), flex: 1 }} />
+            </div>
+          </div>
+          <div>
+            <div style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '6px' }}>4. Source records</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {v.docSourceRows.map((s) => (
+                <label key={s.id} style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', fontSize: '13px', color: 'var(--text-2)', cursor: 'pointer' }}>
+                  <input type="checkbox" checked={s.checked} onChange={s.onToggle} style={{ marginTop: '2px' }} />
+                  <span><span style={{ color: 'var(--text)', fontWeight: 600 }}>{s.label}</span><br /><span style={{ fontSize: '11.5px' }}>{s.desc}</span></span>
+                </label>
+              ))}
+            </div>
+          </div>
+          <button className="aw-primary" onClick={v.onGenerateDoc} disabled={v.docGenerating} style={{ ...v.primaryBtnStyle, opacity: v.docGenerating ? 0.6 : 1, cursor: v.docGenerating ? 'not-allowed' : 'pointer' }}>{v.docGenerating ? 'Generating…' : 'Generate document'}</button>
+          {v.docError && <div style={{ fontSize: '12px', color: 'var(--risk-high-text)' }}>{v.docError}</div>}
         </div>
-        <div>
-          <div style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '6px' }}>2. Document type</div>
-          <select value={v.docForm.type} onChange={v.onDocTypeChange} style={{ ...v.selectStyle, width: '100%' }}>{v.docTypeOptions.map((t) => (<option key={t.id} value={t.id}>{t.label}</option>))}</select>
-        </div>
-        <div>
-          <div style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '6px' }}>3. Source records</div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-            {v.docSourceRows.map((s) => (
-              <label key={s.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: 'var(--text-2)', cursor: 'pointer' }}>
-                <input type="checkbox" checked={s.checked} onChange={s.onToggle} />{s.label}
-              </label>
+        <div style={{ ...CARD }}>
+          <span style={{ ...FR, fontSize: '14px' }}>Recently generated for this client</span>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '12px' }}>
+            {v.clientReportsLoading && <div style={{ fontSize: '12.5px', color: 'var(--muted)' }}>Loading…</div>}
+            {v.clientReportRows.map((r) => (
+              <div key={r.id} style={{ padding: '10px 12px', borderRadius: '12px', background: 'var(--surface-2)' }}>
+                <div style={{ fontSize: '12.5px', fontWeight: 600, color: 'var(--text)' }}>{r.title}</div>
+                <div style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '2px' }}>{r.date}</div>
+              </div>
             ))}
+            {v.noClientReports && <div style={{ fontSize: '12.5px', color: 'var(--muted)' }}>No documents generated yet for this client.</div>}
           </div>
         </div>
-        <button className="aw-primary" onClick={v.onGenerateDoc} style={v.primaryBtnStyle}>Generate draft</button>
       </div>
       <div style={CARD}>
-        <span style={{ ...FR, fontSize: '16px' }}>Draft preview</span>
+        <span style={{ ...FR, fontSize: '16px' }}>Preview</span>
         {v.hasGeneratedDoc ? (
           <>
-            <div style={{ marginTop: '12px', padding: '16px', borderRadius: '14px', background: 'var(--surface-2)', fontSize: '13px', color: 'var(--text)', lineHeight: 1.7, whiteSpace: 'pre-line' }}>{v.generatedDoc}</div>
-            <div style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '8px' }}>AI-assisted draft from selected source records — review before approving. Never invents unsupported clinical facts.</div>
+            <div style={{ marginTop: '12px', borderRadius: '14px', border: '1px solid var(--border)', overflow: 'hidden', height: '520px' }}>
+              <iframe title="Generated document preview" srcDoc={v.generatedDoc.html} style={{ width: '100%', height: '100%', border: 'none', background: '#fff' }} />
+            </div>
+            <div style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '8px' }}>Generated from real client records — already saved to this client's document history. Advisor review is required before sharing or printing.</div>
             <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
-              <button className="aw-primary" onClick={v.onApproveDoc} style={v.primaryBtnStyle}>Approve &amp; save to record</button>
-              <button onClick={v.onGenerateDoc} style={v.secondaryBtnStyle}>Regenerate</button>
+              <button className="aw-primary" onClick={v.onOpenGeneratedDoc} style={v.primaryBtnStyle}>Open / Print</button>
+              <button onClick={v.onGenerateDoc} disabled={v.docGenerating} style={v.secondaryBtnStyle}>Regenerate</button>
             </div>
           </>
         ) : (
-          <div style={{ padding: '24px', textAlign: 'center', color: 'var(--muted)', fontSize: '13px' }}>Select sources and generate a draft to preview it here.</div>
+          <div style={{ padding: '24px', textAlign: 'center', color: 'var(--muted)', fontSize: '13px' }}>Select sources and generate a document to preview it here.</div>
         )}
       </div>
     </div>

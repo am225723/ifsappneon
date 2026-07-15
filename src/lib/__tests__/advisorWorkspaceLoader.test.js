@@ -1,12 +1,29 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, afterAll } from 'vitest';
 
 // The loader imports supabase (browser client) transitively; stub it so the
 // pure mappers can be tested in the Node test environment.
-vi.mock('../supabase', () => ({ supabase: { from: () => ({ select: () => ({ eq: () => ({ order: () => ({ data: [], error: null }) }) }) }) } }));
+// vi.mock factories may only reference variables prefixed with "mock" (vitest
+// hoisting rule) — this lets individual tests below override what a query
+// against ifs_generated_reports resolves to.
+let mockReportRows = { data: [], error: null };
+vi.mock('../supabase', () => ({
+  supabase: {
+    from: (table) => ({
+      select: () => ({
+        eq: () => ({
+          order: () => ({
+            limit: () => (table === 'ifs_generated_reports' ? mockReportRows : { data: [], error: null }),
+          }),
+        }),
+      }),
+    }),
+  },
+}));
 vi.mock('../apiAuth.js', () => ({ getClerkToken: async () => null }));
 
 const {
   initialsFrom, daysSince, mapClientRow, mapNoteEntry, deriveWorkspaceDetail, WORKSPACE_WOUNDS, mergeCaseloadRefresh,
+  generateWorkspaceReport, loadWorkspaceReports,
 } = await import('../advisorWorkspaceLoader.js');
 
 describe('initialsFrom', () => {
@@ -167,5 +184,66 @@ describe('mergeCaseloadRefresh', () => {
     const fresh = [{ id: 'c2', name: 'New Signup', assignment_status: 'active' }].map(mapClientRow);
     const merged = mergeCaseloadRefresh(prev, fresh);
     expect(merged[0].unassigned).toBe(false);
+  });
+});
+
+describe('generateWorkspaceReport', () => {
+  const originalFetch = globalThis.fetch;
+  afterAll(() => { globalThis.fetch = originalFetch; });
+
+  it('requires a clientId before calling the API', async () => {
+    const { data, error } = await generateWorkspaceReport({ clientId: null });
+    expect(data).toBeNull();
+    expect(error).toBeTruthy();
+  });
+
+  it('returns the generated document data on success', async () => {
+    globalThis.fetch = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({ data: { html: '<html>report</html>', reportId: 'r1', title: 'Clinical Summary Report — Maya Chen' }, error: null }),
+    }));
+    const { data, error } = await generateWorkspaceReport({ clientId: 'c1', reportType: 'clinical_summary', sections: { includeTreatmentPlans: true } });
+    expect(error).toBeNull();
+    expect(data.html).toContain('report');
+    expect(data.reportId).toBe('r1');
+    expect(globalThis.fetch).toHaveBeenCalledWith('/api/generate-report', expect.objectContaining({ method: 'POST' }));
+  });
+
+  it('surfaces a server-provided error message instead of throwing', async () => {
+    globalThis.fetch = vi.fn(async () => ({
+      ok: false,
+      json: async () => ({ error: { message: 'Client is not assigned to this therapist' } }),
+    }));
+    const { data, error } = await generateWorkspaceReport({ clientId: 'unassigned1' });
+    expect(data).toBeNull();
+    expect(error.message).toBe('Client is not assigned to this therapist');
+  });
+
+  it('handles a network failure gracefully', async () => {
+    globalThis.fetch = vi.fn(async () => { throw new Error('network down'); });
+    const { data, error } = await generateWorkspaceReport({ clientId: 'c1' });
+    expect(data).toBeNull();
+    expect(error.message).toBe('network down');
+  });
+});
+
+describe('loadWorkspaceReports', () => {
+  it('returns an empty array without a clientId', async () => {
+    expect(await loadWorkspaceReports(null)).toEqual([]);
+  });
+
+  it('returns mapped report audit rows for a client', async () => {
+    mockReportRows = { data: [{ id: 'r1', report_type: 'clinical_summary', title: 'Clinical Summary — Maya Chen', sections_included: ['Growth Goals'], generated_at: '2026-07-01T00:00:00Z' }], error: null };
+    const rows = await loadWorkspaceReports('c1');
+    expect(rows).toHaveLength(1);
+    expect(rows[0].title).toBe('Clinical Summary — Maya Chen');
+    mockReportRows = { data: [], error: null };
+  });
+
+  it('returns an empty array (not a throw) when the query errors', async () => {
+    mockReportRows = { data: null, error: { message: 'db down' } };
+    const rows = await loadWorkspaceReports('c1');
+    expect(rows).toEqual([]);
+    mockReportRows = { data: [], error: null };
   });
 });
