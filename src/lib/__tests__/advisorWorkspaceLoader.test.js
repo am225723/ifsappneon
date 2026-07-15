@@ -6,7 +6,7 @@ vi.mock('../supabase', () => ({ supabase: { from: () => ({ select: () => ({ eq: 
 vi.mock('../apiAuth.js', () => ({ getClerkToken: async () => null }));
 
 const {
-  initialsFrom, daysSince, mapClientRow, mapNoteEntry, deriveWorkspaceDetail, WORKSPACE_WOUNDS,
+  initialsFrom, daysSince, mapClientRow, mapNoteEntry, deriveWorkspaceDetail, WORKSPACE_WOUNDS, mergeCaseloadRefresh,
 } = await import('../advisorWorkspaceLoader.js');
 
 describe('initialsFrom', () => {
@@ -107,5 +107,65 @@ describe('deriveWorkspaceDetail', () => {
     expect(noteEntries).toHaveLength(1);
     expect(noteEntries[0].clientId).toBe('x1');
     expect(noteEntries[0].clientName).toBe('Maya Chen');
+  });
+});
+
+describe('mapClientRow — unassigned detection', () => {
+  it('marks a client unassigned when assignment_status is null and the caseload was loaded with unassigned clients included', () => {
+    const row = { id: 'new1', name: 'Fresh Signup', assignment_status: null };
+    const c = mapClientRow(row);
+    expect(c.unassigned).toBe(true);
+  });
+
+  it('marks a client assigned when assignment_status is present and non-null', () => {
+    const row = { id: 'a1', name: 'Assigned Client', assignment_status: 'active' };
+    const c = mapClientRow(row);
+    expect(c.unassigned).toBe(false);
+  });
+
+  it('defaults to assigned (false) when assignment_status was not requested at all', () => {
+    const row = { id: 'a2', name: 'Legacy Row' };
+    const c = mapClientRow(row);
+    expect(c.unassigned).toBe(false);
+  });
+
+  it('gives a natural-language inactivity message for clients with no recorded activity, not "999 days"', () => {
+    const row = { id: 'x3', name: 'Never Logged In' };
+    const c = mapClientRow(row);
+    expect(c.risk).not.toBeNull();
+    expect(c.risk.detail).not.toMatch(/999/);
+    expect(c.risk.detail).toMatch(/no login or activity has been recorded/i);
+  });
+});
+
+describe('mergeCaseloadRefresh', () => {
+  it('adds brand-new clients returned by a refresh (e.g. a signup that landed after the page opened)', () => {
+    const prev = [mapClientRow({ id: 'c1', name: 'Maya Chen', assignment_status: 'active' })];
+    const fresh = [
+      { id: 'c1', name: 'Maya Chen', assignment_status: 'active' },
+      { id: 'c2', name: 'New Signup', assignment_status: null },
+    ].map(mapClientRow);
+    const merged = mergeCaseloadRefresh(prev, fresh);
+    expect(merged.map((c) => c.id)).toEqual(['c1', 'c2']);
+    expect(merged.find((c) => c.id === 'c2').unassigned).toBe(true);
+  });
+
+  it('preserves already-loaded detail fields for existing clients while refreshing base identity fields', () => {
+    const base = mapClientRow({ id: 'c1', name: 'Maya Chen', assignment_status: 'active', last_active: new Date().toISOString() });
+    const enriched = { ...base, _detailLoaded: true, progressPct: 78, parts: [{ id: 'p1', name: 'The Watcher' }] };
+    const fresh = [{ id: 'c1', name: 'Maya Chen', assignment_status: 'active', last_active: new Date(Date.now() - 20 * 86400000).toISOString() }].map(mapClientRow);
+    const merged = mergeCaseloadRefresh([enriched], fresh);
+    expect(merged[0]._detailLoaded).toBe(true);
+    expect(merged[0].progressPct).toBe(78);
+    expect(merged[0].parts).toHaveLength(1);
+    // Base fields (like inactivity-derived status) do get refreshed.
+    expect(merged[0].lastActiveDays).toBeGreaterThanOrEqual(19);
+  });
+
+  it('reflects a claim (unassigned -> assigned) picked up on the next refresh', () => {
+    const prev = [mapClientRow({ id: 'c2', name: 'New Signup', assignment_status: null })];
+    const fresh = [{ id: 'c2', name: 'New Signup', assignment_status: 'active' }].map(mapClientRow);
+    const merged = mergeCaseloadRefresh(prev, fresh);
+    expect(merged[0].unassigned).toBe(false);
   });
 });

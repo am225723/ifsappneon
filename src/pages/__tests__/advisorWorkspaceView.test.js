@@ -106,3 +106,57 @@ describe('buildView — filtering and search', () => {
     expect(v.clientListFiltered.map((c) => c.name)).toEqual(['Sam Okafor']);
   });
 });
+
+const UNASSIGNED_CLIENT = {
+  id: 'new1', name: 'Fresh Signup', initial: 'FS', email: '', phone: '', status: 'active', unassigned: true,
+  supportPriority: 'standard', primaryWound: 'abandonment', secondaryWound: 'shame',
+  progressPct: 0, modulesCompleted: 0, streak: 0, level: 1, lastActiveDays: 0, risk: null,
+  scores: { abandonment: 0, shame: 0, neglect: 0, betrayal: 0, helplessness: 0 },
+  goals: [], pendingReview: null, session: { when: 'No upcoming session scheduled', status: 'none' },
+  recentActivity: [], qaAnswers: [], timeline: [],
+  safety: { riskLevel: 'none', protective: [], riskFactors: [], safetyPlan: null, contacts: [], acknowledged: true, ackNote: '' },
+  mbc: [], parts: [], messages: [],
+};
+
+describe('buildView — unassigned clients (new signups)', () => {
+  it('surfaces an unassigned client in the raw picker with a claim action, without hiding it', () => {
+    const v = makeView({ extraClients: [UNASSIGNED_CLIENT] });
+    const row = v.clientListFiltered.find((c) => c.id === 'new1');
+    expect(row).toBeDefined();
+    expect(row.unassigned).toBe(true);
+    expect(typeof row.onClaim).toBe('function');
+  });
+
+  it('counts unassigned clients separately from the assigned "Active caseload" stat', () => {
+    const withUnassigned = makeView({ extraClients: [UNASSIGNED_CLIENT] });
+    const without = makeView();
+    expect(withUnassigned.stats.unassigned).toBe(1);
+    expect(withUnassigned.stats.caseload).toBe(without.stats.caseload);
+  });
+
+  it('excludes unassigned clients from write-oriented dropdowns (notes, tasks, docs, plans)', () => {
+    const v = makeView({ extraClients: [UNASSIGNED_CLIENT] });
+    expect(v.clientOptions.some((o) => o.id === 'new1')).toBe(false);
+  });
+
+  it('never surfaces an unassigned client in the review queue or safety center', () => {
+    const v = makeView({ extraClients: [UNASSIGNED_CLIENT] });
+    expect(v.reviewItems.some((r) => r.clientName === 'Fresh Signup')).toBe(false);
+    expect(v.safetyRows.some((s) => s.name === 'Fresh Signup')).toBe(false);
+  });
+
+  it('wires the claim action through to the onClaimClient handler', () => {
+    const calls = [];
+    const S = { ...INITIAL_STATE, extraClients: [UNASSIGNED_CLIENT] };
+    const theme = LIGHT;
+    const allClients = () => CLIENTS.concat(S.extraClients || []).filter((c) => !S.deletedIds[c.id]);
+    const buildTreatmentPlan = (client) => ({ clientName: client.name, phases: [], currentPhaseLabel: '', currentPhaseDesc: '', milestones: [] });
+    const handlers = new Proxy(
+      { isGroupExpanded: () => false, onClaimClient: (id) => calls.push(id) },
+      { get: (target, prop) => target[prop] || (() => {}) },
+    );
+    const v = buildView({ S, theme, allClients, buildTreatmentPlan, handlers, isAdmin: true });
+    v.clientListFiltered.find((c) => c.id === 'new1').onClaim();
+    expect(calls).toEqual(['new1']);
+  });
+});

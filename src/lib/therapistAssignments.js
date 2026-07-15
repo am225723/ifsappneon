@@ -20,10 +20,22 @@ function pickColumns(rows, columns) {
   return rows.map((row) => Object.fromEntries(requested.map((column) => [column, row[column]])));
 }
 
-export async function loadAssignedClients(therapistId, columns = 'id, name, pin, email, phone, status, last_active, created_at, user_role, access_restrictions') {
-  if (!therapistId) return [];
+// assignment_status/assigned_at/discharged_at are computed by the secure API
+// route's JOIN — they don't exist as columns on ifs_clients itself, so a
+// direct Supabase select against that table must not request them.
+const ASSIGNMENT_VIRTUAL_COLUMNS = new Set(['assignment_status', 'assigned_at', 'discharged_at']);
+function clientsTableColumns(columns) {
+  if (!columns || columns === '*') return columns;
+  const kept = columns.split(',').map((c) => c.trim()).filter((c) => c && !ASSIGNMENT_VIRTUAL_COLUMNS.has(c));
+  return kept.length ? kept.join(', ') : 'id';
+}
 
-  const { data, error } = await getJson('/api/therapist/assigned-clients');
+export async function loadAssignedClients(therapistId, columns = 'id, name, pin, email, phone, status, last_active, created_at, user_role, access_restrictions', options = {}) {
+  if (!therapistId) return [];
+  const { includeUnassigned = false } = options;
+
+  const query = includeUnassigned ? '/api/therapist/assigned-clients?includeUnassigned=true' : '/api/therapist/assigned-clients';
+  const { data, error } = await getJson(query);
   if (!error && data) return pickColumns(data, columns);
 
   console.warn('Secure assigned-clients route unavailable; falling back to scoped assignment query.', error);
@@ -38,22 +50,52 @@ export async function loadAssignedClients(therapistId, columns = 'id, name, pin,
     return [];
   }
 
-  const clientIds = [...new Set((assignments || []).map((row) => row.client_id).filter(Boolean))];
-  if (clientIds.length === 0) return [];
+  const assignedIds = [...new Set((assignments || []).map((row) => row.client_id).filter(Boolean))];
+  const rawColumns = clientsTableColumns(columns);
+  const wantsAssignmentStatus = !columns || columns === '*' || columns.includes('assignment_status');
 
-  const { data: clients, error: clientError } = await supabase
-    .from('ifs_clients')
-    .select(columns)
-    .in('id', clientIds)
-    .eq('user_role', 'client')
-    .order('name');
+  const { data: assignedClients, error: clientError } = assignedIds.length
+    ? await supabase.from('ifs_clients').select(rawColumns).in('id', assignedIds).eq('user_role', 'client').order('name')
+    : { data: [], error: null };
 
   if (clientError) {
     console.error('Error loading assigned client records:', clientError);
     return [];
   }
 
-  return clients || [];
+  const assignedWithStatus = wantsAssignmentStatus
+    ? (assignedClients || []).map((c) => ({ ...c, assignment_status: 'active' }))
+    : (assignedClients || []);
+
+  if (!includeUnassigned) return assignedWithStatus;
+
+  // Also surface clients nobody has claimed yet (e.g. fresh signups with no
+  // ifs_therapist_clients row at all), so the fallback path doesn't hide them.
+  const { data: allTherapistClientRows, error: allAssignmentsError } = await supabase
+    .from('ifs_therapist_clients')
+    .select('client_id');
+
+  if (allAssignmentsError) {
+    console.error('Error loading assignment ids for unassigned lookup:', allAssignmentsError);
+    return assignedWithStatus;
+  }
+
+  const claimedIds = new Set((allTherapistClientRows || []).map((row) => row.client_id).filter(Boolean));
+  const { data: allClients, error: allClientsError } = await supabase
+    .from('ifs_clients')
+    .select(rawColumns)
+    .eq('user_role', 'client')
+    .order('name');
+
+  if (allClientsError) {
+    console.error('Error loading unassigned client records:', allClientsError);
+    return assignedWithStatus;
+  }
+
+  const unassignedClients = (allClients || [])
+    .filter((c) => !claimedIds.has(c.id))
+    .map((c) => (wantsAssignmentStatus ? { ...c, assignment_status: null } : c));
+  return [...assignedWithStatus, ...unassignedClients];
 }
 
 export async function loadCaseloadClients() {
