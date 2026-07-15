@@ -2,14 +2,21 @@ import { useEffect, useRef, useState } from 'react';
 import { buildView, WorkspaceShell, EmptyCaseload, WorkspaceStatus } from './AdvisorWorkspaceView.jsx';
 import {
   WOUND_META, LIGHT, DARK, CLIENTS, TEMPLATE_OPTIONS, PRACTICE_TYPE_META, PLAN_PHASES,
-  DOC_TYPES, NAV_CONFIG,
+  DOC_SOURCES_DEFAULT, NAV_CONFIG,
 } from './advisorWorkspaceData.js';
 import {
   loadWorkspaceCaseload, loadWorkspaceCaseloadWithStatus, loadWorkspaceClientDetail, sendWorkspaceMessage, persistTherapistNote,
-  claimWorkspaceClient, mergeCaseloadRefresh,
+  claimWorkspaceClient, mergeCaseloadRefresh, generateWorkspaceReport, loadWorkspaceReports,
 } from '../lib/advisorWorkspaceLoader.js';
 
 const CASELOAD_REFRESH_MS = 45000;
+
+function todayIso() { return new Date().toISOString().slice(0, 10); }
+function sixMonthsAgoIso() {
+  const d = new Date();
+  d.setMonth(d.getMonth() - 6);
+  return d.toISOString().slice(0, 10);
+}
 
 export const INITIAL_STATE = {
   baseClients: CLIENTS,
@@ -32,8 +39,9 @@ export const INITIAL_STATE = {
     { id: 't4', title: 'Treatment plan review — Maya Chen', clientId: 'c1', priority: 'low', due: 'Jul 20', status: 'open', category: 'Treatment Plan' },
   ],
   taskFilter: 'open', newTaskTitle: '', newTaskClientId: 'c1',
-  docForm: { clientId: 'c1', type: 'progress_summary' }, docSources: { notes: true, assessments: true, plan: true, practices: false },
-  generatedDoc: null,
+  docForm: { clientId: 'c1', type: 'clinical_summary', dateRangeStart: sixMonthsAgoIso(), dateRangeEnd: todayIso() },
+  docSources: { ...DOC_SOURCES_DEFAULT },
+  generatedDoc: null, docGenerating: false, docError: '', clientReports: [], clientReportsLoading: false,
   accessOverrides: {}, settingsAccent: 'amber',
   extraClients: [], deletedIds: {},
   showNewClientForm: false, newClientForm: { name: '', email: '', phone: '', sendEmail: true }, newClientResult: null,
@@ -63,6 +71,7 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
   const [S, setS] = useState(INITIAL_STATE);
   const [loadPhase, setLoadPhase] = useState(isDemo ? 'ready' : 'loading');
   const detailRequested = useRef(new Set());
+  const reportsLoadedFor = useRef(null);
   // Generation guard: bumped on therapist change / unmount so stale in-flight
   // detail merges are ignored without cancelling still-valid sibling requests.
   const genRef = useRef(0);
@@ -293,28 +302,52 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
   };
   const toggleTask = (id) => set((s) => ({ tasks: s.tasks.map((t) => (t.id === id ? { ...t, status: t.status === 'open' ? 'done' : 'open' } : t)) }));
   const onDismissEngagement = (clientId) => set((s) => ({ engagementDismissed: { ...s.engagementDismissed, [clientId]: !s.engagementDismissed[clientId] } }));
-  const onDocClientChange = (e) => set((s) => ({ docForm: { ...s.docForm, clientId: e.target.value }, generatedDoc: null }));
-  const onDocTypeChange = (e) => set((s) => ({ docForm: { ...s.docForm, type: e.target.value }, generatedDoc: null }));
+  const refreshClientReports = (clientId) => {
+    if (isDemo || !clientId) { set({ clientReports: [] }); return; }
+    set({ clientReportsLoading: true });
+    loadWorkspaceReports(clientId)
+      .then((rows) => set({ clientReports: rows, clientReportsLoading: false }))
+      .catch(() => set({ clientReportsLoading: false }));
+  };
+  const onDocClientChange = (e) => {
+    const clientId = e.target.value;
+    set((s) => ({ docForm: { ...s.docForm, clientId }, generatedDoc: null, docError: '' }));
+    refreshClientReports(clientId);
+  };
+  const onDocTypeChange = (e) => set((s) => ({ docForm: { ...s.docForm, type: e.target.value }, generatedDoc: null, docError: '' }));
+  const onDocDateChange = (field) => (e) => set((s) => ({ docForm: { ...s.docForm, [field]: e.target.value }, generatedDoc: null }));
   const toggleDocSource = (key) => set((s) => ({ docSources: { ...s.docSources, [key]: !s.docSources[key] }, generatedDoc: null }));
   const onGenerateDoc = () => {
+    if (isDemo) { set({ docError: 'Document generation requires a signed-in Advisor session.' }); return; }
     const { docForm, docSources } = S;
-    const client = allClients().find((c) => c.id === docForm.clientId) || allClients()[0];
-    const docType = DOC_TYPES.find((d) => d.id === docForm.type) || DOC_TYPES[0];
-    const parts = [`${docType.label} — ${client.name}\nPrepared by Dr. Rivera, Advisor\n`];
-    if (docSources.notes) parts.push(`Session notes on file: ${S.savedNotes.filter((n) => n.clientId === client.id).length || 0} recent note(s) reviewed.`);
-    if (docSources.assessments) parts.push(`Recent MBC results: ${client.mbc.map((m) => m.name + ' ' + m.current).join('; ')}.`);
-    if (docSources.plan) parts.push(`Treatment plan: currently in the ${PLAN_PHASES[client.modulesCompleted < 4 ? 0 : (client.modulesCompleted < 9 ? 1 : 2)].label} phase. Active goal: ${client.goals[0] ? client.goals[0].title : 'none on file'}.`);
-    if (docSources.practices) parts.push(`Assigned practices: ${S.assignedPractices.filter((a) => a.clientName === client.name).length} tracked in system.`);
-    if (!docSources.notes && !docSources.assessments && !docSources.plan && !docSources.practices) parts.push('No source records selected — select at least one above for a complete draft.');
-    parts.push('\nUnsupported fields have been omitted rather than invented; Advisor review is required before finalizing.');
-    set({ generatedDoc: parts.join('\n\n') });
+    if (!docForm.clientId) { set({ docError: 'Select a client first.' }); return; }
+    set({ docGenerating: true, docError: '', generatedDoc: null });
+    generateWorkspaceReport({
+      clientId: docForm.clientId, reportType: docForm.type,
+      dateRangeStart: docForm.dateRangeStart, dateRangeEnd: docForm.dateRangeEnd, sections: docSources,
+    }).then(({ data, error }) => {
+      if (error) { set({ docGenerating: false, docError: error.message || 'Unable to generate document.' }); return; }
+      set({ docGenerating: false, generatedDoc: data });
+      refreshClientReports(docForm.clientId);
+    });
   };
-  const onApproveDoc = () => {
-    if (!S.generatedDoc) return;
-    const client = allClients().find((c) => c.id === S.docForm.clientId) || allClients()[0];
-    const docType = DOC_TYPES.find((d) => d.id === S.docForm.type) || DOC_TYPES[0];
-    set((s) => ({ reports: [{ title: docType.label + ' — ' + client.name, date: 'Today' }, ...s.reports], generatedDoc: null }));
+  const onOpenGeneratedDoc = () => {
+    if (!S.generatedDoc?.html) return;
+    const blob = new Blob([S.generatedDoc.html], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    window.open(url, '_blank', 'noopener');
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
   };
+
+  // Lazily load a client's real report-generation history the first time the
+  // Document Creator tab is opened for them (rather than eagerly on mount).
+  useEffect(() => {
+    if (isDemo || loadPhase !== 'ready' || S.activeTab !== 'clinical-docs' || !S.docForm.clientId) return;
+    if (reportsLoadedFor.current === S.docForm.clientId) return;
+    reportsLoadedFor.current = S.docForm.clientId;
+    refreshClientReports(S.docForm.clientId);
+  }, [isDemo, loadPhase, S.activeTab, S.docForm.clientId, refreshClientReports]);
+
   const toggleNewClientForm = () => set((s) => ({ showNewClientForm: !s.showNewClientForm, newClientResult: null }));
   const onNewClientFieldChange = (field) => (e) => set((s) => ({ newClientForm: { ...s.newClientForm, [field]: field === 'sendEmail' ? e.target.checked : e.target.value } }));
   const onCreateClient = () => {
@@ -403,7 +436,7 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
       onCoTherapyMessageChange, onSendCoTherapyMessage, toggleCoTherapyShare, onGenerateReport, isGroupExpanded, toggleGroup,
       onClientMessageChange, onSendClientMessage, setActiveThread, addTaskFromMessage, onAcknowledgeSafety, onCreateSafetyPlan, setPartsClientFilter,
       setTaskFilter, onNewTaskTitleChange, onNewTaskClientChange, onAddTask, toggleTask, onDismissEngagement,
-      onDocClientChange, onDocTypeChange, toggleDocSource, onGenerateDoc, onApproveDoc, toggleNewClientForm, onNewClientFieldChange, onCreateClient,
+      onDocClientChange, onDocTypeChange, onDocDateChange, toggleDocSource, onGenerateDoc, onOpenGeneratedDoc, toggleNewClientForm, onNewClientFieldChange, onCreateClient,
       onStartDelete, onCancelDelete, onDeleteConfirmChange, onConfirmDelete, onPracticeGuidanceChange, onGeneratePracticeBatch, onUseBatchPractice,
       onDeleteMessage, applyQuickMessage, toggleLiveSession, endLiveSession, onMarkNotifRead, onMarkAllNotifsRead, onOpenNotifClient,
     },
