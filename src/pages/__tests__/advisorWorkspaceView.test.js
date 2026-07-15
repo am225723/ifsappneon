@@ -13,15 +13,18 @@ function makeView(overrides = {}) {
     clientName: client.name, phases: PLAN_PHASES.map((p) => ({ label: p.label, dotStyle: {}, labelStyle: {} })),
     currentPhaseLabel: PLAN_PHASES[0].label, currentPhaseDesc: PLAN_PHASES[0].desc, milestones: [],
   });
-  const handlers = new Proxy({}, { get: () => (S.__isGroup ? false : () => {}) });
-  handlers.isGroupExpanded = () => false;
-  return buildView({ S, theme, allClients, buildTreatmentPlan, handlers });
+  const handlers = new Proxy(
+    { isGroupExpanded: () => false },
+    { get: (target, prop) => target[prop] || (() => {}) },
+  );
+  return buildView({ S, theme, allClients, buildTreatmentPlan, handlers, isAdmin: true });
 }
 
 describe('buildView — overview metrics', () => {
   const v = makeView();
-  it('counts the seeded caseload', () => {
-    expect(v.stats.caseload).toBe(3);
+  it('counts only active clients in the caseload stat', () => {
+    // 3 seeded clients, but Sam Okafor is inactive — active caseload is 2.
+    expect(v.stats.caseload).toBe(2);
   });
   it('flags clients with active risk for attention', () => {
     // Jordan (high) + Sam (medium) both carry a risk flag in the seed data.
@@ -47,6 +50,17 @@ describe('buildView — navigation', () => {
     expect(v.isOverview).toBe(true);
     expect(v.isCommandMode).toBe(true);
     expect(v.topbarTitle).toBe('Command Center');
+  });
+  it('hides the Admin group from non-admin users', () => {
+    const admin = makeView(); // isAdmin: true
+    expect(admin.navRows.some((r) => r.id === 'admin')).toBe(true);
+    const nonAdmin = buildView({
+      S: { ...INITIAL_STATE }, theme: LIGHT,
+      allClients: () => CLIENTS, buildTreatmentPlan: (c) => ({ clientName: c.name, phases: [], milestones: [], currentPhaseLabel: '', currentPhaseDesc: '' }),
+      handlers: new Proxy({ isGroupExpanded: () => false }, { get: (t, p) => t[p] || (() => {}) }),
+      isAdmin: false,
+    });
+    expect(nonAdmin.navRows.some((r) => r.id === 'admin')).toBe(false);
   });
 });
 

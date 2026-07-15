@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { buildView, WorkspaceShell } from './AdvisorWorkspaceView.jsx';
+import { buildView, WorkspaceShell, EmptyCaseload } from './AdvisorWorkspaceView.jsx';
 import {
   WOUND_META, LIGHT, DARK, CLIENTS, TEMPLATE_OPTIONS, PRACTICE_TYPE_META, PLAN_PHASES,
   DOC_TYPES, NAV_CONFIG,
@@ -16,7 +16,7 @@ export const INITIAL_STATE = {
   coTherapyThread: [{ author: 'Dr. Patel', text: 'Flagging Jordan’s risk note for joint review before Thursday.', date: 'Yesterday' }],
   reports: [{ title: 'Caseload Summary — June 2026', date: 'Jul 1, 2026' }],
   settingsToggles: { riskAlerts: true, weeklyDigest: true, sessionReminders: false },
-  clientMessages: {}, clientMessageDraft: '', activeThreadId: 'c2',
+  clientMessages: {}, clientMessageDraft: '', activeThreadId: 'c2', readThreads: {},
   safetyOverrides: {}, engagementDismissed: {}, partsClientFilter: 'all',
   tasks: [
     { id: 't1', title: 'Sign session note — Maya Chen', clientId: 'c1', priority: 'medium', due: 'Today', status: 'open', category: 'Documentation' },
@@ -48,7 +48,7 @@ export const INITIAL_STATE = {
 
 const FONT_LINK_ID = 'aw-google-fonts';
 
-function AdvisorWorkspace() {
+function AdvisorWorkspace({ isAdmin = false }) {
   const [S, setS] = useState(INITIAL_STATE);
   // setState-compatible merge helper (accepts object or updater fn)
   const set = (patch) => setS((prev) => ({ ...prev, ...(typeof patch === 'function' ? patch(prev) : patch) }));
@@ -83,9 +83,9 @@ function AdvisorWorkspace() {
   const saveNoteInternal = (status) => {
     const noteDraft = S.noteDraft;
     if (!noteDraft.text.trim()) return;
-    const client = CLIENTS.find((c) => c.id === noteDraft.clientId);
+    const client = allClients().find((c) => c.id === noteDraft.clientId);
     const tmpl = TEMPLATE_OPTIONS.find((t) => t.id === noteDraft.template);
-    const entry = { clientName: client ? client.name : 'Client', templateLabel: tmpl ? tmpl.label : 'Note', text: noteDraft.text, date: 'Just now', status };
+    const entry = { clientId: noteDraft.clientId, clientName: client ? client.name : 'Client', templateLabel: tmpl ? tmpl.label : 'Note', text: noteDraft.text, date: 'Just now', status };
     set((s) => ({ savedNotes: [entry, ...s.savedNotes], noteDraft: { ...s.noteDraft, text: '' } }));
   };
   const onSaveNote = () => saveNoteInternal('Draft');
@@ -94,7 +94,10 @@ function AdvisorWorkspace() {
   const draftNoteFor = (clientId) => set((s) => ({ activeTab: 'clinical-notes', noteDraft: { ...s.noteDraft, clientId } }));
   const openPrepFor = (clientId) => set({ activeTab: 'sessions-prep', sessionPrepOpenId: clientId });
   const openPlanFor = (clientId) => set({ activeTab: 'clinical-plans', planClientId: clientId });
-  const openPracticeFor = (clientId) => set((s) => ({ activeTab: 'clinical-practice', practiceForm: { ...s.practiceForm, clientId } }));
+  const openPracticeFor = (clientId) => {
+    const client = allClients().find((c) => c.id === clientId);
+    set((s) => ({ activeTab: 'clinical-practice', practiceForm: { ...s.practiceForm, clientId, wound: client ? client.primaryWound : s.practiceForm.wound }, generatedPractice: null }));
+  };
   const onPlanClientChange = (e) => set({ planClientId: e.target.value });
   const onPracticeClientChange = (e) => {
     const client = allClients().find((c) => c.id === e.target.value);
@@ -148,13 +151,13 @@ function AdvisorWorkspace() {
       return { clientMessages: { ...s.clientMessages, [clientId]: [...extra, { from: 'advisor', text, date: 'Just now' }] }, clientMessageDraft: '' };
     });
   };
-  const setActiveThread = (id) => set({ activeThreadId: id, activeTab: 'messages' });
+  const setActiveThread = (id) => set((s) => ({ activeThreadId: id, activeTab: 'messages', readThreads: { ...s.readThreads, [id]: true } }));
   const addTaskFromMessage = () => {
     const clientId = currentThreadClientId();
     const client = allClients().find((c) => c.id === clientId);
     set((s) => ({ tasks: [{ id: 'task-' + Date.now(), title: 'Follow up on message — ' + (client ? client.name : ''), clientId, priority: 'medium', due: 'Tomorrow', status: 'open', category: 'Follow-up' }, ...s.tasks] }));
   };
-  const onAcknowledgeSafety = (clientId) => set((s) => ({ safetyOverrides: { ...s.safetyOverrides, [clientId]: { acknowledged: true } } }));
+  const onAcknowledgeSafety = (clientId) => set((s) => ({ safetyOverrides: { ...s.safetyOverrides, [clientId]: { ...(s.safetyOverrides[clientId] || {}), acknowledged: true } } }));
   const onCreateSafetyPlan = (clientId) => set((s) => ({ safetyOverrides: { ...s.safetyOverrides, [clientId]: { ...(s.safetyOverrides[clientId] || {}), hasPlanOverride: true } } }));
   const setPartsClientFilter = (id) => set({ partsClientFilter: id });
   const setTaskFilter = (f) => set({ taskFilter: f });
@@ -175,7 +178,7 @@ function AdvisorWorkspace() {
     const client = allClients().find((c) => c.id === docForm.clientId) || allClients()[0];
     const docType = DOC_TYPES.find((d) => d.id === docForm.type) || DOC_TYPES[0];
     const parts = [`${docType.label} — ${client.name}\nPrepared by Dr. Rivera, Advisor\n`];
-    if (docSources.notes) parts.push(`Session notes on file: ${S.savedNotes.filter((n) => n.clientName === client.name).length || 0} recent note(s) reviewed.`);
+    if (docSources.notes) parts.push(`Session notes on file: ${S.savedNotes.filter((n) => n.clientId === client.id).length || 0} recent note(s) reviewed.`);
     if (docSources.assessments) parts.push(`Recent MBC results: ${client.mbc.map((m) => m.name + ' ' + m.current).join('; ')}.`);
     if (docSources.plan) parts.push(`Treatment plan: currently in the ${PLAN_PHASES[client.modulesCompleted < 4 ? 0 : (client.modulesCompleted < 9 ? 1 : 2)].label} phase. Active goal: ${client.goals[0] ? client.goals[0].title : 'none on file'}.`);
     if (docSources.practices) parts.push(`Assigned practices: ${S.assignedPractices.filter((a) => a.clientName === client.name).length} tracked in system.`);
@@ -257,8 +260,12 @@ function AdvisorWorkspace() {
     };
   };
 
+  if (allClients().length === 0) {
+    return <EmptyCaseload theme={theme} onReset={() => set(INITIAL_STATE)} />;
+  }
+
   const view = buildView({
-    S, theme, allClients, buildTreatmentPlan,
+    S, theme, allClients, buildTreatmentPlan, isAdmin,
     handlers: {
       setTab, setViewMode, toggleTheme, selectClient, setClientTab, onSearch, setFilterWound, markReviewed, toggleSessionPrep,
       onNoteClientChange, onNoteTemplateChange, onNoteTextChange, onSaveNote, onSignNote, toggleSetting, draftNoteFor, openPrepFor, openPlanFor, openPracticeFor,

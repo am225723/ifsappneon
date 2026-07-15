@@ -1,13 +1,13 @@
 import { Link } from 'react-router-dom';
 import {
   WOUND_META, woundChip, daysAgoText, severityStyle, RISK_LEVEL_TO_SEV, RISK_LEVEL_LABEL,
-  PART_CAT_META, partChip, CLIENTS, TEMPLATE_OPTIONS, PRACTICE_TYPE_META, LESSON_TITLES, PLAN_PHASES,
+  PART_CAT_META, partChip, TEMPLATE_OPTIONS, PRACTICE_TYPE_META, LESSON_TITLES, PLAN_PHASES,
   DOC_TYPES, DOC_SOURCES, NAV_CONFIG, CLIENT_TABS, TIMELINE_TYPE_META, TAB_TITLES, TOGGLE_META,
   QUICK_MESSAGES, engagementStatusFor,
 } from './advisorWorkspaceData.js';
 
 // Computes every derived value the UI needs (mirrors the design's renderVals()).
-export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: H }) {
+export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: H, isAdmin = false }) {
   const {
     activeTab, isDark, viewMode, selectedClientId, activeClientTab, search, filterWound, reviewedIds,
     sessionPrepOpenId, noteDraft, savedNotes, planClientId, practiceForm, generatedPractice, assignedPractices,
@@ -48,12 +48,15 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
   }
   const badgeCount = reviewCount();
   const safetyBadge = ALL_CLIENTS.filter((c) => (c.safety.riskLevel === 'high' || c.safety.riskLevel === 'urgent') && !getSafety(c).acknowledged).length;
-  const unreadMessages = ALL_CLIENTS.filter((c) => (c.messages || []).length > 0).length;
+  const readThreads = S.readThreads || {};
+  const hasUnreadFor = (c) => (c.messages || []).some((m) => m.from === 'client') && !readThreads[c.id];
+  const unreadMessages = ALL_CLIENTS.filter(hasUnreadFor).length;
   const openTasksCount = tasks.filter((t) => t.status === 'open').length;
   const notifUnreadCount = S.notifications.filter((n) => !n.read).length;
 
+  const navConfig = isAdmin ? NAV_CONFIG : NAV_CONFIG.filter((g) => g.id !== 'admin');
   const navRows = [];
-  NAV_CONFIG.forEach((g) => {
+  navConfig.forEach((g) => {
     const hasChildren = !!g.children;
     const groupActive = hasChildren ? g.children.some((c) => c.id === activeTab) : activeTab === g.id;
     const expanded = hasChildren ? H.isGroupExpanded(g.id) : false;
@@ -90,7 +93,7 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
     sevChip: severityStyle(theme, c.risk.level), sevLabel: c.risk.level === 'high' ? 'High' : 'Medium', onClick: () => H.selectClient(c.id),
   }));
   const stats = {
-    caseload: enrichedClients.length, needsAttention: needsAttentionRaw.length,
+    caseload: enrichedClients.filter((c) => c.status === 'active').length, needsAttention: needsAttentionRaw.length,
     upcomingSessions: enrichedClients.filter((c) => c.session.status === 'submitted').length,
     pendingReviews: enrichedClients.filter((c) => c.pendingReview && !reviewedIds['practice-' + c.id]).length,
   };
@@ -158,8 +161,8 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
       goals: rawSelected.goals.map((g) => ({ title: g.title, reviewLabel: 'Review in ' + g.reviewInDays + 'd', style: { fontSize: '11px', fontWeight: 700, color: g.reviewInDays <= 7 ? theme.riskMedText : theme.muted } })),
       qaAnswers: rawSelected.qaAnswers,
       timeline: rawSelected.timeline.map((e) => { const m = TIMELINE_TYPE_META[e.type] || TIMELINE_TYPE_META.note; return { label: e.label, date: e.date, typeLabel: m.label, typeChip: { fontSize: '10px', fontWeight: 700, color: m.color, background: isDark ? 'rgba(255,255,255,0.08)' : m.color + '14', padding: '3px 7px', borderRadius: '6px', whiteSpace: 'nowrap', height: 'fit-content' } }; }),
-      clientNotes: savedNotes.filter((n) => n.clientName === rawSelected.name).map((n) => ({ ...n, statusStyle: severityStyle(theme, n.status === 'Signed & Locked' ? 'low' : 'medium'), statusLabel: n.status })),
-      noNotes: !savedNotes.some((n) => n.clientName === rawSelected.name),
+      clientNotes: savedNotes.filter((n) => n.clientId === rawSelected.id).map((n) => ({ ...n, statusStyle: severityStyle(theme, n.status === 'Signed & Locked' ? 'low' : 'medium'), statusLabel: n.status })),
+      noNotes: !savedNotes.some((n) => n.clientId === rawSelected.id),
       plan: buildTreatmentPlan(rawSelected),
       mbc: rawSelected.mbc.map((m) => {
         const change = m.current - m.previous;
@@ -226,7 +229,7 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
   const threadList = enrichedClients.filter((c) => c.messages.length > 0 || (clientMessages[c.id] || []).length > 0).map((c) => {
     const all = [...c.messages, ...(clientMessages[c.id] || [])];
     const last = all[all.length - 1];
-    const hasUnread = c.messages.some((m) => m.from === 'client');
+    const hasUnread = hasUnreadFor(c);
     return { id: c.id, initial: c.initial, name: c.name, preview: last ? last.text : '', hasUnread, onClick: () => H.setActiveThread(c.id), rowStyle: { display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', borderRadius: '14px', cursor: 'pointer', background: activeThreadId === c.id ? theme.surface2 : 'transparent' } };
   });
   const activeThreadClient = enrichedClients.find((c) => c.id === activeThreadId) || enrichedClients[0];
@@ -241,7 +244,7 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
   const TASK_FILTER_LIST = [{ id: 'open', label: 'Open' }, { id: 'done', label: 'Completed' }, { id: 'all', label: 'All' }];
   const taskFilters = TASK_FILTER_LIST.map((f) => ({ id: f.id, label: f.label, onClick: () => H.setTaskFilter(f.id), style: { padding: '6px 12px', borderRadius: '999px', border: '1px solid ' + (taskFilter === f.id ? theme.accent2 : theme.border), background: taskFilter === f.id ? theme.accent2 : 'transparent', color: taskFilter === f.id ? '#fff' : theme.text2, fontSize: '12px', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' } }));
   const taskRows = tasks.filter((t) => taskFilter === 'all' || t.status === taskFilter).map((t) => {
-    const client = CLIENTS.find((c) => c.id === t.clientId);
+    const client = enrichedClients.find((c) => c.id === t.clientId);
     const done = t.status === 'done';
     return {
       id: t.id, title: t.title, client: client ? client.name : '', category: t.category, due: t.due,
@@ -623,7 +626,7 @@ function ClientsCaseload({ v }) {
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
           {v.clientListFiltered.map((c) => (
-            <div key={c.id} onClick={c.onClick} style={c.rowStyle}>
+            <button key={c.id} type="button" onClick={c.onClick} style={{ ...c.rowStyle, width: '100%', textAlign: 'left', font: 'inherit' }}>
               <div style={{ width: '38px', height: '38px', borderRadius: '50%', background: 'var(--accent-2)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '13px', flexShrink: 0 }}>{c.initial}</div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text)' }}>{c.name}</div>
@@ -633,7 +636,7 @@ function ClientsCaseload({ v }) {
                 </div>
               </div>
               {c.hasRisk && <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--risk-high-text)', flexShrink: 0 }} />}
-            </div>
+            </button>
           ))}
         </div>
       </div>
@@ -1533,6 +1536,22 @@ function SettingsView({ v }) {
           <button onClick={s.onClick} style={s.trackStyle}><div style={s.knobStyle} /></button>
         </div>
       ))}
+    </div>
+  );
+}
+
+export function EmptyCaseload({ theme, onReset }) {
+  return (
+    <div className="aw-root" style={{ minHeight: '100vh', background: theme.bg, color: theme.text, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Plus Jakarta Sans', sans-serif", padding: '32px' }}>
+      <div style={{ maxWidth: '440px', textAlign: 'center', background: theme.surface, border: '1px solid ' + theme.border, borderRadius: '20px', padding: '32px', boxShadow: theme.shadow }}>
+        <div style={{ fontFamily: "'Fraunces',serif", fontWeight: 600, fontSize: '18px', color: theme.text }}>Your caseload is empty</div>
+        <div style={{ fontSize: '13.5px', color: theme.muted, marginTop: '8px', lineHeight: 1.6 }}>
+          There are no clients in this workspace. Add a client from the Caseload view to get started.
+        </div>
+        <button type="button" onClick={onReset} style={{ marginTop: '18px', background: `linear-gradient(135deg, ${theme.accent2}, ${theme.emerald2})`, color: '#fff', border: 'none', padding: '10px 18px', borderRadius: '12px', fontWeight: 600, fontSize: '13px', cursor: 'pointer', fontFamily: 'inherit' }}>
+          Restore sample caseload
+        </button>
+      </div>
     </div>
   );
 }
