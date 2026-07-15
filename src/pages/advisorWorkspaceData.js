@@ -37,7 +37,15 @@ export function woundChip(wound, isDark, subtle) {
   const text = isDark ? `oklch(82% 0.09 ${meta.hue})` : `oklch(40% 0.11 ${meta.hue})`;
   return { background: bg, color: text, fontSize: '11px', fontWeight: 600, padding: subtle ? '2px 8px' : '3px 9px', borderRadius: '999px', whiteSpace: 'nowrap' };
 }
+// advisorWorkspaceLoader.mapClientRow uses a large sentinel (999) for
+// lastActiveDays/risk.daysAgo when a client has no recorded activity at all,
+// so internal threshold/sort logic still treats them as "long inactive"
+// without a null check at every call site. Never surface that sentinel as a
+// literal day count.
+const NO_ACTIVITY_SENTINEL = 900;
 export function daysAgoText(n) {
+  if (n == null) return 'No activity recorded';
+  if (n >= NO_ACTIVITY_SENTINEL) return 'No activity recorded';
   if (n === 0) return 'Today';
   if (n === 1) return 'Yesterday';
   return n + ' days ago';

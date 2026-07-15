@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { buildView } from '../AdvisorWorkspaceView.jsx';
 import { INITIAL_STATE } from '../AdvisorWorkspace.jsx';
-import { LIGHT, CLIENTS, PLAN_PHASES } from '../advisorWorkspaceData.js';
+import { LIGHT, CLIENTS, PLAN_PHASES, daysAgoText } from '../advisorWorkspaceData.js';
 
 // Minimal, side-effect-free harness that drives the real derivation engine the
 // Advisor Workspace UI renders from.
@@ -158,5 +158,78 @@ describe('buildView — unassigned clients (new signups)', () => {
     const v = buildView({ S, theme, allClients, buildTreatmentPlan, handlers, isAdmin: true });
     v.clientListFiltered.find((c) => c.id === 'new1').onClaim();
     expect(calls).toEqual(['new1']);
+  });
+});
+
+describe('daysAgoText — no-activity sentinel', () => {
+  it('never renders the internal 999-day sentinel as a literal day count', () => {
+    expect(daysAgoText(999)).toBe('No activity recorded');
+    expect(daysAgoText(null)).toBe('No activity recorded');
+  });
+  it('still formats real day counts normally', () => {
+    expect(daysAgoText(0)).toBe('Today');
+    expect(daysAgoText(1)).toBe('Yesterday');
+    expect(daysAgoText(5)).toBe('5 days ago');
+  });
+});
+
+describe('buildView — unassigned clients never inflate nav badges or hijack write-only fallbacks', () => {
+  const RISKY_UNASSIGNED = {
+    ...UNASSIGNED_CLIENT,
+    id: 'new2', name: 'Risky Signup',
+    risk: { type: 'inactivity', level: 'high', detail: 'No login or activity has been recorded yet.', daysAgo: 999 },
+    pendingReview: { label: 'Intake worksheet', daysAgo: 1 },
+    safety: { riskLevel: 'high', protective: [], riskFactors: ['New signup'], safetyPlan: null, contacts: [], acknowledged: false, ackNote: '' },
+  };
+
+  it('excludes an unassigned client\'s risk/pending-review from the review and safety nav badges', () => {
+    const baseline = makeView();
+    const withRisky = makeView({ extraClients: [RISKY_UNASSIGNED] });
+    const reviewBadge = (v) => v.navRows.find((r) => r.id === 'review').badgeCount;
+    const safetyBadge = (v) => v.navRows.find((r) => r.id === 'safety').badgeCount;
+    expect(reviewBadge(withRisky)).toBe(reviewBadge(baseline));
+    expect(safetyBadge(withRisky)).toBe(safetyBadge(baseline));
+    // Sanity check the fixture would have moved the badges if it were counted.
+    expect(withRisky.reviewItems.some((r) => r.clientName === 'Risky Signup')).toBe(false);
+    expect(withRisky.safetyRows.some((s) => s.name === 'Risky Signup')).toBe(false);
+  });
+
+  it('never falls back to an unassigned client for co-therapy or treatment-plan creation', () => {
+    // An Advisor with zero assigned clients (only an unassigned signup) should
+    // see an empty state, not silently get routed to that unclaimed client.
+    const S = { ...INITIAL_STATE, deletedIds: Object.fromEntries(CLIENTS.map((c) => [c.id, true])), extraClients: [UNASSIGNED_CLIENT] };
+    const theme = LIGHT;
+    const allClients = () => CLIENTS.concat(S.extraClients || []).filter((c) => !S.deletedIds[c.id]);
+    const buildTreatmentPlan = (client) => ({ clientName: client.name, phases: [], currentPhaseLabel: '', currentPhaseDesc: '', milestones: [] });
+    const handlers = new Proxy({ isGroupExpanded: () => false }, { get: (t, p) => t[p] || (() => {}) });
+    const v = buildView({ S, theme, allClients, buildTreatmentPlan, handlers, isAdmin: true });
+    expect(v.hasCoTherapyClient).toBe(false);
+    expect(v.coTherapy).toBeNull();
+    expect(v.hasPlanClient).toBe(false);
+    expect(v.treatmentPlan).toBeNull();
+  });
+});
+
+describe('buildView — write actions are gated until a client is claimed', () => {
+  it('omits write handlers on the selected client when it is unassigned', () => {
+    const v = makeView({ extraClients: [UNASSIGNED_CLIENT], selectedClientId: 'new1' });
+    const sc = v.selectedClient;
+    expect(sc.id).toBe('new1');
+    expect(sc.canWrite).toBe(false);
+    expect(sc.onDraftNote).toBeUndefined();
+    expect(sc.onOpenPrep).toBeUndefined();
+    expect(sc.onOpenPlan).toBeUndefined();
+    expect(sc.onOpenPractice).toBeUndefined();
+    expect(sc.onStartDelete).toBeUndefined();
+    expect(sc.safety.onAcknowledge).toBeUndefined();
+    expect(sc.safety.onCreatePlan).toBeUndefined();
+  });
+
+  it('keeps write handlers wired for an assigned selected client', () => {
+    const v = makeView({ selectedClientId: 'c1' });
+    const sc = v.selectedClient;
+    expect(sc.canWrite).toBe(true);
+    expect(typeof sc.onDraftNote).toBe('function');
+    expect(typeof sc.safety.onAcknowledge).toBe('function');
   });
 });

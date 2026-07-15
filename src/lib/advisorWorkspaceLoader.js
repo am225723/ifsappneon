@@ -7,7 +7,7 @@
 // source (e.g. MBC measures, structured safety plans) degrade to neutral empty
 // states rather than inventing data.
 
-import { loadAssignedClients, assignClientToTherapist } from './therapistAssignments';
+import { loadAssignedClients, loadAssignedClientsWithStatus, assignClientToTherapist } from './therapistAssignments';
 import { loadClientAnalytics } from './clientAnalytics';
 import { loadTherapistNotesForClient, createTherapistNote } from './therapistNotes';
 import { loadActiveTreatmentPlansForClient } from './treatmentPlans';
@@ -253,6 +253,16 @@ export async function loadWorkspaceCaseload(therapistId) {
   // fresh signups) so they don't silently disappear from the workspace.
   const rows = await loadAssignedClients(therapistId, CASELOAD_COLUMNS, { includeUnassigned: true });
   return (rows || []).map(mapClientRow);
+}
+
+// Same as loadWorkspaceCaseload, but reports whether the fetch was a
+// complete snapshot. A periodic background refresh must check this before
+// merging — applying a degraded/partial result (e.g. one Supabase query in
+// the fallback chain failed) would otherwise silently drop clients that are
+// already visible in the workspace.
+export async function loadWorkspaceCaseloadWithStatus(therapistId) {
+  const { data, complete } = await loadAssignedClientsWithStatus(therapistId, CASELOAD_COLUMNS, { includeUnassigned: true });
+  return { clients: (data || []).map(mapClientRow), complete };
 }
 
 export async function claimWorkspaceClient(therapistId, clientId, names = {}) {

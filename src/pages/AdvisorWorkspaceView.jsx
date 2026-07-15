@@ -34,6 +34,12 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
   const modeBtnStyle = (active) => ({ flex: 1, padding: '8px 6px', borderRadius: '9px', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: '11.5px', fontWeight: 700, background: active ? theme.surface : 'transparent', color: active ? theme.text : theme.muted, boxShadow: active ? theme.shadow : 'none' });
   const modeToggle = { onCommand: () => H.setViewMode('command'), onJourney: () => H.setViewMode('journey'), commandStyle: modeBtnStyle(viewMode === 'command'), journeyStyle: modeBtnStyle(viewMode === 'journey') };
   const ALL_CLIENTS = allClients();
+  // Caseload workflows (stats, review, safety, tasks, MBC, curriculum, etc. —
+  // including their nav badges) only cover clients actually assigned to this
+  // Advisor. Unassigned clients (e.g. fresh signups) still show up in the raw
+  // client picker with a Claim action, but shouldn't count toward or clutter
+  // a caseload that isn't theirs yet.
+  const assignedClients = ALL_CLIENTS.filter((c) => !c.unassigned);
 
   function getSafety(client) {
     const override = safetyOverrides[client.id] || {};
@@ -43,11 +49,11 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
   }
   function reviewCount() {
     let n = 0;
-    ALL_CLIENTS.forEach((c) => { if (c.risk && !reviewedIds['risk-' + c.id]) n++; if (c.pendingReview && !reviewedIds['practice-' + c.id]) n++; });
+    assignedClients.forEach((c) => { if (c.risk && !reviewedIds['risk-' + c.id]) n++; if (c.pendingReview && !reviewedIds['practice-' + c.id]) n++; });
     return n;
   }
   const badgeCount = reviewCount();
-  const safetyBadge = ALL_CLIENTS.filter((c) => (c.safety.riskLevel === 'high' || c.safety.riskLevel === 'urgent') && !getSafety(c).acknowledged).length;
+  const safetyBadge = assignedClients.filter((c) => (c.safety.riskLevel === 'high' || c.safety.riskLevel === 'urgent') && !getSafety(c).acknowledged).length;
   const readThreads = S.readThreads || {};
   const hasUnreadFor = (c) => (c.messages || []).some((m) => m.from === 'client') && !readThreads[c.id];
   const unreadMessages = ALL_CLIENTS.filter(hasUnreadFor).length;
@@ -87,12 +93,6 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
   const themeKnobStyle = { width: '18px', height: '18px', borderRadius: '50%', background: '#fff' };
 
   const enrichedClients = ALL_CLIENTS.map((c) => ({ ...c, lastActiveText: daysAgoText(c.lastActiveDays) }));
-  // Caseload workflows (stats, review, safety, tasks, MBC, curriculum, etc.)
-  // only cover clients actually assigned to this Advisor. Unassigned clients
-  // (e.g. fresh signups) still show up in the raw client picker with a Claim
-  // action, but shouldn't count toward or clutter a caseload that isn't
-  // theirs yet.
-  const assignedClients = enrichedClients.filter((c) => !c.unassigned);
   const needsAttentionRaw = assignedClients.filter((c) => c.risk && !reviewedIds['risk-' + c.id]).map((c) => ({
     id: c.id, name: c.name, detail: c.risk.detail,
     sevDot: { width: '9px', height: '9px', borderRadius: '50%', background: c.risk.level === 'high' ? 'var(--risk-high-text)' : 'var(--risk-med-text)', flexShrink: 0 },
@@ -153,6 +153,11 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
 
   let selectedClient = null;
   if (rawSelected) {
+    // Write-oriented actions (notes, session prep, treatment plans, practice
+    // generation, safety acknowledgment, deletion) are only available once a
+    // client has been claimed — an Advisor shouldn't be able to write
+    // clinical content for a client that isn't (yet) theirs.
+    const canWrite = !rawSelected.unassigned;
     const rawSafety = getSafety(rawSelected);
     const rawExtraMsgs = clientMessages[rawSelected.id] || [];
     const allMsgs = [...rawSelected.messages, ...rawExtraMsgs];
@@ -197,12 +202,16 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
         ackStatusText: rawSafety.acknowledged ? 'Acknowledged by Dr. Rivera' : 'Awaiting Advisor acknowledgment',
         ackBtnLabel: rawSafety.acknowledged ? 'Acknowledged' : 'Acknowledge review',
         ackBtnStyle: rawSafety.acknowledged ? secondaryBtnStyle : primaryBtnStyle,
-        onAcknowledge: () => H.onAcknowledgeSafety(rawSelected.id), onCreatePlan: () => H.onCreateSafetyPlan(rawSelected.id),
+        onAcknowledge: canWrite ? () => H.onAcknowledgeSafety(rawSelected.id) : undefined,
+        onCreatePlan: canWrite ? () => H.onCreateSafetyPlan(rawSelected.id) : undefined,
       },
       messages: allMsgs.map((m, idx) => ({ idx, authorLabel: m.from === 'client' ? rawSelected.name : 'You', text: m.text, date: m.date, readTick: m.from === 'advisor' ? '✓✓' : '', onDelete: () => H.onDeleteMessage(rawSelected.id, idx), bubbleStyle: { alignSelf: m.from === 'advisor' ? 'flex-end' : 'flex-start', maxWidth: '85%', padding: '10px 14px', borderRadius: '14px', background: m.from === 'advisor' ? theme.accent2 : theme.surface2, color: m.from === 'advisor' ? '#fff' : theme.text } })).filter((m) => !((deletedMessageIdx[rawSelected.id] || {})[m.idx])),
-      onDraftNote: () => H.draftNoteFor(rawSelected.id), onOpenPrep: () => H.openPrepFor(rawSelected.id),
-      onOpenPlan: () => H.openPlanFor(rawSelected.id), onOpenPractice: () => H.openPracticeFor(rawSelected.id),
-      onStartDelete: () => H.onStartDelete(rawSelected.id),
+      canWrite,
+      onDraftNote: canWrite ? () => H.draftNoteFor(rawSelected.id) : undefined,
+      onOpenPrep: canWrite ? () => H.openPrepFor(rawSelected.id) : undefined,
+      onOpenPlan: canWrite ? () => H.openPlanFor(rawSelected.id) : undefined,
+      onOpenPractice: canWrite ? () => H.openPracticeFor(rawSelected.id) : undefined,
+      onStartDelete: canWrite ? () => H.onStartDelete(rawSelected.id) : undefined,
     };
   }
 
@@ -229,13 +238,17 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
     isExpanded: sessionPrepOpenId === c.id, qaAnswers: c.qaAnswers, onToggle: () => H.toggleSessionPrep(c.id), onDraftNote: () => H.draftNoteFor(c.id),
   }));
 
-  const coTherapyClient = assignedClients.find((c) => c.id === 'c2') || assignedClients[0] || enrichedClients[0];
-  const coTherapy = {
+  // Never fall back to an unassigned client for co-therapy — an Advisor
+  // shouldn't be able to open a shared-case thread for a client that isn't
+  // (yet) theirs.
+  const coTherapyClient = assignedClients.find((c) => c.id === 'c2') || assignedClients[0] || null;
+  const hasCoTherapyClient = !!coTherapyClient;
+  const coTherapy = coTherapyClient ? {
     collabName: 'Dr. Patel · Clinical Supervisor', collabInitial: 'DP', clientName: coTherapyClient.name, thread: coTherapyThread,
     onToggleShare: H.toggleCoTherapyShare,
     shareTrackStyle: { width: '40px', height: '22px', borderRadius: '999px', border: 'none', cursor: 'pointer', background: coTherapyShare ? theme.emerald2 : theme.border, position: 'relative', padding: '3px', display: 'flex', justifyContent: coTherapyShare ? 'flex-end' : 'flex-start' },
     shareKnobStyle: { width: '16px', height: '16px', borderRadius: '50%', background: '#fff' }, onRequestConsult: () => H.onSendCoTherapyMessage(),
-  };
+  } : null;
 
   const threadList = enrichedClients.filter((c) => c.messages.length > 0 || (clientMessages[c.id] || []).length > 0).map((c) => {
     const all = [...c.messages, ...(clientMessages[c.id] || [])];
@@ -270,8 +283,10 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
   const clientOptions = assignedClients.map((c) => ({ id: c.id, name: c.name }));
   const currentTemplate = TEMPLATE_OPTIONS.find((t) => t.id === noteDraft.template) || TEMPLATE_OPTIONS[0];
   const allGoals = assignedClients.flatMap((c) => c.goals.map((g) => ({ clientName: c.name, title: g.title, reviewLabel: 'Review in ' + g.reviewInDays + 'd', style: { fontSize: '11px', fontWeight: 700, color: g.reviewInDays <= 7 ? theme.riskMedText : theme.muted, whiteSpace: 'nowrap' } })));
-  const planClient = assignedClients.find((c) => c.id === planClientId) || assignedClients[0] || enrichedClients[0];
-  const treatmentPlan = buildTreatmentPlan(planClient);
+  // Never fall back to an unassigned client for treatment-plan creation.
+  const planClient = assignedClients.find((c) => c.id === planClientId) || assignedClients[0] || null;
+  const hasPlanClient = !!planClient;
+  const treatmentPlan = planClient ? buildTreatmentPlan(planClient) : null;
 
   const woundOptions = Object.keys(WOUND_META).map((k) => ({ id: k, label: WOUND_META[k].label }));
   const practiceTypeOptions = Object.keys(PRACTICE_TYPE_META).map((k) => ({ id: k, label: PRACTICE_TYPE_META[k].label }));
@@ -316,7 +331,8 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
   const engagementRows = assignedClients.filter((c) => !engagementDismissed[c.id]).map((c) => {
     const status = engagementStatusFor(c.lastActiveDays);
     const sev = status === 'Highly engaged' || status === 'Engaged' ? 'low' : (status === 'Reduced engagement' ? 'medium' : 'high');
-    return { id: c.id, initial: c.initial, name: c.name, indicatorsSummary: `${c.lastActiveDays}d since last activity · ${c.pendingReview ? '1 pending review' : 'no pending items'}`, statusLabel: status, statusChip: severityStyle(theme, sev), onOutreach: () => H.setActiveThread(c.id), dismissLabel: 'Dismiss flag', onDismiss: () => H.onDismissEngagement(c.id) };
+    const activitySummary = c.lastActiveDays >= 900 ? 'No activity recorded' : `${c.lastActiveDays}d since last activity`;
+    return { id: c.id, initial: c.initial, name: c.name, indicatorsSummary: `${activitySummary} · ${c.pendingReview ? '1 pending review' : 'no pending items'}`, statusLabel: status, statusChip: severityStyle(theme, sev), onOutreach: () => H.setActiveThread(c.id), dismissLabel: 'Dismiss flag', onDismiss: () => H.onDismissEngagement(c.id) };
   });
 
   const settingsTogglesList = Object.keys(TOGGLE_META).map((key) => {
@@ -376,14 +392,14 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
     isClientTabPractices: activeClientTab === 'practices', isClientTabSafety: activeClientTab === 'safety', isClientTabMessages: activeClientTab === 'messages',
     primaryBtnStyle, secondaryBtnStyle, selectStyle,
     reviewItems, reviewQueueEmpty, safetyRows,
-    prepList, coTherapy, coTherapyMessage, onCoTherapyMessageChange: H.onCoTherapyMessageChange, onSendCoTherapyMessage: H.onSendCoTherapyMessage,
+    prepList, coTherapy, hasCoTherapyClient, coTherapyMessage, onCoTherapyMessageChange: H.onCoTherapyMessageChange, onSendCoTherapyMessage: H.onSendCoTherapyMessage,
     clientMessageDraft, onClientMessageChange: H.onClientMessageChange, onSendClientMessage: H.onSendClientMessage,
     threadList, activeThread,
     taskFilters, taskRows, noTasks, newTaskTitle, newTaskClientId, onNewTaskTitleChange: H.onNewTaskTitleChange, onNewTaskClientChange: H.onNewTaskClientChange, onAddTask: H.onAddTask,
     noteDraft: { ...noteDraft, placeholder: currentTemplate.placeholder }, clientOptions, templateOptions: TEMPLATE_OPTIONS,
     onNoteClientChange: H.onNoteClientChange, onNoteTemplateChange: H.onNoteTemplateChange, onNoteTextChange: H.onNoteTextChange, onSaveNote: H.onSaveNote, onSignNote: H.onSignNote,
     savedNotes: savedNotes.map((n) => ({ ...n, statusStyle: severityStyle(theme, n.status === 'Signed & Locked' ? 'low' : 'medium'), statusLabel: n.status })), allGoals,
-    planClientId, onPlanClientChange: H.onPlanClientChange, treatmentPlan,
+    planClientId, onPlanClientChange: H.onPlanClientChange, treatmentPlan, hasPlanClient,
     practiceForm, woundOptions, practiceTypeOptions, onPracticeClientChange: H.onPracticeClientChange, onPracticeWoundChange: H.onPracticeWoundChange, onPracticeTypeChange: H.onPracticeTypeChange,
     onGeneratePractice: H.onGeneratePractice, hasGeneratedPractice: !!generatedPractice, generatedPractice, onAssignPractice: H.onAssignPractice, assignedPractices, noAssignedPractices: assignedPractices.length === 0,
     lessons, mbcCaseloadRows, partsClientFilters, partsAllRows,
@@ -687,8 +703,8 @@ function ClientsCaseload({ v }) {
                 </div>
               </div>
               <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                <button className="aw-primary" onClick={sc.onDraftNote} style={v.primaryBtnStyle}>Draft session note</button>
-                <button onClick={sc.onOpenPrep} style={v.secondaryBtnStyle}>Session prep</button>
+                <button className="aw-primary" onClick={sc.onDraftNote} disabled={!sc.canWrite} style={{ ...v.primaryBtnStyle, opacity: sc.canWrite ? 1 : 0.5, cursor: sc.canWrite ? 'pointer' : 'not-allowed' }}>Draft session note</button>
+                <button onClick={sc.onOpenPrep} disabled={!sc.canWrite} style={{ ...v.secondaryBtnStyle, opacity: sc.canWrite ? 1 : 0.5, cursor: sc.canWrite ? 'pointer' : 'not-allowed' }}>Session prep</button>
               </div>
             </div>
             {sc.unassigned && (
@@ -729,7 +745,7 @@ function ClientsCaseload({ v }) {
             <div style={CARD}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <span style={{ ...FR, fontSize: '15px' }}>Session notes</span>
-                <button onClick={sc.onDraftNote} style={v.secondaryBtnStyle}>New note</button>
+                <button onClick={sc.onDraftNote} disabled={!sc.canWrite} style={{ ...v.secondaryBtnStyle, opacity: sc.canWrite ? 1 : 0.5, cursor: sc.canWrite ? 'pointer' : 'not-allowed' }}>New note</button>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '14px' }}>
                 {sc.clientNotes.map((n, i) => (
@@ -750,7 +766,7 @@ function ClientsCaseload({ v }) {
             <div style={CARD}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <span style={{ ...FR, fontSize: '15px' }}>Assigned practices</span>
-                <button onClick={sc.onOpenPractice} style={v.secondaryBtnStyle}>Generate new</button>
+                <button onClick={sc.onOpenPractice} disabled={!sc.canWrite} style={{ ...v.secondaryBtnStyle, opacity: sc.canWrite ? 1 : 0.5, cursor: sc.canWrite ? 'pointer' : 'not-allowed' }}>Generate new</button>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '14px' }}>
                 {sc.clientPractices.map((a, i) => (
@@ -823,7 +839,7 @@ function ClientOverviewTab({ v, sc }) {
       <div style={{ border: '1px solid var(--risk-high-border)', borderRadius: '20px', padding: '20px', background: 'var(--risk-high-bg)' }}>
         <span style={{ fontSize: '13.5px', fontWeight: 700, color: 'var(--risk-high-text)' }}>Danger zone</span>
         <div style={{ fontSize: '12.5px', color: 'var(--text-2)', marginTop: '4px' }}>Permanently remove this client and all associated records.</div>
-        <button onClick={sc.onStartDelete} style={{ marginTop: '10px', background: 'var(--risk-high-text)', color: '#fff', border: 'none', padding: '9px 16px', borderRadius: '10px', fontWeight: 600, fontSize: '13px', cursor: 'pointer', fontFamily: 'inherit' }}>Delete client</button>
+        <button onClick={sc.onStartDelete} disabled={!sc.canWrite} style={{ marginTop: '10px', background: 'var(--risk-high-text)', color: '#fff', border: 'none', padding: '9px 16px', borderRadius: '10px', fontWeight: 600, fontSize: '13px', cursor: sc.canWrite ? 'pointer' : 'not-allowed', fontFamily: 'inherit', opacity: sc.canWrite ? 1 : 0.5 }}>Delete client</button>
         {v.deletingClientId && (
           <div style={{ marginTop: '14px', padding: '14px', borderRadius: '14px', background: 'var(--surface)', border: '1px solid var(--border)' }}>
             <div style={{ fontSize: '12.5px', color: 'var(--text-2)' }}>Type <strong>{v.deletingClientName}</strong> to confirm deletion.</div>
@@ -943,7 +959,7 @@ function ClientSafetyTab({ v, sc }) {
         {s.noPlan && (
           <div style={{ padding: '14px', borderRadius: '14px', background: 'var(--surface-2)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <span style={{ fontSize: '12.5px', color: 'var(--muted)' }}>No safety plan on file.</span>
-            <button onClick={s.onCreatePlan} style={v.secondaryBtnStyle}>Create safety plan</button>
+            <button onClick={s.onCreatePlan} disabled={!sc.canWrite} style={{ ...v.secondaryBtnStyle, opacity: sc.canWrite ? 1 : 0.5, cursor: sc.canWrite ? 'pointer' : 'not-allowed' }}>Create safety plan</button>
           </div>
         )}
         <div>
@@ -955,7 +971,7 @@ function ClientSafetyTab({ v, sc }) {
         </div>
         <div style={{ borderTop: '1px solid var(--border)', paddingTop: '12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
           <div style={{ fontSize: '12.5px', color: 'var(--muted)' }}>{s.ackStatusText}</div>
-          <button onClick={s.onAcknowledge} style={s.ackBtnStyle}>{s.ackBtnLabel}</button>
+          <button onClick={s.onAcknowledge} disabled={!sc.canWrite} style={{ ...s.ackBtnStyle, opacity: sc.canWrite ? 1 : 0.5, cursor: sc.canWrite ? 'pointer' : 'not-allowed' }}>{s.ackBtnLabel}</button>
         </div>
       </div>
     </div>
@@ -971,13 +987,19 @@ function ClientMessagesTab({ v, sc }) {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '14px', maxHeight: '260px', overflowY: 'auto' }}>
           {sc.messages.map((m) => (<MessageBubble key={m.idx} m={m} />))}
         </div>
-        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginTop: '12px' }}>
-          {v.quickMessages.map((q, i) => (<button key={i} onClick={q.onClick} style={chipBtn()}>{q.text}</button>))}
-        </div>
-        <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
-          <input value={v.clientMessageDraft} onChange={v.onClientMessageChange} placeholder="Message this client..." style={{ flex: 1, padding: '10px 14px', borderRadius: '12px', border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text)', fontSize: '13.5px', fontFamily: 'inherit' }} />
-          <button className="aw-primary" onClick={v.onSendClientMessage} style={v.primaryBtnStyle}>Send</button>
-        </div>
+        {sc.canWrite ? (
+          <>
+            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginTop: '12px' }}>
+              {v.quickMessages.map((q, i) => (<button key={i} onClick={q.onClick} style={chipBtn()}>{q.text}</button>))}
+            </div>
+            <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
+              <input value={v.clientMessageDraft} onChange={v.onClientMessageChange} placeholder="Message this client..." style={{ flex: 1, padding: '10px 14px', borderRadius: '12px', border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text)', fontSize: '13.5px', fontFamily: 'inherit' }} />
+              <button className="aw-primary" onClick={v.onSendClientMessage} style={v.primaryBtnStyle}>Send</button>
+            </div>
+          </>
+        ) : (
+          <div style={{ marginTop: '12px', fontSize: '12.5px', color: 'var(--muted)' }}>Add this client to your caseload to send a message.</div>
+        )}
       </div>
     </div>
   );
@@ -1182,6 +1204,9 @@ function SessionsPrepView({ v }) {
 }
 
 function CoTherapyView({ v }) {
+  if (!v.hasCoTherapyClient) {
+    return <div style={{ padding: '32px', textAlign: 'center', color: 'var(--muted)', fontSize: '14px' }}>Add a client to your caseload to start a co-therapy thread.</div>;
+  }
   const c = v.coTherapy;
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '1.1fr 1fr', gap: '20px', alignItems: 'start', maxWidth: '1000px' }}>
@@ -1295,6 +1320,9 @@ function ClinicalNotesView({ v }) {
 }
 
 function PlansView({ v }) {
+  if (!v.hasPlanClient) {
+    return <div style={{ padding: '32px', textAlign: 'center', color: 'var(--muted)', fontSize: '14px' }}>Add a client to your caseload to create a treatment plan.</div>;
+  }
   return (
     <div style={{ maxWidth: '760px', display: 'flex', flexDirection: 'column', gap: '18px' }}>
       <select value={v.planClientId} onChange={v.onPlanClientChange} style={{ ...v.selectStyle, maxWidth: '260px' }}>

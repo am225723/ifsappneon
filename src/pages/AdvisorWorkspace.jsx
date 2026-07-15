@@ -5,8 +5,8 @@ import {
   DOC_TYPES, NAV_CONFIG,
 } from './advisorWorkspaceData.js';
 import {
-  loadWorkspaceCaseload, loadWorkspaceClientDetail, sendWorkspaceMessage, persistTherapistNote, claimWorkspaceClient,
-  mergeCaseloadRefresh,
+  loadWorkspaceCaseload, loadWorkspaceCaseloadWithStatus, loadWorkspaceClientDetail, sendWorkspaceMessage, persistTherapistNote,
+  claimWorkspaceClient, mergeCaseloadRefresh,
 } from '../lib/advisorWorkspaceLoader.js';
 
 const CASELOAD_REFRESH_MS = 45000;
@@ -133,10 +133,17 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
     if (isDemo || loadPhase !== 'ready') return;
     const gen = genRef.current;
     const interval = setInterval(() => {
-      loadWorkspaceCaseload(therapistId)
-        .then((freshRows) => {
+      loadWorkspaceCaseloadWithStatus(therapistId)
+        .then(({ clients, complete }) => {
           if (genRef.current !== gen) return;
-          setS((prev) => ({ ...prev, baseClients: mergeCaseloadRefresh(prev.baseClients, freshRows) }));
+          if (!complete) {
+            // A degraded/partial fetch (e.g. the fallback chain hit an error
+            // partway through) is not an authoritative snapshot — applying it
+            // would silently drop clients already visible in the workspace.
+            console.warn('Skipping caseload refresh: fetch was incomplete.');
+            return;
+          }
+          setS((prev) => ({ ...prev, baseClients: mergeCaseloadRefresh(prev.baseClients, clients) }));
         })
         .catch((error) => console.error('Failed to refresh caseload:', error));
     }, CASELOAD_REFRESH_MS);

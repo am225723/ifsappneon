@@ -30,13 +30,21 @@ function clientsTableColumns(columns) {
   return kept.length ? kept.join(', ') : 'id';
 }
 
-export async function loadAssignedClients(therapistId, columns = 'id, name, pin, email, phone, status, last_active, created_at, user_role, access_restrictions', options = {}) {
-  if (!therapistId) return [];
+// Core fetch logic shared by loadAssignedClients (back-compat plain-array
+// contract used by ~12 call sites across the app) and
+// loadAssignedClientsWithStatus (used by callers that need to know whether a
+// degraded fallback silently dropped data, e.g. a periodic background
+// refresh that must not treat a partial fetch as an authoritative snapshot).
+// `complete: false` means a step failed and the returned array may be a
+// subset of the real caseload — callers doing a destructive merge should
+// discard rather than apply it.
+async function loadAssignedClientsInternal(therapistId, columns, options) {
+  if (!therapistId) return { data: [], complete: true };
   const { includeUnassigned = false } = options;
 
   const query = includeUnassigned ? '/api/therapist/assigned-clients?includeUnassigned=true' : '/api/therapist/assigned-clients';
   const { data, error } = await getJson(query);
-  if (!error && data) return pickColumns(data, columns);
+  if (!error && data) return { data: pickColumns(data, columns), complete: true };
 
   console.warn('Secure assigned-clients route unavailable; falling back to scoped assignment query.', error);
   const { data: assignments, error: assignmentError } = await supabase
@@ -47,7 +55,7 @@ export async function loadAssignedClients(therapistId, columns = 'id, name, pin,
 
   if (assignmentError) {
     console.error('Error loading assigned client ids:', assignmentError);
-    return [];
+    return { data: [], complete: false };
   }
 
   const assignedIds = [...new Set((assignments || []).map((row) => row.client_id).filter(Boolean))];
@@ -60,14 +68,14 @@ export async function loadAssignedClients(therapistId, columns = 'id, name, pin,
 
   if (clientError) {
     console.error('Error loading assigned client records:', clientError);
-    return [];
+    return { data: [], complete: false };
   }
 
   const assignedWithStatus = wantsAssignmentStatus
     ? (assignedClients || []).map((c) => ({ ...c, assignment_status: 'active' }))
     : (assignedClients || []);
 
-  if (!includeUnassigned) return assignedWithStatus;
+  if (!includeUnassigned) return { data: assignedWithStatus, complete: true };
 
   // Also surface clients nobody has claimed yet (e.g. fresh signups with no
   // ifs_therapist_clients row at all), so the fallback path doesn't hide them.
@@ -77,7 +85,7 @@ export async function loadAssignedClients(therapistId, columns = 'id, name, pin,
 
   if (allAssignmentsError) {
     console.error('Error loading assignment ids for unassigned lookup:', allAssignmentsError);
-    return assignedWithStatus;
+    return { data: assignedWithStatus, complete: false };
   }
 
   const claimedIds = new Set((allTherapistClientRows || []).map((row) => row.client_id).filter(Boolean));
@@ -89,13 +97,25 @@ export async function loadAssignedClients(therapistId, columns = 'id, name, pin,
 
   if (allClientsError) {
     console.error('Error loading unassigned client records:', allClientsError);
-    return assignedWithStatus;
+    return { data: assignedWithStatus, complete: false };
   }
 
   const unassignedClients = (allClients || [])
     .filter((c) => !claimedIds.has(c.id))
     .map((c) => (wantsAssignmentStatus ? { ...c, assignment_status: null } : c));
-  return [...assignedWithStatus, ...unassignedClients];
+  return { data: [...assignedWithStatus, ...unassignedClients], complete: true };
+}
+
+export async function loadAssignedClients(therapistId, columns = 'id, name, pin, email, phone, status, last_active, created_at, user_role, access_restrictions', options = {}) {
+  const { data } = await loadAssignedClientsInternal(therapistId, columns, options);
+  return data;
+}
+
+// Same fetch, but reports whether the result is a complete snapshot so a
+// caller doing a background merge (rather than a first load) can skip
+// applying a degraded/partial result instead of silently dropping clients.
+export async function loadAssignedClientsWithStatus(therapistId, columns = 'id, name, pin, email, phone, status, last_active, created_at, user_role, access_restrictions', options = {}) {
+  return loadAssignedClientsInternal(therapistId, columns, options);
 }
 
 export async function loadCaseloadClients() {
