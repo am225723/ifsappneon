@@ -1518,7 +1518,7 @@ function DocsView({ v }) {
         {v.hasGeneratedDoc ? (
           <>
             <div style={{ marginTop: '12px', borderRadius: '14px', border: '1px solid var(--border)', overflow: 'hidden', height: '520px' }}>
-              <iframe title="Generated document preview" srcDoc={v.generatedDoc.html} style={{ width: '100%', height: '100%', border: 'none', background: '#fff' }} />
+              <iframe title="Generated document preview" srcDoc={v.generatedDoc.html} sandbox="" style={{ width: '100%', height: '100%', border: 'none', background: '#fff' }} />
             </div>
             <div style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '8px' }}>Generated from real client records — already saved to this client's document history. Advisor review is required before sharing or printing.</div>
             <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>

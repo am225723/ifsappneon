@@ -75,7 +75,12 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
   // Generation guard: bumped on therapist change / unmount so stale in-flight
   // detail merges are ignored without cancelling still-valid sibling requests.
   const genRef = useRef(0);
-  useEffect(() => () => { genRef.current += 1; }, []);
+  // Same capture-and-compare pattern as genRef, scoped to document generation:
+  // bumped whenever the pending request's context changes (new onGenerateDoc
+  // call, form edits, therapist switch, unmount) so a slower response can
+  // never overwrite a newer selection's preview.
+  const docGenRef = useRef(0);
+  useEffect(() => () => { genRef.current += 1; docGenRef.current += 1; }, []);
   // setState-compatible merge helper (accepts object or updater fn)
   const set = (patch) => setS((prev) => ({ ...prev, ...(typeof patch === 'function' ? patch(prev) : patch) }));
 
@@ -83,6 +88,7 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
   useEffect(() => {
     if (!therapistId) { setLoadPhase('ready'); return; }
     genRef.current += 1;
+    docGenRef.current += 1;
     let cancelled = false;
     setLoadPhase('loading');
     detailRequested.current = new Set();
@@ -309,23 +315,34 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
       .then((rows) => set({ clientReports: rows, clientReportsLoading: false }))
       .catch(() => set({ clientReportsLoading: false }));
   };
+  // Changing the document context mid-generation must invalidate any request
+  // already in flight, so its (now-stale) response can't repopulate the
+  // preview for a selection the Advisor has since moved away from.
+  const invalidatePendingDoc = () => {
+    docGenRef.current += 1;
+    set((s) => (s.docGenerating ? { docGenerating: false } : null));
+  };
   const onDocClientChange = (e) => {
     const clientId = e.target.value;
+    invalidatePendingDoc();
     set((s) => ({ docForm: { ...s.docForm, clientId }, generatedDoc: null, docError: '' }));
     refreshClientReports(clientId);
   };
-  const onDocTypeChange = (e) => set((s) => ({ docForm: { ...s.docForm, type: e.target.value }, generatedDoc: null, docError: '' }));
-  const onDocDateChange = (field) => (e) => set((s) => ({ docForm: { ...s.docForm, [field]: e.target.value }, generatedDoc: null }));
-  const toggleDocSource = (key) => set((s) => ({ docSources: { ...s.docSources, [key]: !s.docSources[key] }, generatedDoc: null }));
+  const onDocTypeChange = (e) => { invalidatePendingDoc(); set((s) => ({ docForm: { ...s.docForm, type: e.target.value }, generatedDoc: null, docError: '' })); };
+  const onDocDateChange = (field) => (e) => { invalidatePendingDoc(); set((s) => ({ docForm: { ...s.docForm, [field]: e.target.value }, generatedDoc: null })); };
+  const toggleDocSource = (key) => { invalidatePendingDoc(); set((s) => ({ docSources: { ...s.docSources, [key]: !s.docSources[key] }, generatedDoc: null })); };
   const onGenerateDoc = () => {
     if (isDemo) { set({ docError: 'Document generation requires a signed-in Advisor session.' }); return; }
     const { docForm, docSources } = S;
     if (!docForm.clientId) { set({ docError: 'Select a client first.' }); return; }
     set({ docGenerating: true, docError: '', generatedDoc: null });
+    docGenRef.current += 1;
+    const gen = docGenRef.current;
     generateWorkspaceReport({
       clientId: docForm.clientId, reportType: docForm.type,
       dateRangeStart: docForm.dateRangeStart, dateRangeEnd: docForm.dateRangeEnd, sections: docSources,
     }).then(({ data, error }) => {
+      if (docGenRef.current !== gen) return;
       if (error) { set({ docGenerating: false, docError: error.message || 'Unable to generate document.' }); return; }
       set({ docGenerating: false, generatedDoc: data });
       refreshClientReports(docForm.clientId);
