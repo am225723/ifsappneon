@@ -262,6 +262,34 @@ describe('buildView — AI Session Snapshot', () => {
   });
 });
 
+describe('buildView — Since Last Session change summary', () => {
+  it('surfaces loading/error/data state', () => {
+    const idle = makeView({ selectedClientId: 'c1' });
+    expect(idle.selectedClient.changeSummary.loading).toBe(false);
+    expect(idle.selectedClient.changeSummary.data).toBeNull();
+
+    const loading = makeView({ selectedClientId: 'c1', changeSummary: { loading: true, data: null, error: '' } });
+    expect(loading.selectedClient.changeSummary.loading).toBe(true);
+
+    const errored = makeView({ selectedClientId: 'c1', changeSummary: { loading: false, data: null, error: 'Unable to generate a change summary.' } });
+    expect(errored.selectedClient.changeSummary.error).toBe('Unable to generate a change summary.');
+
+    const summaryData = { summary: '1. Recent themes\nStable week.', disclaimer: 'AI-generated draft for Advisor review.', generatedAt: '2026-07-20T00:00:00Z', dataSources: { moodEntries: 3, journalEntries: 0, sparse: false, unavailableSources: [] } };
+    const ready = makeView({ selectedClientId: 'c1', changeSummary: { loading: false, data: summaryData, error: '' } });
+    expect(ready.selectedClient.changeSummary.data.summary).toContain('Recent themes');
+  });
+
+  it('never offers change-summary generation for an unassigned client', () => {
+    const v = makeView({ extraClients: [UNASSIGNED_CLIENT], selectedClientId: 'new1' });
+    expect(v.selectedClient.changeSummary.onGenerate).toBeUndefined();
+  });
+
+  it('keeps change-summary generation wired for an assigned client', () => {
+    const v = makeView({ selectedClientId: 'c1' });
+    expect(typeof v.selectedClient.changeSummary.onGenerate).toBe('function');
+  });
+});
+
 describe('buildView — Document Creator reflects the real report-generation backend', () => {
   it('only offers the document types and sections api/generate-report.js actually supports', () => {
     const v = makeView();

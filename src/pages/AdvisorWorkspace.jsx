@@ -9,6 +9,7 @@ import {
   claimWorkspaceClient, mergeCaseloadRefresh, generateWorkspaceReport, loadWorkspaceReports,
 } from '../lib/advisorWorkspaceLoader.js';
 import { loadAdvisorSessionSnapshot } from '../lib/unifiedGuidance.js';
+import { generateSessionPrepSummary } from '../lib/sessionPrepSummary.js';
 
 const CASELOAD_REFRESH_MS = 45000;
 
@@ -44,6 +45,7 @@ export const INITIAL_STATE = {
   docSources: { ...DOC_SOURCES_DEFAULT },
   generatedDoc: null, docGenerating: false, docError: '', clientReports: [], clientReportsLoading: false,
   sessionSnapshot: { loading: false, data: null, error: '' },
+  changeSummary: { loading: false, data: null, error: '' },
   accessOverrides: {}, settingsAccent: 'amber',
   extraClients: [], deletedIds: {},
   showNewClientForm: false, newClientForm: { name: '', email: '', phone: '', sendEmail: true }, newClientResult: null,
@@ -85,7 +87,9 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
   // Same pattern again, scoped to the AI Session Snapshot: bumped on every
   // onGenerateSnapshot call, client switch, therapist switch, and unmount.
   const snapshotGenRef = useRef(0);
-  useEffect(() => () => { genRef.current += 1; docGenRef.current += 1; snapshotGenRef.current += 1; }, []);
+  // Same pattern again, scoped to the Since Last Session change summary.
+  const changeSummaryGenRef = useRef(0);
+  useEffect(() => () => { genRef.current += 1; docGenRef.current += 1; snapshotGenRef.current += 1; changeSummaryGenRef.current += 1; }, []);
   // setState-compatible merge helper (accepts object or updater fn)
   const set = (patch) => setS((prev) => ({ ...prev, ...(typeof patch === 'function' ? patch(prev) : patch) }));
 
@@ -95,6 +99,7 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
     genRef.current += 1;
     docGenRef.current += 1;
     snapshotGenRef.current += 1;
+    changeSummaryGenRef.current += 1;
     let cancelled = false;
     setLoadPhase('loading');
     detailRequested.current = new Set();
@@ -205,10 +210,15 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
   const setViewMode = (m) => set({ viewMode: m });
   const toggleTheme = () => set((s) => ({ isDark: !s.isDark }));
   const selectClient = (id) => {
-    // A generated snapshot is client-specific decision support, not a saved
-    // record — never leave a previous client's snapshot visible for a new one.
+    // Generated snapshots/summaries are client-specific decision support, not
+    // saved records — never leave a previous client's copy visible for a new one.
     snapshotGenRef.current += 1;
-    set({ selectedClientId: id, activeTab: 'clients-caseload', activeClientTab: 'overview', sessionSnapshot: { loading: false, data: null, error: '' } });
+    changeSummaryGenRef.current += 1;
+    set({
+      selectedClientId: id, activeTab: 'clients-caseload', activeClientTab: 'overview',
+      sessionSnapshot: { loading: false, data: null, error: '' },
+      changeSummary: { loading: false, data: null, error: '' },
+    });
   };
   const setClientTab = (id) => set({ activeClientTab: id });
   const onSearch = (e) => set({ search: e.target.value });
@@ -404,6 +414,24 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
     navigator.clipboard?.writeText(text);
   };
 
+  // "Since Last Session" change summary — a decision-support panel generated
+  // on demand from real client records over the last week (mood, journal,
+  // parts, messages, assigned practice, prior session prep). Never saved as
+  // a note and never shown to the client.
+  const onGenerateChangeSummary = () => {
+    if (isDemo) { set({ changeSummary: { loading: false, data: null, error: 'This summary requires a signed-in Advisor session.' } }); return; }
+    const clientId = S.selectedClientId;
+    if (!clientId) return;
+    set({ changeSummary: { loading: true, data: null, error: '' } });
+    changeSummaryGenRef.current += 1;
+    const gen = changeSummaryGenRef.current;
+    generateSessionPrepSummary({ clientId, rangeDays: 7 }).then(({ data, error }) => {
+      if (changeSummaryGenRef.current !== gen) return;
+      if (error) { set({ changeSummary: { loading: false, data: null, error: error.message || 'Unable to generate a change summary.' } }); return; }
+      set({ changeSummary: { loading: false, data, error: '' } });
+    });
+  };
+
   // Lazily load a client's real report-generation history the first time the
   // Document Creator tab is opened for them (rather than eagerly on mount).
   useEffect(() => {
@@ -502,7 +530,7 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
       onClientMessageChange, onSendClientMessage, setActiveThread, addTaskFromMessage, onAcknowledgeSafety, onCreateSafetyPlan, setPartsClientFilter,
       setTaskFilter, onNewTaskTitleChange, onNewTaskClientChange, onAddTask, toggleTask, onDismissEngagement,
       onDocClientChange, onDocTypeChange, onDocDateChange, toggleDocSource, onGenerateDoc, onOpenGeneratedDoc, toggleNewClientForm, onNewClientFieldChange, onCreateClient,
-      onGenerateSnapshot, onCopySnapshot,
+      onGenerateSnapshot, onCopySnapshot, onGenerateChangeSummary,
       onStartDelete, onCancelDelete, onDeleteConfirmChange, onConfirmDelete, onPracticeGuidanceChange, onGeneratePracticeBatch, onUseBatchPractice,
       onDeleteMessage, applyQuickMessage, toggleLiveSession, endLiveSession, onMarkNotifRead, onMarkAllNotifsRead, onOpenNotifClient,
     },

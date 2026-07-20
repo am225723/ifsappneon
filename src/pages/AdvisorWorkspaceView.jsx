@@ -14,7 +14,7 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
     assignedLessons, coTherapyShare, coTherapyMessage, coTherapyThread, reports, settingsToggles, clientMessages,
     clientMessageDraft, activeThreadId, safetyOverrides, engagementDismissed, partsClientFilter, tasks, taskFilter,
     newTaskTitle, newTaskClientId, docForm, docSources, generatedDoc, docGenerating, docError, clientReports, clientReportsLoading, deletedMessageIdx,
-    sessionSnapshot,
+    sessionSnapshot, changeSummary,
   } = S;
 
   const rootStyle = {
@@ -212,6 +212,12 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
         onGenerate: canWrite ? H.onGenerateSnapshot : undefined,
         onCopy: sessionSnapshot.data ? H.onCopySnapshot : undefined,
       },
+      changeSummary: {
+        loading: !!changeSummary.loading,
+        error: changeSummary.error || '',
+        data: changeSummary.data,
+        onGenerate: canWrite ? H.onGenerateChangeSummary : undefined,
+      },
       parts: rawSelected.parts.map((p) => ({ ...p, catChip: partChip(p.category, isDark), catLabel: PART_CAT_META[p.category].label, barStyle: { width: p.activation + '%', height: '100%', borderRadius: '4px', background: PART_CAT_META[p.category].color } })),
       clientPractices: assignedPractices.filter((a) => a.clientName === rawSelected.name),
       noPractices: !assignedPractices.some((a) => a.clientName === rawSelected.name),
@@ -408,7 +414,7 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
     isSafety: activeTab === 'safety', isReview: activeTab === 'review', isSessionsPrep: activeTab === 'sessions-prep', isSessionsCotherapy: activeTab === 'sessions-cotherapy',
     isSessionsLive: activeTab === 'sessions-live',
     isMessages: activeTab === 'messages', isNotifications: activeTab === 'notifications', isTasks: activeTab === 'tasks',
-    isClientTabSnapshot: activeClientTab === 'snapshot',
+    isClientTabSnapshot: activeClientTab === 'snapshot', isClientTabChangeSummary: activeClientTab === 'changeSummary',
     isClinicalNotes: activeTab === 'clinical-notes', isClinicalPlans: activeTab === 'clinical-plans', isClinicalMbc: activeTab === 'clinical-mbc', isClinicalParts: activeTab === 'clinical-parts',
     isClinicalPractice: activeTab === 'clinical-practice', isClinicalPracticeInteractive: activeTab === 'clinical-practice-interactive',
     isClinicalLessons: activeTab === 'clinical-lessons', isClinicalCurriculumBuilder: activeTab === 'clinical-curriculum-builder', isClinicalDocs: activeTab === 'clinical-docs',
@@ -762,6 +768,7 @@ function ClientsCaseload({ v }) {
           {v.isClientTabOverview && <ClientOverviewTab v={v} sc={sc} />}
           {v.isClientTabAssessments && <AssessmentHistoryTab history={sc.assessmentHistory} empty={sc.noAssessmentHistory} />}
           {v.isClientTabSnapshot && <SnapshotTab snapshot={sc.snapshot} primaryBtnStyle={v.primaryBtnStyle} secondaryBtnStyle={v.secondaryBtnStyle} />}
+          {v.isClientTabChangeSummary && <ChangeSummaryTab changeSummary={sc.changeSummary} primaryBtnStyle={v.primaryBtnStyle} />}
           {v.isClientTabTimeline && (
             <div style={CARD}>
               <span style={{ ...FR, fontSize: '15px' }}>Unified timeline</span>
@@ -1033,6 +1040,65 @@ function SnapshotTab({ snapshot, primaryBtnStyle, secondaryBtnStyle }) {
             <SnapshotSection title="Suggested session questions"><SnapshotList items={s.suggested_session_questions} /></SnapshotSection>
             <SnapshotSection title="Attention items for Advisor"><SnapshotList items={s.attention_items_for_advisor} /></SnapshotSection>
             <SnapshotSection title="What not to over-interpret"><SnapshotList items={s.what_not_to_overinterpret} /></SnapshotSection>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// The API returns free-form text with numbered section headings (e.g. "1.
+// Recent themes") — render those lines as headings, everything else as body
+// text, mirroring how this same backend's output is rendered elsewhere in
+// the app (SessionPrepBrief.jsx's AiSummaryContent).
+function ChangeSummaryContent({ text }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+      {String(text || '').split('\n').map((line, i) => {
+        const trimmed = line.trim();
+        if (!trimmed) return <div key={i} style={{ height: '8px' }} />;
+        const isHeading = /^\d+\.\s/.test(trimmed);
+        return (
+          <p key={i} style={{ margin: isHeading ? '10px 0 0' : 0, fontSize: isHeading ? '13px' : '12.5px', fontWeight: isHeading ? 700 : 400, color: isHeading ? 'var(--text)' : 'var(--text-2)', lineHeight: 1.55, whiteSpace: 'pre-wrap' }}>
+            {trimmed}
+          </p>
+        );
+      })}
+    </div>
+  );
+}
+
+function ChangeSummaryTab({ changeSummary, primaryBtnStyle }) {
+  const d = changeSummary.data;
+  const sourceCount = d?.dataSources
+    ? Object.entries(d.dataSources).filter(([k, v]) => k !== 'unavailableSources' && k !== 'sparse' && (typeof v === 'boolean' ? v : v > 0)).length
+    : 0;
+  return (
+    <div style={CARD}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
+        <div>
+          <span style={{ ...FR, fontSize: '15px' }}>Since Last Session</span>
+          <div style={{ fontSize: '12px', color: 'var(--muted)', marginTop: '4px', maxWidth: '52ch' }}>Generate a summary of what's changed for this client over the last week — mood, journal, parts, messages, and assigned practice — for Advisor review ahead of your next session.</div>
+        </div>
+        <button
+          className="aw-primary"
+          onClick={changeSummary.onGenerate}
+          disabled={!changeSummary.onGenerate || changeSummary.loading}
+          style={{ ...primaryBtnStyle, opacity: !changeSummary.onGenerate || changeSummary.loading ? 0.6 : 1, cursor: !changeSummary.onGenerate || changeSummary.loading ? 'not-allowed' : 'pointer' }}
+        >
+          {changeSummary.loading ? 'Generating…' : 'Generate summary'}
+        </button>
+      </div>
+
+      {!changeSummary.onGenerate && <div style={{ marginTop: '12px', fontSize: '12px', color: 'var(--muted)' }}>Add this client to your caseload to generate a summary.</div>}
+      {changeSummary.error && <div style={{ marginTop: '12px', fontSize: '12px', color: 'var(--risk-high-text)' }}>{changeSummary.error}</div>}
+
+      {d && (
+        <div style={{ marginTop: '16px' }}>
+          {d.disclaimer && <div style={{ padding: '10px 12px', borderRadius: '10px', background: 'var(--surface-2)', fontSize: '11.5px', color: 'var(--text-2)' }}>{d.disclaimer}</div>}
+          <div style={{ marginTop: '14px' }}><ChangeSummaryContent text={d.summary} /></div>
+          <div style={{ marginTop: '14px', fontSize: '11px', color: 'var(--muted)' }}>
+            Generated {d.generatedAt ? new Date(d.generatedAt).toLocaleString() : '—'} · {sourceCount} data source{sourceCount === 1 ? '' : 's'} referenced
           </div>
         </div>
       )}
