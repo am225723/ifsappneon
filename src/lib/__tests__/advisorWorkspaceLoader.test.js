@@ -151,6 +151,60 @@ describe('deriveWorkspaceDetail', () => {
     const { client } = deriveWorkspaceDetail(alreadyEnriched, { analytics: { assessmentTrajectory: [] }, notes: [], plans: [], messages: [] });
     expect(client.assessmentHistory).toEqual([]);
   });
+
+  it('builds MBC measures from the real wound-pattern assessment trajectory, primary/secondary first', () => {
+    const analytics = {
+      assessmentTrajectory: [
+        { date: '2026-06-01T00:00:00Z', primaryWound: 'betrayal', secondaryWound: 'helplessness', scores: { abandonment: 6, shame: 5, neglect: 5, betrayal: 20, helplessness: 15 } },
+        { date: '2026-07-01T00:00:00Z', primaryWound: 'betrayal', secondaryWound: 'helplessness', scores: { abandonment: 5, shame: 6, neglect: 4, betrayal: 12, helplessness: 9 } },
+        { date: '2026-07-15T00:00:00Z', primaryWound: 'betrayal', secondaryWound: 'helplessness', scores: { abandonment: 4, shame: 4, neglect: 4, betrayal: 9, helplessness: 8 } },
+      ],
+    };
+    const { client } = deriveWorkspaceDetail(base, { analytics, notes: [], plans: [], messages: [] });
+    expect(client.mbc).toHaveLength(5);
+    expect(client.mbc[0].code).toBe('betrayal');
+    expect(client.mbc[1].code).toBe('helplessness');
+    expect(client.mbc[0].baseline).toBe(20);
+    expect(client.mbc[0].previous).toBe(12);
+    expect(client.mbc[0].current).toBe(9);
+    expect(client.mbc[0].history).toEqual([20, 12, 9]);
+    expect(client.mbc[0].severity).toBe('Low'); // current 9 <= 10
+    expect(client.mbc[0].date).toBeTruthy();
+    // Remaining wounds ordered by current score, descending.
+    const tailScores = client.mbc.slice(2).map((m) => m.current);
+    expect(tailScores).toEqual([...tailScores].sort((a, b) => b - a));
+  });
+
+  it('labels severity bands from the current wound score', () => {
+    const highAnalytics = { assessmentTrajectory: [{ date: new Date().toISOString(), primaryWound: 'shame', secondaryWound: 'neglect', scores: { abandonment: 1, shame: 22, neglect: 12, betrayal: 1, helplessness: 1 } }] };
+    const { client: highClient } = deriveWorkspaceDetail(base, { analytics: highAnalytics, notes: [], plans: [], messages: [] });
+    expect(highClient.mbc[0].severity).toBe('High'); // 22 >= 18
+    expect(highClient.mbc[1].severity).toBe('Moderate'); // 12 is between 11 and 17
+  });
+
+  it('treats a single assessment as its own baseline/previous/current', () => {
+    const analytics = { assessmentTrajectory: [{ date: new Date().toISOString(), primaryWound: 'abandonment', secondaryWound: 'shame', scores: { abandonment: 14, shame: 6, neglect: 5, betrayal: 5, helplessness: 5 } }] };
+    const { client } = deriveWorkspaceDetail(base, { analytics, notes: [], plans: [], messages: [] });
+    expect(client.mbc[0].baseline).toBe(14);
+    expect(client.mbc[0].previous).toBe(14);
+    expect(client.mbc[0].current).toBe(14);
+    expect(client.mbc[0].history).toEqual([14]);
+  });
+
+  it('leaves mbc empty when the client has never taken the wound-pattern assessment', () => {
+    const { client } = deriveWorkspaceDetail(base, { analytics: { assessmentTrajectory: [] }, notes: [], plans: [], messages: [] });
+    expect(client.mbc).toEqual([]);
+  });
+
+  it('does not leak a prior enrichment\'s mbc through on a re-derive that finds no assessment data', () => {
+    // Simulates re-deriving an already-enriched client (e.g. after claiming
+    // resets _detailLoaded and forces a re-fetch) whose new analytics pass
+    // comes back with no trajectory — the previous mbc must not survive the
+    // {...base} spread.
+    const alreadyEnriched = { ...base, mbc: [{ code: 'betrayal', name: 'Betrayal Wound Pattern', date: 'Jul 1', severity: 'High', baseline: 20, previous: 18, current: 19, history: [20, 18, 19] }] };
+    const { client } = deriveWorkspaceDetail(alreadyEnriched, { analytics: { assessmentTrajectory: [] }, notes: [], plans: [], messages: [] });
+    expect(client.mbc).toEqual([]);
+  });
 });
 
 describe('mapClientRow — unassigned detection', () => {

@@ -8,6 +8,7 @@ import {
   loadWorkspaceCaseload, loadWorkspaceCaseloadWithStatus, loadWorkspaceClientDetail, sendWorkspaceMessage, persistTherapistNote,
   claimWorkspaceClient, mergeCaseloadRefresh, generateWorkspaceReport, loadWorkspaceReports,
 } from '../lib/advisorWorkspaceLoader.js';
+import { loadAdvisorSessionSnapshot } from '../lib/unifiedGuidance.js';
 
 const CASELOAD_REFRESH_MS = 45000;
 
@@ -42,6 +43,7 @@ export const INITIAL_STATE = {
   docForm: { clientId: 'c1', type: 'clinical_summary', dateRangeStart: sixMonthsAgoIso(), dateRangeEnd: todayIso() },
   docSources: { ...DOC_SOURCES_DEFAULT },
   generatedDoc: null, docGenerating: false, docError: '', clientReports: [], clientReportsLoading: false,
+  sessionSnapshot: { loading: false, data: null, error: '' },
   accessOverrides: {}, settingsAccent: 'amber',
   extraClients: [], deletedIds: {},
   showNewClientForm: false, newClientForm: { name: '', email: '', phone: '', sendEmail: true }, newClientResult: null,
@@ -80,7 +82,10 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
   // call, form edits, therapist switch, unmount) so a slower response can
   // never overwrite a newer selection's preview.
   const docGenRef = useRef(0);
-  useEffect(() => () => { genRef.current += 1; docGenRef.current += 1; }, []);
+  // Same pattern again, scoped to the AI Session Snapshot: bumped on every
+  // onGenerateSnapshot call, client switch, therapist switch, and unmount.
+  const snapshotGenRef = useRef(0);
+  useEffect(() => () => { genRef.current += 1; docGenRef.current += 1; snapshotGenRef.current += 1; }, []);
   // setState-compatible merge helper (accepts object or updater fn)
   const set = (patch) => setS((prev) => ({ ...prev, ...(typeof patch === 'function' ? patch(prev) : patch) }));
 
@@ -89,6 +94,7 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
     if (!therapistId) { setLoadPhase('ready'); return; }
     genRef.current += 1;
     docGenRef.current += 1;
+    snapshotGenRef.current += 1;
     let cancelled = false;
     setLoadPhase('loading');
     detailRequested.current = new Set();
@@ -198,7 +204,12 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
   const setTab = (id) => set({ activeTab: id });
   const setViewMode = (m) => set({ viewMode: m });
   const toggleTheme = () => set((s) => ({ isDark: !s.isDark }));
-  const selectClient = (id) => set({ selectedClientId: id, activeTab: 'clients-caseload', activeClientTab: 'overview' });
+  const selectClient = (id) => {
+    // A generated snapshot is client-specific decision support, not a saved
+    // record — never leave a previous client's snapshot visible for a new one.
+    snapshotGenRef.current += 1;
+    set({ selectedClientId: id, activeTab: 'clients-caseload', activeClientTab: 'overview', sessionSnapshot: { loading: false, data: null, error: '' } });
+  };
   const setClientTab = (id) => set({ activeClientTab: id });
   const onSearch = (e) => set({ search: e.target.value });
   const setFilterWound = (w) => set({ filterWound: w });
@@ -356,6 +367,43 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
     setTimeout(() => URL.revokeObjectURL(url), 60000);
   };
 
+  // AI Session Snapshot — a decision-support panel generated on demand from
+  // real client records (curriculum, parts, assessments, life-integration,
+  // assigned practice). It is never saved as a note and never shown to the
+  // client; the Advisor must review and act on it themselves.
+  const onGenerateSnapshot = () => {
+    if (isDemo) { set({ sessionSnapshot: { loading: false, data: null, error: 'Session Snapshot requires a signed-in Advisor session.' } }); return; }
+    const clientId = S.selectedClientId;
+    if (!clientId) return;
+    set({ sessionSnapshot: { loading: true, data: null, error: '' } });
+    snapshotGenRef.current += 1;
+    const gen = snapshotGenRef.current;
+    loadAdvisorSessionSnapshot({ clientId, rangeDays: 30 })
+      .then((data) => {
+        if (snapshotGenRef.current !== gen) return;
+        set({ sessionSnapshot: { loading: false, data: data?.advisor_session_snapshot || null, error: '' } });
+      })
+      .catch((error) => {
+        if (snapshotGenRef.current !== gen) return;
+        set({ sessionSnapshot: { loading: false, data: null, error: error.message || 'Unable to generate Advisor Session Snapshot.' } });
+      });
+  };
+  const onCopySnapshot = () => {
+    const snapshot = S.sessionSnapshot.data;
+    if (!snapshot) return;
+    const text = [
+      snapshot.snapshot_title,
+      snapshot.advisor_review_disclaimer,
+      `Curriculum: ${snapshot.curriculum_trajectory?.active_module || 'Not available'} (${snapshot.curriculum_trajectory?.percent_complete || 0}% complete)`,
+      snapshot.curriculum_trajectory?.recent_response_synthesis,
+      `Assigned practice status: ${snapshot.assigned_practice_status || ''}`,
+      `Suggested questions: ${(snapshot.suggested_session_questions || []).join('; ')}`,
+      `Attention items: ${(snapshot.attention_items_for_advisor || []).join('; ')}`,
+      `Do not over-interpret: ${(snapshot.what_not_to_overinterpret || []).join('; ')}`,
+    ].filter(Boolean).join('\n\n');
+    navigator.clipboard?.writeText(text);
+  };
+
   // Lazily load a client's real report-generation history the first time the
   // Document Creator tab is opened for them (rather than eagerly on mount).
   useEffect(() => {
@@ -454,6 +502,7 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
       onClientMessageChange, onSendClientMessage, setActiveThread, addTaskFromMessage, onAcknowledgeSafety, onCreateSafetyPlan, setPartsClientFilter,
       setTaskFilter, onNewTaskTitleChange, onNewTaskClientChange, onAddTask, toggleTask, onDismissEngagement,
       onDocClientChange, onDocTypeChange, onDocDateChange, toggleDocSource, onGenerateDoc, onOpenGeneratedDoc, toggleNewClientForm, onNewClientFieldChange, onCreateClient,
+      onGenerateSnapshot, onCopySnapshot,
       onStartDelete, onCancelDelete, onDeleteConfirmChange, onConfirmDelete, onPracticeGuidanceChange, onGeneratePracticeBatch, onUseBatchPractice,
       onDeleteMessage, applyQuickMessage, toggleLiveSession, endLiveSession, onMarkNotifRead, onMarkAllNotifsRead, onOpenNotifClient,
     },
