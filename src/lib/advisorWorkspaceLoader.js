@@ -277,19 +277,23 @@ function mapTimeline(analytics, { assessmentHistory = [], messages = [], noteEnt
     });
   }
   assessmentHistory.slice(0, 3).forEach((entry) => {
-    events.push({ type: 'assessment', label: 'Wound Patterns Assessment retaken', rawDate: entry.date });
+    events.push({ id: entry.id ? `assessment-${entry.id}` : null, type: 'assessment', label: 'Wound Patterns Assessment retaken', rawDate: entry.date });
   });
   messages.slice(-6).forEach((m) => {
-    events.push({ type: 'message', label: m.from === 'client' ? 'Client sent a message' : 'Advisor sent a message', rawDate: m.rawDate });
+    events.push({ id: m.id ? `message-${m.id}` : null, type: 'message', label: m.from === 'client' ? 'Client sent a message' : 'Advisor sent a message', rawDate: m.rawDate });
   });
   noteEntries.slice(0, 5).forEach((n) => {
-    events.push({ type: 'note', label: `${n.templateLabel} ${n.status === 'Signed & Locked' ? 'signed' : 'drafted'}`, rawDate: n.rawDate });
+    events.push({ id: n.id ? `note-${n.id}` : null, type: 'note', label: `${n.templateLabel} ${n.status === 'Signed & Locked' ? 'signed' : 'drafted'}`, rawDate: n.rawDate });
   });
   return events
     .filter((e) => e.rawDate)
     .sort((a, b) => String(b.rawDate).localeCompare(String(a.rawDate)))
     .slice(0, 20)
-    .map(({ rawDate, ...rest }, i) => ({ ...rest, date: relativeDateLabel(rawDate), id: `${rest.type}-${rawDate}-${i}` }));
+    // Prefer the source entity's own id (stable across re-sorts as new events
+    // arrive) over the post-sort index, which shifts whenever an event is
+    // added/removed and would otherwise churn React keys for every event
+    // that comes after it.
+    .map(({ rawDate, id, ...rest }, i) => ({ ...rest, date: relativeDateLabel(rawDate), id: id || `${rest.type}-${rawDate}-${i}` }));
 }
 
 function mapGoals(planRows) {
@@ -305,6 +309,7 @@ function mapGoals(planRows) {
 
 export function mapNoteEntry(note, clientId) {
   return {
+    id: note.id,
     clientId,
     clientName: undefined,
     templateLabel: NOTE_TYPE_LABEL[note.note_type] || 'Note',
