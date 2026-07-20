@@ -195,7 +195,7 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
       })),
       goals: rawSelected.goals.map((g) => ({ title: g.title, reviewLabel: 'Review in ' + g.reviewInDays + 'd', style: { fontSize: '11px', fontWeight: 700, color: g.reviewInDays <= 7 ? theme.riskMedText : theme.muted } })),
       qaAnswers: rawSelected.qaAnswers,
-      timeline: rawSelected.timeline.map((e) => { const m = TIMELINE_TYPE_META[e.type] || TIMELINE_TYPE_META.note; return { label: e.label, date: e.date, typeLabel: m.label, typeChip: { fontSize: '10px', fontWeight: 700, color: m.color, background: isDark ? 'rgba(255,255,255,0.08)' : m.color + '14', padding: '3px 7px', borderRadius: '6px', whiteSpace: 'nowrap', height: 'fit-content' } }; }),
+      timeline: rawSelected.timeline.map((e, i) => { const m = TIMELINE_TYPE_META[e.type] || TIMELINE_TYPE_META.note; return { id: e.id || `${e.type}-${i}`, label: e.label, date: e.date, typeLabel: m.label, typeChip: { fontSize: '10px', fontWeight: 700, color: m.color, background: isDark ? 'rgba(255,255,255,0.08)' : m.color + '14', padding: '3px 7px', borderRadius: '6px', whiteSpace: 'nowrap', height: 'fit-content' } }; }),
       clientNotes: savedNotes.filter((n) => n.clientId === rawSelected.id).map((n) => ({ ...n, statusStyle: severityStyle(theme, n.status === 'Signed & Locked' ? 'low' : 'medium'), statusLabel: n.status })),
       noNotes: !savedNotes.some((n) => n.clientId === rawSelected.id),
       plan: buildTreatmentPlan(rawSelected),
@@ -821,8 +821,8 @@ function ClientsCaseload({ v }) {
             <div style={CARD}>
               <span style={{ ...FR, fontSize: '15px' }}>Unified timeline</span>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '16px' }}>
-                {sc.timeline.map((e, i) => (
-                  <div key={i} style={{ display: 'flex', gap: '12px' }}>
+                {sc.timeline.map((e) => (
+                  <div key={e.id} style={{ display: 'flex', gap: '12px' }}>
                     <span style={e.typeChip}>{e.typeLabel}</span>
                     <div style={{ flex: 1 }}>
                       <div style={{ fontSize: '13px', color: 'var(--text)' }}>{e.label}</div>
@@ -830,6 +830,7 @@ function ClientsCaseload({ v }) {
                     </div>
                   </div>
                 ))}
+                {sc.timeline.length === 0 && <div style={{ fontSize: '13px', color: 'var(--muted)' }}>No activity recorded yet.</div>}
               </div>
             </div>
           )}
