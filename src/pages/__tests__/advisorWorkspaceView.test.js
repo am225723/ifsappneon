@@ -297,3 +297,51 @@ describe('buildView — Document Creator reflects the real report-generation bac
     expect(empty.noClientReports).toBe(true);
   });
 });
+
+describe('buildView — Assessments tab reflects the real wound-pattern assessment history', () => {
+  const CLIENT_WITH_HISTORY = {
+    ...UNASSIGNED_CLIENT, id: 'ah1', name: 'History Test', unassigned: false,
+    assessmentHistory: [
+      {
+        id: 'a2', date: '2026-07-01T00:00:00Z', dateLabel: 'Jul 1, 2026', primaryWound: 'betrayal', secondaryWound: 'helplessness',
+        subscales: [
+          { wound: 'abandonment', score: 5, severity: 'Low', delta: -1 },
+          { wound: 'shame', score: 6, severity: 'Low', delta: 1 },
+          { wound: 'neglect', score: 4, severity: 'Low', delta: -1 },
+          { wound: 'betrayal', score: 12, severity: 'Moderate', delta: -8 },
+          { wound: 'helplessness', score: 9, severity: 'Low', delta: -6 },
+        ],
+      },
+      {
+        id: 'a1', date: '2026-06-01T00:00:00Z', dateLabel: 'Jun 1, 2026', primaryWound: 'betrayal', secondaryWound: 'helplessness',
+        subscales: [
+          { wound: 'abandonment', score: 6, severity: 'Low', delta: null },
+          { wound: 'shame', score: 5, severity: 'Low', delta: null },
+          { wound: 'neglect', score: 5, severity: 'Low', delta: null },
+          { wound: 'betrayal', score: 20, severity: 'High', delta: null },
+          { wound: 'helplessness', score: 15, severity: 'Moderate', delta: null },
+        ],
+      },
+    ],
+  };
+
+  it('maps the newest-first history with per-subscale severity and delta', () => {
+    const v = makeView({ extraClients: [CLIENT_WITH_HISTORY], selectedClientId: 'ah1' });
+    const sc = v.selectedClient;
+    expect(sc.noAssessmentHistory).toBe(false);
+    expect(sc.assessmentHistory).toHaveLength(2);
+    expect(sc.assessmentHistory[0].id).toBe('a2'); // most recent first
+    const betrayal = sc.assessmentHistory[0].subscales.find((s) => s.wound === 'betrayal');
+    expect(betrayal.scoreLabel).toBe('12/25');
+    expect(betrayal.severityLabel).toBe('Moderate');
+    expect(betrayal.deltaLabel).toBe('-8 pts');
+    const firstRetakeBetrayal = sc.assessmentHistory[1].subscales.find((s) => s.wound === 'betrayal');
+    expect(firstRetakeBetrayal.deltaLabel).toBe('First retake');
+  });
+
+  it('shows an explicit empty state for a client who has never taken the assessment', () => {
+    const v = makeView({ selectedClientId: 'c1' }); // seeded demo clients carry no real assessmentHistory
+    expect(v.selectedClient.noAssessmentHistory).toBe(true);
+    expect(v.selectedClient.assessmentHistory).toEqual([]);
+  });
+});

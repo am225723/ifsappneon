@@ -100,6 +100,7 @@ export function mapClientRow(row) {
     timeline: [],
     safety: { riskLevel: risk ? 'monitor' : 'none', protective: [], riskFactors: risk ? ['Extended inactivity'] : [], safetyPlan: null, contacts: [], acknowledged: true, ackNote: '' },
     mbc: [],
+    assessmentHistory: [],
     parts: [],
     messages: [],
     _detailLoaded: false,
@@ -129,14 +130,40 @@ function mapAssessment(assessmentTrajectory) {
 
 // The Wound Patterns Assessment (ifs_assessment_results, surfaced by
 // api/analytics/client.js as assessmentTrajectory) is the only client-
-// repeatable numeric self-report in this app, so it's the real MBC data
-// source — not a stand-in for a standardized instrument like PHQ-9/GAD-7,
-// which this app never actually administers. Each retake scores five wound
-// subscales (5 questions, 1-5 Likert each => 5-25 range per subscale).
+// repeatable numeric self-report in this app — it's real assessment history,
+// not a stand-in for a standardized instrument like PHQ-9/GAD-7, which this
+// app never actually administers. Each retake scores five wound subscales
+// (5 questions, 1-5 Likert each => 5-25 range per subscale).
 function woundSeverityLabel(score) {
   if (score >= 18) return 'High';
   if (score >= 11) return 'Moderate';
   return 'Low';
+}
+
+// One entry per real retake, most recent first, with per-subscale severity
+// and the change from the immediately preceding retake (null on a client's
+// first-ever retake, since there's nothing to compare against).
+function mapAssessmentHistory(assessmentTrajectory) {
+  if (!Array.isArray(assessmentTrajectory) || assessmentTrajectory.length === 0) return [];
+  const newestFirst = [...assessmentTrajectory].reverse();
+  return newestFirst.map((entry, i) => {
+    const previousEntry = newestFirst[i + 1];
+    const subscales = WORKSPACE_WOUNDS.map((wound) => {
+      const v = Number(entry.scores?.[wound]);
+      const score = Number.isFinite(v) ? v : 0;
+      const prevRaw = previousEntry ? Number(previousEntry.scores?.[wound]) : NaN;
+      const delta = Number.isFinite(prevRaw) ? score - prevRaw : null;
+      return { wound, score, severity: woundSeverityLabel(score), delta };
+    });
+    return {
+      id: entry.id || `assessment-${i}`,
+      date: entry.date || null,
+      dateLabel: relativeDateLabel(entry.date),
+      primaryWound: normalizeWound(entry.primaryWound),
+      secondaryWound: normalizeWound(entry.secondaryWound),
+      subscales,
+    };
+  });
 }
 
 function mapMbcMeasures(assessmentTrajectory, primaryWound, secondaryWound) {
@@ -261,6 +288,10 @@ export function deriveWorkspaceDetail(base, { analytics, notes, plans, messages 
       // no assessment data.
       enriched.mbc = [];
     }
+    // Set unconditionally (not nested under `if (assessment)`) so a client
+    // with no retakes on this pass gets an explicit [] rather than an empty
+    // trajectory silently leaving a prior enrichment's history in place.
+    enriched.assessmentHistory = mapAssessmentHistory(analytics.assessmentTrajectory);
     const hw = analytics.homeworkSummary;
     if (hw) {
       enriched.progressPct = Number.isFinite(hw.completionPercentage) ? hw.completionPercentage : 0;
