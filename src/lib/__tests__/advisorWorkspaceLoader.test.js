@@ -256,13 +256,30 @@ describe('deriveWorkspaceDetail', () => {
       treatmentPlanSummary: {},
       partsSummary: {},
     };
-    const notes = [{ note_type: 'session_note', content: 'Signed note', status: 'final', created_at: '2026-07-10T00:00:00Z' }];
+    const notes = [{ id: 'note1', note_type: 'session_note', content: 'Signed note', status: 'final', created_at: '2026-07-10T00:00:00Z' }];
     const messages = [{ id: 'm1', sender_role: 'client', body: 'hi', created_at: '2026-07-08T00:00:00Z' }];
     const { client } = deriveWorkspaceDetail(base, { analytics, notes, plans: [], messages });
     const types = client.timeline.map((e) => e.type);
     expect(types).toEqual(['note', 'message', 'practice', 'assessment']); // newest (Jul 10) first
     expect(client.timeline.every((e) => typeof e.id === 'string')).toBe(true);
     expect(new Set(client.timeline.map((e) => e.id)).size).toBe(client.timeline.length); // ids are unique
+    // Real entity ids (namespaced by type) are used where available, not a
+    // post-sort array index — this is what keeps React keys stable when a
+    // new event is later inserted ahead of existing ones.
+    expect(client.timeline.find((e) => e.type === 'note').id).toBe('note-note1');
+    expect(client.timeline.find((e) => e.type === 'message').id).toBe('message-m1');
+    expect(client.timeline.find((e) => e.type === 'assessment').id).toBe('assessment-a1');
+  });
+
+  it('keeps existing entities\' timeline ids stable when a newer event is inserted ahead of them', () => {
+    const analytics = { assessmentTrajectory: [], homeworkSummary: {}, agendaSummary: {}, treatmentPlanSummary: {}, partsSummary: {} };
+    const messages = [{ id: 'm1', sender_role: 'client', body: 'hi', created_at: '2026-07-01T00:00:00Z' }];
+    const before = deriveWorkspaceDetail(base, { analytics, notes: [], plans: [], messages }).client.timeline;
+    const idBefore = before.find((e) => e.type === 'message').id;
+    const messagesWithNewer = [...messages, { id: 'm2', sender_role: 'therapist', body: 'hi back', created_at: '2026-07-15T00:00:00Z' }];
+    const after = deriveWorkspaceDetail(base, { analytics, notes: [], plans: [], messages: messagesWithNewer }).client.timeline;
+    const idAfter = after.find((e) => e.id === idBefore);
+    expect(idAfter).toBeDefined(); // m1's id survived even though it's no longer index 0
   });
 
   it('leaves the timeline empty (not throwing) when a client has no dated activity at all', () => {
