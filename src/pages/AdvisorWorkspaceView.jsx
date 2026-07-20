@@ -262,7 +262,7 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
           label: r.label,
           summary: r.summary,
           dateLabel: r.created_at ? new Date(r.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—',
-          linkedPartName: r.linkedPartName || r.linked_part_name || r.linked_part_alias || '',
+          linkedPartName: r.linkedPartName || '',
           fields: [
             ['Situation', r.situation], ['Part noticed', r.part_noticed], ['Body sensation', r.body_sensation],
             ['Emotion', r.emotion], ['Need or message', r.need_or_message], ['Self-energy response', r.self_energy_response],

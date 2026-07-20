@@ -469,7 +469,13 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
     if (lifeReflectionsLoadedFor.current === S.selectedClientId) return;
     lifeReflectionsLoadedFor.current = S.selectedClientId;
     set({ lifeReflectionsLoading: true });
-    loadWorkspaceLifeReflections(S.selectedClientId).then((rows) => set({ lifeReflections: rows, lifeReflectionsLoading: false }));
+    let isCanceled = false;
+    loadWorkspaceLifeReflections(S.selectedClientId).then((rows) => {
+      if (!isCanceled) set({ lifeReflections: rows, lifeReflectionsLoading: false });
+    });
+    return () => {
+      isCanceled = true;
+    };
   }, [isDemo, loadPhase, S.activeClientTab, S.selectedClientId]);
 
   const toggleNewClientForm = () => set((s) => ({ showNewClientForm: !s.showNewClientForm, newClientResult: null }));
