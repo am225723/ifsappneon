@@ -247,6 +247,28 @@ describe('deriveWorkspaceDetail', () => {
     expect(client.betweenSession.homeworkFunnel.totalAssigned).toBe(0);
     expect(client.betweenSession.hasMoodData).toBe(false);
   });
+
+  it('merges messages, notes, and assessment retakes into the timeline alongside analytics events, sorted newest-first', () => {
+    const analytics = {
+      assessmentTrajectory: [{ id: 'a1', date: '2026-07-01T00:00:00Z', primaryWound: 'shame', secondaryWound: 'neglect', scores: { abandonment: 4, shame: 10, neglect: 5, betrayal: 3, helplessness: 4 } }],
+      homeworkSummary: { recentAssignments: [{ title: 'Body scan', status: 'completed', completed_at: '2026-07-05T00:00:00Z' }] },
+      agendaSummary: {},
+      treatmentPlanSummary: {},
+      partsSummary: {},
+    };
+    const notes = [{ note_type: 'session_note', content: 'Signed note', status: 'final', created_at: '2026-07-10T00:00:00Z' }];
+    const messages = [{ id: 'm1', sender_role: 'client', body: 'hi', created_at: '2026-07-08T00:00:00Z' }];
+    const { client } = deriveWorkspaceDetail(base, { analytics, notes, plans: [], messages });
+    const types = client.timeline.map((e) => e.type);
+    expect(types).toEqual(['note', 'message', 'practice', 'assessment']); // newest (Jul 10) first
+    expect(client.timeline.every((e) => typeof e.id === 'string')).toBe(true);
+    expect(new Set(client.timeline.map((e) => e.id)).size).toBe(client.timeline.length); // ids are unique
+  });
+
+  it('leaves the timeline empty (not throwing) when a client has no dated activity at all', () => {
+    const { client } = deriveWorkspaceDetail(base, { analytics: null, notes: [], plans: [], messages: [] });
+    expect(client.timeline).toEqual([]);
+  });
 });
 
 describe('mapClientRow — unassigned detection', () => {

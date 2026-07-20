@@ -447,3 +447,18 @@ describe('buildView — Between Sessions reflects real analytics data', () => {
     expect(bs.moodTrendBars).toEqual([]);
   });
 });
+
+describe('buildView — unified timeline gives every event a stable key', () => {
+  it('falls back to a synthetic id when a timeline entry has none (demo seed data)', () => {
+    const v = makeView({ selectedClientId: 'c1' }); // seeded demo timeline entries carry no id field
+    expect(v.selectedClient.timeline.length).toBeGreaterThan(0);
+    expect(v.selectedClient.timeline.every((e) => typeof e.id === 'string' && e.id.length > 0)).toBe(true);
+    expect(new Set(v.selectedClient.timeline.map((e) => e.id)).size).toBe(v.selectedClient.timeline.length);
+  });
+
+  it('preserves a real id computed by the loader when one is present', () => {
+    const client = { ...UNASSIGNED_CLIENT, id: 'tl1', name: 'Timeline Test', unassigned: false, timeline: [{ id: 'note-2026-07-10T00:00:00Z-0', type: 'note', label: 'Session Note signed', date: 'Jul 10' }] };
+    const v = makeView({ extraClients: [client], selectedClientId: 'tl1' });
+    expect(v.selectedClient.timeline[0].id).toBe('note-2026-07-10T00:00:00Z-0');
+  });
+});

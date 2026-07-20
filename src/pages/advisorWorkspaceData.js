@@ -306,7 +306,7 @@ export const CLIENT_TABS = [
   { id: 'practices', label: 'Practices' }, { id: 'safety', label: 'Safety' }, { id: 'messages', label: 'Messages' },
 ];
 export const TIMELINE_TYPE_META = {
-  note: { label: 'NOTE', color: '#57534e' }, assessment: { label: 'MBC', color: '#2563eb' },
+  note: { label: 'NOTE', color: '#57534e' }, assessment: { label: 'ASSESSMENT', color: '#2563eb' },
   practice: { label: 'PRACTICE', color: '#059669' }, message: { label: 'MSG', color: '#0d9488' },
   journal: { label: 'JOURNAL', color: '#b45309' }, safety: { label: 'SAFETY', color: '#dc2626' }, plan: { label: 'PLAN', color: '#7c3aed' },
 };

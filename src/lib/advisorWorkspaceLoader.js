@@ -254,21 +254,42 @@ function mapParts(partsSummary) {
   });
 }
 
-function mapTimeline(analytics) {
+// Merges every real per-client event source already loaded for the workspace
+// (analytics-derived events, assessment retakes, messages, session notes)
+// into one real chronology, sorted newest-first. Previously only 4 thin
+// analytics slices ever fed this, discarding messages/notes/assessments
+// entirely even though all three are already loaded for the same client.
+function mapTimeline(analytics, { assessmentHistory = [], messages = [], noteEntries = [] } = {}) {
   const events = [];
-  (analytics.homeworkSummary?.recentAssignments || []).slice(0, 3).forEach((h) => {
-    events.push({ type: 'practice', label: `Practice: ${h.title || h.module_id || 'assigned module'} (${h.status || 'assigned'})`, date: relativeDateLabel(h.completed_at || h.assigned_at) });
+  if (analytics) {
+    (analytics.homeworkSummary?.recentAssignments || []).slice(0, 3).forEach((h) => {
+      const raw = h.completed_at || h.assigned_at;
+      events.push({ type: 'practice', label: `Practice: ${h.title || h.module_id || 'assigned module'} (${h.status || 'assigned'})`, rawDate: raw });
+    });
+    (analytics.agendaSummary?.recentAgendaDates || []).slice(0, 2).forEach((d) => {
+      events.push({ type: 'note', label: 'Session check-in submitted', rawDate: d });
+    });
+    (analytics.treatmentPlanSummary?.recentCompletedGoals || []).slice(0, 2).forEach((g) => {
+      events.push({ type: 'plan', label: `Treatment goal completed: ${g.goal_title || 'goal'}`, rawDate: g.completed_at || g.updated_at });
+    });
+    (analytics.partsSummary?.recentlyUpdated || []).slice(0, 2).forEach((p) => {
+      events.push({ type: 'journal', label: `Part updated: ${p.name || p.part_name || 'part'}`, rawDate: p.updated_at });
+    });
+  }
+  assessmentHistory.slice(0, 3).forEach((entry) => {
+    events.push({ type: 'assessment', label: 'Wound Patterns Assessment retaken', rawDate: entry.date });
   });
-  (analytics.agendaSummary?.recentAgendaDates || []).slice(0, 2).forEach((d) => {
-    events.push({ type: 'note', label: 'Session check-in submitted', date: relativeDateLabel(d) });
+  messages.slice(-6).forEach((m) => {
+    events.push({ type: 'message', label: m.from === 'client' ? 'Client sent a message' : 'Advisor sent a message', rawDate: m.rawDate });
   });
-  (analytics.treatmentPlanSummary?.recentCompletedGoals || []).slice(0, 2).forEach((g) => {
-    events.push({ type: 'plan', label: `Treatment goal completed: ${g.goal_title || 'goal'}`, date: relativeDateLabel(g.completed_at || g.updated_at) });
+  noteEntries.slice(0, 5).forEach((n) => {
+    events.push({ type: 'note', label: `${n.templateLabel} ${n.status === 'Signed & Locked' ? 'signed' : 'drafted'}`, rawDate: n.rawDate });
   });
-  (analytics.partsSummary?.recentlyUpdated || []).slice(0, 2).forEach((p) => {
-    events.push({ type: 'journal', label: `Part updated: ${p.name || p.part_name || 'part'}`, date: relativeDateLabel(p.updated_at) });
-  });
-  return events;
+  return events
+    .filter((e) => e.rawDate)
+    .sort((a, b) => String(b.rawDate).localeCompare(String(a.rawDate)))
+    .slice(0, 20)
+    .map(({ rawDate, ...rest }, i) => ({ ...rest, date: relativeDateLabel(rawDate), id: `${rest.type}-${rawDate}-${i}` }));
 }
 
 function mapGoals(planRows) {
@@ -289,6 +310,7 @@ export function mapNoteEntry(note, clientId) {
     templateLabel: NOTE_TYPE_LABEL[note.note_type] || 'Note',
     text: note.clinical_summary || note.content || '',
     date: relativeDateLabel(note.created_at),
+    rawDate: note.created_at || null,
     status: note.status === 'final' ? 'Signed & Locked' : 'Draft',
   };
 }
@@ -303,6 +325,7 @@ function mapMessages(rows, clientName) {
       from: m.sender_role === 'therapist' ? 'advisor' : 'client',
       text: m.body || m.content || '',
       date: relativeDateLabel(m.created_at),
+      rawDate: m.created_at || null,
       _clientName: clientName,
     }));
 }
@@ -336,7 +359,6 @@ export function deriveWorkspaceDetail(base, { analytics, notes, plans, messages 
       enriched.modulesCompleted = hw.completedCount || 0;
     }
     enriched.parts = mapParts(analytics.partsSummary);
-    enriched.timeline = mapTimeline(analytics);
 
     const agenda = analytics.agendaSummary;
     if (agenda && agenda.totalSubmitted > 0) {
@@ -350,6 +372,11 @@ export function deriveWorkspaceDetail(base, { analytics, notes, plans, messages 
   if (Array.isArray(messages)) enriched.messages = mapMessages(messages, base.name);
 
   const noteEntries = Array.isArray(notes) ? notes.map((n) => ({ ...mapNoteEntry(n, base.id), clientName: base.name })) : [];
+
+  // Built last so it can draw on every other real source already loaded for
+  // this client (assessment retakes, messages, session notes), merged with
+  // the analytics-derived events into one real chronology.
+  enriched.timeline = mapTimeline(analytics, { assessmentHistory: enriched.assessmentHistory, messages: enriched.messages, noteEntries });
 
   return { client: enriched, noteEntries };
 }
