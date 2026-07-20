@@ -390,7 +390,16 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
   });
   const noLiveSessions = liveSessionRows.length === 0;
 
-  const NOTIF_DOT_META = { risk: theme.riskHighText, practice: theme.emerald2, engagement: theme.riskMedText, message: '#0d9488', assessment: '#2563eb' };
+  const NOTIF_DOT_META = {
+    // Demo-data categories.
+    risk: theme.riskHighText, practice: theme.emerald2, engagement: theme.riskMedText, message: '#0d9488', assessment: '#2563eb',
+    // Real ifs_notifications.notification_type values.
+    homework_assigned: theme.emerald2, homework_started: theme.emerald2, homework_completed: theme.emerald2, homework_reviewed: theme.emerald2,
+    session_agenda_submitted: '#0d9488', session_agenda_reviewed: '#0d9488',
+    treatment_goal_created: '#2563eb', treatment_goal_updated: '#2563eb', treatment_goal_completed: '#2563eb',
+    live_session_started: theme.riskMedText, live_session_joined: theme.riskMedText, live_session_ended: theme.riskMedText,
+    report_generated: '#2563eb', therapist_note_created: theme.muted, general_update: theme.muted,
+  };
   const notificationRows = [...S.notifications].sort((a, b) => (a.read === b.read ? 0 : a.read ? 1 : -1)).map((n) => {
     const client = ALL_CLIENTS.find((c) => c.id === n.clientId);
     return {
@@ -399,7 +408,8 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
       priorityChip: severityStyle(theme, n.priority), priorityLabel: n.priority,
       rowStyle: { background: n.read ? 'var(--surface)' : 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: '16px', padding: '14px 18px', display: 'flex', alignItems: 'flex-start', gap: '12px', boxShadow: 'var(--shadow)' },
       clientName: client ? client.name : '',
-      onOpenClient: () => H.onOpenNotifClient(n.clientId, n.id), onMarkRead: () => H.onMarkNotifRead(n.id), showMarkRead: !n.read,
+      onOpenClient: client ? () => H.onOpenNotifClient(n.clientId, n.id) : undefined,
+      onMarkRead: () => H.onMarkNotifRead(n.id), showMarkRead: !n.read,
     };
   });
   const noNotifications = notificationRows.length === 0;
@@ -1385,7 +1395,7 @@ function NotificationsView({ v }) {
             <div style={{ fontSize: '11.5px', color: 'var(--muted)', marginTop: '5px' }}>{n.clientName} · {n.date}</div>
           </div>
           <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
-            <button onClick={n.onOpenClient} style={v.secondaryBtnStyle}>Open client</button>
+            {n.onOpenClient && <button onClick={n.onOpenClient} style={v.secondaryBtnStyle}>Open client</button>}
             {n.showMarkRead && <button onClick={n.onMarkRead} style={v.secondaryBtnStyle}>Mark read</button>}
           </div>
         </div>
