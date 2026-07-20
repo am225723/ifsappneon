@@ -11,6 +11,7 @@ import { loadAssignedClients, loadAssignedClientsWithStatus, assignClientToThera
 import { loadClientAnalytics } from './clientAnalytics';
 import { loadTherapistNotesForClient, createTherapistNote } from './therapistNotes';
 import { loadActiveTreatmentPlansForClient } from './treatmentPlans';
+import { loadNotifications, markNotificationRead, markAllNotificationsRead } from './notifications.js';
 import { supabase } from './supabase';
 import { getClerkToken } from './apiAuth.js';
 
@@ -447,4 +448,44 @@ export async function loadWorkspaceReports(clientId, limit = 8) {
   } catch {
     return [];
   }
+}
+
+// ifs_notifications stores priority as low/normal/important; the workspace's
+// existing severity chip vocabulary (shared with risk/safety) is low/medium/high.
+const NOTIF_PRIORITY_TO_SEV = { important: 'high', normal: 'medium', low: 'low' };
+
+function mapNotification(row) {
+  return {
+    id: row.id,
+    clientId: row.client_id || null,
+    type: row.notification_type,
+    priority: NOTIF_PRIORITY_TO_SEV[row.priority] || 'medium',
+    title: row.title,
+    message: row.message || '',
+    date: relativeDateLabel(row.created_at),
+    read: !!row.read_at,
+  };
+}
+
+// The Advisor's real notification feed (ifs_notifications) — already
+// populated by real client-driven events (homework completed, session
+// agenda submitted, reports generated, etc.) and already surfaced
+// elsewhere in the app (RecentActivityFeed), just never wired into the
+// workspace itself.
+export async function loadWorkspaceNotifications(limit = 50) {
+  try {
+    const { data, error } = await loadNotifications({ filter: 'all', limit });
+    if (error) return [];
+    return (data || []).map(mapNotification);
+  } catch {
+    return [];
+  }
+}
+
+export async function markWorkspaceNotificationRead(notificationId) {
+  return markNotificationRead(notificationId);
+}
+
+export async function markAllWorkspaceNotificationsRead() {
+  return markAllNotificationsRead();
 }

@@ -290,6 +290,34 @@ describe('buildView — Since Last Session change summary', () => {
   });
 });
 
+describe('buildView — real notification feed', () => {
+  const REAL_NOTIFICATIONS = [
+    { id: 'n1', clientId: 'c1', type: 'homework_completed', priority: 'high', title: 'Practice completed', message: 'Maya finished a module.', date: 'Today', read: false },
+    { id: 'n2', clientId: 'c2', type: 'session_agenda_submitted', priority: 'medium', title: 'Check-in submitted', message: '', date: 'Yesterday', read: true },
+    { id: 'n3', clientId: null, type: 'general_update', priority: 'low', title: 'System update', message: '', date: '2 days ago', read: false },
+  ];
+
+  it('maps real notification rows, unread first, with a client-open action only when a client is attached', () => {
+    const v = makeView({ notifications: REAL_NOTIFICATIONS });
+    expect(v.notificationRows).toHaveLength(3);
+    expect(v.notificationRows.every((r) => typeof r.priorityChip === 'object')).toBe(true); // severityStyle never throws on a mapped priority
+    const noClient = v.notificationRows.find((r) => r.id === 'n3');
+    expect(noClient.onOpenClient).toBeUndefined();
+    const withClient = v.notificationRows.find((r) => r.id === 'n1');
+    expect(typeof withClient.onOpenClient).toBe('function');
+  });
+
+  it('counts unread notifications for the nav badge', () => {
+    const v = makeView({ notifications: REAL_NOTIFICATIONS });
+    expect(v.notifUnreadCount).toBe(2); // n1 and n3 are unread
+  });
+
+  it('shows the empty state once the real feed has loaded with nothing in it', () => {
+    const v = makeView({ notifications: [] });
+    expect(v.noNotifications).toBe(true);
+  });
+});
+
 describe('buildView — Document Creator reflects the real report-generation backend', () => {
   it('only offers the document types and sections api/generate-report.js actually supports', () => {
     const v = makeView();

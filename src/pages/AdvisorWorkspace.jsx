@@ -7,6 +7,7 @@ import {
 import {
   loadWorkspaceCaseload, loadWorkspaceCaseloadWithStatus, loadWorkspaceClientDetail, sendWorkspaceMessage, persistTherapistNote,
   claimWorkspaceClient, mergeCaseloadRefresh, generateWorkspaceReport, loadWorkspaceReports,
+  loadWorkspaceNotifications, markWorkspaceNotificationRead, markAllWorkspaceNotificationsRead,
 } from '../lib/advisorWorkspaceLoader.js';
 import { loadAdvisorSessionSnapshot } from '../lib/unifiedGuidance.js';
 import { generateSessionPrepSummary } from '../lib/sessionPrepSummary.js';
@@ -76,6 +77,7 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
   const [loadPhase, setLoadPhase] = useState(isDemo ? 'ready' : 'loading');
   const detailRequested = useRef(new Set());
   const reportsLoadedFor = useRef(null);
+  const notificationsLoaded = useRef(false);
   // Generation guard: bumped on therapist change / unmount so stale in-flight
   // detail merges are ignored without cancelling still-valid sibling requests.
   const genRef = useRef(0);
@@ -103,6 +105,7 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
     let cancelled = false;
     setLoadPhase('loading');
     detailRequested.current = new Set();
+    notificationsLoaded.current = false;
     (async () => {
       try {
         const clients = await loadWorkspaceCaseload(therapistId);
@@ -441,6 +444,17 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
     refreshClientReports(S.docForm.clientId);
   }, [isDemo, loadPhase, S.activeTab, S.docForm.clientId, refreshClientReports]);
 
+  // Lazily load the Advisor's real notification feed the first time the
+  // Notifications tab is opened (rather than eagerly on mount) — this is the
+  // real ifs_notifications feed already populated by client-driven events
+  // (homework completed, session agenda submitted, reports generated, etc.),
+  // just not previously surfaced in the workspace.
+  useEffect(() => {
+    if (isDemo || loadPhase !== 'ready' || S.activeTab !== 'notifications' || notificationsLoaded.current) return;
+    notificationsLoaded.current = true;
+    loadWorkspaceNotifications().then((rows) => set({ notifications: rows }));
+  }, [isDemo, loadPhase, S.activeTab]);
+
   const toggleNewClientForm = () => set((s) => ({ showNewClientForm: !s.showNewClientForm, newClientResult: null }));
   const onNewClientFieldChange = (field) => (e) => set((s) => ({ newClientForm: { ...s.newClientForm, [field]: field === 'sendEmail' ? e.target.checked : e.target.value } }));
   const onCreateClient = () => {
@@ -490,8 +504,14 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
   const applyQuickMessage = (text) => set({ clientMessageDraft: text });
   const toggleLiveSession = (id) => set((s) => ({ liveSessions: s.liveSessions.map((l) => (l.id === id ? { ...l, status: l.status === 'active' ? 'paused' : 'active' } : l)) }));
   const endLiveSession = (id) => set((s) => ({ liveSessions: s.liveSessions.filter((l) => l.id !== id) }));
-  const onMarkNotifRead = (id) => set((s) => ({ notifications: s.notifications.map((n) => (n.id === id ? { ...n, read: true } : n)) }));
-  const onMarkAllNotifsRead = () => set((s) => ({ notifications: s.notifications.map((n) => ({ ...n, read: true })) }));
+  const onMarkNotifRead = (id) => {
+    set((s) => ({ notifications: s.notifications.map((n) => (n.id === id ? { ...n, read: true } : n)) }));
+    if (!isDemo) markWorkspaceNotificationRead(id).catch((error) => console.error('Failed to mark notification read:', error));
+  };
+  const onMarkAllNotifsRead = () => {
+    set((s) => ({ notifications: s.notifications.map((n) => ({ ...n, read: true })) }));
+    if (!isDemo) markAllWorkspaceNotificationsRead().catch((error) => console.error('Failed to mark all notifications read:', error));
+  };
   const onOpenNotifClient = (clientId, id) => { onMarkNotifRead(id); set({ selectedClientId: clientId, activeTab: 'clients-caseload', activeClientTab: 'overview' }); };
 
   const buildTreatmentPlan = (client) => {

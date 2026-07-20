@@ -21,9 +21,18 @@ vi.mock('../supabase', () => ({
 }));
 vi.mock('../apiAuth.js', () => ({ getClerkToken: async () => null }));
 
+let mockNotificationsResult = { data: [], error: null };
+const mockMarkReadCalls = [];
+const mockMarkAllReadCalls = [];
+vi.mock('../notifications.js', () => ({
+  loadNotifications: async () => mockNotificationsResult,
+  markNotificationRead: async (id) => { mockMarkReadCalls.push(id); return { data: null, error: null }; },
+  markAllNotificationsRead: async () => { mockMarkAllReadCalls.push(true); return { data: null, error: null }; },
+}));
+
 const {
   initialsFrom, daysSince, mapClientRow, mapNoteEntry, deriveWorkspaceDetail, WORKSPACE_WOUNDS, mergeCaseloadRefresh,
-  generateWorkspaceReport, loadWorkspaceReports,
+  generateWorkspaceReport, loadWorkspaceReports, loadWorkspaceNotifications, markWorkspaceNotificationRead, markAllWorkspaceNotificationsRead,
 } = await import('../advisorWorkspaceLoader.js');
 
 describe('initialsFrom', () => {
@@ -325,5 +334,46 @@ describe('loadWorkspaceReports', () => {
     const rows = await loadWorkspaceReports('c1');
     expect(rows).toEqual([]);
     mockReportRows = { data: [], error: null };
+  });
+});
+
+describe('loadWorkspaceNotifications', () => {
+  it('maps real ifs_notifications rows into the workspace notification shape', async () => {
+    mockNotificationsResult = {
+      data: [
+        { id: 'n1', client_id: 'c1', notification_type: 'homework_completed', priority: 'important', title: 'Practice completed', message: 'Maya finished Module 9.', created_at: new Date().toISOString(), read_at: null },
+        { id: 'n2', client_id: 'c2', notification_type: 'session_agenda_submitted', priority: 'normal', title: 'Check-in submitted', message: '', created_at: new Date().toISOString(), read_at: new Date().toISOString() },
+      ],
+      error: null,
+    };
+    const rows = await loadWorkspaceNotifications();
+    expect(rows).toHaveLength(2);
+    expect(rows[0]).toMatchObject({ id: 'n1', clientId: 'c1', type: 'homework_completed', priority: 'high', title: 'Practice completed', read: false });
+    expect(rows[1]).toMatchObject({ id: 'n2', clientId: 'c2', priority: 'medium', read: true });
+    mockNotificationsResult = { data: [], error: null };
+  });
+
+  it('defaults an unrecognized priority to medium rather than crashing the severity chip lookup', async () => {
+    mockNotificationsResult = { data: [{ id: 'n3', client_id: null, notification_type: 'general_update', priority: 'weird_value', title: 'x', created_at: new Date().toISOString(), read_at: null }], error: null };
+    const rows = await loadWorkspaceNotifications();
+    expect(rows[0].priority).toBe('medium');
+    expect(rows[0].clientId).toBeNull();
+    mockNotificationsResult = { data: [], error: null };
+  });
+
+  it('returns an empty array (not a throw) when the API errors', async () => {
+    mockNotificationsResult = { data: null, error: { message: 'unauthorized' } };
+    const rows = await loadWorkspaceNotifications();
+    expect(rows).toEqual([]);
+    mockNotificationsResult = { data: [], error: null };
+  });
+});
+
+describe('markWorkspaceNotificationRead / markAllWorkspaceNotificationsRead', () => {
+  it('delegate to the real notifications API', async () => {
+    await markWorkspaceNotificationRead('n1');
+    expect(mockMarkReadCalls).toContain('n1');
+    await markAllWorkspaceNotificationsRead();
+    expect(mockMarkAllReadCalls.length).toBeGreaterThan(0);
   });
 });
