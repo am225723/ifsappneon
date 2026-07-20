@@ -295,21 +295,26 @@ describe('buildView — real notification feed', () => {
     { id: 'n1', clientId: 'c1', type: 'homework_completed', priority: 'high', title: 'Practice completed', message: 'Maya finished a module.', date: 'Today', read: false },
     { id: 'n2', clientId: 'c2', type: 'session_agenda_submitted', priority: 'medium', title: 'Check-in submitted', message: '', date: 'Yesterday', read: true },
     { id: 'n3', clientId: null, type: 'general_update', priority: 'low', title: 'System update', message: '', date: '2 days ago', read: false },
+    { id: 'n4', clientId: 'not-in-caseload', type: 'homework_completed', priority: 'low', title: 'Stale reference', message: '', date: '3 days ago', read: false },
   ];
 
-  it('maps real notification rows, unread first, with a client-open action only when a client is attached', () => {
+  it('maps real notification rows, unread first, with a client-open action only when the client is actually resolvable in the workspace', () => {
     const v = makeView({ notifications: REAL_NOTIFICATIONS });
-    expect(v.notificationRows).toHaveLength(3);
+    expect(v.notificationRows).toHaveLength(4);
     expect(v.notificationRows.every((r) => typeof r.priorityChip === 'object')).toBe(true); // severityStyle never throws on a mapped priority
     const noClient = v.notificationRows.find((r) => r.id === 'n3');
     expect(noClient.onOpenClient).toBeUndefined();
     const withClient = v.notificationRows.find((r) => r.id === 'n1');
     expect(typeof withClient.onOpenClient).toBe('function');
+    // A clientId that doesn't resolve to a loaded client (unassigned/removed/
+    // stale reference) must not offer a dead-end navigation action either.
+    const staleClient = v.notificationRows.find((r) => r.id === 'n4');
+    expect(staleClient.onOpenClient).toBeUndefined();
   });
 
   it('counts unread notifications for the nav badge', () => {
     const v = makeView({ notifications: REAL_NOTIFICATIONS });
-    expect(v.notifUnreadCount).toBe(2); // n1 and n3 are unread
+    expect(v.notifUnreadCount).toBe(3); // n1, n3, and n4 are unread
   });
 
   it('shows the empty state once the real feed has loaded with nothing in it', () => {

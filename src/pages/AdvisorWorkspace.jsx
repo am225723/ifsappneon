@@ -506,11 +506,19 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
   const endLiveSession = (id) => set((s) => ({ liveSessions: s.liveSessions.filter((l) => l.id !== id) }));
   const onMarkNotifRead = (id) => {
     set((s) => ({ notifications: s.notifications.map((n) => (n.id === id ? { ...n, read: true } : n)) }));
-    if (!isDemo) markWorkspaceNotificationRead(id).catch((error) => console.error('Failed to mark notification read:', error));
+    if (!isDemo) {
+      markWorkspaceNotificationRead(id)
+        .then(({ error }) => { if (error) console.error('Failed to mark notification read:', error); })
+        .catch((error) => console.error('Failed to mark notification read:', error));
+    }
   };
   const onMarkAllNotifsRead = () => {
     set((s) => ({ notifications: s.notifications.map((n) => ({ ...n, read: true })) }));
-    if (!isDemo) markAllWorkspaceNotificationsRead().catch((error) => console.error('Failed to mark all notifications read:', error));
+    if (!isDemo) {
+      markAllWorkspaceNotificationsRead()
+        .then(({ error }) => { if (error) console.error('Failed to mark all notifications read:', error); })
+        .catch((error) => console.error('Failed to mark all notifications read:', error));
+    }
   };
   const onOpenNotifClient = (clientId, id) => { onMarkNotifRead(id); set({ selectedClientId: clientId, activeTab: 'clients-caseload', activeClientTab: 'overview' }); };
 

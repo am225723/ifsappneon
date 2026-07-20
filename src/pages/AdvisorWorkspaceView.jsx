@@ -408,7 +408,7 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
       priorityChip: severityStyle(theme, n.priority), priorityLabel: n.priority,
       rowStyle: { background: n.read ? 'var(--surface)' : 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: '16px', padding: '14px 18px', display: 'flex', alignItems: 'flex-start', gap: '12px', boxShadow: 'var(--shadow)' },
       clientName: client ? client.name : '',
-      onOpenClient: n.clientId ? () => H.onOpenNotifClient(n.clientId, n.id) : undefined,
+      onOpenClient: client ? () => H.onOpenNotifClient(n.clientId, n.id) : undefined,
       onMarkRead: () => H.onMarkNotifRead(n.id), showMarkRead: !n.read,
     };
   });
