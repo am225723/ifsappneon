@@ -189,6 +189,20 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
           sparkline: m.history.map((v) => ({ style: { flex: 1, height: Math.max(6, Math.round((v / max) * 36)) + 'px', borderRadius: '3px 3px 0 0', background: theme.accent2 + '55' } })),
         };
       }),
+      assessmentHistory: (rawSelected.assessmentHistory || []).map((entry) => ({
+        id: entry.id,
+        dateLabel: entry.dateLabel || (entry.date ? new Date(entry.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'),
+        primaryLabel: entry.primaryWound ? WOUND_META[entry.primaryWound].label : null,
+        secondaryLabel: entry.secondaryWound ? WOUND_META[entry.secondaryWound].label : null,
+        subscales: entry.subscales.map((s) => ({
+          wound: s.wound, label: WOUND_META[s.wound].label, scoreLabel: s.score + '/25',
+          sevChip: severityStyle(theme, s.severity === 'High' ? 'high' : (s.severity === 'Moderate' ? 'medium' : 'low')), severityLabel: s.severity,
+          barStyle: { width: Math.round((s.score / 25) * 100) + '%', height: '100%', borderRadius: '4px', background: s.wound === rawSelected.primaryWound ? theme.accent2 : (s.wound === rawSelected.secondaryWound ? theme.emerald2 : theme.muted) },
+          deltaLabel: s.delta == null ? 'First retake' : (s.delta > 0 ? `+${s.delta} pts` : `${s.delta} pts`),
+          deltaStyle: { fontSize: '11px', fontWeight: 700, color: s.delta == null ? theme.muted : (s.delta > 0 ? theme.riskHighText : (s.delta < 0 ? theme.emerald2 : theme.muted)) },
+        })),
+      })),
+      noAssessmentHistory: !(rawSelected.assessmentHistory || []).length,
       parts: rawSelected.parts.map((p) => ({ ...p, catChip: partChip(p.category, isDark), catLabel: PART_CAT_META[p.category].label, barStyle: { width: p.activation + '%', height: '100%', borderRadius: '4px', background: PART_CAT_META[p.category].color } })),
       clientPractices: assignedPractices.filter((a) => a.clientName === rawSelected.name),
       noPractices: !assignedPractices.some((a) => a.clientName === rawSelected.name),
@@ -394,7 +408,7 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
     stats, quickActions, needsAttention: needsAttentionRaw, noAttentionNeeded: needsAttentionRaw.length === 0,
     todaysSessions, caseloadSnapshot, goToReview: () => H.setTab('review'), goToClients: () => H.setTab('clients-caseload'),
     woundFilters, clientListFiltered, hasSelectedClient, selectedClient, clientTabs,
-    isClientTabOverview: activeClientTab === 'overview', isClientTabTimeline: activeClientTab === 'timeline', isClientTabNotes: activeClientTab === 'notes',
+    isClientTabOverview: activeClientTab === 'overview', isClientTabAssessments: activeClientTab === 'assessments', isClientTabTimeline: activeClientTab === 'timeline', isClientTabNotes: activeClientTab === 'notes',
     isClientTabPlan: activeClientTab === 'plan', isClientTabMbc: activeClientTab === 'mbc', isClientTabParts: activeClientTab === 'parts',
     isClientTabPractices: activeClientTab === 'practices', isClientTabSafety: activeClientTab === 'safety', isClientTabMessages: activeClientTab === 'messages',
     primaryBtnStyle, secondaryBtnStyle, selectStyle,
@@ -736,6 +750,7 @@ function ClientsCaseload({ v }) {
           </div>
 
           {v.isClientTabOverview && <ClientOverviewTab v={v} sc={sc} />}
+          {v.isClientTabAssessments && <AssessmentHistoryTab history={sc.assessmentHistory} empty={sc.noAssessmentHistory} />}
           {v.isClientTabTimeline && (
             <div style={CARD}>
               <span style={{ ...FR, fontSize: '15px' }}>Unified timeline</span>
@@ -891,6 +906,48 @@ function PlanCard({ plan, onOpen, secondaryBtnStyle }) {
         </div>
       </div>
       {onOpen && <button onClick={onOpen} style={{ ...secondaryBtnStyle, marginTop: '16px' }}>Open full plan editor</button>}
+    </div>
+  );
+}
+
+function AssessmentHistoryTab({ history, empty }) {
+  if (empty) {
+    return (
+      <div style={CARD}>
+        <span style={{ ...FR, fontSize: '15px' }}>Assessments</span>
+        <div style={{ marginTop: '12px', fontSize: '13px', color: 'var(--muted)' }}>This client hasn't retaken the Wound Patterns Assessment yet. Retakes appear here as a full history once submitted.</div>
+      </div>
+    );
+  }
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+      {history.map((entry, i) => (
+        <div key={entry.id} style={CARD}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
+            <div>
+              <span style={{ ...FR, fontSize: '14px' }}>Wound Patterns Assessment</span>
+              <span style={{ fontSize: '11.5px', color: 'var(--muted)' }}> · {entry.dateLabel}</span>
+              {i === 0 && <span style={{ marginLeft: '8px', fontSize: '10px', fontWeight: 700, color: 'var(--accent-2)', textTransform: 'uppercase', letterSpacing: '0.03em' }}>Most recent</span>}
+            </div>
+            {entry.primaryLabel && <span style={{ fontSize: '11.5px', color: 'var(--muted)' }}>Primary: {entry.primaryLabel}{entry.secondaryLabel ? ` · Secondary: ${entry.secondaryLabel}` : ''}</span>}
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '14px' }}>
+            {entry.subscales.map((s) => (
+              <div key={s.wound}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '12.5px' }}>
+                  <span style={{ color: 'var(--text)', fontWeight: 600 }}>{s.label}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <span style={s.deltaStyle}>{s.deltaLabel}</span>
+                    <span style={s.sevChip}>{s.severityLabel}</span>
+                    <span style={{ color: 'var(--muted)' }}>{s.scoreLabel}</span>
+                  </div>
+                </div>
+                <div style={{ height: '6px', borderRadius: '4px', background: 'var(--surface-2)', marginTop: '4px', overflow: 'hidden' }}><div style={s.barStyle} /></div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

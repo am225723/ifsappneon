@@ -125,6 +125,32 @@ describe('deriveWorkspaceDetail', () => {
     expect(noteEntries[0].clientId).toBe('x1');
     expect(noteEntries[0].clientName).toBe('Maya Chen');
   });
+
+  it('builds a newest-first assessment history from the real wound-pattern assessment trajectory', () => {
+    const analytics = {
+      assessmentTrajectory: [
+        { id: 'a1', date: '2026-06-01T00:00:00Z', primaryWound: 'betrayal', secondaryWound: 'helplessness', scores: { abandonment: 6, shame: 5, neglect: 5, betrayal: 20, helplessness: 15 } },
+        { id: 'a2', date: '2026-07-01T00:00:00Z', primaryWound: 'betrayal', secondaryWound: 'helplessness', scores: { abandonment: 5, shame: 6, neglect: 4, betrayal: 12, helplessness: 9 } },
+      ],
+    };
+    const { client } = deriveWorkspaceDetail(base, { analytics, notes: [], plans: [], messages: [] });
+    expect(client.assessmentHistory).toHaveLength(2);
+    expect(client.assessmentHistory[0].id).toBe('a2'); // most recent first
+    expect(client.assessmentHistory[1].id).toBe('a1');
+    const betrayalNow = client.assessmentHistory[0].subscales.find((s) => s.wound === 'betrayal');
+    expect(betrayalNow.score).toBe(12);
+    expect(betrayalNow.delta).toBe(-8); // 12 - 20
+    expect(betrayalNow.severity).toBe('Moderate'); // 11-17
+    const betrayalOldest = client.assessmentHistory[1].subscales.find((s) => s.wound === 'betrayal');
+    expect(betrayalOldest.delta).toBeNull(); // nothing to compare the first-ever retake against
+    expect(betrayalOldest.severity).toBe('High'); // >= 18
+  });
+
+  it('resets assessment history to empty on a re-derive that finds no trajectory data', () => {
+    const alreadyEnriched = { ...base, assessmentHistory: [{ id: 'stale', subscales: [] }] };
+    const { client } = deriveWorkspaceDetail(alreadyEnriched, { analytics: { assessmentTrajectory: [] }, notes: [], plans: [], messages: [] });
+    expect(client.assessmentHistory).toEqual([]);
+  });
 });
 
 describe('mapClientRow — unassigned detection', () => {
