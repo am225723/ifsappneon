@@ -169,6 +169,16 @@ describe('deriveWorkspaceDetail', () => {
     const { client } = deriveWorkspaceDetail(base, { analytics: { assessmentTrajectory: [] }, notes: [], plans: [], messages: [] });
     expect(client.mbc).toEqual([]);
   });
+
+  it('does not leak a prior enrichment\'s mbc through on a re-derive that finds no assessment data', () => {
+    // Simulates re-deriving an already-enriched client (e.g. after claiming
+    // resets _detailLoaded and forces a re-fetch) whose new analytics pass
+    // comes back with no trajectory — the previous mbc must not survive the
+    // {...base} spread.
+    const alreadyEnriched = { ...base, mbc: [{ code: 'betrayal', name: 'Betrayal Wound Pattern', date: 'Jul 1', severity: 'High', baseline: 20, previous: 18, current: 19, history: [20, 18, 19] }] };
+    const { client } = deriveWorkspaceDetail(alreadyEnriched, { analytics: { assessmentTrajectory: [] }, notes: [], plans: [], messages: [] });
+    expect(client.mbc).toEqual([]);
+  });
 });
 
 describe('mapClientRow — unassigned detection', () => {

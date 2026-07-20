@@ -255,6 +255,11 @@ export function deriveWorkspaceDetail(base, { analytics, notes, plans, messages 
       enriched.primaryWound = assessment.primaryWound;
       enriched.secondaryWound = assessment.secondaryWound;
       enriched.mbc = mapMbcMeasures(analytics.assessmentTrajectory, assessment.primaryWound, assessment.secondaryWound);
+    } else {
+      // Don't let a re-derive (e.g. after claiming a client) leak a prior
+      // enrichment's mbc through the `{...base}` spread when this pass finds
+      // no assessment data.
+      enriched.mbc = [];
     }
     const hw = analytics.homeworkSummary;
     if (hw) {
