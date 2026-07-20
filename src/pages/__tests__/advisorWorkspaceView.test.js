@@ -223,6 +223,7 @@ describe('buildView — write actions are gated until a client is claimed', () =
     expect(sc.onStartDelete).toBeUndefined();
     expect(sc.safety.onAcknowledge).toBeUndefined();
     expect(sc.safety.onCreatePlan).toBeUndefined();
+    expect(sc.snapshot.onGenerate).toBeUndefined();
   });
 
   it('keeps write handlers wired for an assigned selected client', () => {
@@ -231,6 +232,33 @@ describe('buildView — write actions are gated until a client is claimed', () =
     expect(sc.canWrite).toBe(true);
     expect(typeof sc.onDraftNote).toBe('function');
     expect(typeof sc.safety.onAcknowledge).toBe('function');
+    expect(typeof sc.snapshot.onGenerate).toBe('function');
+  });
+});
+
+describe('buildView — AI Session Snapshot', () => {
+  it('surfaces loading/error state and only offers copy once a snapshot exists', () => {
+    const idle = makeView({ selectedClientId: 'c1' });
+    expect(idle.selectedClient.snapshot.loading).toBe(false);
+    expect(idle.selectedClient.snapshot.hasData).toBe(false);
+    expect(idle.selectedClient.snapshot.onCopy).toBeUndefined();
+
+    const loading = makeView({ selectedClientId: 'c1', sessionSnapshot: { loading: true, data: null, error: '' } });
+    expect(loading.selectedClient.snapshot.loading).toBe(true);
+
+    const errored = makeView({ selectedClientId: 'c1', sessionSnapshot: { loading: false, data: null, error: 'Unable to generate Advisor Session Snapshot.' } });
+    expect(errored.selectedClient.snapshot.error).toBe('Unable to generate Advisor Session Snapshot.');
+
+    const snapshotData = { snapshot_title: 'Pre-session summary', advisor_review_disclaimer: 'AI-generated draft for Advisor review.', suggested_session_questions: ['What has shifted since last session?'] };
+    const ready = makeView({ selectedClientId: 'c1', sessionSnapshot: { loading: false, data: snapshotData, error: '' } });
+    expect(ready.selectedClient.snapshot.hasData).toBe(true);
+    expect(ready.selectedClient.snapshot.data.snapshot_title).toBe('Pre-session summary');
+    expect(typeof ready.selectedClient.snapshot.onCopy).toBe('function');
+  });
+
+  it('never offers snapshot generation for an unassigned client, even mid-request', () => {
+    const v = makeView({ extraClients: [UNASSIGNED_CLIENT], selectedClientId: 'new1', sessionSnapshot: { loading: true, data: null, error: '' } });
+    expect(v.selectedClient.snapshot.onGenerate).toBeUndefined();
   });
 });
 

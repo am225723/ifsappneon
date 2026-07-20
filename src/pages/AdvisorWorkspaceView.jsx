@@ -14,6 +14,7 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
     assignedLessons, coTherapyShare, coTherapyMessage, coTherapyThread, reports, settingsToggles, clientMessages,
     clientMessageDraft, activeThreadId, safetyOverrides, engagementDismissed, partsClientFilter, tasks, taskFilter,
     newTaskTitle, newTaskClientId, docForm, docSources, generatedDoc, docGenerating, docError, clientReports, clientReportsLoading, deletedMessageIdx,
+    sessionSnapshot,
   } = S;
 
   const rootStyle = {
@@ -189,6 +190,14 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
           sparkline: m.history.map((v) => ({ style: { flex: 1, height: Math.max(6, Math.round((v / max) * 36)) + 'px', borderRadius: '3px 3px 0 0', background: theme.accent2 + '55' } })),
         };
       }),
+      snapshot: {
+        loading: !!sessionSnapshot.loading,
+        error: sessionSnapshot.error || '',
+        hasData: !!sessionSnapshot.data,
+        data: sessionSnapshot.data,
+        onGenerate: canWrite ? H.onGenerateSnapshot : undefined,
+        onCopy: sessionSnapshot.data ? H.onCopySnapshot : undefined,
+      },
       parts: rawSelected.parts.map((p) => ({ ...p, catChip: partChip(p.category, isDark), catLabel: PART_CAT_META[p.category].label, barStyle: { width: p.activation + '%', height: '100%', borderRadius: '4px', background: PART_CAT_META[p.category].color } })),
       clientPractices: assignedPractices.filter((a) => a.clientName === rawSelected.name),
       noPractices: !assignedPractices.some((a) => a.clientName === rawSelected.name),
@@ -385,6 +394,7 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
     isSafety: activeTab === 'safety', isReview: activeTab === 'review', isSessionsPrep: activeTab === 'sessions-prep', isSessionsCotherapy: activeTab === 'sessions-cotherapy',
     isSessionsLive: activeTab === 'sessions-live',
     isMessages: activeTab === 'messages', isNotifications: activeTab === 'notifications', isTasks: activeTab === 'tasks',
+    isClientTabSnapshot: activeClientTab === 'snapshot',
     isClinicalNotes: activeTab === 'clinical-notes', isClinicalPlans: activeTab === 'clinical-plans', isClinicalMbc: activeTab === 'clinical-mbc', isClinicalParts: activeTab === 'clinical-parts',
     isClinicalPractice: activeTab === 'clinical-practice', isClinicalPracticeInteractive: activeTab === 'clinical-practice-interactive',
     isClinicalLessons: activeTab === 'clinical-lessons', isClinicalCurriculumBuilder: activeTab === 'clinical-curriculum-builder', isClinicalDocs: activeTab === 'clinical-docs',
@@ -736,6 +746,7 @@ function ClientsCaseload({ v }) {
           </div>
 
           {v.isClientTabOverview && <ClientOverviewTab v={v} sc={sc} />}
+          {v.isClientTabSnapshot && <SnapshotTab snapshot={sc.snapshot} primaryBtnStyle={v.primaryBtnStyle} secondaryBtnStyle={v.secondaryBtnStyle} />}
           {v.isClientTabTimeline && (
             <div style={CARD}>
               <span style={{ ...FR, fontSize: '15px' }}>Unified timeline</span>
@@ -891,6 +902,83 @@ function PlanCard({ plan, onOpen, secondaryBtnStyle }) {
         </div>
       </div>
       {onOpen && <button onClick={onOpen} style={{ ...secondaryBtnStyle, marginTop: '16px' }}>Open full plan editor</button>}
+    </div>
+  );
+}
+
+function SnapshotSection({ title, children }) {
+  return (
+    <div style={{ border: '1px solid var(--border)', borderRadius: '14px', padding: '14px 16px' }}>
+      <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text)' }}>{title}</div>
+      <div style={{ marginTop: '8px' }}>{children}</div>
+    </div>
+  );
+}
+
+function SnapshotList({ items }) {
+  if (!items?.length) return <p style={{ fontSize: '12.5px', color: 'var(--muted)', margin: 0 }}>No clear pattern in available app data.</p>;
+  return (
+    <ul style={{ margin: 0, paddingLeft: '18px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+      {items.map((item, i) => (<li key={i} style={{ fontSize: '12.5px', color: 'var(--text-2)' }}>{item}</li>))}
+    </ul>
+  );
+}
+
+function SnapshotTab({ snapshot, primaryBtnStyle, secondaryBtnStyle }) {
+  const s = snapshot.data;
+  return (
+    <div style={CARD}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
+        <div>
+          <span style={{ ...FR, fontSize: '15px' }}>AI Session Snapshot</span>
+          <div style={{ fontSize: '12px', color: 'var(--muted)', marginTop: '4px', maxWidth: '52ch' }}>Generate a single-screen pre-session summary for Advisor review. It is not saved as a note and is not shown to the client.</div>
+        </div>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          {snapshot.onCopy && <button onClick={snapshot.onCopy} style={secondaryBtnStyle}>Copy snapshot</button>}
+          <button
+            className="aw-primary"
+            onClick={snapshot.onGenerate}
+            disabled={!snapshot.onGenerate || snapshot.loading}
+            style={{ ...primaryBtnStyle, opacity: !snapshot.onGenerate || snapshot.loading ? 0.6 : 1, cursor: !snapshot.onGenerate || snapshot.loading ? 'not-allowed' : 'pointer' }}
+          >
+            {snapshot.loading ? 'Generating…' : 'Generate snapshot'}
+          </button>
+        </div>
+      </div>
+
+      {!snapshot.onGenerate && <div style={{ marginTop: '12px', fontSize: '12px', color: 'var(--muted)' }}>Add this client to your caseload to generate a snapshot.</div>}
+      {snapshot.error && <div style={{ marginTop: '12px', fontSize: '12px', color: 'var(--risk-high-text)' }}>{snapshot.error}</div>}
+
+      {s && (
+        <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          <div>
+            <div style={{ fontSize: '10.5px', fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--accent-2)' }}>Advisor review</div>
+            <div style={{ ...FR, fontSize: '16px', marginTop: '4px' }}>{s.snapshot_title}</div>
+            <div style={{ marginTop: '8px', padding: '10px 12px', borderRadius: '10px', background: 'var(--surface-2)', fontSize: '11.5px', color: 'var(--text-2)' }}>{s.advisor_review_disclaimer}</div>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px,1fr))', gap: '12px' }}>
+            <SnapshotSection title="Curriculum trajectory">
+              <p style={{ margin: 0, fontSize: '12.5px', color: 'var(--text-2)' }}>{s.curriculum_trajectory?.active_module || 'Available data is limited'} · {s.curriculum_trajectory?.percent_complete || 0}% complete</p>
+              {s.curriculum_trajectory?.recent_response_synthesis && <p style={{ margin: '8px 0 0', fontSize: '12.5px', color: 'var(--text-2)' }}>{s.curriculum_trajectory.recent_response_synthesis}</p>}
+            </SnapshotSection>
+            <SnapshotSection title="Assigned practice status">
+              <p style={{ margin: 0, fontSize: '12.5px', color: 'var(--text-2)' }}>{s.assigned_practice_status || 'Review current assigned IFS practices.'}</p>
+            </SnapshotSection>
+            <SnapshotSection title="Parts / inner-system themes">
+              <SnapshotList items={[...(s.parts_and_inner_system_themes?.active_parts_or_protectors || []), ...(s.parts_and_inner_system_themes?.relationship_patterns || []), ...(s.parts_and_inner_system_themes?.possible_polarizations_to_explore || [])]} />
+            </SnapshotSection>
+            <SnapshotSection title="Assessment / Self-energy themes">
+              <SnapshotList items={[...(s.assessment_and_self_energy_themes?.assessment_patterns || []), ...(s.assessment_and_self_energy_themes?.self_energy_strengths || []), ...(s.assessment_and_self_energy_themes?.self_energy_growth_edges || [])]} />
+            </SnapshotSection>
+            <SnapshotSection title="Life-integration themes">
+              <SnapshotList items={[...(s.life_integration_themes?.recent_daily_life_patterns || []), ...(s.life_integration_themes?.triggers_needs_or_boundaries || [])]} />
+            </SnapshotSection>
+            <SnapshotSection title="Suggested session questions"><SnapshotList items={s.suggested_session_questions} /></SnapshotSection>
+            <SnapshotSection title="Attention items for Advisor"><SnapshotList items={s.attention_items_for_advisor} /></SnapshotSection>
+            <SnapshotSection title="What not to over-interpret"><SnapshotList items={s.what_not_to_overinterpret} /></SnapshotSection>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
