@@ -214,6 +214,39 @@ describe('deriveWorkspaceDetail', () => {
     const { client } = deriveWorkspaceDetail(alreadyEnriched, { analytics: { assessmentTrajectory: [] }, notes: [], plans: [], messages: [] });
     expect(client.mbc).toEqual([]);
   });
+
+  it('derives real between-session activity from data api/analytics/client.js already computes', () => {
+    const analytics = {
+      assessmentTrajectory: [],
+      homeworkSummary: { totalAssigned: 6, inProgressCount: 1, completedCount: 4, reviewedCount: 3, completionPercentage: 67, averageDaysToCompletion: 2.5 },
+      moodEntries: [
+        { id: 'm1', date: '2026-07-01T00:00:00Z', mood: 3, energy: 6, emotions: ['Anxious'] },
+        { id: 'm2', date: '2026-07-10T00:00:00Z', mood: 4, energy: 7, emotions: ['Hopeful', 'Calm'] },
+      ],
+      moodTrend: [{ week: '2026-W26', mood: 3, entries: 1 }, { week: '2026-W28', mood: 4, entries: 1 }],
+      energyTrend: [{ week: '2026-W26', energy: 6, entries: 1 }],
+      // stressTrend intentionally omitted from the fixture — it's always [] upstream (no stress column exists).
+      journalEngagement: [{ week: '2026-W27', entries: 2 }],
+      dataAvailability: { hasMoodData: true, hasJournalData: true, hasHomeworkData: true },
+    };
+    const { client } = deriveWorkspaceDetail(base, { analytics, notes: [], plans: [], messages: [] });
+    expect(client.betweenSession.homeworkFunnel).toEqual({ totalAssigned: 6, inProgress: 1, completed: 4, reviewed: 3, completionPct: 67, avgDaysToComplete: 2.5 });
+    // Most recent mood entry first.
+    expect(client.betweenSession.moodEntries[0].id).toBe('m2');
+    expect(client.betweenSession.moodEntries[0].emotions).toEqual(['Hopeful', 'Calm']);
+    expect(client.betweenSession.moodTrend).toEqual([{ week: '2026-W26', value: 3 }, { week: '2026-W28', value: 4 }]);
+    expect(client.betweenSession.energyTrend).toEqual([{ week: '2026-W26', value: 6 }]);
+    expect(client.betweenSession.journalWeekly).toEqual([{ week: '2026-W27', count: 2 }]);
+    expect(client.betweenSession.hasMoodData).toBe(true);
+  });
+
+  it('resets between-session activity to neutral defaults on a re-derive with no analytics data', () => {
+    const alreadyEnriched = { ...base, betweenSession: { homeworkFunnel: { totalAssigned: 6, inProgress: 1, completed: 4, reviewed: 3, completionPct: 67, avgDaysToComplete: 2.5 }, moodEntries: [{ id: 'stale' }], moodTrend: [], energyTrend: [], journalWeekly: [], hasMoodData: true, hasJournalData: true, hasHomeworkData: true } };
+    const { client } = deriveWorkspaceDetail(alreadyEnriched, { analytics: { assessmentTrajectory: [], homeworkSummary: {}, moodEntries: [], moodTrend: [], energyTrend: [], journalEngagement: [], dataAvailability: {} }, notes: [], plans: [], messages: [] });
+    expect(client.betweenSession.moodEntries).toEqual([]);
+    expect(client.betweenSession.homeworkFunnel.totalAssigned).toBe(0);
+    expect(client.betweenSession.hasMoodData).toBe(false);
+  });
 });
 
 describe('mapClientRow — unassigned detection', () => {

@@ -3,7 +3,7 @@ import {
   WOUND_META, woundChip, daysAgoText, severityStyle, RISK_LEVEL_TO_SEV, RISK_LEVEL_LABEL,
   PART_CAT_META, partChip, TEMPLATE_OPTIONS, PRACTICE_TYPE_META, LESSON_TITLES, PLAN_PHASES,
   DOC_TYPES, DOC_SOURCES, NAV_CONFIG, CLIENT_TABS, TIMELINE_TYPE_META, TAB_TITLES, TOGGLE_META,
-  QUICK_MESSAGES, engagementStatusFor,
+  QUICK_MESSAGES, engagementStatusFor, MOOD_LABELS,
 } from './advisorWorkspaceData.js';
 
 // Computes every derived value the UI needs (mirrors the design's renderVals()).
@@ -162,6 +162,24 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
     const rawSafety = getSafety(rawSelected);
     const rawExtraMsgs = clientMessages[rawSelected.id] || [];
     const allMsgs = [...rawSelected.messages, ...rawExtraMsgs];
+    // Demo seed clients don't carry betweenSession (it's a real-mode-only
+    // derived field) — fall back to a neutral empty shape rather than crash.
+    const rawBS = rawSelected.betweenSession || {
+      homeworkFunnel: { totalAssigned: 0, inProgress: 0, completed: 0, reviewed: 0, completionPct: 0, avgDaysToComplete: null },
+      moodEntries: [], moodTrend: [], energyTrend: [], journalWeekly: [],
+      hasMoodData: false, hasJournalData: false, hasHomeworkData: false,
+    };
+    const funnelSteps = [
+      { label: 'Assigned', value: rawBS.homeworkFunnel.totalAssigned },
+      { label: 'In progress', value: rawBS.homeworkFunnel.inProgress },
+      { label: 'Completed', value: rawBS.homeworkFunnel.completed },
+      { label: 'Reviewed', value: rawBS.homeworkFunnel.reviewed },
+    ];
+    const funnelMax = Math.max(...funnelSteps.map((f) => f.value), 1);
+    const moodMax = Math.max(...rawBS.moodTrend.map((w) => w.value || 0), 1);
+    const energyMax = Math.max(...rawBS.energyTrend.map((w) => w.value || 0), 1);
+    const journalMax = Math.max(...rawBS.journalWeekly.map((w) => w.count || 0), 1);
+    const sparkBar = (value, max, color) => ({ flex: 1, height: Math.max(6, Math.round((value / max) * 36)) + 'px', borderRadius: '3px 3px 0 0', background: color });
     selectedClient = {
       id: rawSelected.id, name: rawSelected.name, initial: rawSelected.initial, email: rawSelected.email, phone: rawSelected.phone,
       statusLabel: rawSelected.status === 'active' ? 'Active' : 'Inactive', statusChip: severityStyle(theme, rawSelected.status === 'active' ? 'low' : 'medium'),
@@ -204,6 +222,24 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
         })),
       })),
       noAssessmentHistory: !(rawSelected.assessmentHistory || []).length,
+      betweenSession: {
+        funnelRows: funnelSteps.map((f) => ({ ...f, barStyle: { width: Math.round((f.value / funnelMax) * 100) + '%', height: '100%', borderRadius: '4px', background: theme.accent2 } })),
+        completionPct: rawBS.homeworkFunnel.completionPct,
+        avgDaysToComplete: rawBS.homeworkFunnel.avgDaysToComplete,
+        hasHomeworkData: rawBS.hasHomeworkData,
+        moodRows: rawBS.moodEntries.map((m) => ({
+          id: m.id, dateLabel: m.dateLabel,
+          moodLabel: m.mood != null ? (MOOD_LABELS[m.mood] || `${m.mood}/5`) : '—',
+          energyLabel: m.energy != null ? `${m.energy}/10` : '—',
+          emotionsLabel: m.emotions.length ? m.emotions.join(', ') : '—',
+        })),
+        noMoodEntries: rawBS.moodEntries.length === 0,
+        hasMoodData: rawBS.hasMoodData,
+        moodTrendBars: rawBS.moodTrend.map((w) => ({ week: w.week, style: sparkBar(w.value || 0, moodMax, theme.accent2 + '55') })),
+        energyTrendBars: rawBS.energyTrend.map((w) => ({ week: w.week, style: sparkBar(w.value || 0, energyMax, theme.emerald2 + '55') })),
+        journalWeeklyBars: rawBS.journalWeekly.map((w) => ({ week: w.week, style: sparkBar(w.count || 0, journalMax, '#0d948855') })),
+        hasJournalData: rawBS.hasJournalData,
+      },
       snapshot: {
         loading: !!sessionSnapshot.loading,
         error: sessionSnapshot.error || '',
@@ -425,6 +461,7 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
     isSessionsLive: activeTab === 'sessions-live',
     isMessages: activeTab === 'messages', isNotifications: activeTab === 'notifications', isTasks: activeTab === 'tasks',
     isClientTabSnapshot: activeClientTab === 'snapshot', isClientTabChangeSummary: activeClientTab === 'changeSummary',
+    isClientTabBetweenSession: activeClientTab === 'betweenSession',
     isClinicalNotes: activeTab === 'clinical-notes', isClinicalPlans: activeTab === 'clinical-plans', isClinicalMbc: activeTab === 'clinical-mbc', isClinicalParts: activeTab === 'clinical-parts',
     isClinicalPractice: activeTab === 'clinical-practice', isClinicalPracticeInteractive: activeTab === 'clinical-practice-interactive',
     isClinicalLessons: activeTab === 'clinical-lessons', isClinicalCurriculumBuilder: activeTab === 'clinical-curriculum-builder', isClinicalDocs: activeTab === 'clinical-docs',
@@ -779,6 +816,7 @@ function ClientsCaseload({ v }) {
           {v.isClientTabAssessments && <AssessmentHistoryTab history={sc.assessmentHistory} empty={sc.noAssessmentHistory} />}
           {v.isClientTabSnapshot && <SnapshotTab snapshot={sc.snapshot} primaryBtnStyle={v.primaryBtnStyle} secondaryBtnStyle={v.secondaryBtnStyle} />}
           {v.isClientTabChangeSummary && <ChangeSummaryTab changeSummary={sc.changeSummary} primaryBtnStyle={v.primaryBtnStyle} />}
+          {v.isClientTabBetweenSession && <BetweenSessionTab bs={sc.betweenSession} />}
           {v.isClientTabTimeline && (
             <div style={CARD}>
               <span style={{ ...FR, fontSize: '15px' }}>Unified timeline</span>
@@ -1112,6 +1150,74 @@ function ChangeSummaryTab({ changeSummary, primaryBtnStyle }) {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+function TrendChart({ title, bars, unit, noDataLabel }) {
+  return (
+    <div style={{ border: '1px solid var(--border)', borderRadius: '14px', padding: '14px 16px' }}>
+      <div style={{ fontSize: '12.5px', fontWeight: 700, color: 'var(--text)' }}>{title}</div>
+      {bars.length === 0 ? (
+        <p style={{ margin: '10px 0 0', fontSize: '12px', color: 'var(--muted)' }}>{noDataLabel}</p>
+      ) : (
+        <div style={{ display: 'flex', alignItems: 'flex-end', gap: '4px', height: '36px', marginTop: '12px' }}>
+          {bars.map((b, i) => (<div key={i} title={b.week + (unit ? ` · ${unit}` : '')} style={b.style} />))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function BetweenSessionTab({ bs }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+      <div style={CARD}>
+        <span style={{ ...FR, fontSize: '15px' }}>Assigned practice funnel</span>
+        <div style={{ fontSize: '12px', color: 'var(--muted)', marginTop: '4px' }}>How far this client's assigned homework has moved since it was assigned.</div>
+        {bs.hasHomeworkData ? (
+          <>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '14px', marginTop: '16px' }}>
+              {bs.funnelRows.map((f, i) => (
+                <div key={i}>
+                  <div style={{ fontSize: '11px', color: 'var(--muted)' }}>{f.label}</div>
+                  <div style={{ fontSize: '19px', fontWeight: 700, color: 'var(--text)', marginTop: '2px' }}>{f.value}</div>
+                  <div style={{ height: '6px', borderRadius: '4px', background: 'var(--surface-2)', marginTop: '6px', overflow: 'hidden' }}><div style={f.barStyle} /></div>
+                </div>
+              ))}
+            </div>
+            <div style={{ marginTop: '14px', fontSize: '12px', color: 'var(--muted)' }}>
+              {bs.completionPct}% completion rate{bs.avgDaysToComplete != null ? ` · ${bs.avgDaysToComplete} days average to complete` : ''}
+            </div>
+          </>
+        ) : (
+          <p style={{ marginTop: '12px', fontSize: '12.5px', color: 'var(--muted)' }}>No practices assigned yet.</p>
+        )}
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px,1fr))', gap: '14px' }}>
+        <TrendChart title="Weekly mood (1–5)" bars={bs.moodTrendBars} noDataLabel="No mood check-ins recorded yet." />
+        <TrendChart title="Weekly energy (1–10)" bars={bs.energyTrendBars} noDataLabel="No energy check-ins recorded yet." />
+        <TrendChart title="Weekly journal entries" bars={bs.journalWeeklyBars} noDataLabel="No journal entries recorded yet." />
+      </div>
+
+      <div style={CARD}>
+        <span style={{ ...FR, fontSize: '15px' }}>Recent check-ins</span>
+        {bs.noMoodEntries ? (
+          <p style={{ marginTop: '12px', fontSize: '12.5px', color: 'var(--muted)' }}>No mood check-ins recorded yet.</p>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '14px' }}>
+            {bs.moodRows.map((m) => (
+              <div key={m.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', padding: '10px 14px', borderRadius: '12px', background: 'var(--surface-2)', flexWrap: 'wrap' }}>
+                <span style={{ fontSize: '11.5px', color: 'var(--muted)' }}>{m.dateLabel}</span>
+                <span style={{ fontSize: '12.5px', color: 'var(--text)', fontWeight: 600 }}>{m.moodLabel}</span>
+                <span style={{ fontSize: '12px', color: 'var(--text-2)' }}>Energy {m.energyLabel}</span>
+                <span style={{ fontSize: '12px', color: 'var(--text-2)' }}>{m.emotionsLabel}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

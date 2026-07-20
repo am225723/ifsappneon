@@ -102,6 +102,11 @@ export function mapClientRow(row) {
     safety: { riskLevel: risk ? 'monitor' : 'none', protective: [], riskFactors: risk ? ['Extended inactivity'] : [], safetyPlan: null, contacts: [], acknowledged: true, ackNote: '' },
     mbc: [],
     assessmentHistory: [],
+    betweenSession: {
+      homeworkFunnel: { totalAssigned: 0, inProgress: 0, completed: 0, reviewed: 0, completionPct: 0, avgDaysToComplete: null },
+      moodEntries: [], moodTrend: [], energyTrend: [], journalWeekly: [],
+      hasMoodData: false, hasJournalData: false, hasHomeworkData: false,
+    },
     parts: [],
     messages: [],
     _detailLoaded: false,
@@ -199,6 +204,37 @@ function mapMbcMeasures(assessmentTrajectory, primaryWound, secondaryWound) {
   });
 }
 
+// Between-session activity from data api/analytics/client.js already computes
+// but the workspace previously discarded: the real homework funnel (only
+// completionPct/completedCount were ever used elsewhere), raw mood entries,
+// weekly mood/energy trend, and weekly journal engagement counts. Note:
+// stressTrend is deliberately not surfaced — ifs_mood_entries has no stress
+// column, so that series is always empty upstream regardless of real data.
+function mapBetweenSession(analytics) {
+  const hw = analytics.homeworkSummary || {};
+  const availability = analytics.dataAvailability || {};
+  return {
+    homeworkFunnel: {
+      totalAssigned: hw.totalAssigned || 0,
+      inProgress: hw.inProgressCount || 0,
+      completed: hw.completedCount || 0,
+      reviewed: hw.reviewedCount || 0,
+      completionPct: hw.completionPercentage || 0,
+      avgDaysToComplete: hw.averageDaysToCompletion ?? null,
+    },
+    moodEntries: (analytics.moodEntries || []).slice(-8).reverse().map((m) => ({
+      id: m.id, dateLabel: relativeDateLabel(m.date), mood: m.mood ?? null, energy: m.energy ?? null,
+      emotions: Array.isArray(m.emotions) ? m.emotions : [],
+    })),
+    moodTrend: (analytics.moodTrend || []).map((w) => ({ week: w.week, value: w.mood })),
+    energyTrend: (analytics.energyTrend || []).map((w) => ({ week: w.week, value: w.energy })),
+    journalWeekly: (analytics.journalEngagement || []).map((w) => ({ week: w.week, count: w.entries })),
+    hasMoodData: !!availability.hasMoodData,
+    hasJournalData: !!availability.hasJournalData,
+    hasHomeworkData: !!availability.hasHomeworkData,
+  };
+}
+
 function mapParts(partsSummary) {
   const recent = partsSummary?.recentlyUpdated;
   if (!Array.isArray(recent)) return [];
@@ -293,6 +329,7 @@ export function deriveWorkspaceDetail(base, { analytics, notes, plans, messages 
     // with no retakes on this pass gets an explicit [] rather than an empty
     // trajectory silently leaving a prior enrichment's history in place.
     enriched.assessmentHistory = mapAssessmentHistory(analytics.assessmentTrajectory);
+    enriched.betweenSession = mapBetweenSession(analytics);
     const hw = analytics.homeworkSummary;
     if (hw) {
       enriched.progressPct = Number.isFinite(hw.completionPercentage) ? hw.completionPercentage : 0;

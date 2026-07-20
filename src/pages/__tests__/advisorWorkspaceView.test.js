@@ -406,3 +406,44 @@ describe('buildView — Assessments tab reflects the real wound-pattern assessme
     expect(v.selectedClient.assessmentHistory).toEqual([]);
   });
 });
+
+describe('buildView — Between Sessions reflects real analytics data', () => {
+  const CLIENT_WITH_ACTIVITY = {
+    ...UNASSIGNED_CLIENT, id: 'bs1', name: 'Activity Test', unassigned: false,
+    betweenSession: {
+      homeworkFunnel: { totalAssigned: 6, inProgress: 1, completed: 4, reviewed: 3, completionPct: 67, avgDaysToComplete: 2.5 },
+      moodEntries: [
+        { id: 'm1', dateLabel: 'Jul 1', mood: 3, energy: 6, emotions: ['Anxious'] },
+        { id: 'm2', dateLabel: 'Jul 10', mood: 5, energy: 8, emotions: ['Hopeful', 'Calm'] },
+      ],
+      moodTrend: [{ week: '2026-W26', value: 3 }, { week: '2026-W28', value: 5 }],
+      energyTrend: [{ week: '2026-W26', value: 6 }],
+      journalWeekly: [{ week: '2026-W27', count: 2 }],
+      hasMoodData: true, hasJournalData: true, hasHomeworkData: true,
+    },
+  };
+
+  it('maps the real homework funnel, mood/energy trend, and recent check-ins', () => {
+    const v = makeView({ extraClients: [CLIENT_WITH_ACTIVITY], selectedClientId: 'bs1' });
+    const bs = v.selectedClient.betweenSession;
+    expect(bs.hasHomeworkData).toBe(true);
+    expect(bs.funnelRows.map((f) => f.value)).toEqual([6, 1, 4, 3]);
+    expect(bs.completionPct).toBe(67);
+    expect(bs.avgDaysToComplete).toBe(2.5);
+    expect(bs.moodTrendBars).toHaveLength(2);
+    expect(bs.energyTrendBars).toHaveLength(1);
+    expect(bs.journalWeeklyBars).toHaveLength(1);
+    expect(bs.noMoodEntries).toBe(false);
+    expect(bs.moodRows[0].moodLabel).toBe('Okay'); // mood 3
+    expect(bs.moodRows[1].moodLabel).toBe('Great'); // mood 5
+    expect(bs.moodRows[1].emotionsLabel).toBe('Hopeful, Calm');
+  });
+
+  it('falls back to a neutral empty shape for demo clients (no real betweenSession field)', () => {
+    const v = makeView({ selectedClientId: 'c1' });
+    const bs = v.selectedClient.betweenSession;
+    expect(bs.hasHomeworkData).toBe(false);
+    expect(bs.noMoodEntries).toBe(true);
+    expect(bs.moodTrendBars).toEqual([]);
+  });
+});
