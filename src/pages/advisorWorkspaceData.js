@@ -323,7 +323,7 @@ export const TAB_TITLES = {
   tasks: ['Tasks & Reminders', 'Clinical to-dos across your caseload'],
   'clinical-notes': ['Notes & Goals', 'Advisor notes and treatment goals'],
   'clinical-plans': ['Treatment Plans', 'Phase-based plans and milestones'],
-  'clinical-mbc': ['Measurement-Based Care', 'Standardized measures and trajectories'],
+  'clinical-mbc': ['Measurement-Based Care', 'Wound-pattern measures and trajectories across your caseload'],
   'clinical-parts': ['Parts Studio', 'Parts across your caseload'],
   'clinical-practice': ['Practice Generator', 'AI-assisted homework and practice suggestions'],
   'clinical-lessons': ['Curriculum Library', 'IFS curriculum modules and caseload completion'],

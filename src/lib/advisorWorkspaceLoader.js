@@ -127,6 +127,50 @@ function mapAssessment(assessmentTrajectory) {
   return { scores, primaryWound: primary, secondaryWound: secondary };
 }
 
+// The Wound Patterns Assessment (ifs_assessment_results, surfaced by
+// api/analytics/client.js as assessmentTrajectory) is the only client-
+// repeatable numeric self-report in this app, so it's the real MBC data
+// source — not a stand-in for a standardized instrument like PHQ-9/GAD-7,
+// which this app never actually administers. Each retake scores five wound
+// subscales (5 questions, 1-5 Likert each => 5-25 range per subscale).
+function woundSeverityLabel(score) {
+  if (score >= 18) return 'High';
+  if (score >= 11) return 'Moderate';
+  return 'Low';
+}
+
+function mapMbcMeasures(assessmentTrajectory, primaryWound, secondaryWound) {
+  if (!Array.isArray(assessmentTrajectory) || assessmentTrajectory.length === 0) return [];
+  const latest = assessmentTrajectory[assessmentTrajectory.length - 1];
+  const lastAdministered = relativeDateLabel(latest.date);
+  const scoreAt = (wound) => {
+    const v = Number(latest.scores?.[wound]);
+    return Number.isFinite(v) ? v : 0;
+  };
+  // Primary/secondary wound first (most clinically relevant), then the rest
+  // ordered by current severity so the highest-signal measures surface first.
+  const head = [primaryWound, secondaryWound].filter((w) => WORKSPACE_WOUNDS.includes(w));
+  const tail = WORKSPACE_WOUNDS.filter((w) => !head.includes(w)).sort((a, b) => scoreAt(b) - scoreAt(a));
+  const orderedWounds = [...new Set([...head, ...tail])];
+
+  return orderedWounds.map((wound) => {
+    const history = assessmentTrajectory.map((entry) => {
+      const v = Number(entry.scores?.[wound]);
+      return Number.isFinite(v) ? v : 0;
+    });
+    const current = history[history.length - 1];
+    const baseline = history[0];
+    const previous = history.length > 1 ? history[history.length - 2] : current;
+    return {
+      code: wound,
+      name: `${wound.charAt(0).toUpperCase()}${wound.slice(1)} Wound Pattern`,
+      date: lastAdministered,
+      severity: woundSeverityLabel(current),
+      baseline, previous, current, history,
+    };
+  });
+}
+
 function mapParts(partsSummary) {
   const recent = partsSummary?.recentlyUpdated;
   if (!Array.isArray(recent)) return [];
@@ -210,6 +254,7 @@ export function deriveWorkspaceDetail(base, { analytics, notes, plans, messages 
       enriched.scores = assessment.scores;
       enriched.primaryWound = assessment.primaryWound;
       enriched.secondaryWound = assessment.secondaryWound;
+      enriched.mbc = mapMbcMeasures(analytics.assessmentTrajectory, assessment.primaryWound, assessment.secondaryWound);
     }
     const hw = analytics.homeworkSummary;
     if (hw) {
