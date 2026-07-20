@@ -1162,7 +1162,7 @@ function TrendChart({ title, bars, unit, noDataLabel }) {
         <p style={{ margin: '10px 0 0', fontSize: '12px', color: 'var(--muted)' }}>{noDataLabel}</p>
       ) : (
         <div style={{ display: 'flex', alignItems: 'flex-end', gap: '4px', height: '36px', marginTop: '12px' }}>
-          {bars.map((b, i) => (<div key={i} title={b.week + (unit ? ` · ${unit}` : '')} style={b.style} />))}
+          {bars.map((b) => (<div key={b.week} title={b.week + (unit ? ` · ${unit}` : '')} style={b.style} />))}
         </div>
       )}
     </div>
@@ -1178,8 +1178,8 @@ function BetweenSessionTab({ bs }) {
         {bs.hasHomeworkData ? (
           <>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '14px', marginTop: '16px' }}>
-              {bs.funnelRows.map((f, i) => (
-                <div key={i}>
+              {bs.funnelRows.map((f) => (
+                <div key={f.label}>
                   <div style={{ fontSize: '11px', color: 'var(--muted)' }}>{f.label}</div>
                   <div style={{ fontSize: '19px', fontWeight: 700, color: 'var(--text)', marginTop: '2px' }}>{f.value}</div>
                   <div style={{ height: '6px', borderRadius: '4px', background: 'var(--surface-2)', marginTop: '6px', overflow: 'hidden' }}><div style={f.barStyle} /></div>
