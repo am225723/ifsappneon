@@ -14,7 +14,7 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
     assignedLessons, coTherapyShare, coTherapyMessage, coTherapyThread, reports, settingsToggles, clientMessages,
     clientMessageDraft, activeThreadId, safetyOverrides, engagementDismissed, partsClientFilter, tasks, taskFilter,
     newTaskTitle, newTaskClientId, docForm, docSources, generatedDoc, docGenerating, docError, clientReports, clientReportsLoading, deletedMessageIdx,
-    sessionSnapshot, changeSummary,
+    sessionSnapshot, changeSummary, lifeReflections, lifeReflectionsLoading,
   } = S;
 
   const rootStyle = {
@@ -254,6 +254,23 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
         data: changeSummary.data,
         onGenerate: canWrite ? H.onGenerateChangeSummary : undefined,
       },
+      lifeReflections: {
+        loading: !!lifeReflectionsLoading,
+        canView: canWrite,
+        rows: canWrite ? lifeReflections.map((r) => ({
+          id: r.id,
+          label: r.label,
+          summary: r.summary,
+          dateLabel: r.created_at ? new Date(r.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—',
+          linkedPartName: r.linkedPartName || r.linked_part_name || r.linked_part_alias || '',
+          fields: [
+            ['Situation', r.situation], ['Part noticed', r.part_noticed], ['Body sensation', r.body_sensation],
+            ['Emotion', r.emotion], ['Need or message', r.need_or_message], ['Self-energy response', r.self_energy_response],
+            ['Next step', r.next_step],
+          ].filter(([, v]) => v),
+        })) : [],
+        noReflections: canWrite && !lifeReflectionsLoading && lifeReflections.length === 0,
+      },
       parts: rawSelected.parts.map((p) => ({ ...p, catChip: partChip(p.category, isDark), catLabel: PART_CAT_META[p.category].label, barStyle: { width: p.activation + '%', height: '100%', borderRadius: '4px', background: PART_CAT_META[p.category].color } })),
       clientPractices: assignedPractices.filter((a) => a.clientName === rawSelected.name),
       noPractices: !assignedPractices.some((a) => a.clientName === rawSelected.name),
@@ -461,7 +478,7 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
     isSessionsLive: activeTab === 'sessions-live',
     isMessages: activeTab === 'messages', isNotifications: activeTab === 'notifications', isTasks: activeTab === 'tasks',
     isClientTabSnapshot: activeClientTab === 'snapshot', isClientTabChangeSummary: activeClientTab === 'changeSummary',
-    isClientTabBetweenSession: activeClientTab === 'betweenSession',
+    isClientTabBetweenSession: activeClientTab === 'betweenSession', isClientTabLifeReflections: activeClientTab === 'lifeReflections',
     isClinicalNotes: activeTab === 'clinical-notes', isClinicalPlans: activeTab === 'clinical-plans', isClinicalMbc: activeTab === 'clinical-mbc', isClinicalParts: activeTab === 'clinical-parts',
     isClinicalPractice: activeTab === 'clinical-practice', isClinicalPracticeInteractive: activeTab === 'clinical-practice-interactive',
     isClinicalLessons: activeTab === 'clinical-lessons', isClinicalCurriculumBuilder: activeTab === 'clinical-curriculum-builder', isClinicalDocs: activeTab === 'clinical-docs',
@@ -817,6 +834,7 @@ function ClientsCaseload({ v }) {
           {v.isClientTabSnapshot && <SnapshotTab snapshot={sc.snapshot} primaryBtnStyle={v.primaryBtnStyle} secondaryBtnStyle={v.secondaryBtnStyle} />}
           {v.isClientTabChangeSummary && <ChangeSummaryTab changeSummary={sc.changeSummary} primaryBtnStyle={v.primaryBtnStyle} />}
           {v.isClientTabBetweenSession && <BetweenSessionTab bs={sc.betweenSession} />}
+          {v.isClientTabLifeReflections && <LifeReflectionsTab lr={sc.lifeReflections} onClaim={sc.onClaim} />}
           {v.isClientTabTimeline && (
             <div style={CARD}>
               <span style={{ ...FR, fontSize: '15px' }}>Unified timeline</span>
@@ -1219,6 +1237,49 @@ function BetweenSessionTab({ bs }) {
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+function LifeReflectionsTab({ lr, onClaim }) {
+  if (!lr.canView) {
+    return (
+      <div style={CARD}>
+        <span style={{ ...FR, fontSize: '15px' }}>Life Reflections</span>
+        <div style={{ marginTop: '14px', padding: '12px 14px', borderRadius: '14px', background: 'var(--risk-med-bg)', border: '1px solid var(--risk-med-border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
+          <span style={{ fontSize: '12.5px', color: 'var(--risk-med-text)' }}>Add this client to your caseload to view reflections they've shared.</span>
+          {onClaim && <button type="button" onClick={onClaim} style={{ fontSize: '11px', fontWeight: 700, padding: '8px 10px', borderRadius: '10px', border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text-2)', cursor: 'pointer', fontFamily: 'inherit' }}>Add to my caseload</button>}
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+      <div style={{ fontSize: '12px', color: 'var(--muted)', padding: '2px 2px 0' }}>
+        Reflections this client has chosen to share from their IFS in Daily Life practices. Archived reflections and other clients' data are never shown here.
+      </div>
+      {lr.loading && <div style={{ ...CARD, textAlign: 'center', color: 'var(--muted)', fontSize: '13px' }}>Loading shared reflections…</div>}
+      {lr.noReflections && <div style={{ ...CARD, textAlign: 'center', color: 'var(--muted)', fontSize: '13px' }}>No shared reflections yet for this client.</div>}
+      {lr.rows.map((r) => (
+        <div key={r.id} style={CARD}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
+            <div>
+              <span style={{ ...FR, fontSize: '14px' }}>{r.label}</span>
+              <span style={{ fontSize: '11.5px', color: 'var(--muted)' }}> · {r.dateLabel}</span>
+            </div>
+            {r.linkedPartName && <span style={{ fontSize: '11.5px', color: 'var(--muted)' }}>Linked part: {r.linkedPartName}</span>}
+          </div>
+          <div style={{ fontSize: '13px', color: 'var(--text-2)', marginTop: '8px', lineHeight: 1.5 }}>{r.summary}</div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px,1fr))', gap: '10px', marginTop: '14px' }}>
+            {r.fields.map(([label, value]) => (
+              <div key={label} style={{ padding: '10px 12px', borderRadius: '12px', background: 'var(--surface-2)' }}>
+                <div style={{ fontSize: '10.5px', fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--muted)' }}>{label}</div>
+                <div style={{ fontSize: '12.5px', color: 'var(--text)', marginTop: '4px', whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>{value}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

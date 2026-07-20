@@ -30,9 +30,15 @@ vi.mock('../notifications.js', () => ({
   markAllNotificationsRead: async () => { mockMarkAllReadCalls.push(true); return { data: null, error: null }; },
 }));
 
+let mockLifeReflectionsResult = { data: [], error: null };
+vi.mock('../lifeIntegration.js', () => ({
+  loadSharedLifeIntegrationReflectionsForAdvisor: async () => mockLifeReflectionsResult,
+}));
+
 const {
   initialsFrom, daysSince, mapClientRow, mapNoteEntry, deriveWorkspaceDetail, WORKSPACE_WOUNDS, mergeCaseloadRefresh,
   generateWorkspaceReport, loadWorkspaceReports, loadWorkspaceNotifications, markWorkspaceNotificationRead, markAllWorkspaceNotificationsRead,
+  loadWorkspaceLifeReflections,
 } = await import('../advisorWorkspaceLoader.js');
 
 describe('initialsFrom', () => {
@@ -447,5 +453,31 @@ describe('markWorkspaceNotificationRead / markAllWorkspaceNotificationsRead', ()
     expect(mockMarkReadCalls).toContain('n1');
     await markAllWorkspaceNotificationsRead();
     expect(mockMarkAllReadCalls.length).toBeGreaterThan(0);
+  });
+});
+
+describe('loadWorkspaceLifeReflections', () => {
+  it('returns an empty array without a clientId', async () => {
+    expect(await loadWorkspaceLifeReflections(null)).toEqual([]);
+  });
+
+  it('maps real shared reflection rows with display labels/summaries attached', async () => {
+    mockLifeReflectionsResult = {
+      data: [{ id: 'r1', client_id: 'c1', reflection_type: 'trigger_reflection', situation: 'Partner was late texting back', part_noticed: 'The Watcher', emotion: 'Anxious', created_at: '2026-07-01T00:00:00Z', linked_part_name: 'The Watcher' }],
+      error: null,
+    };
+    const rows = await loadWorkspaceLifeReflections('c1');
+    expect(rows).toHaveLength(1);
+    expect(rows[0].label).toBe('Reflected on a Trigger');
+    expect(rows[0].summary).toBeTruthy();
+    expect(rows[0].situation).toBe('Partner was late texting back');
+    mockLifeReflectionsResult = { data: [], error: null };
+  });
+
+  it('returns an empty array (not a throw) when the API errors', async () => {
+    mockLifeReflectionsResult = { data: null, error: { message: 'forbidden' } };
+    const rows = await loadWorkspaceLifeReflections('c1');
+    expect(rows).toEqual([]);
+    mockLifeReflectionsResult = { data: [], error: null };
   });
 });

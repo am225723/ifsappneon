@@ -12,6 +12,8 @@ import { loadClientAnalytics } from './clientAnalytics';
 import { loadTherapistNotesForClient, createTherapistNote } from './therapistNotes';
 import { loadActiveTreatmentPlansForClient } from './treatmentPlans';
 import { loadNotifications, markNotificationRead, markAllNotificationsRead } from './notifications.js';
+import { loadSharedLifeIntegrationReflectionsForAdvisor } from './lifeIntegration.js';
+import { normalizeLifeReflection } from './lifeIntegrationDisplay.js';
 import { supabase } from './supabase';
 import { getClerkToken } from './apiAuth.js';
 
@@ -557,4 +559,19 @@ export async function markWorkspaceNotificationRead(notificationId) {
 
 export async function markAllWorkspaceNotificationsRead() {
   return markAllNotificationsRead();
+}
+
+// Real, already-Advisor-scoped Life Integration reflections a client has
+// shared (ifs_life_integration_reflections via api/life-integration.js's
+// list_shared_for_advisor action, already used by the standalone
+// AdvisorSharedReflections.jsx page — just not surfaced in the workspace).
+export async function loadWorkspaceLifeReflections(clientId) {
+  if (!clientId) return [];
+  try {
+    const { data, error } = await loadSharedLifeIntegrationReflectionsForAdvisor(clientId);
+    if (error) return [];
+    return (Array.isArray(data) ? data : []).map(normalizeLifeReflection);
+  } catch {
+    return [];
+  }
 }
