@@ -8,6 +8,7 @@ import {
   loadWorkspaceCaseload, loadWorkspaceCaseloadWithStatus, loadWorkspaceClientDetail, sendWorkspaceMessage, persistTherapistNote,
   claimWorkspaceClient, mergeCaseloadRefresh, generateWorkspaceReport, loadWorkspaceReports,
   loadWorkspaceNotifications, markWorkspaceNotificationRead, markAllWorkspaceNotificationsRead,
+  loadWorkspaceLifeReflections,
 } from '../lib/advisorWorkspaceLoader.js';
 import { loadAdvisorSessionSnapshot } from '../lib/unifiedGuidance.js';
 import { generateSessionPrepSummary } from '../lib/sessionPrepSummary.js';
@@ -47,6 +48,7 @@ export const INITIAL_STATE = {
   generatedDoc: null, docGenerating: false, docError: '', clientReports: [], clientReportsLoading: false,
   sessionSnapshot: { loading: false, data: null, error: '' },
   changeSummary: { loading: false, data: null, error: '' },
+  lifeReflections: [], lifeReflectionsLoading: false,
   accessOverrides: {}, settingsAccent: 'amber',
   extraClients: [], deletedIds: {},
   showNewClientForm: false, newClientForm: { name: '', email: '', phone: '', sendEmail: true }, newClientResult: null,
@@ -78,6 +80,7 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
   const detailRequested = useRef(new Set());
   const reportsLoadedFor = useRef(null);
   const notificationsLoaded = useRef(false);
+  const lifeReflectionsLoadedFor = useRef(null);
   // Generation guard: bumped on therapist change / unmount so stale in-flight
   // detail merges are ignored without cancelling still-valid sibling requests.
   const genRef = useRef(0);
@@ -217,10 +220,12 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
     // saved records — never leave a previous client's copy visible for a new one.
     snapshotGenRef.current += 1;
     changeSummaryGenRef.current += 1;
+    lifeReflectionsLoadedFor.current = null;
     set({
       selectedClientId: id, activeTab: 'clients-caseload', activeClientTab: 'overview',
       sessionSnapshot: { loading: false, data: null, error: '' },
       changeSummary: { loading: false, data: null, error: '' },
+      lifeReflections: [], lifeReflectionsLoading: false,
     });
   };
   const setClientTab = (id) => set({ activeClientTab: id });
@@ -454,6 +459,24 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
     notificationsLoaded.current = true;
     loadWorkspaceNotifications().then((rows) => set({ notifications: rows }));
   }, [isDemo, loadPhase, S.activeTab]);
+
+  // Lazily load a client's real shared Life Integration reflections the
+  // first time the Life Reflections tab is opened for them — the same
+  // Advisor-scoped data already shown by the standalone
+  // AdvisorSharedReflections.jsx page, just not previously in the workspace.
+  useEffect(() => {
+    if (isDemo || loadPhase !== 'ready' || S.activeClientTab !== 'lifeReflections' || !S.selectedClientId) return;
+    if (lifeReflectionsLoadedFor.current === S.selectedClientId) return;
+    lifeReflectionsLoadedFor.current = S.selectedClientId;
+    set({ lifeReflectionsLoading: true });
+    let isCanceled = false;
+    loadWorkspaceLifeReflections(S.selectedClientId).then((rows) => {
+      if (!isCanceled) set({ lifeReflections: rows, lifeReflectionsLoading: false });
+    });
+    return () => {
+      isCanceled = true;
+    };
+  }, [isDemo, loadPhase, S.activeClientTab, S.selectedClientId]);
 
   const toggleNewClientForm = () => set((s) => ({ showNewClientForm: !s.showNewClientForm, newClientResult: null }));
   const onNewClientFieldChange = (field) => (e) => set((s) => ({ newClientForm: { ...s.newClientForm, [field]: field === 'sendEmail' ? e.target.checked : e.target.value } }));

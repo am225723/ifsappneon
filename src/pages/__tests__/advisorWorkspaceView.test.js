@@ -462,3 +462,40 @@ describe('buildView — unified timeline gives every event a stable key', () => 
     expect(v.selectedClient.timeline[0].id).toBe('note-2026-07-10T00:00:00Z-0');
   });
 });
+
+describe('buildView — Life Reflections reflects real shared reflections', () => {
+  const RAW_REFLECTION = {
+    id: 'r1', reflection_type: 'trigger_reflection', label: 'Reflected on a Trigger', summary: 'You reflected on a trigger and what parts may need.',
+    situation: 'Partner was late texting back', part_noticed: '', body_sensation: '', emotion: 'Anxious', need_or_message: '', self_energy_response: '', next_step: '',
+    linkedPartName: 'The Watcher', created_at: '2026-07-01T00:00:00Z',
+  };
+
+  it('never offers reflections for an unassigned client, and shows a claim prompt instead', () => {
+    const v = makeView({ extraClients: [UNASSIGNED_CLIENT], selectedClientId: 'new1', lifeReflections: [RAW_REFLECTION] });
+    expect(v.selectedClient.lifeReflections.canView).toBe(false);
+    expect(v.selectedClient.lifeReflections.rows).toEqual([]);
+  });
+
+  it('maps real reflection rows for an assigned client, filtering out empty fields', () => {
+    const v = makeView({ selectedClientId: 'c1', lifeReflections: [RAW_REFLECTION] });
+    const lr = v.selectedClient.lifeReflections;
+    expect(lr.canView).toBe(true);
+    expect(lr.rows).toHaveLength(1);
+    expect(lr.rows[0].label).toBe('Reflected on a Trigger');
+    expect(lr.rows[0].linkedPartName).toBe('The Watcher');
+    // Only situation and emotion were non-empty on the fixture.
+    expect(lr.rows[0].fields.map(([label]) => label)).toEqual(['Situation', 'Emotion']);
+    expect(lr.noReflections).toBe(false);
+  });
+
+  it('shows the empty state once loaded with no shared reflections', () => {
+    const v = makeView({ selectedClientId: 'c1', lifeReflections: [], lifeReflectionsLoading: false });
+    expect(v.selectedClient.lifeReflections.noReflections).toBe(true);
+  });
+
+  it('does not show the empty state while still loading', () => {
+    const v = makeView({ selectedClientId: 'c1', lifeReflections: [], lifeReflectionsLoading: true });
+    expect(v.selectedClient.lifeReflections.loading).toBe(true);
+    expect(v.selectedClient.lifeReflections.noReflections).toBe(false);
+  });
+});
