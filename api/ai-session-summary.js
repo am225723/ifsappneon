@@ -197,10 +197,12 @@ function normalizeInteraction(row) {
 }
 
 function normalizeLife(row) {
+  const detail = [row.situation, row.part_noticed && `Part noticed: ${row.part_noticed}`, row.emotion, row.need_or_message, row.self_energy_response, row.next_step]
+    .filter(Boolean)
+    .join(' — ');
   return {
-    type: row.reflection_type || row.practice_type || row.type,
-    prompt: truncateText(row.prompt || row.title, 180),
-    response_excerpt: truncateText(row.response || row.reflection || row.notes || row.data, 500),
+    type: row.reflection_type,
+    response_excerpt: truncateText(detail, 500),
     created_at: row.created_at
   };
 }
@@ -287,9 +289,9 @@ async function loadClinicalData(clientId, since) {
       LIMIT 120
     `),
     optionalRows('ifs_life_integration_reflections', sql`
-      SELECT reflection_type, practice_type, prompt, response, reflection, notes, data, created_at
+      SELECT reflection_type, situation, part_noticed, emotion, need_or_message, self_energy_response, next_step, created_at
       FROM ifs_life_integration_reflections
-      WHERE client_id = ${clientId}
+      WHERE client_id = ${clientId} AND archived_at IS NULL
       ORDER BY created_at DESC
       LIMIT 30
     `),

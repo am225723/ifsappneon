@@ -67,7 +67,7 @@ export async function buildWorksheetPersonalizationData({ clientId, advisorInput
   const [clientResult, interactiveResult, lifeResult, journalResult, homeworkResult, partsResult, relationshipsResult, assessmentResult, moodResult, notesResult] = await Promise.all([
     optionalQuery('ifs_clients', sql`SELECT id, name, user_role, created_at FROM ifs_clients WHERE id = ${clientId} LIMIT 1`),
     optionalQuery('ifs_interactive_data', sql`SELECT id, module_id, data, created_at, updated_at FROM ifs_interactive_data WHERE client_id = ${clientId} ORDER BY COALESCE(updated_at, created_at) DESC LIMIT 140`),
-    optionalQuery('ifs_life_integration_reflections', sql`SELECT reflection_type, practice_type, prompt, response, reflection, notes, created_at FROM ifs_life_integration_reflections WHERE client_id = ${clientId} ORDER BY created_at DESC LIMIT 30`),
+    optionalQuery('ifs_life_integration_reflections', sql`SELECT reflection_type, situation, part_noticed, emotion, need_or_message, self_energy_response, next_step, created_at FROM ifs_life_integration_reflections WHERE client_id = ${clientId} AND archived_at IS NULL ORDER BY created_at DESC LIMIT 30`),
     optionalQuery('ifs_journal_entries', sql`SELECT title, content, created_at FROM ifs_journal_entries WHERE client_id = ${clientId} ORDER BY created_at DESC LIMIT 20`),
     optionalQuery('ifs_assigned_homework', sql`SELECT title, module_id, category, status, assigned_at, created_at, completed_at, completion_notes, interactive_responses, therapist_feedback, advisor_feedback FROM ifs_assigned_homework WHERE client_id = ${clientId} ORDER BY COALESCE(assigned_at, created_at) DESC LIMIT 20`),
     optionalQuery('ifs_parts', sql`SELECT name, part_name, type, part_type, role, emotion, primary_emotion, notes, updated_at, created_at FROM ifs_parts WHERE client_id = ${clientId} ORDER BY COALESCE(updated_at, created_at) DESC LIMIT 30`),
@@ -85,7 +85,12 @@ export async function buildWorksheetPersonalizationData({ clientId, advisorInput
     advisor_input: truncateText(advisorInput, 900),
     module_responses: interactive.module_responses,
     curriculum_reflections: interactive.curriculum_reflections,
-    life_integration_reflections: capArray(lifeResult.rows, 12, (row) => ({ type: row.reflection_type || row.practice_type, prompt: truncateText(row.prompt, 160), response: truncateText(row.response || row.reflection || row.notes, 360), created_at: row.created_at })),
+    life_integration_reflections: capArray(lifeResult.rows, 12, (row) => {
+      const detail = [row.situation, row.part_noticed && `Part noticed: ${row.part_noticed}`, row.emotion, row.need_or_message, row.self_energy_response, row.next_step]
+        .filter(Boolean)
+        .join(' — ');
+      return { type: row.reflection_type, response: truncateText(detail, 360), created_at: row.created_at };
+    }),
     journal_entries: capArray(journalResult.rows, 10, (row) => ({ title: truncateText(row.title, 140), excerpt: truncateText(row.content, 420), created_at: row.created_at })),
     assigned_practices: capArray(homeworkResult.rows, 15, summarizeHomework),
     parts: capArray(partsResult.rows, 20, (row) => ({ name: truncateText(row.name || row.part_name, 120), type: row.type || row.part_type, role: truncateText(row.role, 180), emotion: truncateText(row.emotion || row.primary_emotion, 120), notes: truncateText(row.notes, 220) })),

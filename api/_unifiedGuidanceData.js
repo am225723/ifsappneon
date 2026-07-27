@@ -114,12 +114,16 @@ function normalizeRelationships(rows = []) {
 }
 
 function normalizeLifeRows(rows = []) {
-  return capArray(rows, 10, (row) => ({
-    type: truncateText(row.reflection_type || row.type || row.practice_type, 120),
-    prompt: truncateText(row.prompt || row.title, 160),
-    response_excerpt: truncateText(row.response || row.reflection || row.notes || row.data, 300),
-    created_at: row.created_at
-  }));
+  return capArray(rows, 10, (row) => {
+    const detail = [row.situation, row.part_noticed && `Part noticed: ${row.part_noticed}`, row.emotion, row.need_or_message, row.self_energy_response, row.next_step]
+      .filter(Boolean)
+      .join(' — ');
+    return {
+      type: truncateText(row.reflection_type, 120),
+      response_excerpt: truncateText(detail, 300),
+      created_at: row.created_at
+    };
+  });
 }
 
 function normalizeAssessmentRows(rows = []) {
@@ -165,7 +169,7 @@ export async function buildUnifiedGuidanceData({ clientId, mode, rangeDays = 30 
     optionalQuery('ifs_clients', sql`SELECT id, name, user_role, created_at FROM ifs_clients WHERE id = ${clientId} LIMIT 1`),
     optionalQuery('ifs_client_progress', sql`SELECT * FROM ifs_client_progress WHERE client_id = ${clientId} ORDER BY COALESCE(updated_at, created_at) DESC LIMIT 80`),
     optionalQuery('ifs_interactive_data', sql`SELECT * FROM ifs_interactive_data WHERE client_id = ${clientId} ORDER BY COALESCE(updated_at, created_at) DESC LIMIT 120`),
-    optionalQuery('ifs_life_integration_reflections', sql`SELECT * FROM ifs_life_integration_reflections WHERE client_id = ${clientId} AND created_at >= ${since} ORDER BY created_at DESC LIMIT 10`),
+    optionalQuery('ifs_life_integration_reflections', sql`SELECT * FROM ifs_life_integration_reflections WHERE client_id = ${clientId} AND created_at >= ${since} AND archived_at IS NULL ORDER BY created_at DESC LIMIT 10`),
     optionalQuery('ifs_parts', sql`SELECT * FROM ifs_parts WHERE client_id = ${clientId} ORDER BY COALESCE(updated_at, created_at) DESC LIMIT 20`),
     optionalQuery('ifs_part_relationships', sql`SELECT * FROM ifs_part_relationships WHERE client_id = ${clientId} ORDER BY COALESCE(updated_at, created_at) DESC LIMIT 30`),
     optionalQuery('ifs_assigned_homework', sql`SELECT * FROM ifs_assigned_homework WHERE client_id = ${clientId} ORDER BY COALESCE(assigned_at, created_at) DESC LIMIT 10`),
