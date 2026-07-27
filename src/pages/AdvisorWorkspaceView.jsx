@@ -195,6 +195,7 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
       })),
       goals: rawSelected.goals.map((g) => ({ title: g.title, reviewLabel: 'Review in ' + g.reviewInDays + 'd', style: { fontSize: '11px', fontWeight: 700, color: g.reviewInDays <= 7 ? theme.riskMedText : theme.muted } })),
       qaAnswers: rawSelected.qaAnswers,
+      noQaAnswers: !(rawSelected.qaAnswers || []).length,
       timeline: rawSelected.timeline.map((e, i) => { const m = TIMELINE_TYPE_META[e.type] || TIMELINE_TYPE_META.note; return { id: e.id || `${e.type}-${i}`, label: e.label, date: e.date, typeLabel: m.label, typeChip: { fontSize: '10px', fontWeight: 700, color: m.color, background: isDark ? 'rgba(255,255,255,0.08)' : m.color + '14', padding: '3px 7px', borderRadius: '6px', whiteSpace: 'nowrap', height: 'fit-content' } }; }),
       clientNotes: savedNotes.filter((n) => n.clientId === rawSelected.id).map((n) => ({ ...n, statusStyle: severityStyle(theme, n.status === 'Signed & Locked' ? 'low' : 'medium'), statusLabel: n.status })),
       noNotes: !savedNotes.some((n) => n.clientId === rawSelected.id),
@@ -948,9 +949,10 @@ function ClientOverviewTab({ v, sc }) {
           {sc.qaAnswers.map((qa, i) => (
             <div key={i} style={{ padding: '12px 14px', borderRadius: '14px', background: 'var(--surface-2)' }}>
               <div style={{ fontSize: '12.5px', fontWeight: 600, color: 'var(--text-2)' }}>{qa.question}</div>
-              <div style={{ fontSize: '13px', color: 'var(--text)', marginTop: '4px', lineHeight: 1.5 }}>“{qa.answer}”</div>
+              <div style={{ fontSize: '13px', color: 'var(--text)', marginTop: '4px', lineHeight: 1.5 }}>”{qa.answer}”</div>
             </div>
           ))}
+          {sc.noQaAnswers && <div style={{ fontSize: '13px', color: 'var(--muted)' }}>No check-in or module responses recorded yet.</div>}
         </div>
       </div>
       <div style={{ border: '1px solid var(--risk-high-border)', borderRadius: '20px', padding: '20px', background: 'var(--risk-high-bg)' }}>
@@ -1600,6 +1602,7 @@ function SessionsPrepView({ v }) {
                   <div style={{ fontSize: '13px', color: 'var(--text)', marginTop: '4px', lineHeight: 1.5 }}>“{qa.answer}”</div>
                 </div>
               ))}
+              {p.qaAnswers.length === 0 && <div style={{ fontSize: '13px', color: 'var(--muted)' }}>No check-in or module responses recorded yet.</div>}
               <button className="aw-primary" onClick={p.onDraftNote} style={{ ...v.primaryBtnStyle, alignSelf: 'flex-start' }}>Draft session note from this</button>
             </div>
           )}

@@ -265,6 +265,21 @@ describe('buildView — write actions are gated until a client is claimed', () =
   });
 });
 
+describe('buildView — check-in & module response answers (qaAnswers)', () => {
+  it('surfaces real qaAnswers for a client and flags noQaAnswers false', () => {
+    const v = makeView({ selectedClientId: 'c1' });
+    const sc = v.selectedClient;
+    expect(sc.qaAnswers.length).toBeGreaterThan(0);
+    expect(sc.noQaAnswers).toBe(false);
+  });
+
+  it('flags noQaAnswers true when a client has no real answers recorded', () => {
+    const v = makeView({ extraClients: [{ ...CLIENTS[0], id: 'empty1', qaAnswers: [] }], selectedClientId: 'empty1' });
+    expect(v.selectedClient.qaAnswers).toEqual([]);
+    expect(v.selectedClient.noQaAnswers).toBe(true);
+  });
+});
+
 describe('buildView — AI Session Snapshot', () => {
   it('surfaces loading/error state and only offers copy once a snapshot exists', () => {
     const idle = makeView({ selectedClientId: 'c1' });

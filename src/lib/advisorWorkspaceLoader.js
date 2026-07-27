@@ -256,6 +256,36 @@ function mapParts(partsSummary) {
   });
 }
 
+// The Advisor Workspace already has two built UI consumers for qaAnswers
+// (the "Recent check-in & journal responses" card and the entire Session
+// Prep tab), both permanently empty because nothing ever populated the
+// field. This is the same real free-text answer data TherapistDashboard.jsx
+// already reads: ifs_module_answers (the current, event-sourced answer
+// store) plus a fallback merge from ifs_client_progress.responses (older
+// rows that predate ifs_module_answers), deduped by module+question.
+function mapQaAnswers(moduleAnswerRows, progressRows) {
+  const seen = new Set();
+  const answers = [];
+  const collect = (rows, answersField) => {
+    (rows || []).forEach((row) => {
+      const entries = row[answersField] && typeof row[answersField] === 'object' ? row[answersField] : {};
+      Object.entries(entries).forEach(([question, answer]) => {
+        if (typeof answer !== 'string' || !answer.trim()) return;
+        const key = `${row.module_id}::${question}`;
+        if (seen.has(key)) return;
+        seen.add(key);
+        answers.push({ question, answer: answer.trim(), rawDate: row.updated_at });
+      });
+    });
+  };
+  collect(moduleAnswerRows, 'answers');
+  collect(progressRows, 'responses');
+  return answers
+    .sort((a, b) => String(b.rawDate).localeCompare(String(a.rawDate)))
+    .slice(0, 12)
+    .map(({ rawDate: _rawDate, ...rest }) => rest);
+}
+
 // Merges every real per-client event source already loaded for the workspace
 // (analytics-derived events, assessment retakes, messages, session notes)
 // into one real chronology, sorted newest-first. Previously only 4 thin
@@ -339,8 +369,12 @@ function mapMessages(rows, clientName) {
 
 // Merge a base client with its loaded detail records. Returns the enriched
 // client plus the note entries that should be appended to `savedNotes`.
-export function deriveWorkspaceDetail(base, { analytics, notes, plans, messages }) {
+export function deriveWorkspaceDetail(base, { analytics, notes, plans, messages, moduleAnswers, progress }) {
   const enriched = { ...base, _detailLoaded: true };
+  // Set unconditionally (not gated behind a truthiness check) so a pass with
+  // no real answers explicitly clears any prior enrichment's qaAnswers
+  // rather than letting it leak through the `{...base}` spread above.
+  enriched.qaAnswers = mapQaAnswers(moduleAnswers, progress);
 
   if (analytics) {
     const assessment = mapAssessment(analytics.assessmentTrajectory);
@@ -400,6 +434,35 @@ async function loadClientMessages(therapistId, clientId) {
   }
 }
 
+async function loadClientModuleAnswers(clientId) {
+  try {
+    const { data, error } = await supabase
+      .from('ifs_module_answers')
+      .select('module_id, answers, updated_at')
+      .eq('client_id', clientId)
+      .order('updated_at', { ascending: false })
+      .limit(50);
+    if (error) return [];
+    return data || [];
+  } catch {
+    return [];
+  }
+}
+
+async function loadClientProgressResponses(clientId) {
+  try {
+    const { data, error } = await supabase
+      .from('ifs_client_progress')
+      .select('module_id, responses, updated_at')
+      .eq('client_id', clientId)
+      .limit(100);
+    if (error) return [];
+    return data || [];
+  } catch {
+    return [];
+  }
+}
+
 const CASELOAD_COLUMNS = 'id, name, pin, email, phone, status, last_active, created_at, user_role, access_restrictions, assignment_status';
 
 export async function loadWorkspaceCaseload(therapistId) {
@@ -444,17 +507,21 @@ export function mergeCaseloadRefresh(prevBaseClients, freshRows) {
 }
 
 export async function loadWorkspaceClientDetail(base, therapistId) {
-  const [analyticsRes, notesRes, plansRes, messages] = await Promise.all([
+  const [analyticsRes, notesRes, plansRes, messages, moduleAnswers, progress] = await Promise.all([
     loadClientAnalytics({ clientId: base.id, range: 'ALL' }).catch(() => ({ data: null })),
     loadTherapistNotesForClient(base.id).catch(() => ({ data: [] })),
     loadActiveTreatmentPlansForClient(base.id).catch(() => ({ data: [] })),
     loadClientMessages(therapistId, base.id),
+    loadClientModuleAnswers(base.id),
+    loadClientProgressResponses(base.id),
   ]);
   return deriveWorkspaceDetail(base, {
     analytics: analyticsRes?.data || null,
     notes: notesRes?.data || [],
     plans: plansRes?.data || [],
     messages,
+    moduleAnswers,
+    progress,
   });
 }
 
