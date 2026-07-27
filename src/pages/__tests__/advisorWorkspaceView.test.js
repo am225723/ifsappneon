@@ -278,6 +278,13 @@ describe('buildView — check-in & module response answers (qaAnswers)', () => {
     expect(v.selectedClient.qaAnswers).toEqual([]);
     expect(v.selectedClient.noQaAnswers).toBe(true);
   });
+
+  it('normalizes a missing qaAnswers field (legacy/partially-loaded client) to an empty array instead of throwing', () => {
+    const { qaAnswers: _qaAnswers, ...clientWithoutQaAnswers } = CLIENTS[0];
+    const v = makeView({ extraClients: [{ ...clientWithoutQaAnswers, id: 'legacy1' }], selectedClientId: 'legacy1' });
+    expect(v.selectedClient.qaAnswers).toEqual([]);
+    expect(v.selectedClient.noQaAnswers).toBe(true);
+  });
 });
 
 describe('buildView — AI Session Snapshot', () => {

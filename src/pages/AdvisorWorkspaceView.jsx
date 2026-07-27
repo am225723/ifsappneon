@@ -194,8 +194,8 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
         barStyle: { width: Math.round((rawSelected.scores[k] / 20) * 100) + '%', height: '100%', borderRadius: '4px', background: k === rawSelected.primaryWound ? theme.accent2 : (k === rawSelected.secondaryWound ? theme.emerald2 : theme.muted) },
       })),
       goals: rawSelected.goals.map((g) => ({ title: g.title, reviewLabel: 'Review in ' + g.reviewInDays + 'd', style: { fontSize: '11px', fontWeight: 700, color: g.reviewInDays <= 7 ? theme.riskMedText : theme.muted } })),
-      qaAnswers: rawSelected.qaAnswers,
-      noQaAnswers: !(rawSelected.qaAnswers || []).length,
+      qaAnswers: Array.isArray(rawSelected.qaAnswers) ? rawSelected.qaAnswers : [],
+      noQaAnswers: !Array.isArray(rawSelected.qaAnswers) || rawSelected.qaAnswers.length === 0,
       timeline: rawSelected.timeline.map((e, i) => { const m = TIMELINE_TYPE_META[e.type] || TIMELINE_TYPE_META.note; return { id: e.id || `${e.type}-${i}`, label: e.label, date: e.date, typeLabel: m.label, typeChip: { fontSize: '10px', fontWeight: 700, color: m.color, background: isDark ? 'rgba(255,255,255,0.08)' : m.color + '14', padding: '3px 7px', borderRadius: '6px', whiteSpace: 'nowrap', height: 'fit-content' } }; }),
       clientNotes: savedNotes.filter((n) => n.clientId === rawSelected.id).map((n) => ({ ...n, statusStyle: severityStyle(theme, n.status === 'Signed & Locked' ? 'low' : 'medium'), statusLabel: n.status })),
       noNotes: !savedNotes.some((n) => n.clientId === rawSelected.id),
@@ -323,7 +323,7 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
 
   const prepList = assignedClients.filter((c) => c.session.status !== 'none').map((c) => ({
     id: c.id, initial: c.initial, name: c.name, time: c.session.when, statusStyle: severityStyle(theme, 'low'), statusLabel: 'Submitted',
-    isExpanded: sessionPrepOpenId === c.id, qaAnswers: c.qaAnswers, onToggle: () => H.toggleSessionPrep(c.id), onDraftNote: () => H.draftNoteFor(c.id),
+    isExpanded: sessionPrepOpenId === c.id, qaAnswers: Array.isArray(c.qaAnswers) ? c.qaAnswers : [], onToggle: () => H.toggleSessionPrep(c.id), onDraftNote: () => H.draftNoteFor(c.id),
   }));
 
   // Never fall back to an unassigned client for co-therapy — an Advisor
@@ -949,7 +949,7 @@ function ClientOverviewTab({ v, sc }) {
           {sc.qaAnswers.map((qa, i) => (
             <div key={i} style={{ padding: '12px 14px', borderRadius: '14px', background: 'var(--surface-2)' }}>
               <div style={{ fontSize: '12.5px', fontWeight: 600, color: 'var(--text-2)' }}>{qa.question}</div>
-              <div style={{ fontSize: '13px', color: 'var(--text)', marginTop: '4px', lineHeight: 1.5 }}>”{qa.answer}”</div>
+              <div style={{ fontSize: '13px', color: 'var(--text)', marginTop: '4px', lineHeight: 1.5 }}>“{qa.answer}”</div>
             </div>
           ))}
           {sc.noQaAnswers && <div style={{ fontSize: '13px', color: 'var(--muted)' }}>No check-in or module responses recorded yet.</div>}

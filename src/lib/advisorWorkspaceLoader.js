@@ -455,6 +455,7 @@ async function loadClientProgressResponses(clientId) {
       .from('ifs_client_progress')
       .select('module_id, responses, updated_at')
       .eq('client_id', clientId)
+      .order('updated_at', { ascending: false })
       .limit(100);
     if (error) return [];
     return data || [];
