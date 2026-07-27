@@ -262,7 +262,7 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
   // just rendered from the workspace's already-fetched state.
   const onExportReport = (clientId) => {
     const client = allClients().find((c) => c.id === clientId);
-    if (!client) return;
+    if (!client || client._detailLoaded === false) return;
     const notes = S.savedNotes.filter((n) => n.clientId === clientId);
     const html = buildClientReportHtml(client, notes);
     const reportWindow = window.open('', '_blank');

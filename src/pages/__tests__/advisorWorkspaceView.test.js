@@ -251,6 +251,18 @@ describe('buildView — write actions are gated until a client is claimed', () =
     v.selectedClient.onExportReport();
     expect(calls).toEqual(['c1']);
   });
+
+  it('disables export while a real client\'s detail fetch is still in flight', () => {
+    const S = { ...INITIAL_STATE, selectedClientId: 'c1', extraClients: [{ ...CLIENTS[0], id: 'loading1', _detailLoaded: false }] };
+    S.selectedClientId = 'loading1';
+    const theme = LIGHT;
+    const allClients = () => CLIENTS.concat(S.extraClients || []).filter((c) => !S.deletedIds[c.id]);
+    const buildTreatmentPlan = (client) => ({ clientName: client.name, phases: [], currentPhaseLabel: '', currentPhaseDesc: '', milestones: [] });
+    const handlers = new Proxy({ isGroupExpanded: () => false }, { get: (target, prop) => target[prop] || (() => {}) });
+    const v = buildView({ S, theme, allClients, buildTreatmentPlan, handlers, isAdmin: true });
+    expect(v.selectedClient.onExportReport).toBeUndefined();
+    expect(v.selectedClient.exportReportLoading).toBe(true);
+  });
 });
 
 describe('buildView — AI Session Snapshot', () => {

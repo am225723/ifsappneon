@@ -501,7 +501,11 @@ describe('buildClientReportHtml', () => {
     const client = {
       ...baseClient,
       assessmentHistory: [{ dateLabel: '3 days ago', subscales: [{ wound: 'shame', score: 18, severity: 'High' }] }],
-      betweenSession: { homeworkFunnel: { completed: 4, totalAssigned: 6, completionPct: 67 }, moodEntries: [{ dateLabel: 'Yesterday', mood: 4, energy: 3 }] },
+      betweenSession: {
+        homeworkFunnel: { completed: 4, totalAssigned: 6, completionPct: 67 },
+        moodEntries: [{ dateLabel: 'Yesterday', mood: 4, energy: 3 }],
+        journalWeekly: [{ week: 'Jul 14', count: 0 }, { week: 'Jul 21', count: 3 }],
+      },
       goals: [{ title: 'Reduce shame spirals', reviewInDays: 5 }],
       parts: [{ name: 'The Critic', category: 'manager', description: 'Status: active.' }],
     };
@@ -510,6 +514,8 @@ describe('buildClientReportHtml', () => {
     expect(html).toContain('18 (High)');
     expect(html).toContain('4/6 completed (67%)');
     expect(html).toContain('Yesterday');
+    expect(html).toContain('Jul 21');
+    expect(html).toContain('<td>3</td>');
     expect(html).toContain('Reduce shame spirals');
     expect(html).toContain('The Critic');
     expect(html).toContain('Session Note');
@@ -520,9 +526,17 @@ describe('buildClientReportHtml', () => {
     const html = buildClientReportHtml(baseClient, []);
     expect(html).toContain('No assessment retakes recorded yet.');
     expect(html).toContain('No mood check-ins recorded yet.');
+    expect(html).toContain('No journal activity recorded yet.');
     expect(html).toContain('No active treatment goals.');
     expect(html).toContain('No parts recorded yet.');
     expect(html).toContain('No session notes recorded yet.');
+  });
+
+  it('omits zero-count weeks from journal engagement so only real activity is shown', () => {
+    const client = { ...baseClient, betweenSession: { ...baseClient.betweenSession, journalWeekly: [{ week: 'Jul 7', count: 0 }] } };
+    const html = buildClientReportHtml(client, []);
+    expect(html).toContain('No journal activity recorded yet.');
+    expect(html).not.toContain('Jul 7');
   });
 
   it('escapes HTML special characters to prevent script injection from stored fields', () => {

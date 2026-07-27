@@ -606,6 +606,9 @@ export function buildClientReportHtml(client, notes = []) {
   const moodRows = (bs.moodEntries || []).slice(0, 8).map((m) =>
     `<tr><td>${escapeHtml(m.dateLabel)}</td><td>${m.mood ?? '—'}</td><td>${m.energy ?? '—'}</td></tr>`
   ).join('');
+  const journalRows = (bs.journalWeekly || []).filter((w) => w.count > 0).slice(-8).map((w) =>
+    `<tr><td>${escapeHtml(w.week)}</td><td>${w.count}</td></tr>`
+  ).join('');
 
   const goalItems = (client.goals || []).map((g) =>
     `<li>${escapeHtml(g.title)} — review in ${escapeHtml(g.reviewInDays)} day(s)</li>`
@@ -652,6 +655,11 @@ export function buildClientReportHtml(client, notes = []) {
   ${moodRows
     ? `<table><thead><tr><th>Date</th><th>Mood</th><th>Energy</th></tr></thead><tbody>${moodRows}</tbody></table>`
     : '<div class="empty">No mood check-ins recorded yet.</div>'}
+
+  <h2>Journal Engagement</h2>
+  ${journalRows
+    ? `<table><thead><tr><th>Week</th><th>Entries</th></tr></thead><tbody>${journalRows}</tbody></table>`
+    : '<div class="empty">No journal activity recorded yet.</div>'}
 
   <h2>Treatment Goals</h2>
   ${goalItems ? `<ul>${goalItems}</ul>` : '<div class="empty">No active treatment goals.</div>'}
