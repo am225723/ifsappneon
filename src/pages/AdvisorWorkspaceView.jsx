@@ -291,6 +291,7 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
       canWrite,
       onDraftNote: canWrite ? () => H.draftNoteFor(rawSelected.id) : undefined,
       onOpenPrep: canWrite ? () => H.openPrepFor(rawSelected.id) : undefined,
+      onExportReport: canWrite ? () => H.onExportReport(rawSelected.id) : undefined,
       onOpenPlan: canWrite ? () => H.openPlanFor(rawSelected.id) : undefined,
       onOpenPractice: canWrite ? () => H.openPracticeFor(rawSelected.id) : undefined,
       onStartDelete: canWrite ? () => H.onStartDelete(rawSelected.id) : undefined,
@@ -810,6 +811,7 @@ function ClientsCaseload({ v }) {
               <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                 <button className="aw-primary" onClick={sc.onDraftNote} disabled={!sc.canWrite} style={{ ...v.primaryBtnStyle, opacity: sc.canWrite ? 1 : 0.5, cursor: sc.canWrite ? 'pointer' : 'not-allowed' }}>Draft session note</button>
                 <button onClick={sc.onOpenPrep} disabled={!sc.canWrite} style={{ ...v.secondaryBtnStyle, opacity: sc.canWrite ? 1 : 0.5, cursor: sc.canWrite ? 'pointer' : 'not-allowed' }}>Session prep</button>
+                <button onClick={sc.onExportReport} disabled={!sc.canWrite} style={{ ...v.secondaryBtnStyle, opacity: sc.canWrite ? 1 : 0.5, cursor: sc.canWrite ? 'pointer' : 'not-allowed' }}>Export report</button>
               </div>
             </div>
             {sc.unassigned && (

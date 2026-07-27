@@ -8,7 +8,7 @@ import {
   loadWorkspaceCaseload, loadWorkspaceCaseloadWithStatus, loadWorkspaceClientDetail, sendWorkspaceMessage, persistTherapistNote,
   claimWorkspaceClient, mergeCaseloadRefresh, generateWorkspaceReport, loadWorkspaceReports,
   loadWorkspaceNotifications, markWorkspaceNotificationRead, markAllWorkspaceNotificationsRead,
-  loadWorkspaceLifeReflections,
+  loadWorkspaceLifeReflections, buildClientReportHtml,
 } from '../lib/advisorWorkspaceLoader.js';
 import { loadAdvisorSessionSnapshot } from '../lib/unifiedGuidance.js';
 import { generateSessionPrepSummary } from '../lib/sessionPrepSummary.js';
@@ -256,6 +256,20 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
   const toggleSetting = (key) => set((s) => ({ settingsToggles: { ...s.settingsToggles, [key]: !s.settingsToggles[key] } }));
   const draftNoteFor = (clientId) => set((s) => ({ activeTab: 'clinical-notes', noteDraft: { ...s.noteDraft, clientId } }));
   const openPrepFor = (clientId) => set({ activeTab: 'sessions-prep', sessionPrepOpenId: clientId });
+  // Builds a printable HTML report entirely from data already loaded for this
+  // client (assessments, mood/homework activity, goals, parts, notes) — the
+  // same real data the legacy TherapistDashboard.jsx report generator used,
+  // just rendered from the workspace's already-fetched state.
+  const onExportReport = (clientId) => {
+    const client = allClients().find((c) => c.id === clientId);
+    if (!client) return;
+    const notes = S.savedNotes.filter((n) => n.clientId === clientId);
+    const html = buildClientReportHtml(client, notes);
+    const reportWindow = window.open('', '_blank');
+    if (!reportWindow) return;
+    reportWindow.document.write(html);
+    reportWindow.document.close();
+  };
   const openPlanFor = (clientId) => set({ activeTab: 'clinical-plans', planClientId: clientId });
   const openPracticeFor = (clientId) => {
     const client = allClients().find((c) => c.id === clientId);
@@ -575,7 +589,7 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
     S, theme, allClients, buildTreatmentPlan, isAdmin,
     handlers: {
       setTab, setViewMode, toggleTheme, selectClient, setClientTab, onSearch, setFilterWound, markReviewed, toggleSessionPrep, onClaimClient,
-      onNoteClientChange, onNoteTemplateChange, onNoteTextChange, onSaveNote, onSignNote, toggleSetting, draftNoteFor, openPrepFor, openPlanFor, openPracticeFor,
+      onNoteClientChange, onNoteTemplateChange, onNoteTextChange, onSaveNote, onSignNote, toggleSetting, draftNoteFor, openPrepFor, openPlanFor, openPracticeFor, onExportReport,
       onPlanClientChange, onPracticeClientChange, onPracticeWoundChange, onPracticeTypeChange, onGeneratePractice, onAssignPractice, toggleAssignLesson,
       onCoTherapyMessageChange, onSendCoTherapyMessage, toggleCoTherapyShare, onGenerateReport, isGroupExpanded, toggleGroup,
       onClientMessageChange, onSendClientMessage, setActiveThread, addTaskFromMessage, onAcknowledgeSafety, onCreateSafetyPlan, setPartsClientFilter,

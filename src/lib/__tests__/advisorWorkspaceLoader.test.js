@@ -38,7 +38,7 @@ vi.mock('../lifeIntegration.js', () => ({
 const {
   initialsFrom, daysSince, mapClientRow, mapNoteEntry, deriveWorkspaceDetail, WORKSPACE_WOUNDS, mergeCaseloadRefresh,
   generateWorkspaceReport, loadWorkspaceReports, loadWorkspaceNotifications, markWorkspaceNotificationRead, markAllWorkspaceNotificationsRead,
-  loadWorkspaceLifeReflections,
+  loadWorkspaceLifeReflections, buildClientReportHtml,
 } = await import('../advisorWorkspaceLoader.js');
 
 describe('initialsFrom', () => {
@@ -479,5 +479,58 @@ describe('loadWorkspaceLifeReflections', () => {
     const rows = await loadWorkspaceLifeReflections('c1');
     expect(rows).toEqual([]);
     mockLifeReflectionsResult = { data: [], error: null };
+  });
+});
+
+describe('buildClientReportHtml', () => {
+  const baseClient = {
+    name: 'Jamie Rivera', email: 'jamie@example.com', primaryWound: 'shame', secondaryWound: 'neglect',
+    assessmentHistory: [], betweenSession: { homeworkFunnel: {}, moodEntries: [] }, goals: [], parts: [],
+  };
+
+  it('renders client identity, wound labels, and a print control', () => {
+    const html = buildClientReportHtml(baseClient, []);
+    expect(html).toContain('Jamie Rivera');
+    expect(html).toContain('jamie@example.com');
+    expect(html).toContain('Shame');
+    expect(html).toContain('Neglect');
+    expect(html).toContain('window.print()');
+  });
+
+  it('renders real assessment history, mood entries, goals, parts, and notes when present', () => {
+    const client = {
+      ...baseClient,
+      assessmentHistory: [{ dateLabel: '3 days ago', subscales: [{ wound: 'shame', score: 18, severity: 'High' }] }],
+      betweenSession: { homeworkFunnel: { completed: 4, totalAssigned: 6, completionPct: 67 }, moodEntries: [{ dateLabel: 'Yesterday', mood: 4, energy: 3 }] },
+      goals: [{ title: 'Reduce shame spirals', reviewInDays: 5 }],
+      parts: [{ name: 'The Critic', category: 'manager', description: 'Status: active.' }],
+    };
+    const notes = [{ templateLabel: 'Session Note', date: 'Today', status: 'Signed & Locked', text: 'Client made progress.' }];
+    const html = buildClientReportHtml(client, notes);
+    expect(html).toContain('18 (High)');
+    expect(html).toContain('4/6 completed (67%)');
+    expect(html).toContain('Yesterday');
+    expect(html).toContain('Reduce shame spirals');
+    expect(html).toContain('The Critic');
+    expect(html).toContain('Session Note');
+    expect(html).toContain('Client made progress.');
+  });
+
+  it('shows neutral empty states instead of fabricating data when nothing real exists', () => {
+    const html = buildClientReportHtml(baseClient, []);
+    expect(html).toContain('No assessment retakes recorded yet.');
+    expect(html).toContain('No mood check-ins recorded yet.');
+    expect(html).toContain('No active treatment goals.');
+    expect(html).toContain('No parts recorded yet.');
+    expect(html).toContain('No session notes recorded yet.');
+  });
+
+  it('escapes HTML special characters to prevent script injection from stored fields', () => {
+    const client = { ...baseClient, name: '<script>alert(1)</script>' };
+    const notes = [{ templateLabel: 'Note', date: 'Today', status: 'Draft', text: '<img src=x onerror=alert(1)>' }];
+    const html = buildClientReportHtml(client, notes);
+    expect(html).not.toContain('<script>alert(1)</script>');
+    expect(html).not.toContain('<img src=x onerror=alert(1)>');
+    expect(html).toContain('&lt;script&gt;');
   });
 });

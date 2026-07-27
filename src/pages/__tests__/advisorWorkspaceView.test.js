@@ -218,6 +218,7 @@ describe('buildView — write actions are gated until a client is claimed', () =
     expect(sc.canWrite).toBe(false);
     expect(sc.onDraftNote).toBeUndefined();
     expect(sc.onOpenPrep).toBeUndefined();
+    expect(sc.onExportReport).toBeUndefined();
     expect(sc.onOpenPlan).toBeUndefined();
     expect(sc.onOpenPractice).toBeUndefined();
     expect(sc.onStartDelete).toBeUndefined();
@@ -231,8 +232,24 @@ describe('buildView — write actions are gated until a client is claimed', () =
     const sc = v.selectedClient;
     expect(sc.canWrite).toBe(true);
     expect(typeof sc.onDraftNote).toBe('function');
+    expect(typeof sc.onExportReport).toBe('function');
     expect(typeof sc.safety.onAcknowledge).toBe('function');
     expect(typeof sc.snapshot.onGenerate).toBe('function');
+  });
+
+  it('routes onExportReport to the handler with the selected client id', () => {
+    const calls = [];
+    const S = { ...INITIAL_STATE, selectedClientId: 'c1' };
+    const theme = LIGHT;
+    const allClients = () => CLIENTS.concat(S.extraClients || []).filter((c) => !S.deletedIds[c.id]);
+    const buildTreatmentPlan = (client) => ({ clientName: client.name, phases: [], currentPhaseLabel: '', currentPhaseDesc: '', milestones: [] });
+    const handlers = new Proxy(
+      { isGroupExpanded: () => false, onExportReport: (id) => calls.push(id) },
+      { get: (target, prop) => target[prop] || (() => {}) },
+    );
+    const v = buildView({ S, theme, allClients, buildTreatmentPlan, handlers, isAdmin: true });
+    v.selectedClient.onExportReport();
+    expect(calls).toEqual(['c1']);
   });
 });
 
