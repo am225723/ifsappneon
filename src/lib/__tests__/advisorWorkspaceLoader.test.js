@@ -221,6 +221,33 @@ describe('deriveWorkspaceDetail', () => {
     expect(client.mbc).toEqual([]);
   });
 
+  it('populates qaAnswers from real ifs_module_answers rows, newest first', () => {
+    const moduleAnswers = [
+      { module_id: 'mod-1', answers: { 'What did you notice?': 'A tightness in my chest.' }, updated_at: '2026-07-01T00:00:00Z' },
+      { module_id: 'mod-2', answers: { 'What does this part need?': 'To feel safe.', 'Empty answer': '   ' }, updated_at: '2026-07-10T00:00:00Z' },
+    ];
+    const { client } = deriveWorkspaceDetail(base, { analytics: null, notes: [], plans: [], messages: [], moduleAnswers, progress: [] });
+    expect(client.qaAnswers).toEqual([
+      { question: 'What does this part need?', answer: 'To feel safe.' },
+      { question: 'What did you notice?', answer: 'A tightness in my chest.' },
+    ]);
+  });
+
+  it('merges in ifs_client_progress.responses as a fallback without duplicating questions already answered', () => {
+    const moduleAnswers = [{ module_id: 'mod-1', answers: { 'Shared question': 'From module_answers' }, updated_at: '2026-07-01T00:00:00Z' }];
+    const progress = [{ module_id: 'mod-1', responses: { 'Shared question': 'Stale duplicate', 'Legacy question': 'From client_progress' }, updated_at: '2026-06-01T00:00:00Z' }];
+    const { client } = deriveWorkspaceDetail(base, { analytics: null, notes: [], plans: [], messages: [], moduleAnswers, progress });
+    expect(client.qaAnswers).toHaveLength(2);
+    expect(client.qaAnswers.find((qa) => qa.question === 'Shared question').answer).toBe('From module_answers');
+    expect(client.qaAnswers.find((qa) => qa.question === 'Legacy question').answer).toBe('From client_progress');
+  });
+
+  it('resets qaAnswers to empty instead of leaking a prior enrichment through on a re-derive with no real answers', () => {
+    const alreadyEnriched = { ...base, qaAnswers: [{ question: 'stale', answer: 'stale' }] };
+    const { client } = deriveWorkspaceDetail(alreadyEnriched, { analytics: null, notes: [], plans: [], messages: [], moduleAnswers: [], progress: [] });
+    expect(client.qaAnswers).toEqual([]);
+  });
+
   it('derives real between-session activity from data api/analytics/client.js already computes', () => {
     const analytics = {
       assessmentTrajectory: [],
