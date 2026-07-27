@@ -291,6 +291,11 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
       canWrite,
       onDraftNote: canWrite ? () => H.draftNoteFor(rawSelected.id) : undefined,
       onOpenPrep: canWrite ? () => H.openPrepFor(rawSelected.id) : undefined,
+      // _detailLoaded is only ever explicitly false while the real per-client
+      // detail fetch is in flight (advisorWorkspaceLoader.mapClientRow); demo
+      // seed clients never set it, so treat "undefined" as already-ready.
+      onExportReport: canWrite && rawSelected._detailLoaded !== false ? () => H.onExportReport(rawSelected.id) : undefined,
+      exportReportLoading: canWrite && rawSelected._detailLoaded === false,
       onOpenPlan: canWrite ? () => H.openPlanFor(rawSelected.id) : undefined,
       onOpenPractice: canWrite ? () => H.openPracticeFor(rawSelected.id) : undefined,
       onStartDelete: canWrite ? () => H.onStartDelete(rawSelected.id) : undefined,
@@ -810,6 +815,7 @@ function ClientsCaseload({ v }) {
               <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                 <button className="aw-primary" onClick={sc.onDraftNote} disabled={!sc.canWrite} style={{ ...v.primaryBtnStyle, opacity: sc.canWrite ? 1 : 0.5, cursor: sc.canWrite ? 'pointer' : 'not-allowed' }}>Draft session note</button>
                 <button onClick={sc.onOpenPrep} disabled={!sc.canWrite} style={{ ...v.secondaryBtnStyle, opacity: sc.canWrite ? 1 : 0.5, cursor: sc.canWrite ? 'pointer' : 'not-allowed' }}>Session prep</button>
+                <button onClick={sc.onExportReport} disabled={!sc.onExportReport} title={sc.exportReportLoading ? 'Client detail is still loading — try again in a moment.' : undefined} style={{ ...v.secondaryBtnStyle, opacity: sc.onExportReport ? 1 : 0.5, cursor: sc.onExportReport ? 'pointer' : 'not-allowed' }}>{sc.exportReportLoading ? 'Export report (loading…)' : 'Export report'}</button>
               </div>
             </div>
             {sc.unassigned && (

@@ -575,3 +575,100 @@ export async function loadWorkspaceLifeReflections(clientId) {
     return [];
   }
 }
+
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+function capitalizeWound(wound) {
+  return wound ? `${wound.charAt(0).toUpperCase()}${wound.slice(1)}` : '—';
+}
+
+// Builds a printable/exportable HTML report entirely from data the workspace
+// has already loaded for the selected client (assessment history, between-
+// session activity, goals, parts, notes) — the same real per-client data the
+// legacy TherapistDashboard.jsx's PDF/CSV export used to build its report,
+// just ported to run off the workspace's already-fetched state instead of
+// issuing fresh queries.
+export function buildClientReportHtml(client, notes = []) {
+  const generatedOn = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+
+  const assessmentRows = (client.assessmentHistory || []).slice(0, 6).map((entry) => {
+    const cells = WORKSPACE_WOUNDS.map((wound) => {
+      const subscale = (entry.subscales || []).find((s) => s.wound === wound);
+      return `<td>${subscale ? `${subscale.score} (${escapeHtml(subscale.severity)})` : '—'}</td>`;
+    }).join('');
+    return `<tr><td>${escapeHtml(entry.dateLabel || entry.date || '—')}</td>${cells}</tr>`;
+  }).join('');
+
+  const bs = client.betweenSession || {};
+  const hw = bs.homeworkFunnel || {};
+  const moodRows = (bs.moodEntries || []).slice(0, 8).map((m) =>
+    `<tr><td>${escapeHtml(m.dateLabel)}</td><td>${m.mood ?? '—'}</td><td>${m.energy ?? '—'}</td></tr>`
+  ).join('');
+  const journalRows = (bs.journalWeekly || []).filter((w) => w.count > 0).slice(-8).map((w) =>
+    `<tr><td>${escapeHtml(w.week)}</td><td>${w.count}</td></tr>`
+  ).join('');
+
+  const goalItems = (client.goals || []).map((g) =>
+    `<li>${escapeHtml(g.title)} — review in ${escapeHtml(g.reviewInDays)} day(s)</li>`
+  ).join('');
+
+  const partItems = (client.parts || []).map((p) =>
+    `<li><strong>${escapeHtml(p.name)}</strong> (${escapeHtml(p.category)}) — ${escapeHtml(p.description)}</li>`
+  ).join('');
+
+  const noteItems = notes.slice(0, 8).map((n) =>
+    `<li><strong>${escapeHtml(n.templateLabel)}</strong> — ${escapeHtml(n.date)} (${escapeHtml(n.status)})${n.text ? `: ${escapeHtml(String(n.text).slice(0, 200))}` : ''}</li>`
+  ).join('');
+
+  return `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8" />
+<title>Client Report — ${escapeHtml(client.name)}</title>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; max-width: 760px; margin: 32px auto; padding: 0 16px; color: #1c1917; line-height: 1.5; }
+  h1 { font-size: 22px; margin-bottom: 2px; }
+  h2 { font-size: 15px; margin-top: 28px; border-bottom: 1px solid #ddd; padding-bottom: 4px; }
+  table { border-collapse: collapse; width: 100%; margin-top: 8px; }
+  th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid #eee; font-size: 13px; }
+  .meta { color: #666; font-size: 13px; }
+  .empty { color: #888; font-size: 13px; font-style: italic; }
+  .print-btn { float: right; padding: 8px 14px; font-size: 13px; cursor: pointer; }
+  @media print { .print-btn { display: none; } }
+</style>
+</head>
+<body>
+  <button class="print-btn" onclick="window.print()">Print / Save as PDF</button>
+  <h1>${escapeHtml(client.name)}</h1>
+  <div class="meta">${escapeHtml(client.email || '')} · Report generated ${generatedOn}</div>
+  <div class="meta">Primary wound: ${capitalizeWound(client.primaryWound)} · Secondary wound: ${capitalizeWound(client.secondaryWound)}</div>
+
+  <h2>Wound Pattern Assessment History</h2>
+  ${assessmentRows
+    ? `<table><thead><tr><th>Date</th><th>Abandonment</th><th>Shame</th><th>Neglect</th><th>Betrayal</th><th>Helplessness</th></tr></thead><tbody>${assessmentRows}</tbody></table>`
+    : '<div class="empty">No assessment retakes recorded yet.</div>'}
+
+  <h2>Between-Session Activity</h2>
+  <div class="meta">Homework: ${hw.completed || 0}/${hw.totalAssigned || 0} completed (${hw.completionPct || 0}%)</div>
+  ${moodRows
+    ? `<table><thead><tr><th>Date</th><th>Mood</th><th>Energy</th></tr></thead><tbody>${moodRows}</tbody></table>`
+    : '<div class="empty">No mood check-ins recorded yet.</div>'}
+
+  <h2>Journal Engagement</h2>
+  ${journalRows
+    ? `<table><thead><tr><th>Week</th><th>Entries</th></tr></thead><tbody>${journalRows}</tbody></table>`
+    : '<div class="empty">No journal activity recorded yet.</div>'}
+
+  <h2>Treatment Goals</h2>
+  ${goalItems ? `<ul>${goalItems}</ul>` : '<div class="empty">No active treatment goals.</div>'}
+
+  <h2>Identified Parts</h2>
+  ${partItems ? `<ul>${partItems}</ul>` : '<div class="empty">No parts recorded yet.</div>'}
+
+  <h2>Recent Session Notes</h2>
+  ${noteItems ? `<ul>${noteItems}</ul>` : '<div class="empty">No session notes recorded yet.</div>'}
+</body>
+</html>`;
+}
