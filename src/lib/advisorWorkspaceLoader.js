@@ -256,6 +256,19 @@ function mapParts(partsSummary) {
   });
 }
 
+// The Advisor Workspace's client header ("X day streak" / "X level") and the
+// Progress & Analytics "Engagement streaks" leaderboard already read
+// streak/level off each client, but mapClientRow hardcodes streak: 0,
+// level: 1 forever — nothing ever overrides them. ifs_gamification is the
+// same real, already-written table the client-facing app (GamificationHub,
+// Milestones, Profile) and the legacy TherapistDashboard.jsx already read.
+function mapGamification(row) {
+  return {
+    streak: Number.isFinite(row?.streak_current) ? row.streak_current : 0,
+    level: Number.isFinite(row?.level) ? row.level : 1,
+  };
+}
+
 // The Advisor Workspace already has two built UI consumers for qaAnswers
 // (the "Recent check-in & journal responses" card and the entire Session
 // Prep tab), both permanently empty because nothing ever populated the
@@ -369,12 +382,15 @@ function mapMessages(rows, clientName) {
 
 // Merge a base client with its loaded detail records. Returns the enriched
 // client plus the note entries that should be appended to `savedNotes`.
-export function deriveWorkspaceDetail(base, { analytics, notes, plans, messages, moduleAnswers, progress }) {
+export function deriveWorkspaceDetail(base, { analytics, notes, plans, messages, moduleAnswers, progress, gamification }) {
   const enriched = { ...base, _detailLoaded: true };
   // Set unconditionally (not gated behind a truthiness check) so a pass with
   // no real answers explicitly clears any prior enrichment's qaAnswers
   // rather than letting it leak through the `{...base}` spread above.
   enriched.qaAnswers = mapQaAnswers(moduleAnswers, progress);
+  const gam = mapGamification(gamification);
+  enriched.streak = gam.streak;
+  enriched.level = gam.level;
 
   if (analytics) {
     const assessment = mapAssessment(analytics.assessmentTrajectory);
@@ -464,6 +480,20 @@ async function loadClientProgressResponses(clientId) {
   }
 }
 
+async function loadClientGamification(clientId) {
+  try {
+    const { data, error } = await supabase
+      .from('ifs_gamification')
+      .select('level, streak_current')
+      .eq('client_id', clientId)
+      .maybeSingle();
+    if (error) return null;
+    return data || null;
+  } catch {
+    return null;
+  }
+}
+
 const CASELOAD_COLUMNS = 'id, name, pin, email, phone, status, last_active, created_at, user_role, access_restrictions, assignment_status';
 
 export async function loadWorkspaceCaseload(therapistId) {
@@ -508,13 +538,14 @@ export function mergeCaseloadRefresh(prevBaseClients, freshRows) {
 }
 
 export async function loadWorkspaceClientDetail(base, therapistId) {
-  const [analyticsRes, notesRes, plansRes, messages, moduleAnswers, progress] = await Promise.all([
+  const [analyticsRes, notesRes, plansRes, messages, moduleAnswers, progress, gamification] = await Promise.all([
     loadClientAnalytics({ clientId: base.id, range: 'ALL' }).catch(() => ({ data: null })),
     loadTherapistNotesForClient(base.id).catch(() => ({ data: [] })),
     loadActiveTreatmentPlansForClient(base.id).catch(() => ({ data: [] })),
     loadClientMessages(therapistId, base.id),
     loadClientModuleAnswers(base.id),
     loadClientProgressResponses(base.id),
+    loadClientGamification(base.id),
   ]);
   return deriveWorkspaceDetail(base, {
     analytics: analyticsRes?.data || null,
@@ -523,6 +554,7 @@ export async function loadWorkspaceClientDetail(base, therapistId) {
     messages,
     moduleAnswers,
     progress,
+    gamification,
   });
 }
 

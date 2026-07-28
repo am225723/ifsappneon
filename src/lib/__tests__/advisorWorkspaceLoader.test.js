@@ -248,6 +248,25 @@ describe('deriveWorkspaceDetail', () => {
     expect(client.qaAnswers).toEqual([]);
   });
 
+  it('populates streak/level from a real ifs_gamification row', () => {
+    const { client } = deriveWorkspaceDetail(base, { analytics: null, notes: [], plans: [], messages: [], gamification: { level: 4, streak_current: 12 } });
+    expect(client.streak).toBe(12);
+    expect(client.level).toBe(4);
+  });
+
+  it('defaults streak/level to 0/1 when the client has no gamification row', () => {
+    const { client } = deriveWorkspaceDetail(base, { analytics: null, notes: [], plans: [], messages: [], gamification: null });
+    expect(client.streak).toBe(0);
+    expect(client.level).toBe(1);
+  });
+
+  it('does not leak a prior enrichment\'s streak/level through on a re-derive that finds no gamification row', () => {
+    const alreadyEnriched = { ...base, streak: 30, level: 6 };
+    const { client } = deriveWorkspaceDetail(alreadyEnriched, { analytics: null, notes: [], plans: [], messages: [], gamification: null });
+    expect(client.streak).toBe(0);
+    expect(client.level).toBe(1);
+  });
+
   it('derives real between-session activity from data api/analytics/client.js already computes', () => {
     const analytics = {
       assessmentTrajectory: [],
