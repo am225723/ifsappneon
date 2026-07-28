@@ -474,6 +474,9 @@ describe('buildView — Between Sessions reflects real analytics data', () => {
         { id: 'hw1', title: 'Self-Connection Journal', status: 'reviewed', statusLabel: 'Reviewed', instructions: 'Focus on the abandonment part.', advisorFeedback: 'Great insight.', assignedDateLabel: 'Jun 1', completedDateLabel: 'Jun 5' },
         { id: 'hw2', title: 'mod-2', status: 'assigned', statusLabel: 'Assigned', instructions: '', advisorFeedback: '', assignedDateLabel: 'Jun 10', completedDateLabel: '' },
       ],
+      freeformAssignments: [
+        { id: 'fh1', title: 'Notice the protector', statusLabel: 'Completed', description: 'Journal about your inner critic.', completionNotes: 'It showed up before my meeting.', interactiveSummary: [], completedDateLabel: 'Jun 5', dueDateLabel: '' },
+      ],
       hasMoodData: true, hasJournalData: true, hasHomeworkData: true,
     },
   };
@@ -515,6 +518,19 @@ describe('buildView — Between Sessions reflects real analytics data', () => {
     expect(bs.assignmentRows[0].advisorFeedback).toBe('Great insight.');
     expect(bs.assignmentRows[0].dateLabel).toBe('Completed Jun 5');
     expect(bs.assignmentRows[1].dateLabel).toBe('Assigned Jun 10');
+  });
+
+  it('maps real custom (freeform) homework with completion notes, and flags noFreeformAssignments for clients with none', () => {
+    const withCustom = makeView({ extraClients: [CLIENT_WITH_ACTIVITY], selectedClientId: 'bs1' });
+    const bs = withCustom.selectedClient.betweenSession;
+    expect(bs.noFreeformAssignments).toBe(false);
+    expect(bs.freeformAssignmentRows).toHaveLength(1);
+    expect(bs.freeformAssignmentRows[0].title).toBe('Notice the protector');
+    expect(bs.freeformAssignmentRows[0].completionNotes).toBe('It showed up before my meeting.');
+    expect(bs.freeformAssignmentRows[0].dateLabel).toBe('Completed Jun 5');
+
+    const demo = makeView({ selectedClientId: 'c1' });
+    expect(demo.selectedClient.betweenSession.noFreeformAssignments).toBe(true);
   });
 });
 
