@@ -335,6 +335,32 @@ describe('buildView — Part relationships', () => {
   });
 });
 
+describe('buildView — Assessment tertiary wounds & protector types', () => {
+  const subscales = ['abandonment', 'shame', 'neglect', 'betrayal', 'helplessness'].map((wound) => ({ wound, score: 5, severity: 'Low', delta: null }));
+
+  it('maps real tertiary wound labels and protector types onto an assessment history entry', () => {
+    const client = {
+      ...CLIENTS[0], id: 'ah1',
+      assessmentHistory: [{ id: 'a1', date: '2026-06-01', primaryWound: 'shame', secondaryWound: 'neglect', subscales, tertiaryWounds: ['betrayal'], protectorTypes: ['Perfectionist'] }],
+    };
+    const v = makeView({ extraClients: [client], selectedClientId: 'ah1' });
+    const entry = v.selectedClient.assessmentHistory[0];
+    expect(entry.tertiaryLabels).toEqual(['Betrayal']);
+    expect(entry.protectorTypes).toEqual(['Perfectionist']);
+  });
+
+  it('defaults to empty tertiary/protector lists when an entry lacks the fields', () => {
+    const client = {
+      ...CLIENTS[0], id: 'ah2',
+      assessmentHistory: [{ id: 'a2', date: '2026-06-01', primaryWound: 'shame', secondaryWound: 'neglect', subscales }],
+    };
+    const v = makeView({ extraClients: [client], selectedClientId: 'ah2' });
+    const entry = v.selectedClient.assessmentHistory[0];
+    expect(entry.tertiaryLabels).toEqual([]);
+    expect(entry.protectorTypes).toEqual([]);
+  });
+});
+
 describe('buildView — AI Session Snapshot', () => {
   it('surfaces loading/error state and only offers copy once a snapshot exists', () => {
     const idle = makeView({ selectedClientId: 'c1' });
