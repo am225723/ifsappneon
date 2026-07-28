@@ -12,6 +12,7 @@ import { loadClientAnalytics } from './clientAnalytics';
 import { loadTherapistNotesForClient, createTherapistNote } from './therapistNotes';
 import { loadActiveTreatmentPlansForClient } from './treatmentPlans';
 import { loadAssignedHomeworkForClient } from './assignedHomework.js';
+import { loadTherapistClientSessionAgendas, markSessionAgendaReviewed } from './sessionAgendas.js';
 import { loadNotifications, markNotificationRead, markAllNotificationsRead } from './notifications.js';
 import { loadSharedLifeIntegrationReflectionsForAdvisor } from './lifeIntegration.js';
 import { normalizeLifeReflection } from './lifeIntegrationDisplay.js';
@@ -99,6 +100,7 @@ export function mapClientRow(row) {
     scores: { abandonment: 0, shame: 0, neglect: 0, betrayal: 0, helplessness: 0 },
     goals: [],
     pendingReview: null,
+    agendas: [],
     session: { when: 'No upcoming session scheduled', status: 'none' },
     recentActivity: [],
     qaAnswers: [],
@@ -249,6 +251,34 @@ function mapFreeformHomework(rows) {
     interactiveSummary: summarizeInteractiveResponses(row.interactive_responses || {}),
     dueDateLabel: row.due_date ? relativeDateLabel(row.due_date) : '',
     completedDateLabel: row.completed_at ? relativeDateLabel(row.completed_at) : '',
+  }));
+}
+
+const AGENDA_STATUS_LABEL = { submitted: 'Submitted', reviewed: 'Reviewed', archived: 'Archived', draft: 'Draft' };
+
+// The Session Prep tab already shows a client's check-in Q&A answers, but
+// the structured session agenda they submit alongside it (topics, active
+// parts, stuck points, goals for the session, current stress/mood, safety
+// concerns) — real data already rendered by the real
+// SessionPrepBrief.jsx/TherapistDashboard.jsx via
+// loadTherapistClientSessionAgendas — was never surfaced, and "Mark
+// reviewed" in the workspace never actually persisted anything to
+// ifs_session_agendas.
+function mapSessionAgendas(rows) {
+  if (!Array.isArray(rows)) return [];
+  return rows.slice(0, 10).map((row) => ({
+    id: row.id,
+    dateLabel: relativeDateLabel(row.session_date || row.session_datetime || row.created_at),
+    statusLabel: AGENDA_STATUS_LABEL[row.status] || row.status || 'Submitted',
+    reviewed: row.status === 'reviewed',
+    topics: row.topics || '',
+    activeParts: Array.isArray(row.active_parts) ? row.active_parts : [],
+    stuckPoints: row.stuck_points || '',
+    goalsForSession: row.goals_for_session || '',
+    currentStressLevel: row.current_stress_level ?? null,
+    currentMoodLabel: row.current_mood_label || '',
+    safetyConcerns: row.safety_concerns || '',
+    therapistNotes: row.therapist_notes || '',
   }));
 }
 
@@ -428,7 +458,7 @@ function mapMessages(rows, clientName) {
 
 // Merge a base client with its loaded detail records. Returns the enriched
 // client plus the note entries that should be appended to `savedNotes`.
-export function deriveWorkspaceDetail(base, { analytics, notes, plans, messages, moduleAnswers, progress, gamification, assignedHomework, freeformHomework }) {
+export function deriveWorkspaceDetail(base, { analytics, notes, plans, messages, moduleAnswers, progress, gamification, assignedHomework, freeformHomework, agendas }) {
   const enriched = { ...base, _detailLoaded: true };
   // Set unconditionally (not gated behind a truthiness check) so a pass with
   // no real answers explicitly clears any prior enrichment's qaAnswers
@@ -437,6 +467,7 @@ export function deriveWorkspaceDetail(base, { analytics, notes, plans, messages,
   const gam = mapGamification(gamification);
   enriched.streak = gam.streak;
   enriched.level = gam.level;
+  enriched.agendas = mapSessionAgendas(agendas);
 
   if (analytics) {
     const assessment = mapAssessment(analytics.assessmentTrajectory);
@@ -609,7 +640,7 @@ export function mergeCaseloadRefresh(prevBaseClients, freshRows) {
 }
 
 export async function loadWorkspaceClientDetail(base, therapistId) {
-  const [analyticsRes, notesRes, plansRes, messages, moduleAnswers, progress, gamification, assignedHomeworkRes, freeformHomework] = await Promise.all([
+  const [analyticsRes, notesRes, plansRes, messages, moduleAnswers, progress, gamification, assignedHomeworkRes, freeformHomework, agendasRes] = await Promise.all([
     loadClientAnalytics({ clientId: base.id, range: 'ALL' }).catch(() => ({ data: null })),
     loadTherapistNotesForClient(base.id).catch(() => ({ data: [] })),
     loadActiveTreatmentPlansForClient(base.id).catch(() => ({ data: [] })),
@@ -619,6 +650,7 @@ export async function loadWorkspaceClientDetail(base, therapistId) {
     loadClientGamification(base.id),
     loadAssignedHomeworkForClient(base.id).catch(() => ({ data: [] })),
     loadClientFreeformHomework(base.id),
+    loadTherapistClientSessionAgendas(therapistId, base.id).catch(() => ({ data: [] })),
   ]);
   return deriveWorkspaceDetail(base, {
     analytics: analyticsRes?.data || null,
@@ -630,7 +662,15 @@ export async function loadWorkspaceClientDetail(base, therapistId) {
     gamification,
     assignedHomework: assignedHomeworkRes?.data || [],
     freeformHomework,
+    agendas: agendasRes?.data || [],
   });
+}
+
+// The Session Prep tab's "Mark reviewed" action previously only flipped a
+// local in-memory flag — it never actually persisted anything to
+// ifs_session_agendas. This wraps the already-real markSessionAgendaReviewed.
+export async function markWorkspaceAgendaReviewed(agendaId) {
+  return markSessionAgendaReviewed(agendaId);
 }
 
 export async function persistTherapistNote({ therapistId, clientId, content, status = 'draft' }) {

@@ -336,6 +336,12 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
   const prepList = assignedClients.filter((c) => c.session.status !== 'none').map((c) => ({
     id: c.id, initial: c.initial, name: c.name, time: c.session.when, statusStyle: severityStyle(theme, 'low'), statusLabel: 'Submitted',
     isExpanded: sessionPrepOpenId === c.id, qaAnswers: Array.isArray(c.qaAnswers) ? c.qaAnswers : [], onToggle: () => H.toggleSessionPrep(c.id), onDraftNote: () => H.draftNoteFor(c.id),
+    agendas: (Array.isArray(c.agendas) ? c.agendas : []).map((a) => ({
+      id: a.id, dateLabel: a.dateLabel, statusLabel: a.statusLabel, reviewed: a.reviewed,
+      topics: a.topics, activeParts: a.activeParts, stuckPoints: a.stuckPoints, goalsForSession: a.goalsForSession,
+      currentStressLevel: a.currentStressLevel, currentMoodLabel: a.currentMoodLabel, safetyConcerns: a.safetyConcerns,
+      onMarkReviewed: () => H.onMarkAgendaReviewed(c.id, a.id),
+    })),
   }));
 
   // Never fall back to an unassigned client for co-therapy — an Advisor
@@ -1655,6 +1661,35 @@ function SessionsPrepView({ v }) {
           </div>
           {p.isExpanded && (
             <div style={{ padding: '0 20px 20px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {p.agendas.map((a) => (
+                <div key={a.id} style={{ padding: '14px', borderRadius: '14px', background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: '12.5px', fontWeight: 600, color: 'var(--text)' }}>Session agenda · {a.dateLabel}</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontSize: '11px', fontWeight: 700, color: a.reviewed ? 'var(--emerald-2)' : 'var(--muted)' }}>{a.statusLabel}</span>
+                      {!a.reviewed && <button onClick={a.onMarkReviewed} style={v.secondaryBtnStyle}>Mark reviewed</button>}
+                    </div>
+                  </div>
+                  {a.safetyConcerns && (
+                    <div style={{ marginTop: '10px', padding: '10px 12px', borderRadius: '12px', background: 'var(--risk-high-bg)', border: '1px solid var(--risk-high-border)' }}>
+                      <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--risk-high-text)' }}>Safety concerns flagged</div>
+                      <div style={{ fontSize: '12.5px', color: 'var(--risk-high-text)', marginTop: '4px', lineHeight: 1.5 }}>{a.safetyConcerns}</div>
+                    </div>
+                  )}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '10px', fontSize: '12.5px', color: 'var(--text-2)' }}>
+                    {a.topics && <div><strong>Topics:</strong> {a.topics}</div>}
+                    {a.activeParts.length > 0 && <div><strong>Active parts:</strong> {a.activeParts.join(', ')}</div>}
+                    {a.stuckPoints && <div><strong>Stuck points:</strong> {a.stuckPoints}</div>}
+                    {a.goalsForSession && <div><strong>Goals for session:</strong> {a.goalsForSession}</div>}
+                    {(a.currentStressLevel != null || a.currentMoodLabel) && (
+                      <div>
+                        {a.currentStressLevel != null && <><strong>Stress:</strong> {a.currentStressLevel}/10 </>}
+                        {a.currentMoodLabel && <><strong>Mood:</strong> {a.currentMoodLabel}</>}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
               {p.qaAnswers.map((qa, i) => (
                 <div key={i} style={{ padding: '12px 14px', borderRadius: '14px', background: 'var(--surface-2)' }}>
                   <div style={{ fontSize: '12.5px', fontWeight: 600, color: 'var(--text-2)' }}>{qa.question}</div>

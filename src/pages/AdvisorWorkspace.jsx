@@ -8,7 +8,7 @@ import {
   loadWorkspaceCaseload, loadWorkspaceCaseloadWithStatus, loadWorkspaceClientDetail, sendWorkspaceMessage, persistTherapistNote,
   claimWorkspaceClient, mergeCaseloadRefresh, generateWorkspaceReport, loadWorkspaceReports,
   loadWorkspaceNotifications, markWorkspaceNotificationRead, markAllWorkspaceNotificationsRead,
-  loadWorkspaceLifeReflections, buildClientReportHtml,
+  loadWorkspaceLifeReflections, buildClientReportHtml, markWorkspaceAgendaReviewed,
 } from '../lib/advisorWorkspaceLoader.js';
 import { loadAdvisorSessionSnapshot } from '../lib/unifiedGuidance.js';
 import { generateSessionPrepSummary } from '../lib/sessionPrepSummary.js';
@@ -233,6 +233,19 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
   const setFilterWound = (w) => set({ filterWound: w });
   const markReviewed = (id) => set((s) => ({ reviewedIds: { ...s.reviewedIds, [id]: true } }));
   const toggleSessionPrep = (id) => set((s) => ({ sessionPrepOpenId: s.sessionPrepOpenId === id ? null : id }));
+  // Persists a real ifs_session_agendas review (previously "Mark reviewed"
+  // in Session Prep only flipped a local flag and never wrote to the DB).
+  const onMarkAgendaReviewed = (clientId, agendaId) => {
+    set((s) => ({
+      baseClients: (s.baseClients || []).map((c) => (c.id !== clientId ? c : {
+        ...c,
+        agendas: (c.agendas || []).map((a) => (a.id === agendaId ? { ...a, statusLabel: 'Reviewed', reviewed: true } : a)),
+      })),
+    }));
+    markWorkspaceAgendaReviewed(agendaId)
+      .then(({ error }) => { if (error) console.error('Failed to mark agenda reviewed:', error); })
+      .catch((error) => console.error('Failed to mark agenda reviewed:', error));
+  };
   const onNoteClientChange = (e) => set((s) => ({ noteDraft: { ...s.noteDraft, clientId: e.target.value } }));
   const onNoteTemplateChange = (e) => set((s) => ({ noteDraft: { ...s.noteDraft, template: e.target.value } }));
   const onNoteTextChange = (e) => set((s) => ({ noteDraft: { ...s.noteDraft, text: e.target.value } }));
@@ -588,7 +601,7 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
   const view = buildView({
     S, theme, allClients, buildTreatmentPlan, isAdmin,
     handlers: {
-      setTab, setViewMode, toggleTheme, selectClient, setClientTab, onSearch, setFilterWound, markReviewed, toggleSessionPrep, onClaimClient,
+      setTab, setViewMode, toggleTheme, selectClient, setClientTab, onSearch, setFilterWound, markReviewed, toggleSessionPrep, onClaimClient, onMarkAgendaReviewed,
       onNoteClientChange, onNoteTemplateChange, onNoteTextChange, onSaveNote, onSignNote, toggleSetting, draftNoteFor, openPrepFor, openPlanFor, openPracticeFor, onExportReport,
       onPlanClientChange, onPracticeClientChange, onPracticeWoundChange, onPracticeTypeChange, onGeneratePractice, onAssignPractice, toggleAssignLesson,
       onCoTherapyMessageChange, onSendCoTherapyMessage, toggleCoTherapyShare, onGenerateReport, isGroupExpanded, toggleGroup,

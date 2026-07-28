@@ -35,10 +35,16 @@ vi.mock('../lifeIntegration.js', () => ({
   loadSharedLifeIntegrationReflectionsForAdvisor: async () => mockLifeReflectionsResult,
 }));
 
+const mockMarkAgendaReviewedCalls = [];
+vi.mock('../sessionAgendas.js', () => ({
+  loadTherapistClientSessionAgendas: async () => ({ data: [], error: null }),
+  markSessionAgendaReviewed: async (agendaId) => { mockMarkAgendaReviewedCalls.push(agendaId); return { data: { id: agendaId, status: 'reviewed' }, error: null }; },
+}));
+
 const {
   initialsFrom, daysSince, mapClientRow, mapNoteEntry, deriveWorkspaceDetail, WORKSPACE_WOUNDS, mergeCaseloadRefresh,
   generateWorkspaceReport, loadWorkspaceReports, loadWorkspaceNotifications, markWorkspaceNotificationRead, markAllWorkspaceNotificationsRead,
-  loadWorkspaceLifeReflections, buildClientReportHtml,
+  loadWorkspaceLifeReflections, buildClientReportHtml, markWorkspaceAgendaReviewed,
 } = await import('../advisorWorkspaceLoader.js');
 
 describe('initialsFrom', () => {
@@ -318,6 +324,35 @@ describe('deriveWorkspaceDetail', () => {
     expect(client.betweenSession.freeformAssignments).toEqual([]);
   });
 
+  it('maps real ifs_session_agendas rows into client.agendas with structured fields and safety concerns', () => {
+    const agendas = [
+      {
+        id: 'ag1', session_date: '2026-07-20', status: 'submitted', topics: 'Boundary setting with sister', active_parts: ['The Watcher', 'The Critic'],
+        stuck_points: 'Not sure how to bring it up.', goals_for_session: 'Practice saying no.', current_stress_level: 6, current_mood_label: 'Anxious',
+        safety_concerns: 'Client mentioned feeling hopeless this week.',
+      },
+    ];
+    const { client } = deriveWorkspaceDetail(base, { analytics: null, notes: [], plans: [], messages: [], agendas });
+    expect(client.agendas).toHaveLength(1);
+    const a = client.agendas[0];
+    expect(a.statusLabel).toBe('Submitted');
+    expect(a.reviewed).toBe(false);
+    expect(a.topics).toBe('Boundary setting with sister');
+    expect(a.activeParts).toEqual(['The Watcher', 'The Critic']);
+    expect(a.currentStressLevel).toBe(6);
+    expect(a.safetyConcerns).toBe('Client mentioned feeling hopeless this week.');
+  });
+
+  it('marks reviewed agendas correctly and resets client.agendas to empty instead of leaking a prior enrichment through', () => {
+    const reviewed = deriveWorkspaceDetail(base, { analytics: null, notes: [], plans: [], messages: [], agendas: [{ id: 'ag2', status: 'reviewed', session_date: '2026-07-01' }] });
+    expect(reviewed.client.agendas[0].reviewed).toBe(true);
+    expect(reviewed.client.agendas[0].statusLabel).toBe('Reviewed');
+
+    const alreadyEnriched = { ...base, agendas: [{ id: 'stale', topics: 'stale' }] };
+    const { client } = deriveWorkspaceDetail(alreadyEnriched, { analytics: null, notes: [], plans: [], messages: [], agendas: [] });
+    expect(client.agendas).toEqual([]);
+  });
+
   it('derives real between-session activity from data api/analytics/client.js already computes', () => {
     const analytics = {
       assessmentTrajectory: [],
@@ -550,6 +585,14 @@ describe('markWorkspaceNotificationRead / markAllWorkspaceNotificationsRead', ()
     expect(mockMarkReadCalls).toContain('n1');
     await markAllWorkspaceNotificationsRead();
     expect(mockMarkAllReadCalls.length).toBeGreaterThan(0);
+  });
+});
+
+describe('markWorkspaceAgendaReviewed', () => {
+  it('delegates to the real ifs_session_agendas review API', async () => {
+    const { error } = await markWorkspaceAgendaReviewed('ag1');
+    expect(mockMarkAgendaReviewedCalls).toContain('ag1');
+    expect(error).toBeNull();
   });
 });
 
