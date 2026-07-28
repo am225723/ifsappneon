@@ -167,6 +167,25 @@ describe('deriveWorkspaceDetail', () => {
     expect(betrayalOldest.severity).toBe('High'); // >= 18
   });
 
+  it('merges real tertiary wounds and protector types from ifs_assessment_results, matched by retake id', () => {
+    const analytics = {
+      assessmentTrajectory: [
+        { id: 'a1', date: '2026-06-01T00:00:00Z', primaryWound: 'betrayal', secondaryWound: 'helplessness', scores: { abandonment: 6, shame: 5, neglect: 5, betrayal: 20, helplessness: 15 } },
+      ],
+    };
+    const assessmentExtras = [{ id: 'a1', tertiary_wounds: ['shame', 'neglect', 'not-a-real-wound'], protector_types: ['Perfectionist', 'People-pleaser'] }];
+    const { client } = deriveWorkspaceDetail(base, { analytics, notes: [], plans: [], messages: [], assessmentExtras });
+    expect(client.assessmentHistory[0].tertiaryWounds).toEqual(['shame', 'neglect']); // invalid wound filtered out
+    expect(client.assessmentHistory[0].protectorTypes).toEqual(['Perfectionist', 'People-pleaser']);
+  });
+
+  it('leaves tertiaryWounds/protectorTypes empty when no matching extras row exists for a retake', () => {
+    const analytics = { assessmentTrajectory: [{ id: 'a1', date: '2026-06-01T00:00:00Z', scores: {} }] };
+    const { client } = deriveWorkspaceDetail(base, { analytics, notes: [], plans: [], messages: [], assessmentExtras: [] });
+    expect(client.assessmentHistory[0].tertiaryWounds).toEqual([]);
+    expect(client.assessmentHistory[0].protectorTypes).toEqual([]);
+  });
+
   it('resets assessment history to empty on a re-derive that finds no trajectory data', () => {
     const alreadyEnriched = { ...base, assessmentHistory: [{ id: 'stale', subscales: [] }] };
     const { client } = deriveWorkspaceDetail(alreadyEnriched, { analytics: { assessmentTrajectory: [] }, notes: [], plans: [], messages: [] });

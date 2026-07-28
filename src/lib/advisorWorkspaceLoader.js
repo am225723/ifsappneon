@@ -157,7 +157,12 @@ function woundSeverityLabel(score) {
 // One entry per real retake, most recent first, with per-subscale severity
 // and the change from the immediately preceding retake (null on a client's
 // first-ever retake, since there's nothing to compare against).
-function mapAssessmentHistory(assessmentTrajectory) {
+// tertiaryWounds/protectorTypes are real, populated columns on
+// ifs_assessment_results (written by Assessments.jsx on submission,
+// already consumed by AI context builders like api/ai-session-summary.js)
+// that the analytics endpoint's assessmentTrajectory never selects — merged
+// in here from a small dedicated query, matched by the real retake id.
+function mapAssessmentHistory(assessmentTrajectory, extrasById) {
   if (!Array.isArray(assessmentTrajectory) || assessmentTrajectory.length === 0) return [];
   const newestFirst = [...assessmentTrajectory].reverse();
   return newestFirst.map((entry, i) => {
@@ -169,6 +174,7 @@ function mapAssessmentHistory(assessmentTrajectory) {
       const delta = Number.isFinite(prevRaw) ? score - prevRaw : null;
       return { wound, score, severity: woundSeverityLabel(score), delta };
     });
+    const extras = (extrasById || {})[entry.id] || {};
     return {
       id: entry.id || `assessment-${i}`,
       date: entry.date || null,
@@ -176,6 +182,8 @@ function mapAssessmentHistory(assessmentTrajectory) {
       primaryWound: normalizeWound(entry.primaryWound),
       secondaryWound: normalizeWound(entry.secondaryWound),
       subscales,
+      tertiaryWounds: Array.isArray(extras.tertiary_wounds) ? extras.tertiary_wounds.filter((w) => normalizeWound(w)) : [],
+      protectorTypes: Array.isArray(extras.protector_types) ? extras.protector_types : [],
     };
   });
 }
@@ -484,7 +492,7 @@ function mapMessages(rows, clientName) {
 
 // Merge a base client with its loaded detail records. Returns the enriched
 // client plus the note entries that should be appended to `savedNotes`.
-export function deriveWorkspaceDetail(base, { analytics, notes, plans, messages, moduleAnswers, progress, gamification, assignedHomework, freeformHomework, agendas, partRelationships, allParts }) {
+export function deriveWorkspaceDetail(base, { analytics, notes, plans, messages, moduleAnswers, progress, gamification, assignedHomework, freeformHomework, agendas, partRelationships, allParts, assessmentExtras }) {
   const enriched = { ...base, _detailLoaded: true };
   // Set unconditionally (not gated behind a truthiness check) so a pass with
   // no real answers explicitly clears any prior enrichment's qaAnswers
@@ -512,7 +520,8 @@ export function deriveWorkspaceDetail(base, { analytics, notes, plans, messages,
     // Set unconditionally (not nested under `if (assessment)`) so a client
     // with no retakes on this pass gets an explicit [] rather than an empty
     // trajectory silently leaving a prior enrichment's history in place.
-    enriched.assessmentHistory = mapAssessmentHistory(analytics.assessmentTrajectory);
+    const extrasById = Object.fromEntries((assessmentExtras || []).map((row) => [row.id, row]));
+    enriched.assessmentHistory = mapAssessmentHistory(analytics.assessmentTrajectory, extrasById);
     enriched.betweenSession = mapBetweenSession(analytics);
     const hw = analytics.homeworkSummary;
     if (hw) {
@@ -636,6 +645,21 @@ async function loadClientAllParts(clientId) {
   }
 }
 
+async function loadClientAssessmentExtras(clientId) {
+  try {
+    const { data, error } = await supabase
+      .from('ifs_assessment_results')
+      .select('id, tertiary_wounds, protector_types')
+      .eq('client_id', clientId)
+      .order('assessment_date', { ascending: false })
+      .limit(20);
+    if (error) return [];
+    return data || [];
+  } catch {
+    return [];
+  }
+}
+
 const CASELOAD_COLUMNS = 'id, name, pin, email, phone, status, last_active, created_at, user_role, access_restrictions, assignment_status';
 
 export async function loadWorkspaceCaseload(therapistId) {
@@ -680,7 +704,7 @@ export function mergeCaseloadRefresh(prevBaseClients, freshRows) {
 }
 
 export async function loadWorkspaceClientDetail(base, therapistId) {
-  const [analyticsRes, notesRes, plansRes, messages, moduleAnswers, progress, gamification, assignedHomeworkRes, freeformHomework, agendasRes, partRelationshipsRes, allParts] = await Promise.all([
+  const [analyticsRes, notesRes, plansRes, messages, moduleAnswers, progress, gamification, assignedHomeworkRes, freeformHomework, agendasRes, partRelationshipsRes, allParts, assessmentExtras] = await Promise.all([
     loadClientAnalytics({ clientId: base.id, range: 'ALL' }).catch(() => ({ data: null })),
     loadTherapistNotesForClient(base.id).catch(() => ({ data: [] })),
     loadActiveTreatmentPlansForClient(base.id).catch(() => ({ data: [] })),
@@ -693,6 +717,7 @@ export async function loadWorkspaceClientDetail(base, therapistId) {
     loadTherapistClientSessionAgendas(therapistId, base.id).catch(() => ({ data: [] })),
     loadPartRelationships({ clientId: base.id }).catch(() => ({ data: [] })),
     loadClientAllParts(base.id),
+    loadClientAssessmentExtras(base.id),
   ]);
   return deriveWorkspaceDetail(base, {
     analytics: analyticsRes?.data || null,
@@ -707,6 +732,7 @@ export async function loadWorkspaceClientDetail(base, therapistId) {
     agendas: agendasRes?.data || [],
     partRelationships: partRelationshipsRes?.data || [],
     allParts,
+    assessmentExtras,
   });
 }
 

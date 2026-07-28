@@ -221,6 +221,8 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
           deltaLabel: s.delta == null ? 'First retake' : (s.delta > 0 ? `+${s.delta} pts` : `${s.delta} pts`),
           deltaStyle: { fontSize: '11px', fontWeight: 700, color: s.delta == null ? theme.muted : (s.delta > 0 ? theme.riskHighText : (s.delta < 0 ? theme.emerald2 : theme.muted)) },
         })),
+        tertiaryLabels: (entry.tertiaryWounds || []).map((w) => WOUND_META[w]?.label).filter(Boolean),
+        protectorTypes: entry.protectorTypes || [],
       })),
       noAssessmentHistory: !(rawSelected.assessmentHistory || []).length,
       betweenSession: {
@@ -1080,6 +1082,12 @@ function AssessmentHistoryTab({ history, empty }) {
               </div>
             ))}
           </div>
+          {(entry.tertiaryLabels.length > 0 || entry.protectorTypes.length > 0) && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '12px', paddingTop: '12px', borderTop: '1px solid var(--border)' }}>
+              {entry.tertiaryLabels.length > 0 && <div style={{ fontSize: '12px', color: 'var(--text-2)' }}><strong>Tertiary wounds:</strong> {entry.tertiaryLabels.join(', ')}</div>}
+              {entry.protectorTypes.length > 0 && <div style={{ fontSize: '12px', color: 'var(--text-2)' }}><strong>Protector types:</strong> {entry.protectorTypes.join(', ')}</div>}
+            </div>
+          )}
         </div>
       ))}
     </div>
