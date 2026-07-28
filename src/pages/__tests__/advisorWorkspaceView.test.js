@@ -335,6 +335,39 @@ describe('buildView — Part relationships', () => {
   });
 });
 
+describe('buildView — Healing Journey', () => {
+  it('gates the tab for an unassigned client', () => {
+    const v = makeView({ extraClients: [UNASSIGNED_CLIENT], selectedClientId: 'new1' });
+    expect(v.selectedClient.healingTimeline.canView).toBe(false);
+    expect(v.selectedClient.healingTimeline.rows).toEqual([]);
+  });
+
+  it('surfaces loading, error, and populated states from real S.healingTimeline', () => {
+    const loading = makeView({ selectedClientId: 'c1', healingTimeline: { loading: true, data: null, error: '' } });
+    expect(loading.selectedClient.healingTimeline.loading).toBe(true);
+
+    const errored = makeView({ selectedClientId: 'c1', healingTimeline: { loading: false, data: null, error: 'Unable to load your healing timeline.' } });
+    expect(errored.selectedClient.healingTimeline.error).toBe('Unable to load your healing timeline.');
+    expect(errored.selectedClient.healingTimeline.noEvents).toBe(false); // error takes precedence over the empty state
+
+    const populated = makeView({
+      selectedClientId: 'c1',
+      healingTimeline: {
+        loading: false, error: '',
+        data: { summary: { modulesCompleted: 2, checkInsSubmitted: 1, goalsCompleted: 0, partsCreated: 3, journalEntries: 4, moodCheckIns: 5, lifeIntegrationReflections: 0, curriculumReflections: 1 }, timeline: [{ id: 'e1', title: 'You added a new part.', description: 'Noticing more clearly.', source: 'Parts', dateLabel: 'Jul 1' }] },
+      },
+    });
+    expect(populated.selectedClient.healingTimeline.summary.partsCreated).toBe(3);
+    expect(populated.selectedClient.healingTimeline.rows).toHaveLength(1);
+    expect(populated.selectedClient.healingTimeline.noEvents).toBe(false);
+  });
+
+  it('flags noEvents when a real fetch completed with zero milestones', () => {
+    const v = makeView({ selectedClientId: 'c1', healingTimeline: { loading: false, error: '', data: { summary: {}, timeline: [] } } });
+    expect(v.selectedClient.healingTimeline.noEvents).toBe(true);
+  });
+});
+
 describe('buildView — Assessment tertiary wounds & protector types', () => {
   const subscales = ['abandonment', 'shame', 'neglect', 'betrayal', 'helplessness'].map((wound) => ({ wound, score: 5, severity: 'Low', delta: null }));
 
