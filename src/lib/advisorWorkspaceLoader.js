@@ -11,6 +11,7 @@ import { loadAssignedClients, loadAssignedClientsWithStatus, assignClientToThera
 import { loadClientAnalytics } from './clientAnalytics';
 import { loadTherapistNotesForClient, createTherapistNote } from './therapistNotes';
 import { loadActiveTreatmentPlansForClient } from './treatmentPlans';
+import { loadAssignedHomeworkForClient } from './assignedHomework.js';
 import { loadNotifications, markNotificationRead, markAllNotificationsRead } from './notifications.js';
 import { loadSharedLifeIntegrationReflectionsForAdvisor } from './lifeIntegration.js';
 import { normalizeLifeReflection } from './lifeIntegrationDisplay.js';
@@ -106,7 +107,7 @@ export function mapClientRow(row) {
     assessmentHistory: [],
     betweenSession: {
       homeworkFunnel: { totalAssigned: 0, inProgress: 0, completed: 0, reviewed: 0, completionPct: 0, avgDaysToComplete: null },
-      moodEntries: [], moodTrend: [], energyTrend: [], journalWeekly: [],
+      moodEntries: [], moodTrend: [], energyTrend: [], journalWeekly: [], assignments: [],
       hasMoodData: false, hasJournalData: false, hasHomeworkData: false,
     },
     parts: [],
@@ -204,6 +205,29 @@ function mapMbcMeasures(assessmentTrajectory, primaryWound, secondaryWound) {
       baseline, previous, current, history,
     };
   });
+}
+
+const HOMEWORK_STATUS_LABEL = {
+  assigned: 'Assigned', in_progress: 'In progress', completed: 'Completed', reviewed: 'Reviewed', archived: 'Archived',
+};
+
+// The homework funnel below is aggregate counts only. This is the real
+// per-assignment detail (title, instructions, advisor feedback, dates) from
+// the same ifs_assigned_homework rows TherapistHomework.jsx already reads
+// and writes, via the already-existing loadAssignedHomeworkForClient — just
+// not previously surfaced in the workspace.
+function mapAssignedHomeworkDetail(rows) {
+  if (!Array.isArray(rows)) return [];
+  return rows.slice(0, 20).map((row) => ({
+    id: row.id,
+    title: row.title || row.module_id || 'Assigned module',
+    status: row.status || 'assigned',
+    statusLabel: HOMEWORK_STATUS_LABEL[row.status] || row.status || 'Assigned',
+    instructions: row.instructions || '',
+    advisorFeedback: row.therapist_feedback || '',
+    assignedDateLabel: relativeDateLabel(row.assigned_at),
+    completedDateLabel: row.completed_at ? relativeDateLabel(row.completed_at) : '',
+  }));
 }
 
 // Between-session activity from data api/analytics/client.js already computes
@@ -382,7 +406,7 @@ function mapMessages(rows, clientName) {
 
 // Merge a base client with its loaded detail records. Returns the enriched
 // client plus the note entries that should be appended to `savedNotes`.
-export function deriveWorkspaceDetail(base, { analytics, notes, plans, messages, moduleAnswers, progress, gamification }) {
+export function deriveWorkspaceDetail(base, { analytics, notes, plans, messages, moduleAnswers, progress, gamification, assignedHomework }) {
   const enriched = { ...base, _detailLoaded: true };
   // Set unconditionally (not gated behind a truthiness check) so a pass with
   // no real answers explicitly clears any prior enrichment's qaAnswers
@@ -427,6 +451,12 @@ export function deriveWorkspaceDetail(base, { analytics, notes, plans, messages,
 
   if (Array.isArray(plans)) enriched.goals = mapGoals(plans);
   if (Array.isArray(messages)) enriched.messages = mapMessages(messages, base.name);
+
+  // Set unconditionally, on top of whatever betweenSession shape this pass
+  // produced (or the base default when analytics was unavailable), so a re-
+  // derive that finds no assignments explicitly clears a prior enrichment's
+  // list rather than leaking it through.
+  enriched.betweenSession = { ...enriched.betweenSession, assignments: mapAssignedHomeworkDetail(assignedHomework) };
 
   const noteEntries = Array.isArray(notes) ? notes.map((n) => ({ ...mapNoteEntry(n, base.id), clientName: base.name })) : [];
 
@@ -538,7 +568,7 @@ export function mergeCaseloadRefresh(prevBaseClients, freshRows) {
 }
 
 export async function loadWorkspaceClientDetail(base, therapistId) {
-  const [analyticsRes, notesRes, plansRes, messages, moduleAnswers, progress, gamification] = await Promise.all([
+  const [analyticsRes, notesRes, plansRes, messages, moduleAnswers, progress, gamification, assignedHomeworkRes] = await Promise.all([
     loadClientAnalytics({ clientId: base.id, range: 'ALL' }).catch(() => ({ data: null })),
     loadTherapistNotesForClient(base.id).catch(() => ({ data: [] })),
     loadActiveTreatmentPlansForClient(base.id).catch(() => ({ data: [] })),
@@ -546,6 +576,7 @@ export async function loadWorkspaceClientDetail(base, therapistId) {
     loadClientModuleAnswers(base.id),
     loadClientProgressResponses(base.id),
     loadClientGamification(base.id),
+    loadAssignedHomeworkForClient(base.id).catch(() => ({ data: [] })),
   ]);
   return deriveWorkspaceDetail(base, {
     analytics: analyticsRes?.data || null,
@@ -555,6 +586,7 @@ export async function loadWorkspaceClientDetail(base, therapistId) {
     moduleAnswers,
     progress,
     gamification,
+    assignedHomework: assignedHomeworkRes?.data || [],
   });
 }
 

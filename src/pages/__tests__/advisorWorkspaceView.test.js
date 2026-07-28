@@ -470,6 +470,10 @@ describe('buildView — Between Sessions reflects real analytics data', () => {
       moodTrend: [{ week: '2026-W26', value: 3 }, { week: '2026-W28', value: 5 }],
       energyTrend: [{ week: '2026-W26', value: 6 }],
       journalWeekly: [{ week: '2026-W27', count: 2 }],
+      assignments: [
+        { id: 'hw1', title: 'Self-Connection Journal', status: 'reviewed', statusLabel: 'Reviewed', instructions: 'Focus on the abandonment part.', advisorFeedback: 'Great insight.', assignedDateLabel: 'Jun 1', completedDateLabel: 'Jun 5' },
+        { id: 'hw2', title: 'mod-2', status: 'assigned', statusLabel: 'Assigned', instructions: '', advisorFeedback: '', assignedDateLabel: 'Jun 10', completedDateLabel: '' },
+      ],
       hasMoodData: true, hasJournalData: true, hasHomeworkData: true,
     },
   };
@@ -496,6 +500,21 @@ describe('buildView — Between Sessions reflects real analytics data', () => {
     expect(bs.hasHomeworkData).toBe(false);
     expect(bs.noMoodEntries).toBe(true);
     expect(bs.moodTrendBars).toEqual([]);
+    expect(bs.noAssignments).toBe(true);
+    expect(bs.assignmentRows).toEqual([]);
+  });
+
+  it('maps real per-assignment homework detail (title, status, instructions, advisor feedback)', () => {
+    const v = makeView({ extraClients: [CLIENT_WITH_ACTIVITY], selectedClientId: 'bs1' });
+    const bs = v.selectedClient.betweenSession;
+    expect(bs.noAssignments).toBe(false);
+    expect(bs.assignmentRows).toHaveLength(2);
+    expect(bs.assignmentRows[0].title).toBe('Self-Connection Journal');
+    expect(bs.assignmentRows[0].statusLabel).toBe('Reviewed');
+    expect(bs.assignmentRows[0].instructions).toBe('Focus on the abandonment part.');
+    expect(bs.assignmentRows[0].advisorFeedback).toBe('Great insight.');
+    expect(bs.assignmentRows[0].dateLabel).toBe('Completed Jun 5');
+    expect(bs.assignmentRows[1].dateLabel).toBe('Assigned Jun 10');
   });
 });
 
