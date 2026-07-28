@@ -374,6 +374,13 @@ describe('deriveWorkspaceDetail', () => {
     expect(client.partRelationships).toEqual([]);
   });
 
+  it('does not silently drop relationships beyond a fixed cap', () => {
+    const partRelationships = Array.from({ length: 25 }, (_, i) => ({ id: `r${i}`, from_part_id: 'p1', to_part_id: 'p2', relationship_type: 'unknown' }));
+    const allParts = [{ id: 'p1', name: 'A' }, { id: 'p2', name: 'B' }];
+    const { client } = deriveWorkspaceDetail(base, { analytics: null, notes: [], plans: [], messages: [], partRelationships, allParts });
+    expect(client.partRelationships).toHaveLength(25);
+  });
+
   it('derives real between-session activity from data api/analytics/client.js already computes', () => {
     const analytics = {
       assessmentTrajectory: [],

@@ -298,7 +298,7 @@ const RELATIONSHIP_TYPE_LABEL = {
 function mapPartRelationships(rows, partsRows) {
   if (!Array.isArray(rows)) return [];
   const nameById = new Map((partsRows || []).map((p) => [String(p.id), p.name || p.part_name || 'Unnamed part']));
-  return rows.slice(0, 20).map((row) => ({
+  return rows.map((row) => ({
     id: row.id,
     fromName: nameById.get(String(row.from_part_id)) || 'Unknown part',
     toName: nameById.get(String(row.to_part_id)) || 'Unknown part',
