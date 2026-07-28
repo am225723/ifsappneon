@@ -166,7 +166,7 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
     // derived field) — fall back to a neutral empty shape rather than crash.
     const rawBS = rawSelected.betweenSession || {
       homeworkFunnel: { totalAssigned: 0, inProgress: 0, completed: 0, reviewed: 0, completionPct: 0, avgDaysToComplete: null },
-      moodEntries: [], moodTrend: [], energyTrend: [], journalWeekly: [],
+      moodEntries: [], moodTrend: [], energyTrend: [], journalWeekly: [], assignments: [],
       hasMoodData: false, hasJournalData: false, hasHomeworkData: false,
     };
     const funnelSteps = [
@@ -240,6 +240,12 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
         energyTrendBars: rawBS.energyTrend.map((w) => ({ week: w.week, style: sparkBar(w.value || 0, energyMax, theme.emerald2 + '55') })),
         journalWeeklyBars: rawBS.journalWeekly.map((w) => ({ week: w.week, style: sparkBar(w.count || 0, journalMax, '#0d948855') })),
         hasJournalData: rawBS.hasJournalData,
+        assignmentRows: (rawBS.assignments || []).map((a) => ({
+          id: a.id, title: a.title, statusLabel: a.statusLabel, instructions: a.instructions, advisorFeedback: a.advisorFeedback,
+          statusChip: severityStyle(theme, a.status === 'completed' || a.status === 'reviewed' ? 'low' : 'medium'),
+          dateLabel: a.completedDateLabel ? `Completed ${a.completedDateLabel}` : `Assigned ${a.assignedDateLabel}`,
+        })),
+        noAssignments: !(rawBS.assignments || []).length,
       },
       snapshot: {
         loading: !!sessionSnapshot.loading,
@@ -1226,6 +1232,27 @@ function BetweenSessionTab({ bs }) {
         <TrendChart title="Weekly mood (1–5)" bars={bs.moodTrendBars} noDataLabel="No mood check-ins recorded yet." />
         <TrendChart title="Weekly energy (1–10)" bars={bs.energyTrendBars} noDataLabel="No energy check-ins recorded yet." />
         <TrendChart title="Weekly journal entries" bars={bs.journalWeeklyBars} noDataLabel="No journal entries recorded yet." />
+      </div>
+
+      <div style={CARD}>
+        <span style={{ ...FR, fontSize: '15px' }}>Recent assignments</span>
+        {bs.noAssignments ? (
+          <p style={{ marginTop: '12px', fontSize: '12.5px', color: 'var(--muted)' }}>No curriculum modules assigned yet.</p>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '14px' }}>
+            {bs.assignmentRows.map((a) => (
+              <div key={a.id} style={{ padding: '12px 14px', borderRadius: '14px', background: 'var(--surface-2)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text)' }}>{a.title}</span>
+                  <span style={a.statusChip}>{a.statusLabel}</span>
+                </div>
+                <div style={{ fontSize: '11.5px', color: 'var(--muted)', marginTop: '3px' }}>{a.dateLabel}</div>
+                {a.instructions && <div style={{ fontSize: '12.5px', color: 'var(--text-2)', marginTop: '6px', lineHeight: 1.5 }}>{a.instructions}</div>}
+                {a.advisorFeedback && <div style={{ fontSize: '12px', color: 'var(--text-2)', marginTop: '6px', lineHeight: 1.5 }}><strong>Advisor feedback:</strong> {a.advisorFeedback}</div>}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       <div style={CARD}>

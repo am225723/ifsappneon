@@ -267,6 +267,29 @@ describe('deriveWorkspaceDetail', () => {
     expect(client.level).toBe(1);
   });
 
+  it('maps real ifs_assigned_homework rows into betweenSession.assignments with real title/status/instructions/feedback', () => {
+    const assignedHomework = [
+      { id: 'hw1', title: 'Self-Connection Journal', module_id: 'mod-1', status: 'reviewed', instructions: 'Focus on the abandonment part.', therapist_feedback: 'Great insight this week.', assigned_at: '2026-06-01T00:00:00Z', completed_at: '2026-06-05T00:00:00Z' },
+      { id: 'hw2', module_id: 'mod-2', status: 'assigned', assigned_at: '2026-06-10T00:00:00Z' },
+    ];
+    const { client } = deriveWorkspaceDetail(base, { analytics: null, notes: [], plans: [], messages: [], assignedHomework });
+    expect(client.betweenSession.assignments).toHaveLength(2);
+    const [reviewed, assigned] = client.betweenSession.assignments;
+    expect(reviewed.title).toBe('Self-Connection Journal');
+    expect(reviewed.statusLabel).toBe('Reviewed');
+    expect(reviewed.instructions).toBe('Focus on the abandonment part.');
+    expect(reviewed.advisorFeedback).toBe('Great insight this week.');
+    expect(assigned.title).toBe('mod-2'); // falls back to module_id when no title was set
+    expect(assigned.statusLabel).toBe('Assigned');
+    expect(assigned.advisorFeedback).toBe('');
+  });
+
+  it('resets betweenSession.assignments to empty instead of leaking a prior enrichment through when a re-derive finds none', () => {
+    const alreadyEnriched = { ...base, betweenSession: { ...base.betweenSession, assignments: [{ id: 'stale', title: 'stale' }] } };
+    const { client } = deriveWorkspaceDetail(alreadyEnriched, { analytics: null, notes: [], plans: [], messages: [], assignedHomework: [] });
+    expect(client.betweenSession.assignments).toEqual([]);
+  });
+
   it('derives real between-session activity from data api/analytics/client.js already computes', () => {
     const analytics = {
       assessmentTrajectory: [],
