@@ -315,6 +315,26 @@ describe('buildView — Session Prep surfaces real session agendas', () => {
   });
 });
 
+describe('buildView — Part relationships', () => {
+  it('surfaces real part relationships and flags noPartRelationships false', () => {
+    const client = {
+      ...CLIENTS[0], id: 'pr1',
+      partRelationships: [{ id: 'r1', fromName: 'The Watcher', toName: 'The Wounded Child', typeLabel: 'protects', label: '', description: 'Shows up first in conflict.' }],
+    };
+    const v = makeView({ extraClients: [client], selectedClientId: 'pr1' });
+    const sc = v.selectedClient;
+    expect(sc.noPartRelationships).toBe(false);
+    expect(sc.partRelationships[0].fromName).toBe('The Watcher');
+    expect(sc.partRelationships[0].description).toBe('Shows up first in conflict.');
+  });
+
+  it('flags noPartRelationships true for a client with none, and normalizes a missing field to an empty array', () => {
+    const v = makeView({ selectedClientId: 'c1' }); // demo seed client has no partRelationships field
+    expect(v.selectedClient.partRelationships).toEqual([]);
+    expect(v.selectedClient.noPartRelationships).toBe(true);
+  });
+});
+
 describe('buildView — AI Session Snapshot', () => {
   it('surfaces loading/error state and only offers copy once a snapshot exists', () => {
     const idle = makeView({ selectedClientId: 'c1' });

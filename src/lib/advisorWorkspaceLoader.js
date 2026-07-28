@@ -13,6 +13,7 @@ import { loadTherapistNotesForClient, createTherapistNote } from './therapistNot
 import { loadActiveTreatmentPlansForClient } from './treatmentPlans';
 import { loadAssignedHomeworkForClient } from './assignedHomework.js';
 import { loadTherapistClientSessionAgendas, markSessionAgendaReviewed } from './sessionAgendas.js';
+import { loadPartRelationships } from './partRelationships.js';
 import { loadNotifications, markNotificationRead, markAllNotificationsRead } from './notifications.js';
 import { loadSharedLifeIntegrationReflectionsForAdvisor } from './lifeIntegration.js';
 import { normalizeLifeReflection } from './lifeIntegrationDisplay.js';
@@ -101,6 +102,7 @@ export function mapClientRow(row) {
     goals: [],
     pendingReview: null,
     agendas: [],
+    partRelationships: [],
     session: { when: 'No upcoming session scheduled', status: 'none' },
     recentActivity: [],
     qaAnswers: [],
@@ -282,6 +284,30 @@ function mapSessionAgendas(rows) {
   }));
 }
 
+const RELATIONSHIP_TYPE_LABEL = {
+  close_to: 'is close to', protects: 'protects', concerned_about: 'is concerned about',
+  polarized_with: 'is polarized with', supports: 'supports', needs_space_from: 'needs space from', unknown: 'relates to',
+};
+
+// ifs_part_relationships is a real, actively client-authored table (via
+// PartsRelationshipMap.jsx's "Inner System Map") with zero Advisor-side
+// consumer anywhere in the app today. from_part_id/to_part_id are resolved
+// against the client's full parts list (not just the small "recently
+// updated" subset the Parts tab already shows) since a relationship can
+// reference a part outside that subset.
+function mapPartRelationships(rows, partsRows) {
+  if (!Array.isArray(rows)) return [];
+  const nameById = new Map((partsRows || []).map((p) => [String(p.id), p.name || p.part_name || 'Unnamed part']));
+  return rows.slice(0, 20).map((row) => ({
+    id: row.id,
+    fromName: nameById.get(String(row.from_part_id)) || 'Unknown part',
+    toName: nameById.get(String(row.to_part_id)) || 'Unknown part',
+    typeLabel: RELATIONSHIP_TYPE_LABEL[row.relationship_type] || 'relates to',
+    label: row.label || '',
+    description: row.description || '',
+  }));
+}
+
 // Between-session activity from data api/analytics/client.js already computes
 // but the workspace previously discarded: the real homework funnel (only
 // completionPct/completedCount were ever used elsewhere), raw mood entries,
@@ -458,7 +484,7 @@ function mapMessages(rows, clientName) {
 
 // Merge a base client with its loaded detail records. Returns the enriched
 // client plus the note entries that should be appended to `savedNotes`.
-export function deriveWorkspaceDetail(base, { analytics, notes, plans, messages, moduleAnswers, progress, gamification, assignedHomework, freeformHomework, agendas }) {
+export function deriveWorkspaceDetail(base, { analytics, notes, plans, messages, moduleAnswers, progress, gamification, assignedHomework, freeformHomework, agendas, partRelationships, allParts }) {
   const enriched = { ...base, _detailLoaded: true };
   // Set unconditionally (not gated behind a truthiness check) so a pass with
   // no real answers explicitly clears any prior enrichment's qaAnswers
@@ -468,6 +494,7 @@ export function deriveWorkspaceDetail(base, { analytics, notes, plans, messages,
   enriched.streak = gam.streak;
   enriched.level = gam.level;
   enriched.agendas = mapSessionAgendas(agendas);
+  enriched.partRelationships = mapPartRelationships(partRelationships, allParts);
 
   if (analytics) {
     const assessment = mapAssessment(analytics.assessmentTrajectory);
@@ -596,6 +623,19 @@ async function loadClientFreeformHomework(clientId) {
   }
 }
 
+async function loadClientAllParts(clientId) {
+  try {
+    const { data, error } = await supabase
+      .from('ifs_parts')
+      .select('id, name, part_name')
+      .eq('client_id', clientId);
+    if (error) return [];
+    return data || [];
+  } catch {
+    return [];
+  }
+}
+
 const CASELOAD_COLUMNS = 'id, name, pin, email, phone, status, last_active, created_at, user_role, access_restrictions, assignment_status';
 
 export async function loadWorkspaceCaseload(therapistId) {
@@ -640,7 +680,7 @@ export function mergeCaseloadRefresh(prevBaseClients, freshRows) {
 }
 
 export async function loadWorkspaceClientDetail(base, therapistId) {
-  const [analyticsRes, notesRes, plansRes, messages, moduleAnswers, progress, gamification, assignedHomeworkRes, freeformHomework, agendasRes] = await Promise.all([
+  const [analyticsRes, notesRes, plansRes, messages, moduleAnswers, progress, gamification, assignedHomeworkRes, freeformHomework, agendasRes, partRelationshipsRes, allParts] = await Promise.all([
     loadClientAnalytics({ clientId: base.id, range: 'ALL' }).catch(() => ({ data: null })),
     loadTherapistNotesForClient(base.id).catch(() => ({ data: [] })),
     loadActiveTreatmentPlansForClient(base.id).catch(() => ({ data: [] })),
@@ -651,6 +691,8 @@ export async function loadWorkspaceClientDetail(base, therapistId) {
     loadAssignedHomeworkForClient(base.id).catch(() => ({ data: [] })),
     loadClientFreeformHomework(base.id),
     loadTherapistClientSessionAgendas(therapistId, base.id).catch(() => ({ data: [] })),
+    loadPartRelationships({ clientId: base.id }).catch(() => ({ data: [] })),
+    loadClientAllParts(base.id),
   ]);
   return deriveWorkspaceDetail(base, {
     analytics: analyticsRes?.data || null,
@@ -663,6 +705,8 @@ export async function loadWorkspaceClientDetail(base, therapistId) {
     assignedHomework: assignedHomeworkRes?.data || [],
     freeformHomework,
     agendas: agendasRes?.data || [],
+    partRelationships: partRelationshipsRes?.data || [],
+    allParts,
   });
 }
 

@@ -285,6 +285,8 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
         noReflections: canWrite && !lifeReflectionsLoading && lifeReflections.length === 0,
       },
       parts: rawSelected.parts.map((p) => ({ ...p, catChip: partChip(p.category, isDark), catLabel: PART_CAT_META[p.category].label, barStyle: { width: p.activation + '%', height: '100%', borderRadius: '4px', background: PART_CAT_META[p.category].color } })),
+      partRelationships: Array.isArray(rawSelected.partRelationships) ? rawSelected.partRelationships : [],
+      noPartRelationships: !(rawSelected.partRelationships || []).length,
       clientPractices: assignedPractices.filter((a) => a.clientName === rawSelected.name),
       noPractices: !assignedPractices.some((a) => a.clientName === rawSelected.name),
       safety: {
@@ -897,7 +899,28 @@ function ClientsCaseload({ v }) {
           )}
           {v.isClientTabPlan && <PlanCard plan={sc.plan} onOpen={sc.onOpenPlan} secondaryBtnStyle={v.secondaryBtnStyle} />}
           {v.isClientTabMbc && <MbcCards mbc={sc.mbc} />}
-          {v.isClientTabParts && <PartsGrid parts={sc.parts} cols={2} showClient={false} />}
+          {v.isClientTabParts && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <PartsGrid parts={sc.parts} cols={2} showClient={false} />
+              <div style={CARD}>
+                <span style={{ ...FR, fontSize: '15px' }}>Part relationships</span>
+                <div style={{ fontSize: '12px', color: 'var(--muted)', marginTop: '4px' }}>How this client has mapped their parts to each other in their Inner System Map.</div>
+                {sc.noPartRelationships ? (
+                  <p style={{ marginTop: '12px', fontSize: '12.5px', color: 'var(--muted)' }}>No part relationships mapped yet.</p>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '14px' }}>
+                    {sc.partRelationships.map((r) => (
+                      <div key={r.id} style={{ padding: '12px 14px', borderRadius: '14px', background: 'var(--surface-2)' }}>
+                        <div style={{ fontSize: '13px', color: 'var(--text)' }}><strong>{r.fromName}</strong> {r.typeLabel} <strong>{r.toName}</strong></div>
+                        {r.label && <div style={{ fontSize: '12px', color: 'var(--text-2)', marginTop: '4px' }}>{r.label}</div>}
+                        {r.description && <div style={{ fontSize: '12px', color: 'var(--text-2)', marginTop: '4px', lineHeight: 1.5 }}>{r.description}</div>}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
           {v.isClientTabPractices && (
             <div style={CARD}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
