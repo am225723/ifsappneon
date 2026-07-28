@@ -287,6 +287,34 @@ describe('buildView — check-in & module response answers (qaAnswers)', () => {
   });
 });
 
+describe('buildView — Session Prep surfaces real session agendas', () => {
+  const CLIENT_WITH_AGENDA = {
+    ...CLIENTS[0], id: 'sp1', name: 'Agenda Test', session: { when: 'Tomorrow, 2:00 PM', status: 'submitted' },
+    agendas: [
+      { id: 'ag1', dateLabel: 'Jul 20', statusLabel: 'Submitted', reviewed: false, topics: 'Boundary setting', activeParts: ['The Watcher'], stuckPoints: 'Not sure how to start.', goalsForSession: 'Practice saying no.', currentStressLevel: 6, currentMoodLabel: 'Anxious', safetyConcerns: '' },
+    ],
+  };
+
+  it('maps real agenda fields into prepList and routes onMarkReviewed with the client and agenda id', () => {
+    const calls = [];
+    const S = { ...INITIAL_STATE, extraClients: [CLIENT_WITH_AGENDA] };
+    const theme = LIGHT;
+    const allClients = () => CLIENTS.concat(S.extraClients || []).filter((c) => !S.deletedIds[c.id]);
+    const buildTreatmentPlan = (client) => ({ clientName: client.name, phases: [], currentPhaseLabel: '', currentPhaseDesc: '', milestones: [] });
+    const handlers = new Proxy(
+      { isGroupExpanded: () => false, onMarkAgendaReviewed: (clientId, agendaId) => calls.push([clientId, agendaId]) },
+      { get: (target, prop) => target[prop] || (() => {}) },
+    );
+    const v = buildView({ S, theme, allClients, buildTreatmentPlan, handlers, isAdmin: true });
+    const prep = v.prepList.find((p) => p.id === 'sp1');
+    expect(prep.agendas).toHaveLength(1);
+    expect(prep.agendas[0].topics).toBe('Boundary setting');
+    expect(prep.agendas[0].currentStressLevel).toBe(6);
+    prep.agendas[0].onMarkReviewed();
+    expect(calls).toEqual([['sp1', 'ag1']]);
+  });
+});
+
 describe('buildView — AI Session Snapshot', () => {
   it('surfaces loading/error state and only offers copy once a snapshot exists', () => {
     const idle = makeView({ selectedClientId: 'c1' });
