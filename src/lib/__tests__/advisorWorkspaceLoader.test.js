@@ -353,6 +353,34 @@ describe('deriveWorkspaceDetail', () => {
     expect(client.agendas).toEqual([]);
   });
 
+  it('maps real ifs_part_relationships rows, resolving part ids to names from the full parts list', () => {
+    const partRelationships = [
+      { id: 'r1', from_part_id: 'p1', to_part_id: 'p2', relationship_type: 'protects', label: 'Protective bond', description: 'Shows up first in conflict.' },
+      { id: 'r2', from_part_id: 'p1', to_part_id: 'p99', relationship_type: 'polarized_with' },
+    ];
+    const allParts = [{ id: 'p1', name: 'The Watcher' }, { id: 'p2', part_name: 'The Wounded Child' }];
+    const { client } = deriveWorkspaceDetail(base, { analytics: null, notes: [], plans: [], messages: [], partRelationships, allParts });
+    expect(client.partRelationships).toHaveLength(2);
+    expect(client.partRelationships[0].fromName).toBe('The Watcher');
+    expect(client.partRelationships[0].toName).toBe('The Wounded Child');
+    expect(client.partRelationships[0].typeLabel).toBe('protects');
+    expect(client.partRelationships[0].label).toBe('Protective bond');
+    expect(client.partRelationships[1].toName).toBe('Unknown part'); // p99 not in allParts
+  });
+
+  it('resets partRelationships to empty instead of leaking a prior enrichment through when a re-derive finds none', () => {
+    const alreadyEnriched = { ...base, partRelationships: [{ id: 'stale', fromName: 'stale' }] };
+    const { client } = deriveWorkspaceDetail(alreadyEnriched, { analytics: null, notes: [], plans: [], messages: [], partRelationships: [], allParts: [] });
+    expect(client.partRelationships).toEqual([]);
+  });
+
+  it('does not silently drop relationships beyond a fixed cap', () => {
+    const partRelationships = Array.from({ length: 25 }, (_, i) => ({ id: `r${i}`, from_part_id: 'p1', to_part_id: 'p2', relationship_type: 'unknown' }));
+    const allParts = [{ id: 'p1', name: 'A' }, { id: 'p2', name: 'B' }];
+    const { client } = deriveWorkspaceDetail(base, { analytics: null, notes: [], plans: [], messages: [], partRelationships, allParts });
+    expect(client.partRelationships).toHaveLength(25);
+  });
+
   it('derives real between-session activity from data api/analytics/client.js already computes', () => {
     const analytics = {
       assessmentTrajectory: [],
