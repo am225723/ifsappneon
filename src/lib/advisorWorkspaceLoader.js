@@ -17,6 +17,7 @@ import { loadPartRelationships } from './partRelationships.js';
 import { loadNotifications, markNotificationRead, markAllNotificationsRead } from './notifications.js';
 import { loadSharedLifeIntegrationReflectionsForAdvisor } from './lifeIntegration.js';
 import { normalizeLifeReflection } from './lifeIntegrationDisplay.js';
+import { loadHealingTimeline } from './healingTimeline.js';
 import { summarizeInteractiveResponses } from './interactiveWorksheetSummary.js';
 import { supabase } from './supabase';
 import { getClerkToken } from './apiAuth.js';
@@ -858,6 +859,50 @@ export async function loadWorkspaceLifeReflections(clientId) {
     return (Array.isArray(data) ? data : []).map(normalizeLifeReflection);
   } catch {
     return [];
+  }
+}
+
+// The client-facing Healing Timeline (/healing-timeline, api/healing-timeline/
+// client.js) already computes a richer, weekly-narrative milestone feed —
+// summary stats plus per-event title/description/source — from real data
+// (parts created, homework, session agendas, treatment goals, journals,
+// mood check-ins, Life Integration reflections, curriculum reflections).
+// It's distinct from the workspace's existing unified activity timeline (a
+// flat, capped, hand-curated feed) and already accepts an arbitrary
+// clientId with the same requireTherapistAssignment auth every other
+// workspace endpoint uses — it just never had an Advisor-side consumer.
+function mapHealingTimeline(raw) {
+  if (!raw) return null;
+  const summary = raw.summary || {};
+  return {
+    summary: {
+      modulesCompleted: summary.modulesCompleted || 0,
+      checkInsSubmitted: summary.checkInsSubmitted || 0,
+      goalsCompleted: summary.goalsCompleted || 0,
+      partsCreated: summary.partsCreated || 0,
+      journalEntries: summary.journalEntries || 0,
+      moodCheckIns: summary.moodCheckIns || 0,
+      lifeIntegrationReflections: summary.lifeIntegrationReflections || 0,
+      curriculumReflections: summary.curriculumReflections || 0,
+    },
+    timeline: (Array.isArray(raw.timeline) ? raw.timeline : []).map((item) => ({
+      id: item.id,
+      title: item.title || '',
+      description: item.description || '',
+      source: item.source || '',
+      dateLabel: relativeDateLabel(item.date),
+    })),
+  };
+}
+
+export async function loadWorkspaceHealingTimeline(clientId, range = 'ALL') {
+  if (!clientId) return { data: null, error: 'Missing client id' };
+  try {
+    const { data, error } = await loadHealingTimeline({ clientId, range });
+    if (error) return { data: null, error: typeof error === 'string' ? error : 'Unable to load healing timeline.' };
+    return { data: mapHealingTimeline(data), error: null };
+  } catch {
+    return { data: null, error: 'Unable to load healing timeline.' };
   }
 }
 

@@ -8,7 +8,7 @@ import {
   loadWorkspaceCaseload, loadWorkspaceCaseloadWithStatus, loadWorkspaceClientDetail, sendWorkspaceMessage, persistTherapistNote,
   claimWorkspaceClient, mergeCaseloadRefresh, generateWorkspaceReport, loadWorkspaceReports,
   loadWorkspaceNotifications, markWorkspaceNotificationRead, markAllWorkspaceNotificationsRead,
-  loadWorkspaceLifeReflections, buildClientReportHtml, markWorkspaceAgendaReviewed,
+  loadWorkspaceLifeReflections, buildClientReportHtml, markWorkspaceAgendaReviewed, loadWorkspaceHealingTimeline,
 } from '../lib/advisorWorkspaceLoader.js';
 import { loadAdvisorSessionSnapshot } from '../lib/unifiedGuidance.js';
 import { generateSessionPrepSummary } from '../lib/sessionPrepSummary.js';
@@ -49,6 +49,7 @@ export const INITIAL_STATE = {
   sessionSnapshot: { loading: false, data: null, error: '' },
   changeSummary: { loading: false, data: null, error: '' },
   lifeReflections: [], lifeReflectionsLoading: false,
+  healingTimeline: { loading: false, data: null, error: '' },
   accessOverrides: {}, settingsAccent: 'amber',
   extraClients: [], deletedIds: {},
   showNewClientForm: false, newClientForm: { name: '', email: '', phone: '', sendEmail: true }, newClientResult: null,
@@ -81,6 +82,7 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
   const reportsLoadedFor = useRef(null);
   const notificationsLoaded = useRef(false);
   const lifeReflectionsLoadedFor = useRef(null);
+  const healingTimelineLoadedFor = useRef(null);
   // Generation guard: bumped on therapist change / unmount so stale in-flight
   // detail merges are ignored without cancelling still-valid sibling requests.
   const genRef = useRef(0);
@@ -221,11 +223,13 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
     snapshotGenRef.current += 1;
     changeSummaryGenRef.current += 1;
     lifeReflectionsLoadedFor.current = null;
+    healingTimelineLoadedFor.current = null;
     set({
       selectedClientId: id, activeTab: 'clients-caseload', activeClientTab: 'overview',
       sessionSnapshot: { loading: false, data: null, error: '' },
       changeSummary: { loading: false, data: null, error: '' },
       lifeReflections: [], lifeReflectionsLoading: false,
+      healingTimeline: { loading: false, data: null, error: '' },
     });
   };
   const setClientTab = (id) => set({ activeClientTab: id });
@@ -499,6 +503,24 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
     let isCanceled = false;
     loadWorkspaceLifeReflections(S.selectedClientId).then((rows) => {
       if (!isCanceled) set({ lifeReflections: rows, lifeReflectionsLoading: false });
+    });
+    return () => {
+      isCanceled = true;
+    };
+  }, [isDemo, loadPhase, S.activeClientTab, S.selectedClientId]);
+
+  // Lazily load a client's real Healing Timeline the first time that tab is
+  // opened — the same real, richer milestone feed the client-facing
+  // /healing-timeline page already computes, just not previously reachable
+  // from the Advisor Workspace.
+  useEffect(() => {
+    if (isDemo || loadPhase !== 'ready' || S.activeClientTab !== 'healingJourney' || !S.selectedClientId) return;
+    if (healingTimelineLoadedFor.current === S.selectedClientId) return;
+    healingTimelineLoadedFor.current = S.selectedClientId;
+    set({ healingTimeline: { loading: true, data: null, error: '' } });
+    let isCanceled = false;
+    loadWorkspaceHealingTimeline(S.selectedClientId).then(({ data, error }) => {
+      if (!isCanceled) set({ healingTimeline: { loading: false, data, error: error || '' } });
     });
     return () => {
       isCanceled = true;

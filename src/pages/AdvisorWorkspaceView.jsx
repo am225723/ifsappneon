@@ -14,7 +14,7 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
     assignedLessons, coTherapyShare, coTherapyMessage, coTherapyThread, reports, settingsToggles, clientMessages,
     clientMessageDraft, activeThreadId, safetyOverrides, engagementDismissed, partsClientFilter, tasks, taskFilter,
     newTaskTitle, newTaskClientId, docForm, docSources, generatedDoc, docGenerating, docError, clientReports, clientReportsLoading, deletedMessageIdx,
-    sessionSnapshot, changeSummary, lifeReflections, lifeReflectionsLoading,
+    sessionSnapshot, changeSummary, lifeReflections, lifeReflectionsLoading, healingTimeline,
   } = S;
 
   const rootStyle = {
@@ -286,6 +286,14 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
         })) : [],
         noReflections: canWrite && !lifeReflectionsLoading && lifeReflections.length === 0,
       },
+      healingTimeline: {
+        loading: !!healingTimeline.loading,
+        error: healingTimeline.error || '',
+        canView: canWrite,
+        summary: healingTimeline.data?.summary || null,
+        rows: canWrite ? (healingTimeline.data?.timeline || []) : [],
+        noEvents: canWrite && !healingTimeline.loading && !healingTimeline.error && (healingTimeline.data?.timeline || []).length === 0,
+      },
       parts: rawSelected.parts.map((p) => ({ ...p, catChip: partChip(p.category, isDark), catLabel: PART_CAT_META[p.category].label, barStyle: { width: p.activation + '%', height: '100%', borderRadius: '4px', background: PART_CAT_META[p.category].color } })),
       partRelationships: Array.isArray(rawSelected.partRelationships) ? rawSelected.partRelationships : [],
       noPartRelationships: !Array.isArray(rawSelected.partRelationships) || rawSelected.partRelationships.length === 0,
@@ -507,6 +515,7 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
     isMessages: activeTab === 'messages', isNotifications: activeTab === 'notifications', isTasks: activeTab === 'tasks',
     isClientTabSnapshot: activeClientTab === 'snapshot', isClientTabChangeSummary: activeClientTab === 'changeSummary',
     isClientTabBetweenSession: activeClientTab === 'betweenSession', isClientTabLifeReflections: activeClientTab === 'lifeReflections',
+    isClientTabHealingJourney: activeClientTab === 'healingJourney',
     isClinicalNotes: activeTab === 'clinical-notes', isClinicalPlans: activeTab === 'clinical-plans', isClinicalMbc: activeTab === 'clinical-mbc', isClinicalParts: activeTab === 'clinical-parts',
     isClinicalPractice: activeTab === 'clinical-practice', isClinicalPracticeInteractive: activeTab === 'clinical-practice-interactive',
     isClinicalLessons: activeTab === 'clinical-lessons', isClinicalCurriculumBuilder: activeTab === 'clinical-curriculum-builder', isClinicalDocs: activeTab === 'clinical-docs',
@@ -864,6 +873,7 @@ function ClientsCaseload({ v }) {
           {v.isClientTabChangeSummary && <ChangeSummaryTab changeSummary={sc.changeSummary} primaryBtnStyle={v.primaryBtnStyle} />}
           {v.isClientTabBetweenSession && <BetweenSessionTab bs={sc.betweenSession} />}
           {v.isClientTabLifeReflections && <LifeReflectionsTab lr={sc.lifeReflections} onClaim={sc.onClaim} />}
+          {v.isClientTabHealingJourney && <HealingJourneyTab ht={sc.healingTimeline} onClaim={sc.onClaim} />}
           {v.isClientTabTimeline && (
             <div style={CARD}>
               <span style={{ ...FR, fontSize: '15px' }}>Unified timeline</span>
@@ -1382,6 +1392,56 @@ function LifeReflectionsTab({ lr, onClaim }) {
               </div>
             ))}
           </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+const HEALING_SUMMARY_LABELS = [
+  ['modulesCompleted', 'Modules completed'], ['checkInsSubmitted', 'Check-ins submitted'], ['goalsCompleted', 'Goals completed'],
+  ['partsCreated', 'Parts created'], ['journalEntries', 'Journal entries'], ['moodCheckIns', 'Mood check-ins'],
+  ['lifeIntegrationReflections', 'Life Integration reflections'], ['curriculumReflections', 'Curriculum reflections'],
+];
+
+function HealingJourneyTab({ ht, onClaim }) {
+  if (!ht.canView) {
+    return (
+      <div style={CARD}>
+        <span style={{ ...FR, fontSize: '15px' }}>Healing Journey</span>
+        <div style={{ marginTop: '14px', padding: '12px 14px', borderRadius: '14px', background: 'var(--risk-med-bg)', border: '1px solid var(--risk-med-border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
+          <span style={{ fontSize: '12.5px', color: 'var(--risk-med-text)' }}>Add this client to your caseload to view their healing journey.</span>
+          {onClaim && <button type="button" onClick={onClaim} style={{ fontSize: '11px', fontWeight: 700, padding: '8px 10px', borderRadius: '10px', border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text-2)', cursor: 'pointer', fontFamily: 'inherit' }}>Add to my caseload</button>}
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+      <div style={{ fontSize: '12px', color: 'var(--muted)', padding: '2px 2px 0' }}>
+        A gentler, milestone-oriented view of this client's progress — the same real activity the client sees on their own Healing Timeline.
+      </div>
+      {ht.loading && <div style={{ ...CARD, textAlign: 'center', color: 'var(--muted)', fontSize: '13px' }}>Loading healing timeline…</div>}
+      {ht.error && <div style={{ ...CARD, textAlign: 'center', color: 'var(--risk-high-text)', fontSize: '13px' }}>{ht.error}</div>}
+      {ht.summary && (
+        <div style={{ ...CARD, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px,1fr))', gap: '14px' }}>
+          {HEALING_SUMMARY_LABELS.map(([key, label]) => (
+            <div key={key}>
+              <div style={{ fontSize: '19px', fontWeight: 700, color: 'var(--text)' }}>{ht.summary[key]}</div>
+              <div style={{ fontSize: '11.5px', color: 'var(--muted)' }}>{label}</div>
+            </div>
+          ))}
+        </div>
+      )}
+      {ht.noEvents && <div style={{ ...CARD, textAlign: 'center', color: 'var(--muted)', fontSize: '13px' }}>No milestones recorded yet for this client.</div>}
+      {ht.rows.map((e) => (
+        <div key={e.id} style={CARD}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
+            <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text)' }}>{e.title}</span>
+            <span style={{ fontSize: '11.5px', color: 'var(--muted)' }}>{e.dateLabel}</span>
+          </div>
+          {e.description && <div style={{ fontSize: '12.5px', color: 'var(--text-2)', marginTop: '6px', lineHeight: 1.5 }}>{e.description}</div>}
+          {e.source && <div style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '6px' }}>{e.source}</div>}
         </div>
       ))}
     </div>

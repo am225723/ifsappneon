@@ -41,10 +41,15 @@ vi.mock('../sessionAgendas.js', () => ({
   markSessionAgendaReviewed: async (agendaId) => { mockMarkAgendaReviewedCalls.push(agendaId); return { data: { id: agendaId, status: 'reviewed' }, error: null }; },
 }));
 
+let mockHealingTimelineResult = { data: null, error: null };
+vi.mock('../healingTimeline.js', () => ({
+  loadHealingTimeline: async () => mockHealingTimelineResult,
+}));
+
 const {
   initialsFrom, daysSince, mapClientRow, mapNoteEntry, deriveWorkspaceDetail, WORKSPACE_WOUNDS, mergeCaseloadRefresh,
   generateWorkspaceReport, loadWorkspaceReports, loadWorkspaceNotifications, markWorkspaceNotificationRead, markAllWorkspaceNotificationsRead,
-  loadWorkspaceLifeReflections, buildClientReportHtml, markWorkspaceAgendaReviewed,
+  loadWorkspaceLifeReflections, buildClientReportHtml, markWorkspaceAgendaReviewed, loadWorkspaceHealingTimeline,
 } = await import('../advisorWorkspaceLoader.js');
 
 describe('initialsFrom', () => {
@@ -666,6 +671,40 @@ describe('loadWorkspaceLifeReflections', () => {
     const rows = await loadWorkspaceLifeReflections('c1');
     expect(rows).toEqual([]);
     mockLifeReflectionsResult = { data: [], error: null };
+  });
+});
+
+describe('loadWorkspaceHealingTimeline', () => {
+  it('returns an error without a clientId, without calling the API', async () => {
+    const { data, error } = await loadWorkspaceHealingTimeline(null);
+    expect(data).toBeNull();
+    expect(error).toBeTruthy();
+  });
+
+  it('maps a real healing timeline response into the display summary/timeline shape', async () => {
+    mockHealingTimelineResult = {
+      data: {
+        summary: { modulesCompleted: 3, checkInsSubmitted: 2, goalsCompleted: 1, partsCreated: 4, journalEntries: 5, moodCheckIns: 6, lifeIntegrationReflections: 1, curriculumReflections: 0 },
+        timeline: [{ id: 'evt1', title: 'You began mapping your inner system.', description: 'This marks the beginning.', source: 'Parts', date: '2026-07-01T00:00:00Z' }],
+        dataAvailability: {},
+      },
+      error: null,
+    };
+    const { data, error } = await loadWorkspaceHealingTimeline('c1');
+    expect(error).toBeNull();
+    expect(data.summary.partsCreated).toBe(4);
+    expect(data.timeline).toHaveLength(1);
+    expect(data.timeline[0].title).toBe('You began mapping your inner system.');
+    expect(data.timeline[0].dateLabel).toBeTruthy();
+    mockHealingTimelineResult = { data: null, error: null };
+  });
+
+  it('surfaces a real API error instead of throwing', async () => {
+    mockHealingTimelineResult = { data: null, error: 'You do not have permission to view this healing timeline.' };
+    const { data, error } = await loadWorkspaceHealingTimeline('c1');
+    expect(data).toBeNull();
+    expect(error).toBe('You do not have permission to view this healing timeline.');
+    mockHealingTimelineResult = { data: null, error: null };
   });
 });
 
