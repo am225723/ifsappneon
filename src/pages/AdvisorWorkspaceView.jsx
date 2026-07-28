@@ -166,7 +166,7 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
     // derived field) — fall back to a neutral empty shape rather than crash.
     const rawBS = rawSelected.betweenSession || {
       homeworkFunnel: { totalAssigned: 0, inProgress: 0, completed: 0, reviewed: 0, completionPct: 0, avgDaysToComplete: null },
-      moodEntries: [], moodTrend: [], energyTrend: [], journalWeekly: [], assignments: [],
+      moodEntries: [], moodTrend: [], energyTrend: [], journalWeekly: [], assignments: [], freeformAssignments: [],
       hasMoodData: false, hasJournalData: false, hasHomeworkData: false,
     };
     const funnelSteps = [
@@ -246,6 +246,12 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
           dateLabel: a.completedDateLabel ? `Completed ${a.completedDateLabel}` : `Assigned ${a.assignedDateLabel}`,
         })),
         noAssignments: !(rawBS.assignments || []).length,
+        freeformAssignmentRows: (rawBS.freeformAssignments || []).map((a) => ({
+          id: a.id, title: a.title, statusLabel: a.statusLabel, description: a.description, completionNotes: a.completionNotes,
+          interactiveLines: (a.interactiveSummary || []).flatMap((section) => section.lines.map((line) => `${section.title}: ${line}`)),
+          dateLabel: a.completedDateLabel ? `Completed ${a.completedDateLabel}` : (a.dueDateLabel ? `Due ${a.dueDateLabel}` : ''),
+        })),
+        noFreeformAssignments: !(rawBS.freeformAssignments || []).length,
       },
       snapshot: {
         loading: !!sessionSnapshot.loading,
@@ -1249,6 +1255,32 @@ function BetweenSessionTab({ bs }) {
                 <div style={{ fontSize: '11.5px', color: 'var(--muted)', marginTop: '3px' }}>{a.dateLabel}</div>
                 {a.instructions && <div style={{ fontSize: '12.5px', color: 'var(--text-2)', marginTop: '6px', lineHeight: 1.5 }}>{a.instructions}</div>}
                 {a.advisorFeedback && <div style={{ fontSize: '12px', color: 'var(--text-2)', marginTop: '6px', lineHeight: 1.5 }}><strong>Advisor feedback:</strong> {a.advisorFeedback}</div>}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div style={CARD}>
+        <span style={{ ...FR, fontSize: '15px' }}>Custom homework</span>
+        {bs.noFreeformAssignments ? (
+          <p style={{ marginTop: '12px', fontSize: '12.5px', color: 'var(--muted)' }}>No custom homework assigned yet.</p>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '14px' }}>
+            {bs.freeformAssignmentRows.map((a) => (
+              <div key={a.id} style={{ padding: '12px 14px', borderRadius: '14px', background: 'var(--surface-2)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text)' }}>{a.title}</span>
+                  <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--muted)' }}>{a.statusLabel}</span>
+                </div>
+                {a.dateLabel && <div style={{ fontSize: '11.5px', color: 'var(--muted)', marginTop: '3px' }}>{a.dateLabel}</div>}
+                {a.description && <div style={{ fontSize: '12.5px', color: 'var(--text-2)', marginTop: '6px', lineHeight: 1.5 }}>{a.description}</div>}
+                {a.completionNotes && <div style={{ fontSize: '12px', color: 'var(--text-2)', marginTop: '6px', lineHeight: 1.5 }}><strong>Client's reflection:</strong> {a.completionNotes}</div>}
+                {a.interactiveLines.length > 0 && (
+                  <ul style={{ margin: '6px 0 0', paddingLeft: '18px', fontSize: '12px', color: 'var(--text-2)', lineHeight: 1.6 }}>
+                    {a.interactiveLines.map((line, i) => <li key={i}>{line}</li>)}
+                  </ul>
+                )}
               </div>
             ))}
           </div>

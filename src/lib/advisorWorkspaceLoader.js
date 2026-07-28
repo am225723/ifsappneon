@@ -15,6 +15,7 @@ import { loadAssignedHomeworkForClient } from './assignedHomework.js';
 import { loadNotifications, markNotificationRead, markAllNotificationsRead } from './notifications.js';
 import { loadSharedLifeIntegrationReflectionsForAdvisor } from './lifeIntegration.js';
 import { normalizeLifeReflection } from './lifeIntegrationDisplay.js';
+import { summarizeInteractiveResponses } from './interactiveWorksheetSummary.js';
 import { supabase } from './supabase';
 import { getClerkToken } from './apiAuth.js';
 
@@ -107,7 +108,7 @@ export function mapClientRow(row) {
     assessmentHistory: [],
     betweenSession: {
       homeworkFunnel: { totalAssigned: 0, inProgress: 0, completed: 0, reviewed: 0, completionPct: 0, avgDaysToComplete: null },
-      moodEntries: [], moodTrend: [], energyTrend: [], journalWeekly: [], assignments: [],
+      moodEntries: [], moodTrend: [], energyTrend: [], journalWeekly: [], assignments: [], freeformAssignments: [],
       hasMoodData: false, hasJournalData: false, hasHomeworkData: false,
     },
     parts: [],
@@ -226,6 +227,27 @@ function mapAssignedHomeworkDetail(rows) {
     instructions: row.instructions || '',
     advisorFeedback: row.therapist_feedback || '',
     assignedDateLabel: relativeDateLabel(row.assigned_at),
+    completedDateLabel: row.completed_at ? relativeDateLabel(row.completed_at) : '',
+  }));
+}
+
+// ifs_therapy_homework is a separate, advisor-authored freeform homework
+// table (title/description/due date, not tied to a curriculum module) —
+// distinct from ifs_assigned_homework above. Its completion_notes and
+// structured interactive_responses are the client's actual written
+// reflection, already surfaced in TherapistHomework.jsx's "Client's
+// Reflection" panel via the shared summarizeInteractiveResponses helper,
+// just never wired into the workspace.
+function mapFreeformHomework(rows) {
+  if (!Array.isArray(rows)) return [];
+  return rows.slice(0, 20).map((row) => ({
+    id: row.id,
+    title: row.title || 'Homework',
+    statusLabel: row.completed ? 'Completed' : (HOMEWORK_STATUS_LABEL[row.status] || 'Assigned'),
+    description: row.description || '',
+    completionNotes: row.completion_notes || '',
+    interactiveSummary: summarizeInteractiveResponses(row.interactive_responses || {}),
+    dueDateLabel: row.due_date ? relativeDateLabel(row.due_date) : '',
     completedDateLabel: row.completed_at ? relativeDateLabel(row.completed_at) : '',
   }));
 }
@@ -406,7 +428,7 @@ function mapMessages(rows, clientName) {
 
 // Merge a base client with its loaded detail records. Returns the enriched
 // client plus the note entries that should be appended to `savedNotes`.
-export function deriveWorkspaceDetail(base, { analytics, notes, plans, messages, moduleAnswers, progress, gamification, assignedHomework }) {
+export function deriveWorkspaceDetail(base, { analytics, notes, plans, messages, moduleAnswers, progress, gamification, assignedHomework, freeformHomework }) {
   const enriched = { ...base, _detailLoaded: true };
   // Set unconditionally (not gated behind a truthiness check) so a pass with
   // no real answers explicitly clears any prior enrichment's qaAnswers
@@ -456,7 +478,11 @@ export function deriveWorkspaceDetail(base, { analytics, notes, plans, messages,
   // produced (or the base default when analytics was unavailable), so a re-
   // derive that finds no assignments explicitly clears a prior enrichment's
   // list rather than leaking it through.
-  enriched.betweenSession = { ...enriched.betweenSession, assignments: mapAssignedHomeworkDetail(assignedHomework) };
+  enriched.betweenSession = {
+    ...enriched.betweenSession,
+    assignments: mapAssignedHomeworkDetail(assignedHomework),
+    freeformAssignments: mapFreeformHomework(freeformHomework),
+  };
 
   const noteEntries = Array.isArray(notes) ? notes.map((n) => ({ ...mapNoteEntry(n, base.id), clientName: base.name })) : [];
 
@@ -524,6 +550,21 @@ async function loadClientGamification(clientId) {
   }
 }
 
+async function loadClientFreeformHomework(clientId) {
+  try {
+    const { data, error } = await supabase
+      .from('ifs_therapy_homework')
+      .select('id, title, description, status, completed, due_date, completed_at, completion_notes, interactive_responses')
+      .eq('client_id', clientId)
+      .order('created_at', { ascending: false })
+      .limit(20);
+    if (error) return [];
+    return data || [];
+  } catch {
+    return [];
+  }
+}
+
 const CASELOAD_COLUMNS = 'id, name, pin, email, phone, status, last_active, created_at, user_role, access_restrictions, assignment_status';
 
 export async function loadWorkspaceCaseload(therapistId) {
@@ -568,7 +609,7 @@ export function mergeCaseloadRefresh(prevBaseClients, freshRows) {
 }
 
 export async function loadWorkspaceClientDetail(base, therapistId) {
-  const [analyticsRes, notesRes, plansRes, messages, moduleAnswers, progress, gamification, assignedHomeworkRes] = await Promise.all([
+  const [analyticsRes, notesRes, plansRes, messages, moduleAnswers, progress, gamification, assignedHomeworkRes, freeformHomework] = await Promise.all([
     loadClientAnalytics({ clientId: base.id, range: 'ALL' }).catch(() => ({ data: null })),
     loadTherapistNotesForClient(base.id).catch(() => ({ data: [] })),
     loadActiveTreatmentPlansForClient(base.id).catch(() => ({ data: [] })),
@@ -577,6 +618,7 @@ export async function loadWorkspaceClientDetail(base, therapistId) {
     loadClientProgressResponses(base.id),
     loadClientGamification(base.id),
     loadAssignedHomeworkForClient(base.id).catch(() => ({ data: [] })),
+    loadClientFreeformHomework(base.id),
   ]);
   return deriveWorkspaceDetail(base, {
     analytics: analyticsRes?.data || null,
@@ -587,6 +629,7 @@ export async function loadWorkspaceClientDetail(base, therapistId) {
     progress,
     gamification,
     assignedHomework: assignedHomeworkRes?.data || [],
+    freeformHomework,
   });
 }
 

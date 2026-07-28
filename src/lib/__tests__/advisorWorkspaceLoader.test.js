@@ -290,6 +290,34 @@ describe('deriveWorkspaceDetail', () => {
     expect(client.betweenSession.assignments).toEqual([]);
   });
 
+  it('maps real ifs_therapy_homework rows into betweenSession.freeformAssignments with completion notes and interactive summaries', () => {
+    const freeformHomework = [
+      {
+        id: 'fh1', title: 'Notice the protector', description: 'Journal about your inner critic this week.',
+        status: 'completed', completed: true, completed_at: '2026-06-05T00:00:00Z',
+        completion_notes: 'I noticed it show up before my meeting.',
+        interactive_responses: {},
+      },
+      { id: 'fh2', title: 'Body scan', status: 'assigned', completed: false, due_date: '2026-07-01' },
+    ];
+    const { client } = deriveWorkspaceDetail(base, { analytics: null, notes: [], plans: [], messages: [], freeformHomework });
+    expect(client.betweenSession.freeformAssignments).toHaveLength(2);
+    const [done, pending] = client.betweenSession.freeformAssignments;
+    expect(done.title).toBe('Notice the protector');
+    expect(done.statusLabel).toBe('Completed');
+    expect(done.description).toBe('Journal about your inner critic this week.');
+    expect(done.completionNotes).toBe('I noticed it show up before my meeting.');
+    expect(pending.title).toBe('Body scan');
+    expect(pending.statusLabel).toBe('Assigned');
+    expect(pending.completionNotes).toBe('');
+  });
+
+  it('resets betweenSession.freeformAssignments to empty instead of leaking a prior enrichment through when a re-derive finds none', () => {
+    const alreadyEnriched = { ...base, betweenSession: { ...base.betweenSession, freeformAssignments: [{ id: 'stale', title: 'stale' }] } };
+    const { client } = deriveWorkspaceDetail(alreadyEnriched, { analytics: null, notes: [], plans: [], messages: [], freeformHomework: [] });
+    expect(client.betweenSession.freeformAssignments).toEqual([]);
+  });
+
   it('derives real between-session activity from data api/analytics/client.js already computes', () => {
     const analytics = {
       assessmentTrajectory: [],
