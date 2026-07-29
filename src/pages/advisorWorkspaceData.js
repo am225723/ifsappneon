@@ -306,6 +306,9 @@ export const CLIENT_TABS = [
   { id: 'practices', label: 'Practices' }, { id: 'safety', label: 'Safety' }, { id: 'messages', label: 'Messages' },
   { id: 'lifeReflections', label: 'Life Reflections' }, { id: 'healingJourney', label: 'Healing Journey' },
 ];
+export const RISK_TYPE_TITLE = {
+  concerning_language: 'Concerning language detected', mood: 'Low mood reported', inactivity: 'Extended inactivity',
+};
 export const TIMELINE_TYPE_META = {
   note: { label: 'NOTE', color: '#57534e' }, assessment: { label: 'ASSESSMENT', color: '#2563eb' },
   practice: { label: 'PRACTICE', color: '#059669' }, message: { label: 'MSG', color: '#0d9488' },

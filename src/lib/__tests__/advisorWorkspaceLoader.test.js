@@ -50,6 +50,7 @@ const {
   initialsFrom, daysSince, mapClientRow, mapNoteEntry, deriveWorkspaceDetail, WORKSPACE_WOUNDS, mergeCaseloadRefresh,
   generateWorkspaceReport, loadWorkspaceReports, loadWorkspaceNotifications, markWorkspaceNotificationRead, markAllWorkspaceNotificationsRead,
   loadWorkspaceLifeReflections, buildClientReportHtml, markWorkspaceAgendaReviewed, loadWorkspaceHealingTimeline,
+  loadCaseloadRiskAlerts,
 } = await import('../advisorWorkspaceLoader.js');
 
 describe('initialsFrom', () => {
@@ -575,6 +576,63 @@ describe('generateWorkspaceReport', () => {
     const { data, error } = await generateWorkspaceReport({ clientId: 'c1' });
     expect(data).toBeNull();
     expect(error.message).toBe('network down');
+  });
+});
+
+describe('loadCaseloadRiskAlerts', () => {
+  const originalFetch = globalThis.fetch;
+  afterAll(() => { globalThis.fetch = originalFetch; });
+
+  it('classifies a real flagged row with crisis language as concerning_language/high', async () => {
+    globalThis.fetch = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({
+        data: [{
+          client_id: 'c1', name: 'Maya Chen', last_active: new Date(Date.now() - 2 * 86400000).toISOString(),
+          lowest_mood: null, topics: 'Feeling stuck with my sister', stuck_points: 'crisis at work too',
+          reasons: ['Latest pre-session agenda mentions "stuck"', 'Latest pre-session agenda mentions "crisis"'],
+        }],
+      }),
+    }));
+    const alerts = await loadCaseloadRiskAlerts();
+    expect(alerts).toHaveLength(1);
+    expect(alerts[0].clientId).toBe('c1');
+    expect(alerts[0].type).toBe('concerning_language');
+    expect(alerts[0].level).toBe('high');
+    expect(alerts[0].reasons).toHaveLength(2);
+  });
+
+  it('classifies a real low-mood-only row as mood/high', async () => {
+    globalThis.fetch = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({ data: [{ client_id: 'c2', lowest_mood: 1, reasons: ['Mood score 1/5 in the last 7 days'] }] }),
+    }));
+    const alerts = await loadCaseloadRiskAlerts();
+    expect(alerts[0].type).toBe('mood');
+    expect(alerts[0].level).toBe('high');
+  });
+
+  it('classifies an inactivity-only row as inactivity/medium', async () => {
+    globalThis.fetch = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({ data: [{ client_id: 'c3', lowest_mood: null, reasons: ['9+ days without login or module progress'] }] }),
+    }));
+    const alerts = await loadCaseloadRiskAlerts();
+    expect(alerts[0].type).toBe('inactivity');
+    expect(alerts[0].level).toBe('medium');
+  });
+
+  it('filters out rows with no real reasons', async () => {
+    globalThis.fetch = vi.fn(async () => ({ ok: true, json: async () => ({ data: [{ client_id: 'c4', reasons: [] }] }) }));
+    const alerts = await loadCaseloadRiskAlerts();
+    expect(alerts).toEqual([]);
+  });
+
+  it('returns an empty array (not a throw) on a server error or network failure', async () => {
+    globalThis.fetch = vi.fn(async () => ({ ok: false, json: async () => ({ error: { message: 'forbidden' } }) }));
+    expect(await loadCaseloadRiskAlerts()).toEqual([]);
+    globalThis.fetch = vi.fn(async () => { throw new Error('network down'); });
+    expect(await loadCaseloadRiskAlerts()).toEqual([]);
   });
 });
 

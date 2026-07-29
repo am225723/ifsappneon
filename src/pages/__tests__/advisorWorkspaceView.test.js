@@ -335,6 +335,38 @@ describe('buildView — Part relationships', () => {
   });
 });
 
+describe('buildView — real caseload risk alerts (api/risk-alerts.js)', () => {
+  it('enriches a client with no base risk when a real alert exists, with a title matching the reason type', () => {
+    const v = makeView({ riskAlerts: [{ clientId: 'c1', reasons: ['Mood score 2/5 in the last 7 days'], type: 'mood', level: 'high', daysAgo: 1 }] });
+    const row = v.clientListFiltered.find((c) => c.id === 'c1');
+    expect(row.hasRisk).toBe(true);
+    const reviewItem = v.reviewItems.find((r) => r.id === 'risk-c1');
+    expect(reviewItem).toBeDefined();
+    expect(reviewItem.title).toBe('Low mood reported');
+    expect(reviewItem.detail).toBe('Mood score 2/5 in the last 7 days');
+  });
+
+  it('surfaces a concerning_language alert with the matching Review Queue title', () => {
+    const v = makeView({ riskAlerts: [{ clientId: 'c1', reasons: ['Latest pre-session agenda mentions "crisis"'], type: 'concerning_language', level: 'high', daysAgo: 0 }] });
+    const reviewItem = v.reviewItems.find((r) => r.id === 'risk-c1');
+    expect(reviewItem.title).toBe('Concerning language detected');
+    expect(reviewItem.sevLabel).toBe('High');
+  });
+
+  it('leaves a client\'s existing base risk untouched when no real alert exists for them', () => {
+    const v = makeView({ riskAlerts: [{ clientId: 'c1', reasons: ['Mood score 2/5 in the last 7 days'], type: 'mood', level: 'high', daysAgo: 1 }] });
+    // c3 (Sam Okafor) has a real base inactivity risk from mapClientRow/seed data — no alert entry for c3 here.
+    const reviewItem = v.reviewItems.find((r) => r.id === 'risk-c3');
+    expect(reviewItem.title).toBe('Extended inactivity');
+  });
+
+  it('enriches the Safety tab riskFactors/riskLevel for the selected client from a real alert', () => {
+    const v = makeView({ selectedClientId: 'c1', riskAlerts: [{ clientId: 'c1', reasons: ['Latest pre-session agenda mentions "stuck"'], type: 'concerning_language', level: 'high', daysAgo: 0 }] });
+    expect(v.selectedClient.safety.levelLabel).toBe('High');
+    expect(v.selectedClient.safety.riskFactors).toEqual(['Latest pre-session agenda mentions "stuck"']);
+  });
+});
+
 describe('buildView — Healing Journey', () => {
   it('gates the tab for an unassigned client', () => {
     const v = makeView({ extraClients: [UNASSIGNED_CLIENT], selectedClientId: 'new1' });

@@ -807,6 +807,42 @@ export async function loadWorkspaceReports(clientId, limit = 8) {
   }
 }
 
+// api/risk-alerts.js is a real, correctly-scoped (requireTherapist, joined
+// through ifs_therapist_clients) caseload-wide risk detector that flags real
+// low mood scores (<=2 in the last 7 days) and real "stuck"/"crisis"
+// language in session agendas — richer than mapClientRow's inactivity-only
+// heuristic. It was built for RiskAlertWidget.jsx, which is never actually
+// rendered anywhere in the app; this reuses the real endpoint directly.
+function mapRiskAlerts(rows) {
+  if (!Array.isArray(rows)) return [];
+  return rows
+    .map((row) => {
+      const reasons = Array.isArray(row.reasons) ? row.reasons : [];
+      const hasConcerningLanguage = reasons.some((r) => /stuck|crisis/i.test(r));
+      const hasLowMood = row.lowest_mood != null && row.lowest_mood <= 2;
+      return {
+        clientId: row.client_id,
+        reasons,
+        type: hasConcerningLanguage ? 'concerning_language' : (hasLowMood ? 'mood' : 'inactivity'),
+        level: hasConcerningLanguage || hasLowMood ? 'high' : 'medium',
+        daysAgo: row.last_active ? daysSince(row.last_active) : null,
+      };
+    })
+    .filter((alert) => alert.reasons.length > 0);
+}
+
+export async function loadCaseloadRiskAlerts() {
+  try {
+    const token = await getClerkToken();
+    const response = await fetch('/api/risk-alerts', { headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) } });
+    const json = await response.json().catch(() => ({}));
+    if (!response.ok) return [];
+    return mapRiskAlerts(json.data);
+  } catch {
+    return [];
+  }
+}
+
 // ifs_notifications stores priority as low/normal/important; the workspace's
 // existing severity chip vocabulary (shared with risk/safety) is low/medium/high.
 const NOTIF_PRIORITY_TO_SEV = { important: 'high', normal: 'medium', low: 'low' };
