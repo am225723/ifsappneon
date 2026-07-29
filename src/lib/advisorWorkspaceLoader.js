@@ -1271,6 +1271,63 @@ export async function loadWorkspaceActiveLiveSessions(therapistId) {
   }
 }
 
+// The standalone advisor-only Co-Therapy page (/co-therapy,
+// CoTherapySession.jsx) already runs a fixed set of 9 guided in-session
+// activities (parts dialogue, protector negotiation, unburdening ceremony,
+// etc.) and saves each client's completion to ifs_therapy_activity_progress
+// — but, like the Inner System Map before it, that page has no entry point
+// from the unified Workspace. This surfaces a simple completion tracker:
+// which activities are done and when.
+//
+// Deliberately excludes the row's reflections field (the client's own
+// free-text reflection, typed live during the co-therapy session) and the
+// progress_data.data.therapistNotes/observationNotes fields (the advisor's
+// own session notes, but unstructured per-step text with no existing
+// precedent of being surfaced outside this one specific tool) — only the
+// structured completion fact and date are shown here.
+const COTHERAPY_ACTIVITY_TITLES = {
+  'parts-dialogue': 'Guided Parts Dialogue',
+  'protector-negotiation': 'Protector Parts Negotiation',
+  'unburdening-ceremony': 'Unburdening Ceremony Guide',
+  'inner-child-rescue': 'Inner Child Rescue Mission',
+  'parts-council': 'Parts Council Meeting',
+  'somatic-parts-work': 'Somatic Parts Work',
+  'attachment-repair': 'Attachment Repair Exercise',
+  'self-energy-cultivation': 'Self-Energy Cultivation',
+  'trailhead-exploration': 'Trailhead Exploration Exercise',
+};
+
+function mapCoTherapyProgress(row) {
+  return {
+    id: row.id,
+    activityId: row.activity_id,
+    activityTitle: COTHERAPY_ACTIVITY_TITLES[row.activity_id] || row.activity_id,
+    completed: !!row.completed,
+    updatedAt: row.updated_at || null,
+  };
+}
+
+// Same fail-closed pattern as the other ifs_interactive_data-adjacent
+// loaders above: ifs_therapy_activity_progress technically has RLS
+// "enabled", but the only policy defined for it is `USING (true) WITH
+// CHECK (true)` (this app authenticates via PIN, not Supabase Auth), so
+// reads aren't actually scoped to the client's assigned Advisor — the
+// caller must confirm assignment before this fetches anything.
+export async function loadWorkspaceCoTherapyProgress(clientId, isAssigned) {
+  if (!clientId || !isAssigned) return [];
+  try {
+    const { data, error } = await supabase
+      .from('ifs_therapy_activity_progress')
+      .select('id, activity_id, completed, updated_at')
+      .eq('client_id', clientId)
+      .order('updated_at', { ascending: false });
+    if (error) return [];
+    return (data || []).map(mapCoTherapyProgress);
+  } catch {
+    return [];
+  }
+}
+
 function escapeHtml(value) {
   return String(value ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
