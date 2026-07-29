@@ -6,6 +6,7 @@ import { describe, it, expect, vi, afterAll, beforeEach } from 'vitest';
 // hoisting rule) — this lets individual tests below override what a query
 // against ifs_generated_reports resolves to.
 let mockReportRows = { data: [], error: null };
+let mockSelfEnergyRows = { data: [], error: null };
 vi.mock('../supabase', () => ({
   supabase: {
     from: (table) => ({
@@ -13,6 +14,13 @@ vi.mock('../supabase', () => ({
         eq: () => ({
           order: () => ({
             limit: () => (table === 'ifs_generated_reports' ? mockReportRows : { data: [], error: null }),
+          }),
+          // loadWorkspaceSelfEnergyTrend's real query filters with .like()
+          // before .order()/.limit(), unlike the ifs_generated_reports chain above.
+          like: () => ({
+            order: () => ({
+              limit: () => (table === 'ifs_interactive_data' ? mockSelfEnergyRows : { data: [], error: null }),
+            }),
           }),
         }),
       }),
@@ -67,6 +75,7 @@ const {
   loadWorkspaceLifeReflections, buildClientReportHtml, markWorkspaceAgendaReviewed, loadWorkspaceHealingTimeline,
   loadCaseloadRiskAlerts, loadWorkspaceCurriculumReflections,
   markWorkspaceHomeworkReviewed, archiveWorkspaceHomework, refreshWorkspaceHomeworkForClient,
+  loadWorkspaceSelfEnergyTrend,
 } = await import('../advisorWorkspaceLoader.js');
 
 describe('initialsFrom', () => {
@@ -773,6 +782,47 @@ describe('refreshWorkspaceHomeworkForClient', () => {
     const rows = await refreshWorkspaceHomeworkForClient('c1');
     expect(rows).toBeNull();
     mockAssignedHomeworkResult = { data: [], error: null };
+  });
+});
+
+describe('loadWorkspaceSelfEnergyTrend', () => {
+  it('returns an empty array without a clientId', async () => {
+    expect(await loadWorkspaceSelfEnergyTrend(null, true)).toEqual([]);
+  });
+
+  // ifs_interactive_data's RLS doesn't restrict reads to the client's
+  // assigned Advisor (same reasoning as loadWorkspaceCurriculumReflections),
+  // so this refuses to fetch at all unless the caller has confirmed assignment.
+  it('returns an empty array without calling the API when the caller has not confirmed assignment', async () => {
+    expect(await loadWorkspaceSelfEnergyTrend('c1', false)).toEqual([]);
+    expect(await loadWorkspaceSelfEnergyTrend('c1')).toEqual([]);
+  });
+
+  it('maps real daily check-in rows into date-sorted Self-Energy/mood/parts/intention entries', () => {
+    mockSelfEnergyRows = {
+      data: [
+        { module_id: 'daily_checkin_2026-07-05', data: { selfEnergy: 7, mood: 4, activeParts: ['the-watcher'], intention: 'Stay grounded today.' }, updated_at: '2026-07-05T00:00:00Z' },
+        { module_id: 'daily_checkin_2026-07-01', data: { selfEnergy: 3, mood: 2, activeParts: ['the-watcher', 'little-maya'], intention: '' }, updated_at: '2026-07-01T00:00:00Z' },
+      ],
+      error: null,
+    };
+    return loadWorkspaceSelfEnergyTrend('c1', true).then((rows) => {
+      expect(rows).toHaveLength(2);
+      // Sorted ascending by date, not by fetch order.
+      expect(rows[0].date).toBe('2026-07-01');
+      expect(rows[0].selfEnergy).toBe(3);
+      expect(rows[0].activeParts).toEqual(['the-watcher', 'little-maya']);
+      expect(rows[1].date).toBe('2026-07-05');
+      expect(rows[1].intention).toBe('Stay grounded today.');
+      mockSelfEnergyRows = { data: [], error: null };
+    });
+  });
+
+  it('returns an empty array (not a throw) when the API errors', async () => {
+    mockSelfEnergyRows = { data: null, error: { message: 'forbidden' } };
+    const rows = await loadWorkspaceSelfEnergyTrend('c1', true);
+    expect(rows).toEqual([]);
+    mockSelfEnergyRows = { data: [], error: null };
   });
 });
 

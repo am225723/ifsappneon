@@ -698,6 +698,51 @@ describe('buildView — Between Sessions reflects real analytics data', () => {
   });
 });
 
+describe('buildView — Self-Energy trend reflects real daily check-ins (DailyCheckin.jsx)', () => {
+  const CLIENT_WITH_ACTIVITY = {
+    ...UNASSIGNED_CLIENT, id: 'bs1', name: 'Activity Test', unassigned: false,
+    betweenSession: {
+      homeworkFunnel: { totalAssigned: 0, inProgress: 0, completed: 0, reviewed: 0, completionPct: 0, avgDaysToComplete: null },
+      moodEntries: [], moodTrend: [], energyTrend: [], journalWeekly: [], assignments: [], freeformAssignments: [],
+      hasMoodData: false, hasJournalData: false, hasHomeworkData: false,
+    },
+  };
+  const SELF_ENERGY_ROWS = [
+    { date: '2026-07-01', selfEnergy: 3, mood: 2, activeParts: ['the-watcher', 'little-maya'], intention: '' },
+    { date: '2026-07-05', selfEnergy: 7, mood: 4, activeParts: ['the-watcher'], intention: 'Stay grounded today.' },
+  ];
+
+  it('maps real check-in rows into a Self-Energy trend, active-parts frequency, and recent check-ins list', () => {
+    const v = makeView({ extraClients: [CLIENT_WITH_ACTIVITY], selectedClientId: 'bs1', selfEnergyTrend: SELF_ENERGY_ROWS });
+    const bs = v.selectedClient.betweenSession;
+    expect(bs.hasSelfEnergyData).toBe(true);
+    expect(bs.selfEnergyTrendBars).toHaveLength(2);
+    expect(bs.noActiveParts).toBe(false);
+    // "the-watcher" appears in both check-ins, "little-maya" in one.
+    expect(bs.activePartsRows[0]).toEqual(expect.objectContaining({ name: 'The Watcher', count: 2 }));
+    expect(bs.noCheckins).toBe(false);
+    expect(bs.recentCheckins).toHaveLength(2);
+    // Most recent check-in first.
+    expect(bs.recentCheckins[0].dateLabel).toBe('Jul 5');
+    expect(bs.recentCheckins[0].selfEnergyLabel).toBe('7/10');
+    expect(bs.recentCheckins[0].intention).toBe('Stay grounded today.');
+  });
+
+  it('shows the loading state distinctly from the empty state while the tab-scoped fetch is in flight', () => {
+    const v = makeView({ extraClients: [CLIENT_WITH_ACTIVITY], selectedClientId: 'bs1', selfEnergyTrend: [], selfEnergyTrendLoading: true });
+    expect(v.selectedClient.betweenSession.selfEnergyTrendLoading).toBe(true);
+  });
+
+  it('shows the empty state once loaded with no check-ins, and for demo clients', () => {
+    const loaded = makeView({ extraClients: [CLIENT_WITH_ACTIVITY], selectedClientId: 'bs1', selfEnergyTrend: [], selfEnergyTrendLoading: false });
+    expect(loaded.selectedClient.betweenSession.noCheckins).toBe(true);
+
+    const demo = makeView({ selectedClientId: 'c1' });
+    expect(demo.selectedClient.betweenSession.noCheckins).toBe(true);
+    expect(demo.selectedClient.betweenSession.selfEnergyTrendBars).toEqual([]);
+  });
+});
+
 describe('buildView — unified timeline gives every event a stable key', () => {
   it('falls back to a synthetic id when a timeline entry has none (demo seed data)', () => {
     const v = makeView({ selectedClientId: 'c1' }); // seeded demo timeline entries carry no id field

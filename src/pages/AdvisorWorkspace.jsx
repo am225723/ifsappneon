@@ -9,7 +9,7 @@ import {
   claimWorkspaceClient, mergeCaseloadRefresh, generateWorkspaceReport, loadWorkspaceReports,
   loadWorkspaceNotifications, markWorkspaceNotificationRead, markAllWorkspaceNotificationsRead,
   loadWorkspaceLifeReflections, buildClientReportHtml, markWorkspaceAgendaReviewed, loadWorkspaceHealingTimeline,
-  loadCaseloadRiskAlerts, loadWorkspaceCurriculumReflections, mapNoteEntry,
+  loadCaseloadRiskAlerts, loadWorkspaceCurriculumReflections, loadWorkspaceSelfEnergyTrend, mapNoteEntry,
   markWorkspaceHomeworkReviewed, archiveWorkspaceHomework, refreshWorkspaceHomeworkForClient,
 } from '../lib/advisorWorkspaceLoader.js';
 import { loadAdvisorSessionSnapshot } from '../lib/unifiedGuidance.js';
@@ -54,6 +54,7 @@ export const INITIAL_STATE = {
   lifeReflections: [], lifeReflectionsLoading: false,
   healingTimeline: { loading: false, data: null, error: '' },
   curriculumReflections: [], curriculumReflectionsLoading: false,
+  selfEnergyTrend: [], selfEnergyTrendLoading: false,
   riskAlerts: [],
   accessOverrides: {}, settingsAccent: 'amber',
   extraClients: [], deletedIds: {},
@@ -89,6 +90,7 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
   const lifeReflectionsLoadedFor = useRef(null);
   const healingTimelineLoadedFor = useRef(null);
   const curriculumReflectionsLoadedFor = useRef(null);
+  const selfEnergyTrendLoadedFor = useRef(null);
   const riskAlertsLoaded = useRef(false);
   // Generation guard: bumped on therapist change / unmount so stale in-flight
   // detail merges are ignored without cancelling still-valid sibling requests.
@@ -261,6 +263,7 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
     lifeReflectionsLoadedFor.current = null;
     healingTimelineLoadedFor.current = null;
     curriculumReflectionsLoadedFor.current = null;
+    selfEnergyTrendLoadedFor.current = null;
     set({
       selectedClientId: id, activeTab: 'clients-caseload', activeClientTab: 'overview',
       sessionSnapshot: { loading: false, data: null, error: '' },
@@ -268,6 +271,7 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
       lifeReflections: [], lifeReflectionsLoading: false,
       healingTimeline: { loading: false, data: null, error: '' },
       curriculumReflections: [], curriculumReflectionsLoading: false,
+      selfEnergyTrend: [], selfEnergyTrendLoading: false,
     });
   };
   const setClientTab = (id) => set({ activeClientTab: id });
@@ -636,6 +640,27 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
     let isCanceled = false;
     loadWorkspaceCurriculumReflections(S.selectedClientId, true).then((rows) => {
       if (!isCanceled) set({ curriculumReflections: rows, curriculumReflectionsLoading: false });
+    });
+    return () => {
+      isCanceled = true;
+    };
+  }, [isDemo, loadPhase, S.activeClientTab, S.selectedClientId, allClients]);
+
+  // Lazily load a client's real daily Self-Energy check-ins the first time
+  // the Between Sessions tab is opened — the same real trend/active-parts
+  // data MoodAnalytics.jsx's advisor mode already shows, just not previously
+  // reachable from the workspace. Same unassigned-client guard as curriculum
+  // reflections above, for the same reason (open RLS on ifs_interactive_data).
+  useEffect(() => {
+    if (isDemo || loadPhase !== 'ready' || S.activeClientTab !== 'betweenSession' || !S.selectedClientId) return;
+    if (selfEnergyTrendLoadedFor.current === S.selectedClientId) return;
+    const client = allClients().find((c) => c.id === S.selectedClientId);
+    if (!client || client.unassigned) return;
+    selfEnergyTrendLoadedFor.current = S.selectedClientId;
+    set({ selfEnergyTrendLoading: true });
+    let isCanceled = false;
+    loadWorkspaceSelfEnergyTrend(S.selectedClientId, true).then((rows) => {
+      if (!isCanceled) set({ selfEnergyTrend: rows, selfEnergyTrendLoading: false });
     });
     return () => {
       isCanceled = true;
