@@ -157,7 +157,14 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
           setS((prev) => ({
             ...prev,
             baseClients: (prev.baseClients || []).map((c) => (c.id === client.id ? client : c)),
-            savedNotes: [...noteEntries, ...prev.savedNotes.filter((n) => n.clientId !== client.id || n._isLocal)],
+            // A _isLocal note saved (e.g. by onAiNoteSaved) before this client's
+            // detail resolved may already carry the real persisted id — once
+            // noteEntries brings back the server's copy of that same row, drop
+            // the local stand-in so it doesn't show twice.
+            savedNotes: [
+              ...noteEntries,
+              ...prev.savedNotes.filter((n) => (n.clientId !== client.id || n._isLocal) && !noteEntries.some((ne) => ne.id != null && ne.id === n.id)),
+            ],
           }));
         })
         .catch((error) => console.error('Failed to load client detail:', error));
