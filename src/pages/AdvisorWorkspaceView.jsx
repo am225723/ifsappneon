@@ -394,8 +394,8 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
         noReflections: canWrite && !curriculumReflectionsLoading && curriculumReflections.length === 0,
       },
       parts: rawSelected.parts.map((p) => ({ ...p, catChip: partChip(p.category, isDark), catLabel: PART_CAT_META[p.category].label, barStyle: { width: p.activation + '%', height: '100%', borderRadius: '4px', background: PART_CAT_META[p.category].color } })),
-      partRelationships: Array.isArray(rawSelected.partRelationships) ? rawSelected.partRelationships : [],
-      noPartRelationships: !Array.isArray(rawSelected.partRelationships) || rawSelected.partRelationships.length === 0,
+      partRelationships: canWrite && Array.isArray(rawSelected.partRelationships) ? rawSelected.partRelationships : [],
+      noPartRelationships: !canWrite || !Array.isArray(rawSelected.partRelationships) || rawSelected.partRelationships.length === 0,
       partSuggestions: {
         loading: !!partSuggestionsLoading,
         canView: canWrite,
