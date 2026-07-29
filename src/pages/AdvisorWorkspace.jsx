@@ -628,7 +628,15 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
   // hardcoded demo rows that never reflected any real session.
   const refreshLiveSessions = () => {
     if (isDemo || !therapistId) return;
-    loadWorkspaceActiveLiveSessions(therapistId).then((rows) => set({ liveSessions: rows }));
+    // Same stale-response guard as loadCaseloadRiskAlerts below: without it, a
+    // request started for one therapist could resolve after a therapist
+    // switch and briefly overwrite the new therapist's live sessions with
+    // the previous one's.
+    const gen = genRef.current;
+    loadWorkspaceActiveLiveSessions(therapistId).then((rows) => {
+      if (genRef.current !== gen) return;
+      set({ liveSessions: rows });
+    });
   };
   useEffect(() => {
     if (isDemo || loadPhase !== 'ready' || S.activeTab !== 'sessions-live' || liveSessionsLoaded.current) return;
