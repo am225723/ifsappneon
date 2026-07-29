@@ -1141,7 +1141,7 @@ export async function loadWorkspaceUnburdeningRecord(clientId, isAssigned) {
 export async function loadWorkspacePartSuggestions(clientId, isAssigned) {
   if (!clientId || !isAssigned) return null;
   try {
-    const [existingPartsRes, relationshipsRes, interactiveRes, assessmentRes, lifeRes, journalRes, stateRes] = await Promise.all([
+    const [existingPartsRes, relationshipsRes, interactiveRes, assessmentRes, lifeRes, journalRes, curriculumReflectionRows, stateRes] = await Promise.all([
       supabase.from('ifs_parts').select('id, name, part_name, type, part_type, role').eq('client_id', clientId),
       loadPartRelationships({ clientId }),
       supabase.from('ifs_interactive_data').select('id, client_id, module_id, data, updated_at')
@@ -1155,6 +1155,13 @@ export async function loadWorkspacePartSuggestions(clientId, isAssigned) {
         .eq('client_id', clientId).order('updated_at', { ascending: false }).limit(40),
       supabase.from('ifs_journal_entries').select('id, client_id, title, created_at, updated_at')
         .eq('client_id', clientId).order('updated_at', { ascending: false }).limit(20),
+      // The client's own saved curriculum module reflections (loadWorkspaceCurriculumReflections,
+      // wired in an earlier PR) are one of buildPartSuggestions's official input
+      // sources — distinct from the raw module-response rows already covered by
+      // interactiveRows above. Same content already shown verbatim to the
+      // Advisor on the Curriculum Reflections tab, so there's no new exposure
+      // here — only derived suggestion labels ever reach topSuggestions.
+      loadWorkspaceCurriculumReflections(clientId, isAssigned),
       loadPartSuggestionState({ clientId }),
     ]);
     const firstError = [existingPartsRes, relationshipsRes, interactiveRes, assessmentRes, lifeRes, journalRes, stateRes].find((res) => res?.error)?.error;
@@ -1166,6 +1173,7 @@ export async function loadWorkspacePartSuggestions(clientId, isAssigned) {
       interactiveRows: interactiveRes?.data || [],
       lifeIntegrationRows: lifeRes?.data || [],
       journalRows: journalRes?.data || [],
+      curriculumReflectionRows: curriculumReflectionRows || [],
       existingParts,
       existingRelationships,
     });

@@ -951,6 +951,7 @@ const resetPartSuggestionMocks = () => {
   mockAssessmentResultsRows = { data: [], error: null };
   mockLifeIntegrationRows = { data: [], error: null };
   mockJournalRows = { data: [], error: null };
+  mockCurriculumReflectionsResult = { data: [], error: null };
   mockPartSuggestionStateResult = { data: [], error: null };
 };
 
@@ -999,6 +1000,20 @@ describe('loadWorkspacePartSuggestions', () => {
     mockJournalRows = { data: [{ id: 'j1', title: 'a very private secret about my triggers', created_at: '2026-07-01T00:00:00Z' }], error: null };
     const summary = await loadWorkspacePartSuggestions('c1', true);
     expect(JSON.stringify(summary)).not.toContain('a very private secret');
+  });
+
+  // buildPartSuggestions treats saved curriculum reflections (the same
+  // content already surfaced verbatim on the workspace's own Curriculum
+  // Reflections tab) as a distinct input source from the raw module-response
+  // rows already covered by interactiveRows — this loader must feed both in.
+  it('derives a suggestion from the client\'s saved curriculum reflections, not just raw module responses', async () => {
+    mockCurriculumReflectionsResult = {
+      data: [{ id: 'cr1', moduleTitle: 'Module 4', insight: 'A familiar wave of shame came up during this exercise.', partNoticed: '', selfEnergyQuality: '', nextPractice: '', createdAt: '2026-07-10T00:00:00Z' }],
+      error: null,
+    };
+    const summary = await loadWorkspacePartSuggestions('c1', true);
+    expect(summary.pendingPartsCount).toBeGreaterThan(0);
+    expect(summary.topSuggestions.some((s) => s.sourceLabel === 'Curriculum reflection')).toBe(true);
   });
 
   it('returns null (not a throw) when a query errors', async () => {
