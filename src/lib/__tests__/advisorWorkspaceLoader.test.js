@@ -57,8 +57,9 @@ vi.mock('../supabase', () => ({
 vi.mock('../apiAuth.js', () => ({ getClerkToken: async () => null }));
 
 let mockPartRelationshipsResult = { data: [], error: null };
+const mockLoadPartRelationships = vi.fn(async () => mockPartRelationshipsResult);
 vi.mock('../partRelationships.js', () => ({
-  loadPartRelationships: async () => mockPartRelationshipsResult,
+  loadPartRelationships: mockLoadPartRelationships,
 }));
 
 let mockPartSuggestionStateResult = { data: [], error: null };
@@ -114,6 +115,7 @@ const {
   loadCaseloadRiskAlerts, loadWorkspaceCurriculumReflections,
   markWorkspaceHomeworkReviewed, archiveWorkspaceHomework, refreshWorkspaceHomeworkForClient,
   loadWorkspaceSelfEnergyTrend, loadWorkspaceUnburdeningRecord, loadWorkspacePartSuggestions,
+  loadWorkspaceClientDetail,
 } = await import('../advisorWorkspaceLoader.js');
 
 describe('initialsFrom', () => {
@@ -539,6 +541,28 @@ describe('deriveWorkspaceDetail', () => {
   it('leaves the timeline empty (not throwing) when a client has no dated activity at all', () => {
     const { client } = deriveWorkspaceDetail(base, { analytics: null, notes: [], plans: [], messages: [] });
     expect(client.timeline).toEqual([]);
+  });
+});
+
+describe('loadWorkspaceClientDetail — part relationships assignment gate', () => {
+  beforeEach(() => {
+    mockLoadPartRelationships.mockClear();
+    mockPartRelationshipsResult = { data: [{ id: 'r1', client_id: 'x', from_part_id: 'p1', to_part_id: 'p2', relationship_type: 'protects' }], error: null };
+  });
+
+  // ifs_part_relationships has no RLS policy at all, so loadWorkspaceClientDetail
+  // must never even query it for an unassigned client — relying solely on the
+  // view layer to hide the result isn't enough.
+  it('never calls loadPartRelationships for an unassigned client', async () => {
+    const base = { id: 'new1', unassigned: true };
+    await loadWorkspaceClientDetail(base, 'therapist1');
+    expect(mockLoadPartRelationships).not.toHaveBeenCalled();
+  });
+
+  it('still calls loadPartRelationships for an assigned client', async () => {
+    const base = { id: 'c1', unassigned: false };
+    await loadWorkspaceClientDetail(base, 'therapist1');
+    expect(mockLoadPartRelationships).toHaveBeenCalledWith({ clientId: 'c1' });
   });
 });
 
