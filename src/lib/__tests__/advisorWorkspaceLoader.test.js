@@ -13,6 +13,7 @@ let mockAssessmentResultsRows = { data: [], error: null };
 let mockLifeIntegrationRows = { data: [], error: null };
 let mockJournalRows = { data: [], error: null };
 let mockInteractiveOrRows = { data: [], error: null };
+let mockLiveSessionRows = { data: [], error: null };
 vi.mock('../supabase', () => ({
   supabase: {
     from: (table) => ({
@@ -48,6 +49,11 @@ vi.mock('../supabase', () => ({
             order: () => ({
               limit: () => (table === 'ifs_interactive_data' ? mockInteractiveOrRows : { data: [], error: null }),
             }),
+          }),
+          // loadWorkspaceActiveLiveSessions's real query filters with .in()
+          // (status list) before .order() — no .limit() call.
+          in: () => ({
+            order: () => (table === 'ifs_live_sessions' ? mockLiveSessionRows : { data: [], error: null }),
           }),
         }),
       }),
@@ -115,7 +121,7 @@ const {
   loadCaseloadRiskAlerts, loadWorkspaceCurriculumReflections,
   markWorkspaceHomeworkReviewed, archiveWorkspaceHomework, refreshWorkspaceHomeworkForClient,
   loadWorkspaceSelfEnergyTrend, loadWorkspaceUnburdeningRecord, loadWorkspacePartSuggestions,
-  loadWorkspaceClientDetail,
+  loadWorkspaceClientDetail, loadWorkspaceActiveLiveSessions,
 } = await import('../advisorWorkspaceLoader.js');
 
 describe('initialsFrom', () => {
@@ -1092,6 +1098,34 @@ describe('loadWorkspacePartSuggestions', () => {
     expect(summary).toEqual({
       pendingPartsCount: 0, pendingRelationshipsCount: 0, acceptedCount: 0, mergedCount: 0, dismissedCount: 0, topSuggestions: [],
     });
+  });
+});
+
+describe('loadWorkspaceActiveLiveSessions', () => {
+  beforeEach(() => { mockLiveSessionRows = { data: [], error: null }; });
+
+  it('returns an empty array without a therapistId', async () => {
+    expect(await loadWorkspaceActiveLiveSessions(null)).toEqual([]);
+  });
+
+  it('maps real active/paused session rows, most recently updated first', async () => {
+    mockLiveSessionRows = {
+      data: [
+        { id: 'ls1', client_id: 'c1', status: 'active', current_activity: 'guided_breathing', started_at: '2026-07-29T00:00:00Z', updated_at: '2026-07-29T00:05:00Z' },
+        { id: 'ls2', client_id: 'c2', status: 'paused', current_activity: null, started_at: '2026-07-28T00:00:00Z', updated_at: '2026-07-28T00:10:00Z' },
+      ],
+      error: null,
+    };
+    const rows = await loadWorkspaceActiveLiveSessions('therapist1');
+    expect(rows).toHaveLength(2);
+    expect(rows[0]).toEqual(expect.objectContaining({ id: 'ls1', clientId: 'c1', status: 'active', activity: 'guided_breathing' }));
+    // current_activity can be null between activities — falls back to a label rather than showing blank.
+    expect(rows[1].activity).toBe('Guided practice');
+  });
+
+  it('returns an empty array (not a throw) when the API errors', async () => {
+    mockLiveSessionRows = { data: null, error: { message: 'forbidden' } };
+    expect(await loadWorkspaceActiveLiveSessions('therapist1')).toEqual([]);
   });
 });
 

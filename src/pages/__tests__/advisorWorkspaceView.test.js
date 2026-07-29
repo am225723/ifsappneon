@@ -349,6 +349,37 @@ describe('buildView — Part relationships', () => {
   });
 });
 
+describe('buildView — Live Sessions reflects real ifs_live_sessions rows', () => {
+  it('maps a real active session row to a client name/initial, a toggle label, and working handlers', () => {
+    const calls = [];
+    const S = { ...INITIAL_STATE, liveSessions: [{ id: 'ls1', clientId: 'c1', status: 'active', activity: 'guided_breathing', startedAt: '5 min ago' }] };
+    const theme = LIGHT;
+    const allClients = () => CLIENTS;
+    const buildTreatmentPlan = (client) => ({ clientName: client.name, phases: [], currentPhaseLabel: '', currentPhaseDesc: '', milestones: [] });
+    const handlers = new Proxy(
+      { isGroupExpanded: () => false, toggleLiveSession: (id) => calls.push(['toggle', id]), endLiveSession: (id) => calls.push(['end', id]), selectClient: (id) => calls.push(['select', id]) },
+      { get: (target, prop) => target[prop] || (() => {}) },
+    );
+    const v = buildView({ S, theme, allClients, buildTreatmentPlan, handlers, isAdmin: true });
+    expect(v.noLiveSessions).toBe(false);
+    expect(v.liveSessionRows).toHaveLength(1);
+    const row = v.liveSessionRows[0];
+    expect(row.name).toBe('Maya Chen'); // c1 in the seeded CLIENTS list
+    expect(row.statusLabel).toBe('Active');
+    expect(row.toggleLabel).toBe('Pause');
+    row.onToggle();
+    row.onEnd();
+    row.onOpenClient();
+    expect(calls).toEqual([['toggle', 'ls1'], ['end', 'ls1'], ['select', 'c1']]);
+  });
+
+  it('flags noLiveSessions true once the demo seed rows are cleared for a real caseload', () => {
+    const v = makeView({ liveSessions: [] });
+    expect(v.noLiveSessions).toBe(true);
+    expect(v.liveSessionRows).toEqual([]);
+  });
+});
+
 describe('buildView — real caseload risk alerts (api/risk-alerts.js)', () => {
   it('enriches a client with no base risk when a real alert exists, with a title matching the reason type', () => {
     const v = makeView({ riskAlerts: [{ clientId: 'c1', reasons: ['Mood score 2/5 in the last 7 days'], type: 'mood', level: 'high', daysAgo: 1 }] });

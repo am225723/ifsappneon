@@ -1228,6 +1228,49 @@ export async function loadWorkspacePartSuggestions(clientId, isAssigned) {
   }
 }
 
+// The Advisor Workspace's "Live Sessions" tab (LiveView in
+// AdvisorWorkspaceView.jsx) has always been fully built — pause/resume/end
+// controls and all — but was fed by hardcoded demo rows in INITIAL_STATE
+// that get reset to [] the moment a real caseload loads, so it's silently
+// dead for real Advisors. ifs_live_sessions is a real, actively-used table
+// (api/live-session.js, consumed by LiveCoTherapy.jsx/ClientLiveSession.jsx)
+// — it just never had a "list my active sessions" reader.
+//
+// activity_state/current_activity are structured session-control metadata
+// (activity type, current step) — the table's own migration comment is
+// explicit that dialogue transcripts/clinical interpretations are never
+// stored here, so there's no free-text privacy boundary to draw.
+//
+// ifs_live_sessions has no RLS policy at all, so this filters by the
+// caller's own therapistId (not client-suppliable) rather than trusting
+// the table alone to scope rows — the same extra-safety pattern
+// loadClientMessages already uses for ifs_messages above.
+function mapLiveSession(row) {
+  return {
+    id: row.id,
+    clientId: row.client_id,
+    status: row.status,
+    activity: row.current_activity || 'Guided practice',
+    startedAt: relativeDateLabel(row.started_at),
+  };
+}
+
+export async function loadWorkspaceActiveLiveSessions(therapistId) {
+  if (!therapistId) return [];
+  try {
+    const { data, error } = await supabase
+      .from('ifs_live_sessions')
+      .select('id, client_id, status, current_activity, started_at, updated_at')
+      .eq('therapist_id', therapistId)
+      .in('status', ['active', 'paused'])
+      .order('updated_at', { ascending: false });
+    if (error) return [];
+    return (data || []).map(mapLiveSession);
+  } catch {
+    return [];
+  }
+}
+
 function escapeHtml(value) {
   return String(value ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
