@@ -628,6 +628,7 @@ describe('buildView — Between Sessions reflects real analytics data', () => {
       assignments: [
         { id: 'hw1', title: 'Self-Connection Journal', status: 'reviewed', statusLabel: 'Reviewed', instructions: 'Focus on the abandonment part.', advisorFeedback: 'Great insight.', assignedDateLabel: 'Jun 1', completedDateLabel: 'Jun 5' },
         { id: 'hw2', title: 'mod-2', status: 'assigned', statusLabel: 'Assigned', instructions: '', advisorFeedback: '', assignedDateLabel: 'Jun 10', completedDateLabel: '' },
+        { id: 'hw3', title: 'mod-3', status: 'completed', statusLabel: 'Completed', instructions: '', advisorFeedback: '', assignedDateLabel: 'Jun 12', completedDateLabel: 'Jun 15' },
       ],
       freeformAssignments: [
         { id: 'fh1', title: 'Notice the protector', statusLabel: 'Completed', description: 'Journal about your inner critic.', completionNotes: 'It showed up before my meeting.', interactiveSummary: [], completedDateLabel: 'Jun 5', dueDateLabel: '' },
@@ -666,13 +667,21 @@ describe('buildView — Between Sessions reflects real analytics data', () => {
     const v = makeView({ extraClients: [CLIENT_WITH_ACTIVITY], selectedClientId: 'bs1' });
     const bs = v.selectedClient.betweenSession;
     expect(bs.noAssignments).toBe(false);
-    expect(bs.assignmentRows).toHaveLength(2);
+    expect(bs.assignmentRows).toHaveLength(3);
     expect(bs.assignmentRows[0].title).toBe('Self-Connection Journal');
     expect(bs.assignmentRows[0].statusLabel).toBe('Reviewed');
     expect(bs.assignmentRows[0].instructions).toBe('Focus on the abandonment part.');
     expect(bs.assignmentRows[0].advisorFeedback).toBe('Great insight.');
     expect(bs.assignmentRows[0].dateLabel).toBe('Completed Jun 5');
     expect(bs.assignmentRows[1].dateLabel).toBe('Assigned Jun 10');
+  });
+
+  it('only offers the "mark reviewed" action for assignments the client has actually completed', () => {
+    const v = makeView({ extraClients: [CLIENT_WITH_ACTIVITY], selectedClientId: 'bs1' });
+    const rows = v.selectedClient.betweenSession.assignmentRows;
+    expect(rows.find((r) => r.id === 'hw1').canReview).toBe(false); // already reviewed
+    expect(rows.find((r) => r.id === 'hw2').canReview).toBe(false); // not yet completed
+    expect(rows.find((r) => r.id === 'hw3').canReview).toBe(true); // completed, awaiting review
   });
 
   it('maps real custom (freeform) homework with completion notes, and flags noFreeformAssignments for clients with none', () => {
@@ -804,5 +813,30 @@ describe('buildView — AI-Assisted Advisor Note Draft (api/ai-session-note-draf
     });
     view.onAiNoteSaved({ id: 'n1', client_id: 'c1' });
     expect(savedNote).toEqual({ id: 'n1', client_id: 'c1' });
+  });
+});
+
+describe('buildView — real homework review/archive actions (assignedHomework.js)', () => {
+  it('exposes the homework feedback draft and wires the review/archive/assign handlers through', () => {
+    let reviewedArgs = null; let archivedArgs = null; let assignedClientId = null;
+    const S = { ...INITIAL_STATE, homeworkFeedbackDraft: { hw1: 'Great progress' } };
+    const view = buildView({
+      S, theme: LIGHT, allClients: () => CLIENTS,
+      buildTreatmentPlan: (c) => ({ clientName: c.name, phases: [], milestones: [], currentPhaseLabel: '', currentPhaseDesc: '' }),
+      handlers: new Proxy({
+        isGroupExpanded: () => false,
+        onMarkHomeworkReviewed: (clientId, id) => { reviewedArgs = [clientId, id]; },
+        onArchiveHomework: (clientId, id) => { archivedArgs = [clientId, id]; },
+        onHomeworkAssigned: (clientId) => { assignedClientId = clientId; },
+      }, { get: (t, p) => t[p] || (() => {}) }),
+      isAdmin: true,
+    });
+    expect(view.homeworkFeedbackDraft).toEqual({ hw1: 'Great progress' });
+    view.onMarkHomeworkReviewed('c1', 'hw1');
+    expect(reviewedArgs).toEqual(['c1', 'hw1']);
+    view.onArchiveHomework('c1', 'hw1');
+    expect(archivedArgs).toEqual(['c1', 'hw1']);
+    view.onHomeworkAssigned('c1');
+    expect(assignedClientId).toBe('c1');
   });
 });

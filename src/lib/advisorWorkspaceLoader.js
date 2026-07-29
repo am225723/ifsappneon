@@ -11,7 +11,7 @@ import { loadAssignedClients, loadAssignedClientsWithStatus, assignClientToThera
 import { loadClientAnalytics } from './clientAnalytics';
 import { loadTherapistNotesForClient, createTherapistNote } from './therapistNotes';
 import { loadActiveTreatmentPlansForClient } from './treatmentPlans';
-import { loadAssignedHomeworkForClient } from './assignedHomework.js';
+import { loadAssignedHomeworkForClient, markAssignedHomeworkReviewed, archiveAssignedHomework } from './assignedHomework.js';
 import { loadTherapistClientSessionAgendas, markSessionAgendaReviewed } from './sessionAgendas.js';
 import { loadPartRelationships } from './partRelationships.js';
 import { loadNotifications, markNotificationRead, markAllNotificationsRead } from './notifications.js';
@@ -231,7 +231,7 @@ const HOMEWORK_STATUS_LABEL = {
 // the same ifs_assigned_homework rows TherapistHomework.jsx already reads
 // and writes, via the already-existing loadAssignedHomeworkForClient — just
 // not previously surfaced in the workspace.
-function mapAssignedHomeworkDetail(rows) {
+export function mapAssignedHomeworkDetail(rows) {
   if (!Array.isArray(rows)) return [];
   return rows.slice(0, 20).map((row) => ({
     id: row.id,
@@ -743,6 +743,39 @@ export async function loadWorkspaceClientDetail(base, therapistId) {
 // ifs_session_agendas. This wraps the already-real markSessionAgendaReviewed.
 export async function markWorkspaceAgendaReviewed(agendaId) {
   return markSessionAgendaReviewed(agendaId);
+}
+
+// markAssignedHomeworkReviewed/archiveAssignedHomework (assignedHomework.js,
+// table ifs_assigned_homework) are real, working write actions already used
+// by TherapistHomework.jsx — the workspace only ever read this data via
+// mapAssignedHomeworkDetail above, with no way to act on it. Assigning a new
+// module reuses TherapistHomeworkBuilder.jsx directly (it calls
+// assignModuleHomework itself), so no wrapper is needed for that action.
+export async function markWorkspaceHomeworkReviewed(homeworkId, feedback) {
+  if (!homeworkId) return { error: { message: 'Missing assignment id' } };
+  return markAssignedHomeworkReviewed(homeworkId, feedback || '');
+}
+
+export async function archiveWorkspaceHomework(homeworkId) {
+  if (!homeworkId) return { error: { message: 'Missing assignment id' } };
+  return archiveAssignedHomework(homeworkId);
+}
+
+// Re-fetches just one client's assigned-homework list after a write action
+// above, so the workspace doesn't need a full per-client detail reload to
+// reflect a new assignment, a review, or an archive. Returns null (not [])
+// on a missing clientId or a failed fetch, distinct from a real empty list,
+// so the caller can tell "nothing assigned" apart from "couldn't refresh"
+// and avoid wiping the currently-displayed assignments on a transient error.
+export async function refreshWorkspaceHomeworkForClient(clientId) {
+  if (!clientId) return null;
+  try {
+    const { data, error } = await loadAssignedHomeworkForClient(clientId);
+    if (error) return null;
+    return mapAssignedHomeworkDetail(data);
+  } catch {
+    return null;
+  }
 }
 
 export async function persistTherapistNote({ therapistId, clientId, content, status = 'draft' }) {
