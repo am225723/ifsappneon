@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import AdvisorSessionNoteDraft from '../components/AdvisorSessionNoteDraft.jsx';
 import {
   WOUND_META, woundChip, daysAgoText, severityStyle, RISK_LEVEL_TO_SEV, RISK_LEVEL_LABEL, RISK_LEVEL_RANK,
   PART_CAT_META, partChip, TEMPLATE_OPTIONS, PRACTICE_TYPE_META, LESSON_TITLES, PLAN_PHASES,
@@ -7,7 +8,7 @@ import {
 } from './advisorWorkspaceData.js';
 
 // Computes every derived value the UI needs (mirrors the design's renderVals()).
-export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: H, isAdmin = false }) {
+export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: H, isAdmin = false, isDemo = false }) {
   const {
     activeTab, isDark, viewMode, selectedClientId, activeClientTab, search, filterWound, reviewedIds,
     sessionPrepOpenId, noteDraft, savedNotes, planClientId, practiceForm, generatedPractice, assignedPractices,
@@ -561,7 +562,7 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
     threadList, activeThread,
     taskFilters, taskRows, noTasks, newTaskTitle, newTaskClientId, onNewTaskTitleChange: H.onNewTaskTitleChange, onNewTaskClientChange: H.onNewTaskClientChange, onAddTask: H.onAddTask,
     noteDraft: { ...noteDraft, placeholder: currentTemplate.placeholder }, clientOptions, templateOptions: TEMPLATE_OPTIONS,
-    onNoteClientChange: H.onNoteClientChange, onNoteTemplateChange: H.onNoteTemplateChange, onNoteTextChange: H.onNoteTextChange, onSaveNote: H.onSaveNote, onSignNote: H.onSignNote,
+    onNoteClientChange: H.onNoteClientChange, onNoteTemplateChange: H.onNoteTemplateChange, onNoteTextChange: H.onNoteTextChange, onSaveNote: H.onSaveNote, onSignNote: H.onSignNote, onAiNoteSaved: H.onAiNoteSaved, isDemo,
     savedNotes: savedNotes.map((n) => ({ ...n, statusStyle: severityStyle(theme, n.status === 'Signed & Locked' ? 'low' : 'medium'), statusLabel: n.status })), allGoals,
     planClientId, onPlanClientChange: H.onPlanClientChange, treatmentPlan, hasPlanClient,
     practiceForm, woundOptions, practiceTypeOptions, onPracticeClientChange: H.onPracticeClientChange, onPracticeWoundChange: H.onPracticeWoundChange, onPracticeTypeChange: H.onPracticeTypeChange,
@@ -1891,6 +1892,7 @@ function LiveView({ v }) {
 
 function ClinicalNotesView({ v }) {
   return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
     <div style={{ display: 'grid', gridTemplateColumns: '1.1fr 1fr', gap: '20px', alignItems: 'start' }}>
       <div style={CARD}>
         <span style={{ ...FR, fontSize: '16px' }}>New advisor note</span>
@@ -1935,6 +1937,14 @@ function ClinicalNotesView({ v }) {
           ))}
         </div>
       </div>
+    </div>
+    {v.isDemo ? (
+      <div style={{ ...CARD, textAlign: 'center', color: 'var(--muted)', fontSize: '14px' }}>
+        AI-Assisted Advisor Note Draft requires a signed-in Advisor session.
+      </div>
+    ) : (
+      <AdvisorSessionNoteDraft assignedClients={v.clientOptions} initialClientId={v.noteDraft.clientId} onSaved={v.onAiNoteSaved} />
+    )}
     </div>
   );
 }

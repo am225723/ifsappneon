@@ -740,3 +740,34 @@ describe('buildView — Life Reflections reflects real shared reflections', () =
     expect(v.selectedClient.lifeReflections.noReflections).toBe(false);
   });
 });
+
+describe('buildView — AI-Assisted Advisor Note Draft (api/ai-session-note-draft.js)', () => {
+  it('defaults isDemo to false so the real widget renders for a signed-in Advisor', () => {
+    const v = makeView();
+    expect(v.isDemo).toBe(false);
+  });
+
+  it('exposes isDemo so a demo/unauthenticated workspace can gate the widget instead of rendering it', () => {
+    const S = { ...INITIAL_STATE };
+    const view = buildView({
+      S, theme: LIGHT, allClients: () => CLIENTS,
+      buildTreatmentPlan: (c) => ({ clientName: c.name, phases: [], milestones: [], currentPhaseLabel: '', currentPhaseDesc: '' }),
+      handlers: new Proxy({ isGroupExpanded: () => false }, { get: (t, p) => t[p] || (() => {}) }),
+      isAdmin: true, isDemo: true,
+    });
+    expect(view.isDemo).toBe(true);
+  });
+
+  it('wires onAiNoteSaved through to the handler so a saved draft updates Recent notes', () => {
+    let savedNote = null;
+    const S = { ...INITIAL_STATE };
+    const view = buildView({
+      S, theme: LIGHT, allClients: () => CLIENTS,
+      buildTreatmentPlan: (c) => ({ clientName: c.name, phases: [], milestones: [], currentPhaseLabel: '', currentPhaseDesc: '' }),
+      handlers: new Proxy({ isGroupExpanded: () => false, onAiNoteSaved: (note) => { savedNote = note; } }, { get: (t, p) => t[p] || (() => {}) }),
+      isAdmin: true,
+    });
+    view.onAiNoteSaved({ id: 'n1', client_id: 'c1' });
+    expect(savedNote).toEqual({ id: 'n1', client_id: 'c1' });
+  });
+});
