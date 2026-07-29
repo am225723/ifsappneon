@@ -18,6 +18,7 @@ import { loadNotifications, markNotificationRead, markAllNotificationsRead } fro
 import { loadSharedLifeIntegrationReflectionsForAdvisor } from './lifeIntegration.js';
 import { normalizeLifeReflection } from './lifeIntegrationDisplay.js';
 import { loadHealingTimeline } from './healingTimeline.js';
+import { loadCurriculumReflections } from './curriculumReflections.js';
 import { summarizeInteractiveResponses } from './interactiveWorksheetSummary.js';
 import { supabase } from './supabase';
 import { getClerkToken } from './apiAuth.js';
@@ -893,6 +894,39 @@ export async function loadWorkspaceLifeReflections(clientId) {
     const { data, error } = await loadSharedLifeIntegrationReflectionsForAdvisor(clientId);
     if (error) return [];
     return (Array.isArray(data) ? data : []).map(normalizeLifeReflection);
+  } catch {
+    return [];
+  }
+}
+
+// Real, already-Advisor-visible curriculum module reflections
+// (loadCurriculumReflections in curriculumReflections.js, table
+// ifs_interactive_data) that a client writes per learning module and
+// explicitly flags sharedWithAdvisor: true from LearningModuleEnhanced.jsx.
+// The workspace's Healing Journey summary already surfaces an aggregate
+// count of these (mapHealingTimeline below); this loads the actual
+// reflection content, which previously had no Advisor-side consumer.
+//
+// Unlike its siblings (life reflections, healing timeline), this goes
+// through a direct Supabase query rather than a requireTherapistAssignment-
+// gated API route, and ifs_interactive_data's RLS policy doesn't itself
+// restrict reads to the client's assigned Advisor — so isAssigned must be
+// confirmed by the caller (from the already-loaded caseload) before this
+// fetches anything, rather than trusting the backend to enforce it.
+export async function loadWorkspaceCurriculumReflections(clientId, isAssigned) {
+  if (!clientId || !isAssigned) return [];
+  try {
+    const { data, error } = await loadCurriculumReflections({ clientId });
+    if (error) return [];
+    return (Array.isArray(data) ? data : []).map((r) => ({
+      id: r.id,
+      moduleTitle: r.moduleTitle,
+      insight: r.insight,
+      partNoticed: r.partNoticed,
+      selfEnergyQuality: r.selfEnergyQuality,
+      nextPractice: r.nextPractice,
+      createdAt: r.createdAt,
+    }));
   } catch {
     return [];
   }

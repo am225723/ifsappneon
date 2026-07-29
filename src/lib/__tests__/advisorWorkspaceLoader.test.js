@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, afterAll } from 'vitest';
+import { describe, it, expect, vi, afterAll, beforeEach } from 'vitest';
 
 // The loader imports supabase (browser client) transitively; stub it so the
 // pure mappers can be tested in the Node test environment.
@@ -46,11 +46,17 @@ vi.mock('../healingTimeline.js', () => ({
   loadHealingTimeline: async () => mockHealingTimelineResult,
 }));
 
+let mockCurriculumReflectionsResult = { data: [], error: null };
+const mockLoadCurriculumReflections = vi.fn(async () => mockCurriculumReflectionsResult);
+vi.mock('../curriculumReflections.js', () => ({
+  loadCurriculumReflections: mockLoadCurriculumReflections,
+}));
+
 const {
   initialsFrom, daysSince, mapClientRow, mapNoteEntry, deriveWorkspaceDetail, WORKSPACE_WOUNDS, mergeCaseloadRefresh,
   generateWorkspaceReport, loadWorkspaceReports, loadWorkspaceNotifications, markWorkspaceNotificationRead, markAllWorkspaceNotificationsRead,
   loadWorkspaceLifeReflections, buildClientReportHtml, markWorkspaceAgendaReviewed, loadWorkspaceHealingTimeline,
-  loadCaseloadRiskAlerts,
+  loadCaseloadRiskAlerts, loadWorkspaceCurriculumReflections,
 } = await import('../advisorWorkspaceLoader.js');
 
 describe('initialsFrom', () => {
@@ -763,6 +769,51 @@ describe('loadWorkspaceHealingTimeline', () => {
     expect(data).toBeNull();
     expect(error).toBe('You do not have permission to view this healing timeline.');
     mockHealingTimelineResult = { data: null, error: null };
+  });
+});
+
+describe('loadWorkspaceCurriculumReflections', () => {
+  beforeEach(() => {
+    mockLoadCurriculumReflections.mockClear();
+  });
+
+  it('returns an empty array without a clientId, without calling the API', async () => {
+    expect(await loadWorkspaceCurriculumReflections(null, true)).toEqual([]);
+    expect(mockLoadCurriculumReflections).not.toHaveBeenCalled();
+  });
+
+  // ifs_interactive_data's RLS doesn't restrict reads to the client's
+  // assigned Advisor (unlike the API-backed life reflections/healing
+  // timeline siblings), so this loader refuses to fetch at all unless the
+  // caller has already confirmed the client is assigned.
+  it('returns an empty array without calling the API when the caller has not confirmed assignment', async () => {
+    expect(await loadWorkspaceCurriculumReflections('c1', false)).toEqual([]);
+    expect(await loadWorkspaceCurriculumReflections('c1')).toEqual([]);
+    expect(mockLoadCurriculumReflections).not.toHaveBeenCalled();
+  });
+
+  it('maps real curriculum reflection rows into the display shape', async () => {
+    mockCurriculumReflectionsResult = {
+      data: [{
+        id: 'cr1', moduleId: 'm1', moduleTitle: 'Meeting Your Parts', insight: 'I noticed a protector show up early.',
+        partNoticed: 'The Watcher', selfEnergyQuality: 'Curious', nextPractice: 'Sit with the part for 5 minutes.',
+        createdAt: '2026-07-01T00:00:00Z',
+      }],
+      error: null,
+    };
+    const rows = await loadWorkspaceCurriculumReflections('c1', true);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].moduleTitle).toBe('Meeting Your Parts');
+    expect(rows[0].insight).toBe('I noticed a protector show up early.');
+    expect(rows[0].partNoticed).toBe('The Watcher');
+    mockCurriculumReflectionsResult = { data: [], error: null };
+  });
+
+  it('returns an empty array (not a throw) when the API errors', async () => {
+    mockCurriculumReflectionsResult = { data: null, error: { message: 'forbidden' } };
+    const rows = await loadWorkspaceCurriculumReflections('c1', true);
+    expect(rows).toEqual([]);
+    mockCurriculumReflectionsResult = { data: [], error: null };
   });
 });
 

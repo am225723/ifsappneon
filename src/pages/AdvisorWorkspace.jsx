@@ -9,7 +9,7 @@ import {
   claimWorkspaceClient, mergeCaseloadRefresh, generateWorkspaceReport, loadWorkspaceReports,
   loadWorkspaceNotifications, markWorkspaceNotificationRead, markAllWorkspaceNotificationsRead,
   loadWorkspaceLifeReflections, buildClientReportHtml, markWorkspaceAgendaReviewed, loadWorkspaceHealingTimeline,
-  loadCaseloadRiskAlerts, mapNoteEntry,
+  loadCaseloadRiskAlerts, loadWorkspaceCurriculumReflections, mapNoteEntry,
 } from '../lib/advisorWorkspaceLoader.js';
 import { loadAdvisorSessionSnapshot } from '../lib/unifiedGuidance.js';
 import { generateSessionPrepSummary } from '../lib/sessionPrepSummary.js';
@@ -51,6 +51,7 @@ export const INITIAL_STATE = {
   changeSummary: { loading: false, data: null, error: '' },
   lifeReflections: [], lifeReflectionsLoading: false,
   healingTimeline: { loading: false, data: null, error: '' },
+  curriculumReflections: [], curriculumReflectionsLoading: false,
   riskAlerts: [],
   accessOverrides: {}, settingsAccent: 'amber',
   extraClients: [], deletedIds: {},
@@ -85,6 +86,7 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
   const notificationsLoaded = useRef(false);
   const lifeReflectionsLoadedFor = useRef(null);
   const healingTimelineLoadedFor = useRef(null);
+  const curriculumReflectionsLoadedFor = useRef(null);
   const riskAlertsLoaded = useRef(false);
   // Generation guard: bumped on therapist change / unmount so stale in-flight
   // detail merges are ignored without cancelling still-valid sibling requests.
@@ -256,12 +258,14 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
     changeSummaryGenRef.current += 1;
     lifeReflectionsLoadedFor.current = null;
     healingTimelineLoadedFor.current = null;
+    curriculumReflectionsLoadedFor.current = null;
     set({
       selectedClientId: id, activeTab: 'clients-caseload', activeClientTab: 'overview',
       sessionSnapshot: { loading: false, data: null, error: '' },
       changeSummary: { loading: false, data: null, error: '' },
       lifeReflections: [], lifeReflectionsLoading: false,
       healingTimeline: { loading: false, data: null, error: '' },
+      curriculumReflections: [], curriculumReflectionsLoading: false,
     });
   };
   const setClientTab = (id) => set({ activeClientTab: id });
@@ -567,6 +571,33 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
       isCanceled = true;
     };
   }, [isDemo, loadPhase, S.activeClientTab, S.selectedClientId]);
+
+  // Lazily load a client's real curriculum module reflections the first time
+  // that tab is opened — the client's own written insight/part-noticed/
+  // self-energy/next-practice per module, explicitly flagged
+  // sharedWithAdvisor: true by LearningModuleEnhanced.jsx. The Healing
+  // Journey summary above only shows an aggregate count of these; this
+  // surfaces the actual reflection content, which previously had no
+  // Advisor-side consumer.
+  useEffect(() => {
+    if (isDemo || loadPhase !== 'ready' || S.activeClientTab !== 'curriculumReflections' || !S.selectedClientId) return;
+    if (curriculumReflectionsLoadedFor.current === S.selectedClientId) return;
+    // loadWorkspaceCurriculumReflections bypasses a real requireTherapistAssignment
+    // check server-side (see its comment in advisorWorkspaceLoader.js), so an
+    // unassigned client must never reach it — fail closed here rather than
+    // relying solely on the view layer's canView gating to hide the result.
+    const client = allClients().find((c) => c.id === S.selectedClientId);
+    if (!client || client.unassigned) return;
+    curriculumReflectionsLoadedFor.current = S.selectedClientId;
+    set({ curriculumReflectionsLoading: true });
+    let isCanceled = false;
+    loadWorkspaceCurriculumReflections(S.selectedClientId, true).then((rows) => {
+      if (!isCanceled) set({ curriculumReflections: rows, curriculumReflectionsLoading: false });
+    });
+    return () => {
+      isCanceled = true;
+    };
+  }, [isDemo, loadPhase, S.activeClientTab, S.selectedClientId, allClients]);
 
   const toggleNewClientForm = () => set((s) => ({ showNewClientForm: !s.showNewClientForm, newClientResult: null }));
   const onNewClientFieldChange = (field) => (e) => set((s) => ({ newClientForm: { ...s.newClientForm, [field]: field === 'sendEmail' ? e.target.checked : e.target.value } }));

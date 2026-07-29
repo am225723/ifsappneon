@@ -306,6 +306,7 @@ export const CLIENT_TABS = [
   { id: 'plan', label: 'Treatment Plan' }, { id: 'mbc', label: 'MBC' }, { id: 'parts', label: 'Parts' },
   { id: 'practices', label: 'Practices' }, { id: 'safety', label: 'Safety' }, { id: 'messages', label: 'Messages' },
   { id: 'lifeReflections', label: 'Life Reflections' }, { id: 'healingJourney', label: 'Healing Journey' },
+  { id: 'curriculumReflections', label: 'Curriculum Reflections' },
 ];
 export const RISK_TYPE_TITLE = {
   concerning_language: 'Concerning language detected', mood: 'Low mood reported', inactivity: 'Extended inactivity',
