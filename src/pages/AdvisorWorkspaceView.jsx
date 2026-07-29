@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import {
-  WOUND_META, woundChip, daysAgoText, severityStyle, RISK_LEVEL_TO_SEV, RISK_LEVEL_LABEL,
+  WOUND_META, woundChip, daysAgoText, severityStyle, RISK_LEVEL_TO_SEV, RISK_LEVEL_LABEL, RISK_LEVEL_RANK,
   PART_CAT_META, partChip, TEMPLATE_OPTIONS, PRACTICE_TYPE_META, LESSON_TITLES, PLAN_PHASES,
   DOC_TYPES, DOC_SOURCES, NAV_CONFIG, CLIENT_TABS, TIMELINE_TYPE_META, TAB_TITLES, TOGGLE_META,
   QUICK_MESSAGES, engagementStatusFor, MOOD_LABELS, RISK_TYPE_TITLE,
@@ -42,10 +42,22 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
   function withRiskAlert(client) {
     const alert = riskAlertsById.get(client.id);
     if (!alert) return client;
+    // Augment, never downgrade or erase: a client can independently already
+    // carry a higher-severity base risk (e.g. 21+ days inactive) than what
+    // this particular alert reports (e.g. a medium inactivity flag) — take
+    // the higher of the two levels and merge/dedupe the reason lists rather
+    // than replacing them outright.
+    const alertSafetyLevel = alert.level === 'high' ? 'high' : 'monitor';
+    const existingSafetyLevel = client.safety?.riskLevel || 'none';
+    const mergedSafetyLevel = (RISK_LEVEL_RANK[alertSafetyLevel] ?? 0) >= (RISK_LEVEL_RANK[existingSafetyLevel] ?? 0) ? alertSafetyLevel : existingSafetyLevel;
+    const mergedFactors = [...new Set([...(client.safety?.riskFactors || []), ...alert.reasons])];
+    const mergedRiskLevel = client.risk?.level === 'high' || alert.level === 'high' ? 'high' : 'medium';
+    const existingDetail = client.risk?.detail;
+    const mergedDetail = existingDetail && !alert.reasons.includes(existingDetail) ? [existingDetail, ...alert.reasons].join(' · ') : alert.reasons.join(' · ');
     return {
       ...client,
-      risk: { type: alert.type, level: alert.level, detail: alert.reasons.join(' · '), daysAgo: alert.daysAgo ?? client.risk?.daysAgo ?? null },
-      safety: { ...client.safety, riskLevel: alert.level === 'high' ? 'high' : 'monitor', riskFactors: alert.reasons },
+      risk: { type: alert.type, level: mergedRiskLevel, detail: mergedDetail, daysAgo: alert.daysAgo ?? client.risk?.daysAgo ?? null },
+      safety: { ...client.safety, riskLevel: mergedSafetyLevel, riskFactors: mergedFactors },
     };
   }
   const ALL_CLIENTS = allClients().map(withRiskAlert);

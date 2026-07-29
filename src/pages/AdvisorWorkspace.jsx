@@ -114,6 +114,7 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
     setLoadPhase('loading');
     detailRequested.current = new Set();
     notificationsLoaded.current = false;
+    riskAlertsLoaded.current = false;
     (async () => {
       try {
         const clients = await loadWorkspaceCaseload(therapistId);
@@ -123,7 +124,7 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
           ...prev,
           baseClients: clients,
           extraClients: [], deletedIds: {}, savedNotes: [],
-          tasks: [], notifications: [], liveSessions: [], coTherapyThread: [],
+          tasks: [], notifications: [], liveSessions: [], coTherapyThread: [], riskAlerts: [],
           selectedClientId: firstId, activeThreadId: firstId, planClientId: firstId,
           newTaskClientId: firstId,
           noteDraft: { ...prev.noteDraft, clientId: firstId },
@@ -199,10 +200,14 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
   useEffect(() => {
     if (isDemo || loadPhase !== 'ready' || riskAlertsLoaded.current) return;
     riskAlertsLoaded.current = true;
+    const gen = genRef.current;
     loadCaseloadRiskAlerts()
-      .then((alerts) => set({ riskAlerts: alerts }))
+      .then((alerts) => {
+        if (genRef.current !== gen) return;
+        set({ riskAlerts: alerts });
+      })
       .catch((error) => console.error('Failed to load risk alerts:', error));
-  }, [isDemo, loadPhase]);
+  }, [isDemo, loadPhase, therapistId]);
 
   // Claim an unassigned client (e.g. a fresh signup) into this Advisor's
   // caseload, then force a fresh detail load now that the assignment exists.

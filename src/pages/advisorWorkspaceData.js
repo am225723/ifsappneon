@@ -61,6 +61,7 @@ export function severityStyle(theme, level) {
 }
 export const RISK_LEVEL_TO_SEV = { none: 'low', monitor: 'low', elevated: 'medium', high: 'high', urgent: 'high' };
 export const RISK_LEVEL_LABEL = { none: 'No concern', monitor: 'Monitor', elevated: 'Elevated', high: 'High', urgent: 'Urgent' };
+export const RISK_LEVEL_RANK = { none: 0, monitor: 1, elevated: 2, high: 3, urgent: 4 };
 export const PART_CAT_META = {
   manager: { label: 'Manager', color: '#2563eb' },
   firefighter: { label: 'Firefighter', color: '#dc2626' },

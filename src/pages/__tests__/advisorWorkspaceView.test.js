@@ -365,6 +365,22 @@ describe('buildView — real caseload risk alerts (api/risk-alerts.js)', () => {
     expect(v.selectedClient.safety.levelLabel).toBe('High');
     expect(v.selectedClient.safety.riskFactors).toEqual(['Latest pre-session agenda mentions "stuck"']);
   });
+
+  it('never downgrades an existing high/urgent safety status or erases its factors when a lower-severity alert also fires', () => {
+    // c2 (Jordan Reyes) already carries safety.riskLevel: 'high' with 3 real
+    // riskFactors and risk.level: 'high' in the seed data. A medium
+    // inactivity-only alert must augment, not replace, that assessment.
+    const v = makeView({
+      selectedClientId: 'c2',
+      riskAlerts: [{ clientId: 'c2', reasons: ['9+ days without login or module progress'], type: 'inactivity', level: 'medium', daysAgo: 9 }],
+    });
+    expect(v.selectedClient.safety.levelLabel).toBe('High'); // not downgraded to Monitor
+    expect(v.selectedClient.safety.riskFactors).toEqual(
+      expect.arrayContaining(['Recent hopelessness language', 'Reduced social contact', 'History of betrayal trauma', '9+ days without login or module progress']),
+    );
+    const reviewItem = v.reviewItems.find((r) => r.id === 'risk-c2');
+    expect(reviewItem.sevLabel).toBe('High'); // risk.level not downgraded to medium
+  });
 });
 
 describe('buildView — Healing Journey', () => {
