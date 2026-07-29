@@ -740,3 +740,38 @@ describe('buildView — Life Reflections reflects real shared reflections', () =
     expect(v.selectedClient.lifeReflections.noReflections).toBe(false);
   });
 });
+
+describe('buildView — Curriculum Reflections reflects real module reflection content', () => {
+  const RAW_REFLECTION = {
+    id: 'cr1', moduleTitle: 'Meeting Your Parts', insight: 'I noticed a protector show up early.',
+    partNoticed: 'The Watcher', selfEnergyQuality: '', nextPractice: '', createdAt: '2026-07-01T00:00:00Z',
+  };
+
+  it('never offers reflections for an unassigned client, and shows a claim prompt instead', () => {
+    const v = makeView({ extraClients: [UNASSIGNED_CLIENT], selectedClientId: 'new1', curriculumReflections: [RAW_REFLECTION] });
+    expect(v.selectedClient.curriculumReflections.canView).toBe(false);
+    expect(v.selectedClient.curriculumReflections.rows).toEqual([]);
+  });
+
+  it('maps real reflection rows for an assigned client, filtering out empty fields', () => {
+    const v = makeView({ selectedClientId: 'c1', curriculumReflections: [RAW_REFLECTION] });
+    const cr = v.selectedClient.curriculumReflections;
+    expect(cr.canView).toBe(true);
+    expect(cr.rows).toHaveLength(1);
+    expect(cr.rows[0].moduleTitle).toBe('Meeting Your Parts');
+    // Only insight and partNoticed were non-empty on the fixture.
+    expect(cr.rows[0].fields.map(([label]) => label)).toEqual(['Insight', 'Part noticed']);
+    expect(cr.noReflections).toBe(false);
+  });
+
+  it('shows the empty state once loaded with no shared reflections', () => {
+    const v = makeView({ selectedClientId: 'c1', curriculumReflections: [], curriculumReflectionsLoading: false });
+    expect(v.selectedClient.curriculumReflections.noReflections).toBe(true);
+  });
+
+  it('does not show the empty state while still loading', () => {
+    const v = makeView({ selectedClientId: 'c1', curriculumReflections: [], curriculumReflectionsLoading: true });
+    expect(v.selectedClient.curriculumReflections.loading).toBe(true);
+    expect(v.selectedClient.curriculumReflections.noReflections).toBe(false);
+  });
+});

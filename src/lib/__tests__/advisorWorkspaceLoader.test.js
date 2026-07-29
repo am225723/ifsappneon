@@ -46,11 +46,16 @@ vi.mock('../healingTimeline.js', () => ({
   loadHealingTimeline: async () => mockHealingTimelineResult,
 }));
 
+let mockCurriculumReflectionsResult = { data: [], error: null };
+vi.mock('../curriculumReflections.js', () => ({
+  loadCurriculumReflections: async () => mockCurriculumReflectionsResult,
+}));
+
 const {
   initialsFrom, daysSince, mapClientRow, mapNoteEntry, deriveWorkspaceDetail, WORKSPACE_WOUNDS, mergeCaseloadRefresh,
   generateWorkspaceReport, loadWorkspaceReports, loadWorkspaceNotifications, markWorkspaceNotificationRead, markAllWorkspaceNotificationsRead,
   loadWorkspaceLifeReflections, buildClientReportHtml, markWorkspaceAgendaReviewed, loadWorkspaceHealingTimeline,
-  loadCaseloadRiskAlerts,
+  loadCaseloadRiskAlerts, loadWorkspaceCurriculumReflections,
 } = await import('../advisorWorkspaceLoader.js');
 
 describe('initialsFrom', () => {
@@ -763,6 +768,36 @@ describe('loadWorkspaceHealingTimeline', () => {
     expect(data).toBeNull();
     expect(error).toBe('You do not have permission to view this healing timeline.');
     mockHealingTimelineResult = { data: null, error: null };
+  });
+});
+
+describe('loadWorkspaceCurriculumReflections', () => {
+  it('returns an empty array without a clientId, without calling the API', async () => {
+    expect(await loadWorkspaceCurriculumReflections(null)).toEqual([]);
+  });
+
+  it('maps real curriculum reflection rows into the display shape', async () => {
+    mockCurriculumReflectionsResult = {
+      data: [{
+        id: 'cr1', moduleId: 'm1', moduleTitle: 'Meeting Your Parts', insight: 'I noticed a protector show up early.',
+        partNoticed: 'The Watcher', selfEnergyQuality: 'Curious', nextPractice: 'Sit with the part for 5 minutes.',
+        createdAt: '2026-07-01T00:00:00Z',
+      }],
+      error: null,
+    };
+    const rows = await loadWorkspaceCurriculumReflections('c1');
+    expect(rows).toHaveLength(1);
+    expect(rows[0].moduleTitle).toBe('Meeting Your Parts');
+    expect(rows[0].insight).toBe('I noticed a protector show up early.');
+    expect(rows[0].partNoticed).toBe('The Watcher');
+    mockCurriculumReflectionsResult = { data: [], error: null };
+  });
+
+  it('returns an empty array (not a throw) when the API errors', async () => {
+    mockCurriculumReflectionsResult = { data: null, error: { message: 'forbidden' } };
+    const rows = await loadWorkspaceCurriculumReflections('c1');
+    expect(rows).toEqual([]);
+    mockCurriculumReflectionsResult = { data: [], error: null };
   });
 });
 

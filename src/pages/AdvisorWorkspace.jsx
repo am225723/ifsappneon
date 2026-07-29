@@ -9,7 +9,7 @@ import {
   claimWorkspaceClient, mergeCaseloadRefresh, generateWorkspaceReport, loadWorkspaceReports,
   loadWorkspaceNotifications, markWorkspaceNotificationRead, markAllWorkspaceNotificationsRead,
   loadWorkspaceLifeReflections, buildClientReportHtml, markWorkspaceAgendaReviewed, loadWorkspaceHealingTimeline,
-  loadCaseloadRiskAlerts,
+  loadCaseloadRiskAlerts, loadWorkspaceCurriculumReflections,
 } from '../lib/advisorWorkspaceLoader.js';
 import { loadAdvisorSessionSnapshot } from '../lib/unifiedGuidance.js';
 import { generateSessionPrepSummary } from '../lib/sessionPrepSummary.js';
@@ -51,6 +51,7 @@ export const INITIAL_STATE = {
   changeSummary: { loading: false, data: null, error: '' },
   lifeReflections: [], lifeReflectionsLoading: false,
   healingTimeline: { loading: false, data: null, error: '' },
+  curriculumReflections: [], curriculumReflectionsLoading: false,
   riskAlerts: [],
   accessOverrides: {}, settingsAccent: 'amber',
   extraClients: [], deletedIds: {},
@@ -85,6 +86,7 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
   const notificationsLoaded = useRef(false);
   const lifeReflectionsLoadedFor = useRef(null);
   const healingTimelineLoadedFor = useRef(null);
+  const curriculumReflectionsLoadedFor = useRef(null);
   const riskAlertsLoaded = useRef(false);
   // Generation guard: bumped on therapist change / unmount so stale in-flight
   // detail merges are ignored without cancelling still-valid sibling requests.
@@ -249,12 +251,14 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
     changeSummaryGenRef.current += 1;
     lifeReflectionsLoadedFor.current = null;
     healingTimelineLoadedFor.current = null;
+    curriculumReflectionsLoadedFor.current = null;
     set({
       selectedClientId: id, activeTab: 'clients-caseload', activeClientTab: 'overview',
       sessionSnapshot: { loading: false, data: null, error: '' },
       changeSummary: { loading: false, data: null, error: '' },
       lifeReflections: [], lifeReflectionsLoading: false,
       healingTimeline: { loading: false, data: null, error: '' },
+      curriculumReflections: [], curriculumReflectionsLoading: false,
     });
   };
   const setClientTab = (id) => set({ activeClientTab: id });
@@ -546,6 +550,27 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
     let isCanceled = false;
     loadWorkspaceHealingTimeline(S.selectedClientId).then(({ data, error }) => {
       if (!isCanceled) set({ healingTimeline: { loading: false, data, error: error || '' } });
+    });
+    return () => {
+      isCanceled = true;
+    };
+  }, [isDemo, loadPhase, S.activeClientTab, S.selectedClientId]);
+
+  // Lazily load a client's real curriculum module reflections the first time
+  // that tab is opened — the client's own written insight/part-noticed/
+  // self-energy/next-practice per module, explicitly flagged
+  // sharedWithAdvisor: true by LearningModuleEnhanced.jsx. The Healing
+  // Journey summary above only shows an aggregate count of these; this
+  // surfaces the actual reflection content, which previously had no
+  // Advisor-side consumer.
+  useEffect(() => {
+    if (isDemo || loadPhase !== 'ready' || S.activeClientTab !== 'curriculumReflections' || !S.selectedClientId) return;
+    if (curriculumReflectionsLoadedFor.current === S.selectedClientId) return;
+    curriculumReflectionsLoadedFor.current = S.selectedClientId;
+    set({ curriculumReflectionsLoading: true });
+    let isCanceled = false;
+    loadWorkspaceCurriculumReflections(S.selectedClientId).then((rows) => {
+      if (!isCanceled) set({ curriculumReflections: rows, curriculumReflectionsLoading: false });
     });
     return () => {
       isCanceled = true;
