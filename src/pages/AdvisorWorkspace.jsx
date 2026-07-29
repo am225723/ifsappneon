@@ -10,6 +10,7 @@ import {
   loadWorkspaceNotifications, markWorkspaceNotificationRead, markAllWorkspaceNotificationsRead,
   loadWorkspaceLifeReflections, buildClientReportHtml, markWorkspaceAgendaReviewed, loadWorkspaceHealingTimeline,
   loadCaseloadRiskAlerts, loadWorkspaceCurriculumReflections, mapNoteEntry,
+  markWorkspaceHomeworkReviewed, archiveWorkspaceHomework, refreshWorkspaceHomeworkForClient,
 } from '../lib/advisorWorkspaceLoader.js';
 import { loadAdvisorSessionSnapshot } from '../lib/unifiedGuidance.js';
 import { generateSessionPrepSummary } from '../lib/sessionPrepSummary.js';
@@ -29,6 +30,7 @@ export const INITIAL_STATE = {
   selectedClientId: 'c1', activeClientTab: 'overview',
   search: '', filterWound: 'all', reviewedIds: {}, sessionPrepOpenId: null,
   noteDraft: { clientId: 'c1', template: 'none', text: '' }, savedNotes: [],
+  homeworkFeedbackDraft: {},
   planClientId: 'c1', practiceForm: { clientId: 'c1', wound: 'abandonment', type: 'journal' },
   generatedPractice: null, assignedPractices: [], assignedLessons: {},
   coTherapyShare: true, coTherapyMessage: '',
@@ -285,6 +287,43 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
     markWorkspaceAgendaReviewed(agendaId)
       .then(({ error }) => { if (error) console.error('Failed to mark agenda reviewed:', error); })
       .catch((error) => console.error('Failed to mark agenda reviewed:', error));
+  };
+
+  // Real ifs_assigned_homework write actions (assignedHomework.js) already
+  // proven by TherapistHomeworkBuilder.jsx (assign) and TherapistHomework.jsx
+  // (review/archive) — the workspace previously only ever read this data.
+  // Each action re-fetches just that client's assignment list afterward
+  // rather than hand-rolling the new state, since the exact resulting
+  // status/timestamps are the server's to decide.
+  const refreshClientHomework = (clientId) => {
+    refreshWorkspaceHomeworkForClient(clientId).then((assignments) => {
+      set((s) => ({
+        baseClients: (s.baseClients || []).map((c) => (c.id !== clientId ? c : {
+          ...c,
+          betweenSession: { ...c.betweenSession, assignments },
+        })),
+      }));
+    });
+  };
+  const onHomeworkAssigned = (clientId) => refreshClientHomework(clientId);
+  const onHomeworkFeedbackChange = (id, text) => set((s) => ({ homeworkFeedbackDraft: { ...s.homeworkFeedbackDraft, [id]: text } }));
+  const onMarkHomeworkReviewed = (clientId, id) => {
+    const feedback = S.homeworkFeedbackDraft[id] || '';
+    markWorkspaceHomeworkReviewed(id, feedback)
+      .then(({ error }) => {
+        if (error) { console.error('Failed to mark homework reviewed:', error); return; }
+        set((s) => { const draft = { ...s.homeworkFeedbackDraft }; delete draft[id]; return { homeworkFeedbackDraft: draft }; });
+        refreshClientHomework(clientId);
+      })
+      .catch((error) => console.error('Failed to mark homework reviewed:', error));
+  };
+  const onArchiveHomework = (clientId, id) => {
+    archiveWorkspaceHomework(id)
+      .then(({ error }) => {
+        if (error) { console.error('Failed to archive homework:', error); return; }
+        refreshClientHomework(clientId);
+      })
+      .catch((error) => console.error('Failed to archive homework:', error));
   };
   const onNoteClientChange = (e) => set((s) => ({ noteDraft: { ...s.noteDraft, clientId: e.target.value } }));
   const onNoteTemplateChange = (e) => set((s) => ({ noteDraft: { ...s.noteDraft, template: e.target.value } }));
@@ -705,6 +744,7 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
       onGenerateSnapshot, onCopySnapshot, onGenerateChangeSummary,
       onStartDelete, onCancelDelete, onDeleteConfirmChange, onConfirmDelete, onPracticeGuidanceChange, onGeneratePracticeBatch, onUseBatchPractice,
       onDeleteMessage, applyQuickMessage, toggleLiveSession, endLiveSession, onMarkNotifRead, onMarkAllNotifsRead, onOpenNotifClient,
+      onHomeworkAssigned, onHomeworkFeedbackChange, onMarkHomeworkReviewed, onArchiveHomework,
     },
   });
 

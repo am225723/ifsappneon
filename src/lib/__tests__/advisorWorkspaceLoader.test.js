@@ -41,6 +41,15 @@ vi.mock('../sessionAgendas.js', () => ({
   markSessionAgendaReviewed: async (agendaId) => { mockMarkAgendaReviewedCalls.push(agendaId); return { data: { id: agendaId, status: 'reviewed' }, error: null }; },
 }));
 
+let mockAssignedHomeworkResult = { data: [], error: null };
+const mockMarkHomeworkReviewedCalls = [];
+const mockArchiveHomeworkCalls = [];
+vi.mock('../assignedHomework.js', () => ({
+  loadAssignedHomeworkForClient: async () => mockAssignedHomeworkResult,
+  markAssignedHomeworkReviewed: async (id, feedback) => { mockMarkHomeworkReviewedCalls.push([id, feedback]); return { data: { id, status: 'reviewed' }, error: null }; },
+  archiveAssignedHomework: async (id) => { mockArchiveHomeworkCalls.push(id); return { data: { id, status: 'archived' }, error: null }; },
+}));
+
 let mockHealingTimelineResult = { data: null, error: null };
 vi.mock('../healingTimeline.js', () => ({
   loadHealingTimeline: async () => mockHealingTimelineResult,
@@ -57,6 +66,7 @@ const {
   generateWorkspaceReport, loadWorkspaceReports, loadWorkspaceNotifications, markWorkspaceNotificationRead, markAllWorkspaceNotificationsRead,
   loadWorkspaceLifeReflections, buildClientReportHtml, markWorkspaceAgendaReviewed, loadWorkspaceHealingTimeline,
   loadCaseloadRiskAlerts, loadWorkspaceCurriculumReflections,
+  markWorkspaceHomeworkReviewed, archiveWorkspaceHomework, refreshWorkspaceHomeworkForClient,
 } = await import('../advisorWorkspaceLoader.js');
 
 describe('initialsFrom', () => {
@@ -709,6 +719,60 @@ describe('markWorkspaceAgendaReviewed', () => {
     const { error } = await markWorkspaceAgendaReviewed('ag1');
     expect(mockMarkAgendaReviewedCalls).toContain('ag1');
     expect(error).toBeNull();
+  });
+});
+
+describe('markWorkspaceHomeworkReviewed', () => {
+  it('returns an error without an assignment id, without calling the API', async () => {
+    const { error } = await markWorkspaceHomeworkReviewed(null, 'Great work');
+    expect(error).toBeTruthy();
+    expect(mockMarkHomeworkReviewedCalls).toHaveLength(0);
+  });
+
+  it('delegates to the real ifs_assigned_homework review API with feedback', async () => {
+    const { error } = await markWorkspaceHomeworkReviewed('hw1', 'Great work this week.');
+    expect(mockMarkHomeworkReviewedCalls).toContainEqual(['hw1', 'Great work this week.']);
+    expect(error).toBeNull();
+  });
+});
+
+describe('archiveWorkspaceHomework', () => {
+  it('returns an error without an assignment id, without calling the API', async () => {
+    const { error } = await archiveWorkspaceHomework(null);
+    expect(error).toBeTruthy();
+    expect(mockArchiveHomeworkCalls).toHaveLength(0);
+  });
+
+  it('delegates to the real ifs_assigned_homework archive API', async () => {
+    const { error } = await archiveWorkspaceHomework('hw1');
+    expect(mockArchiveHomeworkCalls).toContain('hw1');
+    expect(error).toBeNull();
+  });
+});
+
+describe('refreshWorkspaceHomeworkForClient', () => {
+  it('returns an empty array without a clientId', async () => {
+    expect(await refreshWorkspaceHomeworkForClient(null)).toEqual([]);
+  });
+
+  it('maps the real refetched assignment rows into the display shape', async () => {
+    mockAssignedHomeworkResult = {
+      data: [{ id: 'hw1', title: 'Meeting Your Parts', status: 'reviewed', therapist_feedback: 'Nice work.', assigned_at: new Date().toISOString() }],
+      error: null,
+    };
+    const rows = await refreshWorkspaceHomeworkForClient('c1');
+    expect(rows).toHaveLength(1);
+    expect(rows[0].id).toBe('hw1');
+    expect(rows[0].statusLabel).toBe('Reviewed');
+    expect(rows[0].advisorFeedback).toBe('Nice work.');
+    mockAssignedHomeworkResult = { data: [], error: null };
+  });
+
+  it('returns an empty array (not a throw) when the API errors', async () => {
+    mockAssignedHomeworkResult = { data: null, error: { message: 'forbidden' } };
+    const rows = await refreshWorkspaceHomeworkForClient('c1');
+    expect(rows).toEqual([]);
+    mockAssignedHomeworkResult = { data: [], error: null };
   });
 });
 

@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import AdvisorSessionNoteDraft from '../components/AdvisorSessionNoteDraft.jsx';
 import TreatmentPlanManager from '../components/TreatmentPlanManager.jsx';
+import TherapistHomeworkBuilder from '../components/TherapistHomeworkBuilder.jsx';
 import {
   WOUND_META, woundChip, daysAgoText, severityStyle, RISK_LEVEL_TO_SEV, RISK_LEVEL_LABEL, RISK_LEVEL_RANK,
   PART_CAT_META, partChip, TEMPLATE_OPTIONS, PRACTICE_TYPE_META, LESSON_TITLES, PLAN_PHASES,
@@ -17,7 +18,7 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
     clientMessageDraft, activeThreadId, safetyOverrides, engagementDismissed, partsClientFilter, tasks, taskFilter,
     newTaskTitle, newTaskClientId, docForm, docSources, generatedDoc, docGenerating, docError, clientReports, clientReportsLoading, deletedMessageIdx,
     sessionSnapshot, changeSummary, lifeReflections, lifeReflectionsLoading, healingTimeline, riskAlerts,
-    curriculumReflections, curriculumReflectionsLoading,
+    curriculumReflections, curriculumReflectionsLoading, homeworkFeedbackDraft,
   } = S;
 
   const rootStyle = {
@@ -272,9 +273,10 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
         journalWeeklyBars: rawBS.journalWeekly.map((w) => ({ week: w.week, style: sparkBar(w.count || 0, journalMax, '#0d948855') })),
         hasJournalData: rawBS.hasJournalData,
         assignmentRows: (rawBS.assignments || []).map((a) => ({
-          id: a.id, title: a.title, statusLabel: a.statusLabel, instructions: a.instructions, advisorFeedback: a.advisorFeedback,
+          id: a.id, title: a.title, status: a.status, statusLabel: a.statusLabel, instructions: a.instructions, advisorFeedback: a.advisorFeedback,
           statusChip: severityStyle(theme, a.status === 'completed' || a.status === 'reviewed' ? 'low' : 'medium'),
           dateLabel: a.completedDateLabel ? `Completed ${a.completedDateLabel}` : `Assigned ${a.assignedDateLabel}`,
+          canReview: a.status === 'completed',
         })),
         noAssignments: !(rawBS.assignments || []).length,
         freeformAssignmentRows: (rawBS.freeformAssignments || []).map((a) => ({
@@ -579,6 +581,8 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
     taskFilters, taskRows, noTasks, newTaskTitle, newTaskClientId, onNewTaskTitleChange: H.onNewTaskTitleChange, onNewTaskClientChange: H.onNewTaskClientChange, onAddTask: H.onAddTask,
     noteDraft: { ...noteDraft, placeholder: currentTemplate.placeholder }, clientOptions, templateOptions: TEMPLATE_OPTIONS,
     onNoteClientChange: H.onNoteClientChange, onNoteTemplateChange: H.onNoteTemplateChange, onNoteTextChange: H.onNoteTextChange, onSaveNote: H.onSaveNote, onSignNote: H.onSignNote, onAiNoteSaved: H.onAiNoteSaved, isDemo,
+    homeworkFeedbackDraft, onHomeworkAssigned: H.onHomeworkAssigned, onHomeworkFeedbackChange: H.onHomeworkFeedbackChange,
+    onMarkHomeworkReviewed: H.onMarkHomeworkReviewed, onArchiveHomework: H.onArchiveHomework,
     savedNotes: savedNotes.map((n) => ({ ...n, statusStyle: severityStyle(theme, n.status === 'Signed & Locked' ? 'low' : 'medium'), statusLabel: n.status })), allGoals,
     planClientId, onPlanClientChange: H.onPlanClientChange, treatmentPlan, hasPlanClient,
     practiceForm, woundOptions, practiceTypeOptions, onPracticeClientChange: H.onPracticeClientChange, onPracticeWoundChange: H.onPracticeWoundChange, onPracticeTypeChange: H.onPracticeTypeChange,
@@ -914,7 +918,14 @@ function ClientsCaseload({ v }) {
           {v.isClientTabAssessments && <AssessmentHistoryTab history={sc.assessmentHistory} empty={sc.noAssessmentHistory} />}
           {v.isClientTabSnapshot && <SnapshotTab snapshot={sc.snapshot} primaryBtnStyle={v.primaryBtnStyle} secondaryBtnStyle={v.secondaryBtnStyle} />}
           {v.isClientTabChangeSummary && <ChangeSummaryTab changeSummary={sc.changeSummary} primaryBtnStyle={v.primaryBtnStyle} />}
-          {v.isClientTabBetweenSession && <BetweenSessionTab bs={sc.betweenSession} />}
+          {v.isClientTabBetweenSession && (
+            <BetweenSessionTab
+              bs={sc.betweenSession} clientId={sc.id} isDemo={v.isDemo} unassigned={sc.unassigned}
+              feedbackDraft={v.homeworkFeedbackDraft} onFeedbackChange={v.onHomeworkFeedbackChange}
+              onMarkReviewed={v.onMarkHomeworkReviewed} onArchive={v.onArchiveHomework}
+              onAssigned={() => v.onHomeworkAssigned(sc.id)}
+            />
+          )}
           {v.isClientTabLifeReflections && <LifeReflectionsTab lr={sc.lifeReflections} onClaim={sc.onClaim} />}
           {v.isClientTabHealingJourney && <HealingJourneyTab ht={sc.healingTimeline} onClaim={sc.onClaim} />}
           {v.isClientTabCurriculumReflections && <CurriculumReflectionsTab cr={sc.curriculumReflections} onClaim={sc.onClaim} />}
@@ -1299,7 +1310,7 @@ function TrendChart({ title, bars, unit, noDataLabel }) {
   );
 }
 
-function BetweenSessionTab({ bs }) {
+function BetweenSessionTab({ bs, clientId, isDemo, unassigned, feedbackDraft, onFeedbackChange, onMarkReviewed, onArchive, onAssigned }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
       <div style={CARD}>
@@ -1346,11 +1357,28 @@ function BetweenSessionTab({ bs }) {
                 <div style={{ fontSize: '11.5px', color: 'var(--muted)', marginTop: '3px' }}>{a.dateLabel}</div>
                 {a.instructions && <div style={{ fontSize: '12.5px', color: 'var(--text-2)', marginTop: '6px', lineHeight: 1.5 }}>{a.instructions}</div>}
                 {a.advisorFeedback && <div style={{ fontSize: '12px', color: 'var(--text-2)', marginTop: '6px', lineHeight: 1.5 }}><strong>Advisor feedback:</strong> {a.advisorFeedback}</div>}
+                {!isDemo && a.canReview && (
+                  <div style={{ marginTop: '8px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                    <input
+                      value={feedbackDraft[a.id] || ''} onChange={(e) => onFeedbackChange(a.id, e.target.value)}
+                      placeholder="Feedback for the client (optional)"
+                      style={{ flex: 1, minWidth: '160px', padding: '7px 10px', borderRadius: '10px', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)', fontSize: '12px', fontFamily: 'inherit' }}
+                    />
+                    <button type="button" onClick={() => onMarkReviewed(clientId, a.id)} style={{ fontSize: '11px', fontWeight: 700, padding: '7px 10px', borderRadius: '10px', border: 'none', background: 'var(--emerald-2)', color: '#fff', cursor: 'pointer', fontFamily: 'inherit' }}>Mark reviewed</button>
+                  </div>
+                )}
+                {!isDemo && (
+                  <button type="button" onClick={() => onArchive(clientId, a.id)} style={{ marginTop: '8px', fontSize: '11px', fontWeight: 600, padding: '6px 10px', borderRadius: '10px', border: '1px solid var(--border)', background: 'transparent', color: 'var(--muted)', cursor: 'pointer', fontFamily: 'inherit' }}>Archive</button>
+                )}
               </div>
             ))}
           </div>
         )}
       </div>
+
+      {!isDemo && !unassigned && (
+        <TherapistHomeworkBuilder clientId={clientId} onAssigned={onAssigned} />
+      )}
 
       <div style={CARD}>
         <span style={{ ...FR, fontSize: '15px' }}>Custom homework</span>
