@@ -9,7 +9,7 @@ import {
   claimWorkspaceClient, mergeCaseloadRefresh, generateWorkspaceReport, loadWorkspaceReports,
   loadWorkspaceNotifications, markWorkspaceNotificationRead, markAllWorkspaceNotificationsRead,
   loadWorkspaceLifeReflections, buildClientReportHtml, markWorkspaceAgendaReviewed, loadWorkspaceHealingTimeline,
-  loadCaseloadRiskAlerts,
+  loadCaseloadRiskAlerts, mapNoteEntry,
 } from '../lib/advisorWorkspaceLoader.js';
 import { loadAdvisorSessionSnapshot } from '../lib/unifiedGuidance.js';
 import { generateSessionPrepSummary } from '../lib/sessionPrepSummary.js';
@@ -295,6 +295,15 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
   };
   const onSaveNote = () => saveNoteInternal('Draft');
   const onSignNote = () => saveNoteInternal('Signed & Locked');
+  // AdvisorSessionNoteDraft persists via createTherapistNote itself; this just
+  // mirrors the saved row into local state so it shows in "Recent notes"
+  // immediately. _isLocal: true for the same reason as saveNoteInternal above.
+  const onAiNoteSaved = (note) => {
+    if (!note) return;
+    const client = allClients().find((c) => c.id === note.client_id);
+    const entry = { ...mapNoteEntry(note, note.client_id), clientName: client ? client.name : 'Client', _isLocal: true };
+    set((s) => ({ savedNotes: [entry, ...s.savedNotes] }));
+  };
   const toggleSetting = (key) => set((s) => ({ settingsToggles: { ...s.settingsToggles, [key]: !s.settingsToggles[key] } }));
   const draftNoteFor = (clientId) => set((s) => ({ activeTab: 'clinical-notes', noteDraft: { ...s.noteDraft, clientId } }));
   const openPrepFor = (clientId) => set({ activeTab: 'sessions-prep', sessionPrepOpenId: clientId });
@@ -646,10 +655,10 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
   }
 
   const view = buildView({
-    S, theme, allClients, buildTreatmentPlan, isAdmin,
+    S, theme, allClients, buildTreatmentPlan, isAdmin, isDemo,
     handlers: {
       setTab, setViewMode, toggleTheme, selectClient, setClientTab, onSearch, setFilterWound, markReviewed, toggleSessionPrep, onClaimClient, onMarkAgendaReviewed,
-      onNoteClientChange, onNoteTemplateChange, onNoteTextChange, onSaveNote, onSignNote, toggleSetting, draftNoteFor, openPrepFor, openPlanFor, openPracticeFor, onExportReport,
+      onNoteClientChange, onNoteTemplateChange, onNoteTextChange, onSaveNote, onSignNote, onAiNoteSaved, toggleSetting, draftNoteFor, openPrepFor, openPlanFor, openPracticeFor, onExportReport,
       onPlanClientChange, onPracticeClientChange, onPracticeWoundChange, onPracticeTypeChange, onGeneratePractice, onAssignPractice, toggleAssignLesson,
       onCoTherapyMessageChange, onSendCoTherapyMessage, toggleCoTherapyShare, onGenerateReport, isGroupExpanded, toggleGroup,
       onClientMessageChange, onSendClientMessage, setActiveThread, addTaskFromMessage, onAcknowledgeSafety, onCreateSafetyPlan, setPartsClientFilter,
