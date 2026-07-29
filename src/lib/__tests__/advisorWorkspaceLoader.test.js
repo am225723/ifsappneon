@@ -553,10 +553,11 @@ describe('loadWorkspaceClientDetail — part relationships assignment gate', () 
   // ifs_part_relationships has no RLS policy at all, so loadWorkspaceClientDetail
   // must never even query it for an unassigned client — relying solely on the
   // view layer to hide the result isn't enough.
-  it('never calls loadPartRelationships for an unassigned client', async () => {
+  it('never calls loadPartRelationships for an unassigned client, and returns an empty relationship list', async () => {
     const base = { id: 'new1', unassigned: true };
-    await loadWorkspaceClientDetail(base, 'therapist1');
+    const { client } = await loadWorkspaceClientDetail(base, 'therapist1');
     expect(mockLoadPartRelationships).not.toHaveBeenCalled();
+    expect(client.partRelationships).toEqual([]);
   });
 
   it('still calls loadPartRelationships for an assigned client', async () => {
