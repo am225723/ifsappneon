@@ -20,6 +20,8 @@ import { normalizeLifeReflection } from './lifeIntegrationDisplay.js';
 import { loadHealingTimeline } from './healingTimeline.js';
 import { loadCurriculumReflections } from './curriculumReflections.js';
 import { summarizeInteractiveResponses } from './interactiveWorksheetSummary.js';
+import { buildPartSuggestions } from './partSuggestionEngine.js';
+import { loadPartSuggestionState, applySuggestionState } from './partSuggestionState.js';
 import { supabase } from './supabase';
 import { getClerkToken } from './apiAuth.js';
 
@@ -1105,6 +1107,79 @@ export async function loadWorkspaceUnburdeningRecord(clientId, isAssigned) {
       .maybeSingle();
     if (error) return null;
     return mapUnburdeningRecord(data);
+  } catch {
+    return null;
+  }
+}
+
+// AdvisorInnerSystemMap.jsx (/advisor/inner-system-map/:clientId) already
+// computes real "Suggested Parts"/relationship suggestions from a client's
+// assessments, curriculum/module responses, Life Integration reflections,
+// and journal entry titles (buildPartSuggestions in partSuggestionEngine.js)
+// — plus persisted accept/dismiss/merge state (ifs_part_suggestion_state,
+// via partSuggestionState.js) — but that page has no entry point from the
+// unified Workspace. This surfaces a summary (counts + top pending
+// suggestions) so an Advisor can see there's something to review without
+// leaving the client's Parts tab; reviewing/accepting/dismissing stays on
+// the dedicated Inner System Map page rather than duplicating that write
+// flow here.
+//
+// Every suggestion is already a derived, advisor-safe label (e.g. "Part
+// carrying shame" / "may be connected to an old wound") computed by the
+// same engine the existing page uses — never the raw journal/reflection/
+// assessment text itself.
+//
+// Deliberately omits the legacy "parts_map" import source (an older,
+// rarer saved-map signal — buildPartSuggestions treats it as optional)
+// to keep this a straightforward read alongside the other
+// ifs_interactive_data-backed loaders above.
+//
+// Same as curriculum reflections / Self-Energy trend / the Unburdening
+// record, several of these queries go straight to tables whose RLS
+// doesn't itself scope reads to the client's assigned Advisor, so
+// isAssigned must be confirmed by the caller before this fetches anything.
+export async function loadWorkspacePartSuggestions(clientId, isAssigned) {
+  if (!clientId || !isAssigned) return null;
+  try {
+    const [existingPartsRes, relationshipsRes, interactiveRes, assessmentRes, lifeRes, journalRes, stateRes] = await Promise.all([
+      supabase.from('ifs_parts').select('id, name, part_name, type, part_type, role').eq('client_id', clientId),
+      loadPartRelationships({ clientId }),
+      supabase.from('ifs_interactive_data').select('id, client_id, module_id, data, updated_at')
+        .eq('client_id', clientId)
+        .or('module_id.like.assessment_%,module_id.like.module%')
+        .order('updated_at', { ascending: false })
+        .limit(80),
+      supabase.from('ifs_assessment_results').select('id, client_id, assessment_type, data, results, created_at, updated_at')
+        .eq('client_id', clientId).order('updated_at', { ascending: false }).limit(20),
+      supabase.from('ifs_life_integration_reflections').select('id, client_id, practice_id, reflection_type, data, responses, summary, created_at, updated_at')
+        .eq('client_id', clientId).order('updated_at', { ascending: false }).limit(40),
+      supabase.from('ifs_journal_entries').select('id, client_id, title, created_at, updated_at')
+        .eq('client_id', clientId).order('updated_at', { ascending: false }).limit(20),
+      loadPartSuggestionState({ clientId }),
+    ]);
+    const firstError = [existingPartsRes, relationshipsRes, interactiveRes, assessmentRes, lifeRes, journalRes, stateRes].find((res) => res?.error)?.error;
+    if (firstError) return null;
+    const existingParts = existingPartsRes?.data || [];
+    const existingRelationships = relationshipsRes?.data || [];
+    const built = buildPartSuggestions({
+      assessmentRows: (assessmentRes?.data || []).map((row) => ({ ...row, module_id: row.assessment_type || row.module_id, data: row.data || row.results || row })),
+      interactiveRows: interactiveRes?.data || [],
+      lifeIntegrationRows: lifeRes?.data || [],
+      journalRows: journalRes?.data || [],
+      existingParts,
+      existingRelationships,
+    });
+    const applied = applySuggestionState(built, stateRes?.data || []);
+    return {
+      pendingPartsCount: applied.parts.length,
+      pendingRelationshipsCount: applied.relationships.length,
+      acceptedCount: applied.acceptedCount,
+      mergedCount: applied.mergedCount,
+      dismissedCount: applied.dismissedCount,
+      topSuggestions: applied.parts.slice(0, 5).map((p) => ({
+        id: p.id, name: p.name, role: p.role, type: p.type, sourceLabel: p.sourceLabel || '', confidence: p.confidence || '',
+      })),
+    };
   } catch {
     return null;
   }

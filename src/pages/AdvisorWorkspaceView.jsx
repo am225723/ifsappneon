@@ -10,6 +10,15 @@ import {
   UNBURDENING_MOOD_LABELS, UNBURDENING_TOTAL_STEPS, UNBURDENING_STEP_TITLES,
 } from './advisorWorkspaceData.js';
 
+// Mirrors partSuggestionEngine.js's type vocabulary ('protector', 'self',
+// legacy-import 'unknown', etc.) down onto the workspace's existing
+// manager/firefighter/exile part categories for consistent chip styling.
+const SUGGESTION_TYPE_TO_CATEGORY = {
+  manager: 'manager', protector: 'manager', proactive: 'manager',
+  firefighter: 'firefighter', reactive: 'firefighter',
+  exile: 'exile', wounded: 'exile', vulnerable: 'exile',
+};
+
 // Computes every derived value the UI needs (mirrors the design's renderVals()).
 export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: H, isAdmin = false, isDemo = false }) {
   const {
@@ -20,7 +29,7 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
     newTaskTitle, newTaskClientId, docForm, docSources, generatedDoc, docGenerating, docError, clientReports, clientReportsLoading, deletedMessageIdx,
     sessionSnapshot, changeSummary, lifeReflections, lifeReflectionsLoading, healingTimeline, riskAlerts,
     curriculumReflections, curriculumReflectionsLoading, homeworkFeedbackDraft, selfEnergyTrend, selfEnergyTrendLoading,
-    unburdeningRecord, unburdeningRecordLoading,
+    unburdeningRecord, unburdeningRecordLoading, partSuggestions, partSuggestionsLoading,
   } = S;
 
   const rootStyle = {
@@ -387,6 +396,20 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
       parts: rawSelected.parts.map((p) => ({ ...p, catChip: partChip(p.category, isDark), catLabel: PART_CAT_META[p.category].label, barStyle: { width: p.activation + '%', height: '100%', borderRadius: '4px', background: PART_CAT_META[p.category].color } })),
       partRelationships: Array.isArray(rawSelected.partRelationships) ? rawSelected.partRelationships : [],
       noPartRelationships: !Array.isArray(rawSelected.partRelationships) || rawSelected.partRelationships.length === 0,
+      partSuggestions: {
+        loading: !!partSuggestionsLoading,
+        canView: canWrite,
+        hasData: canWrite && !!partSuggestions,
+        noData: canWrite && !partSuggestionsLoading && !partSuggestions,
+        pendingPartsCount: partSuggestions?.pendingPartsCount || 0,
+        pendingRelationshipsCount: partSuggestions?.pendingRelationshipsCount || 0,
+        hasPending: canWrite && !!partSuggestions && (partSuggestions.pendingPartsCount > 0 || partSuggestions.pendingRelationshipsCount > 0),
+        topSuggestions: canWrite && partSuggestions ? partSuggestions.topSuggestions.map((s) => {
+          const cat = SUGGESTION_TYPE_TO_CATEGORY[s.type] || 'manager';
+          return { id: s.id, name: s.name, role: s.role, sourceLabel: s.sourceLabel, catChip: partChip(cat, isDark), catLabel: PART_CAT_META[cat].label };
+        }) : [],
+        reviewLink: `/advisor/inner-system-map/${rawSelected.id}`,
+      },
       clientPractices: assignedPractices.filter((a) => a.clientName === rawSelected.name),
       noPractices: !assignedPractices.some((a) => a.clientName === rawSelected.name),
       safety: {
@@ -1014,6 +1037,41 @@ function ClientsCaseload({ v }) {
           {v.isClientTabParts && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <PartsGrid parts={sc.parts} cols={2} showClient={false} />
+              {sc.partSuggestions.canView && (
+                <div style={CARD}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
+                    <span style={{ ...FR, fontSize: '15px' }}>Suggested parts</span>
+                    <Link to={sc.partSuggestions.reviewLink} target="_blank" rel="noreferrer" style={{ fontSize: '11px', fontWeight: 700, padding: '8px 10px', borderRadius: '10px', border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text-2)', textDecoration: 'none' }}>Review in Inner System Map</Link>
+                  </div>
+                  <div style={{ fontSize: '12px', color: 'var(--muted)', marginTop: '4px' }}>Signals noticed in this client's assessments, module responses, and reflections — reviewed and accepted or dismissed collaboratively with the client on their Inner System Map.</div>
+                  {sc.partSuggestions.loading && <div style={{ marginTop: '12px', fontSize: '12.5px', color: 'var(--muted)' }}>Loading suggested parts…</div>}
+                  {sc.partSuggestions.noData && <div style={{ marginTop: '12px', fontSize: '12.5px', color: 'var(--muted)' }}>No pending suggestions right now.</div>}
+                  {sc.partSuggestions.hasData && !sc.partSuggestions.loading && (
+                    <>
+                      <div style={{ display: 'flex', gap: '18px', marginTop: '12px', flexWrap: 'wrap' }}>
+                        <div><span style={{ fontSize: '11px', color: 'var(--muted)' }}>Pending parts</span><div style={{ fontSize: '17px', fontWeight: 700, color: 'var(--text)' }}>{sc.partSuggestions.pendingPartsCount}</div></div>
+                        <div><span style={{ fontSize: '11px', color: 'var(--muted)' }}>Pending relationships</span><div style={{ fontSize: '17px', fontWeight: 700, color: 'var(--text)' }}>{sc.partSuggestions.pendingRelationshipsCount}</div></div>
+                      </div>
+                      {!sc.partSuggestions.hasPending ? (
+                        <p style={{ marginTop: '12px', fontSize: '12.5px', color: 'var(--muted)' }}>No pending suggestions right now.</p>
+                      ) : (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '14px' }}>
+                          {sc.partSuggestions.topSuggestions.map((s) => (
+                            <div key={s.id} style={{ padding: '12px 14px', borderRadius: '14px', background: 'var(--surface-2)', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '10px', flexWrap: 'wrap' }}>
+                              <div>
+                                <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text)' }}>{s.name}</div>
+                                <div style={{ fontSize: '12px', color: 'var(--text-2)', marginTop: '4px' }}>{s.role}</div>
+                                {s.sourceLabel && <div style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '4px' }}>Source: {s.sourceLabel}</div>}
+                              </div>
+                              <span style={s.catChip}>{s.catLabel}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              )}
               <div style={CARD}>
                 <span style={{ ...FR, fontSize: '15px' }}>Part relationships</span>
                 <div style={{ fontSize: '12px', color: 'var(--muted)', marginTop: '4px' }}>How this client has mapped their parts to each other in their Inner System Map.</div>

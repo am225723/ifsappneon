@@ -8,13 +8,27 @@ import { describe, it, expect, vi, afterAll, beforeEach } from 'vitest';
 let mockReportRows = { data: [], error: null };
 let mockSelfEnergyRows = { data: [], error: null };
 let mockUnburdeningResult = { data: null, error: null };
+let mockExistingPartsResult = { data: [], error: null };
+let mockAssessmentResultsRows = { data: [], error: null };
+let mockLifeIntegrationRows = { data: [], error: null };
+let mockJournalRows = { data: [], error: null };
+let mockInteractiveOrRows = { data: [], error: null };
 vi.mock('../supabase', () => ({
   supabase: {
     from: (table) => ({
       select: () => ({
         eq: () => ({
+          // loadWorkspacePartSuggestions's existingParts query (ifs_parts)
+          // is awaited directly off a single .eq(), with no further chaining.
+          ...(table === 'ifs_parts' ? mockExistingPartsResult : { data: [], error: null }),
           order: () => ({
-            limit: () => (table === 'ifs_generated_reports' ? mockReportRows : { data: [], error: null }),
+            limit: () => {
+              if (table === 'ifs_generated_reports') return mockReportRows;
+              if (table === 'ifs_assessment_results') return mockAssessmentResultsRows;
+              if (table === 'ifs_life_integration_reflections') return mockLifeIntegrationRows;
+              if (table === 'ifs_journal_entries') return mockJournalRows;
+              return { data: [], error: null };
+            },
           }),
           // loadWorkspaceSelfEnergyTrend's real query filters with .like()
           // before .order()/.limit(), unlike the ifs_generated_reports chain above.
@@ -28,12 +42,30 @@ vi.mock('../supabase', () => ({
           eq: () => ({
             maybeSingle: () => (table === 'ifs_interactive_data' ? mockUnburdeningResult : { data: null, error: null }),
           }),
+          // loadWorkspacePartSuggestions's interactiveRes query filters with
+          // .or() before .order()/.limit().
+          or: () => ({
+            order: () => ({
+              limit: () => (table === 'ifs_interactive_data' ? mockInteractiveOrRows : { data: [], error: null }),
+            }),
+          }),
         }),
       }),
     }),
   },
 }));
 vi.mock('../apiAuth.js', () => ({ getClerkToken: async () => null }));
+
+let mockPartRelationshipsResult = { data: [], error: null };
+vi.mock('../partRelationships.js', () => ({
+  loadPartRelationships: async () => mockPartRelationshipsResult,
+}));
+
+let mockPartSuggestionStateResult = { data: [], error: null };
+vi.mock('../partSuggestionState.js', async () => {
+  const actual = await vi.importActual('../partSuggestionState.js');
+  return { ...actual, loadPartSuggestionState: async () => mockPartSuggestionStateResult };
+});
 
 let mockNotificationsResult = { data: [], error: null };
 const mockMarkReadCalls = [];
@@ -81,7 +113,7 @@ const {
   loadWorkspaceLifeReflections, buildClientReportHtml, markWorkspaceAgendaReviewed, loadWorkspaceHealingTimeline,
   loadCaseloadRiskAlerts, loadWorkspaceCurriculumReflections,
   markWorkspaceHomeworkReviewed, archiveWorkspaceHomework, refreshWorkspaceHomeworkForClient,
-  loadWorkspaceSelfEnergyTrend, loadWorkspaceUnburdeningRecord,
+  loadWorkspaceSelfEnergyTrend, loadWorkspaceUnburdeningRecord, loadWorkspacePartSuggestions,
 } = await import('../advisorWorkspaceLoader.js');
 
 describe('initialsFrom', () => {
@@ -909,6 +941,77 @@ describe('loadWorkspaceUnburdeningRecord', () => {
     const record = await loadWorkspaceUnburdeningRecord('c1', true);
     expect(record).toBeNull();
     mockUnburdeningResult = { data: null, error: null };
+  });
+});
+
+const resetPartSuggestionMocks = () => {
+  mockExistingPartsResult = { data: [], error: null };
+  mockPartRelationshipsResult = { data: [], error: null };
+  mockInteractiveOrRows = { data: [], error: null };
+  mockAssessmentResultsRows = { data: [], error: null };
+  mockLifeIntegrationRows = { data: [], error: null };
+  mockJournalRows = { data: [], error: null };
+  mockPartSuggestionStateResult = { data: [], error: null };
+};
+
+describe('loadWorkspacePartSuggestions', () => {
+  beforeEach(resetPartSuggestionMocks);
+
+  it('returns null without a clientId', async () => {
+    expect(await loadWorkspacePartSuggestions(null, true)).toBeNull();
+  });
+
+  // Several of these queries go straight to tables (ifs_interactive_data,
+  // ifs_journal_entries, etc.) whose RLS doesn't restrict reads to the
+  // client's assigned Advisor, so this refuses to fetch at all unless the
+  // caller has confirmed assignment.
+  it('returns null without calling the API when the caller has not confirmed assignment', async () => {
+    mockAssessmentResultsRows = { data: [{ id: 'a1', assessment_type: 'assessment_wounds', data: { notes: 'shame' } }], error: null };
+    expect(await loadWorkspacePartSuggestions('c1', false)).toBeNull();
+    expect(await loadWorkspacePartSuggestions('c1')).toBeNull();
+  });
+
+  it('derives a real suggestion (a wound-pattern shame signal) into a pending-count summary', async () => {
+    mockAssessmentResultsRows = { data: [{ id: 'a1', assessment_type: 'assessment_wounds', data: { notes: 'Client described ongoing shame around this pattern.' } }], error: null };
+    const summary = await loadWorkspacePartSuggestions('c1', true);
+    expect(summary.pendingPartsCount).toBeGreaterThan(0);
+    expect(summary.topSuggestions.some((s) => s.name === 'Part carrying shame')).toBe(true);
+    expect(summary.topSuggestions[0].sourceLabel).toBeTruthy();
+  });
+
+  it('excludes a suggestion the client already has as a real part, and reports zero pending', async () => {
+    mockAssessmentResultsRows = { data: [{ id: 'a1', assessment_type: 'assessment_wounds', data: { notes: 'shame' } }], error: null };
+    mockExistingPartsResult = { data: [{ id: 'p1', name: 'Part carrying shame', type: 'exile' }], error: null };
+    const summary = await loadWorkspacePartSuggestions('c1', true);
+    expect(summary.pendingPartsCount).toBe(0);
+    expect(summary.topSuggestions).toEqual([]);
+  });
+
+  it('reflects persisted accept/dismiss state (ifs_part_suggestion_state) in the counts, not just the raw signal', async () => {
+    mockAssessmentResultsRows = { data: [{ id: 'a1', assessment_type: 'assessment_wounds', data: { notes: 'shame' } }], error: null };
+    mockPartSuggestionStateResult = { data: [{ suggestion_type: 'part', suggestion_id: 'part:assessment:assessment-wounds:part-carrying-shame:exile', status: 'dismissed' }], error: null };
+    const summary = await loadWorkspacePartSuggestions('c1', true);
+    expect(summary.pendingPartsCount).toBe(0);
+    expect(summary.dismissedCount).toBe(1);
+  });
+
+  it('never exposes raw free-text journal/reflection content, only derived labels', async () => {
+    mockJournalRows = { data: [{ id: 'j1', title: 'a very private secret about my triggers', created_at: '2026-07-01T00:00:00Z' }], error: null };
+    const summary = await loadWorkspacePartSuggestions('c1', true);
+    expect(JSON.stringify(summary)).not.toContain('a very private secret');
+  });
+
+  it('returns null (not a throw) when a query errors', async () => {
+    mockAssessmentResultsRows = { data: null, error: { message: 'forbidden' } };
+    const summary = await loadWorkspacePartSuggestions('c1', true);
+    expect(summary).toBeNull();
+  });
+
+  it('returns an empty-but-present summary when the client has no suggestion signals at all', async () => {
+    const summary = await loadWorkspacePartSuggestions('c1', true);
+    expect(summary).toEqual({
+      pendingPartsCount: 0, pendingRelationshipsCount: 0, acceptedCount: 0, mergedCount: 0, dismissedCount: 0, topSuggestions: [],
+    });
   });
 });
 
