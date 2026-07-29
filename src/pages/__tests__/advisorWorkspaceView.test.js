@@ -743,6 +743,68 @@ describe('buildView — Self-Energy trend reflects real daily check-ins (DailyCh
   });
 });
 
+describe('buildView — Unburdening Protocol reflects the real ceremony record (UnburdeningProtocol.jsx)', () => {
+  const CLIENT_WITH_ACTIVITY = {
+    ...UNASSIGNED_CLIENT, id: 'ub1', name: 'Ceremony Test', unassigned: false,
+    betweenSession: {
+      homeworkFunnel: { totalAssigned: 0, inProgress: 0, completed: 0, reviewed: 0, completionPct: 0, avgDaysToComplete: null },
+      moodEntries: [], moodTrend: [], energyTrend: [], journalWeekly: [], assignments: [], freeformAssignments: [],
+      hasMoodData: false, hasJournalData: false, hasHomeworkData: false,
+    },
+  };
+
+  it('never offers the ceremony record for an unassigned client, and shows a claim prompt instead', () => {
+    const v = makeView({
+      extraClients: [UNASSIGNED_CLIENT], selectedClientId: 'new1',
+      unburdeningRecord: { currentStep: 5, completed: false, completedAt: null, element: 'fire', quality: null, bodyLocation: 'Chest', moodAfter: null },
+    });
+    expect(v.selectedClient.unburdening.canView).toBe(false);
+    expect(v.selectedClient.unburdening.hasRecord).toBe(false);
+  });
+
+  it('maps an in-progress ceremony record into structured step/element/body-location fields', () => {
+    const v = makeView({
+      extraClients: [CLIENT_WITH_ACTIVITY], selectedClientId: 'ub1',
+      unburdeningRecord: { currentStep: 5, completed: false, completedAt: null, element: 'water', quality: null, bodyLocation: 'Chest', moodAfter: null },
+    });
+    const ub = v.selectedClient.unburdening;
+    expect(ub.hasRecord).toBe(true);
+    expect(ub.completed).toBe(false);
+    expect(ub.stepLabel).toBe('Step 5 of 8');
+    expect(ub.stepTitle).toBe('Choose the Element');
+    expect(ub.progressPct).toBe(63);
+    expect(ub.element).toBe('Water');
+    expect(ub.bodyLocation).toBe('Chest');
+    expect(ub.quality).toBe('');
+    expect(ub.moodAfterLabel).toBe('');
+  });
+
+  it('maps a completed ceremony record, including the post-ceremony quality and mood', () => {
+    const v = makeView({
+      extraClients: [CLIENT_WITH_ACTIVITY], selectedClientId: 'ub1',
+      unburdeningRecord: { currentStep: 8, completed: true, completedAt: '2026-07-22T00:00:00Z', element: 'fire', quality: 'Peace', bodyLocation: 'Shoulders', moodAfter: 4 },
+    });
+    const ub = v.selectedClient.unburdening;
+    expect(ub.completed).toBe(true);
+    expect(ub.completedDateLabel).toBe('Jul 22, 2026');
+    expect(ub.quality).toBe('Peace');
+    expect(ub.moodAfterLabel).toBe('Lighter');
+  });
+
+  it('shows the loading state, and the empty state once loaded with no ceremony started', () => {
+    const loading = makeView({ extraClients: [CLIENT_WITH_ACTIVITY], selectedClientId: 'ub1', unburdeningRecord: null, unburdeningRecordLoading: true });
+    expect(loading.selectedClient.unburdening.loading).toBe(true);
+    expect(loading.selectedClient.unburdening.noRecord).toBe(false);
+
+    const loaded = makeView({ extraClients: [CLIENT_WITH_ACTIVITY], selectedClientId: 'ub1', unburdeningRecord: null, unburdeningRecordLoading: false });
+    expect(loaded.selectedClient.unburdening.noRecord).toBe(true);
+    expect(loaded.selectedClient.unburdening.hasRecord).toBe(false);
+
+    const demo = makeView({ selectedClientId: 'c1' });
+    expect(demo.selectedClient.unburdening.hasRecord).toBe(false);
+  });
+});
+
 describe('buildView — unified timeline gives every event a stable key', () => {
   it('falls back to a synthetic id when a timeline entry has none (demo seed data)', () => {
     const v = makeView({ selectedClientId: 'c1' }); // seeded demo timeline entries carry no id field

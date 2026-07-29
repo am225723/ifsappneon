@@ -1057,6 +1057,59 @@ export async function loadWorkspaceHealingTimeline(clientId, range = 'ALL') {
   }
 }
 
+// The client-facing Unburdening Protocol (/unburdening-protocol) tracks an
+// 8-step ceremony (find the part, witness the burden, get permission,
+// acknowledge the weight, choose the element, release, fill the space,
+// integration) as a single row per client (ifs_interactive_data,
+// module_id: 'unburdening_protocol'), upserted/overwritten on each redo.
+// Only structured completion metadata is surfaced here — currentStep,
+// completion status/timestamp, the chosen release element and quality, the
+// body location noticed in step 1, and the post-ceremony mood in step 8.
+// The free-text journal fields (the burden description, gratitude letter,
+// and integration reflection) are deliberately excluded: unlike the daily
+// check-in's short intention text, no existing advisor-facing surface in
+// the app shows this raw content, so there's no established precedent to
+// mirror.
+//
+// Same as curriculum reflections and the Self-Energy trend, this queries
+// ifs_interactive_data directly rather than through a
+// requireTherapistAssignment-gated API route, and that table's RLS policy
+// doesn't itself restrict reads to the client's assigned Advisor — so
+// isAssigned must be confirmed by the caller before this fetches anything.
+function mapUnburdeningRecord(row) {
+  if (!row) return null;
+  const data = row.data || {};
+  const responses = data.responses || {};
+  const step1 = responses.step1 || {};
+  const step8 = responses.step8 || {};
+  return {
+    currentStep: typeof data.currentStep === 'number' ? data.currentStep : 1,
+    completed: !!data.completedAt,
+    completedAt: data.completedAt || null,
+    element: data.element || null,
+    quality: data.qualityChosen || null,
+    bodyLocation: typeof step1.bodyLocation === 'string' ? step1.bodyLocation : null,
+    moodAfter: typeof step8.mood === 'number' ? step8.mood : null,
+    updatedAt: row.updated_at || null,
+  };
+}
+
+export async function loadWorkspaceUnburdeningRecord(clientId, isAssigned) {
+  if (!clientId || !isAssigned) return null;
+  try {
+    const { data, error } = await supabase
+      .from('ifs_interactive_data')
+      .select('data, updated_at')
+      .eq('client_id', clientId)
+      .eq('module_id', 'unburdening_protocol')
+      .maybeSingle();
+    if (error) return null;
+    return mapUnburdeningRecord(data);
+  } catch {
+    return null;
+  }
+}
+
 function escapeHtml(value) {
   return String(value ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }

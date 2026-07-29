@@ -11,6 +11,7 @@ import {
   loadWorkspaceLifeReflections, buildClientReportHtml, markWorkspaceAgendaReviewed, loadWorkspaceHealingTimeline,
   loadCaseloadRiskAlerts, loadWorkspaceCurriculumReflections, loadWorkspaceSelfEnergyTrend, mapNoteEntry,
   markWorkspaceHomeworkReviewed, archiveWorkspaceHomework, refreshWorkspaceHomeworkForClient,
+  loadWorkspaceUnburdeningRecord,
 } from '../lib/advisorWorkspaceLoader.js';
 import { loadAdvisorSessionSnapshot } from '../lib/unifiedGuidance.js';
 import { generateSessionPrepSummary } from '../lib/sessionPrepSummary.js';
@@ -55,6 +56,7 @@ export const INITIAL_STATE = {
   healingTimeline: { loading: false, data: null, error: '' },
   curriculumReflections: [], curriculumReflectionsLoading: false,
   selfEnergyTrend: [], selfEnergyTrendLoading: false,
+  unburdeningRecord: null, unburdeningRecordLoading: false,
   riskAlerts: [],
   accessOverrides: {}, settingsAccent: 'amber',
   extraClients: [], deletedIds: {},
@@ -91,6 +93,7 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
   const healingTimelineLoadedFor = useRef(null);
   const curriculumReflectionsLoadedFor = useRef(null);
   const selfEnergyTrendLoadedFor = useRef(null);
+  const unburdeningRecordLoadedFor = useRef(null);
   const riskAlertsLoaded = useRef(false);
   // Generation guard: bumped on therapist change / unmount so stale in-flight
   // detail merges are ignored without cancelling still-valid sibling requests.
@@ -264,6 +267,7 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
     healingTimelineLoadedFor.current = null;
     curriculumReflectionsLoadedFor.current = null;
     selfEnergyTrendLoadedFor.current = null;
+    unburdeningRecordLoadedFor.current = null;
     set({
       selectedClientId: id, activeTab: 'clients-caseload', activeClientTab: 'overview',
       sessionSnapshot: { loading: false, data: null, error: '' },
@@ -272,6 +276,7 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
       healingTimeline: { loading: false, data: null, error: '' },
       curriculumReflections: [], curriculumReflectionsLoading: false,
       selfEnergyTrend: [], selfEnergyTrendLoading: false,
+      unburdeningRecord: null, unburdeningRecordLoading: false,
     });
   };
   const setClientTab = (id) => set({ activeClientTab: id });
@@ -618,6 +623,28 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
       isCanceled = true;
     };
   }, [isDemo, loadPhase, S.activeClientTab, S.selectedClientId]);
+
+  // Lazily load a client's real Unburdening Protocol completion record
+  // alongside the Healing Timeline — structured ceremony metadata only
+  // (step reached, completion, chosen element/quality, body location, mood
+  // after), never the free-text journal fields. Same unassigned-client
+  // guard as curriculum reflections / Self-Energy trend above, for the same
+  // reason (open RLS on ifs_interactive_data).
+  useEffect(() => {
+    if (isDemo || loadPhase !== 'ready' || S.activeClientTab !== 'healingJourney' || !S.selectedClientId) return;
+    if (unburdeningRecordLoadedFor.current === S.selectedClientId) return;
+    const client = allClients().find((c) => c.id === S.selectedClientId);
+    if (!client || client.unassigned) return;
+    unburdeningRecordLoadedFor.current = S.selectedClientId;
+    set({ unburdeningRecordLoading: true });
+    let isCanceled = false;
+    loadWorkspaceUnburdeningRecord(S.selectedClientId, true).then((record) => {
+      if (!isCanceled) set({ unburdeningRecord: record, unburdeningRecordLoading: false });
+    });
+    return () => {
+      isCanceled = true;
+    };
+  }, [isDemo, loadPhase, S.activeClientTab, S.selectedClientId, allClients]);
 
   // Lazily load a client's real curriculum module reflections the first time
   // that tab is opened — the client's own written insight/part-noticed/

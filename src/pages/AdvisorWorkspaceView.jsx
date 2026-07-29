@@ -7,6 +7,7 @@ import {
   PART_CAT_META, partChip, TEMPLATE_OPTIONS, PRACTICE_TYPE_META, LESSON_TITLES, PLAN_PHASES,
   DOC_TYPES, DOC_SOURCES, NAV_CONFIG, CLIENT_TABS, TIMELINE_TYPE_META, TAB_TITLES, TOGGLE_META,
   QUICK_MESSAGES, engagementStatusFor, MOOD_LABELS, RISK_TYPE_TITLE,
+  UNBURDENING_MOOD_LABELS, UNBURDENING_TOTAL_STEPS, UNBURDENING_STEP_TITLES,
 } from './advisorWorkspaceData.js';
 
 // Computes every derived value the UI needs (mirrors the design's renderVals()).
@@ -19,6 +20,7 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
     newTaskTitle, newTaskClientId, docForm, docSources, generatedDoc, docGenerating, docError, clientReports, clientReportsLoading, deletedMessageIdx,
     sessionSnapshot, changeSummary, lifeReflections, lifeReflectionsLoading, healingTimeline, riskAlerts,
     curriculumReflections, curriculumReflectionsLoading, homeworkFeedbackDraft, selfEnergyTrend, selfEnergyTrendLoading,
+    unburdeningRecord, unburdeningRecordLoading,
   } = S;
 
   const rootStyle = {
@@ -351,6 +353,22 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
         summary: healingTimeline.data?.summary || null,
         rows: canWrite ? (healingTimeline.data?.timeline || []) : [],
         noEvents: canWrite && !healingTimeline.loading && !healingTimeline.error && (healingTimeline.data?.timeline || []).length === 0,
+      },
+      unburdening: {
+        loading: !!unburdeningRecordLoading,
+        canView: canWrite,
+        hasRecord: canWrite && !!unburdeningRecord,
+        noRecord: canWrite && !unburdeningRecordLoading && !unburdeningRecord,
+        stepLabel: canWrite && unburdeningRecord ? `Step ${unburdeningRecord.currentStep} of ${UNBURDENING_TOTAL_STEPS}` : '',
+        stepTitle: canWrite && unburdeningRecord ? (UNBURDENING_STEP_TITLES[unburdeningRecord.currentStep - 1] || '') : '',
+        progressPct: canWrite && unburdeningRecord ? Math.round((unburdeningRecord.currentStep / UNBURDENING_TOTAL_STEPS) * 100) : 0,
+        completed: canWrite && !!unburdeningRecord?.completed,
+        statusChip: severityStyle(theme, unburdeningRecord?.completed ? 'low' : 'medium'),
+        completedDateLabel: unburdeningRecord?.completedAt ? new Date(unburdeningRecord.completedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '',
+        element: unburdeningRecord?.element ? titleCase(unburdeningRecord.element) : '',
+        quality: unburdeningRecord?.quality || '',
+        bodyLocation: unburdeningRecord?.bodyLocation || '',
+        moodAfterLabel: unburdeningRecord?.moodAfter != null ? (UNBURDENING_MOOD_LABELS[unburdeningRecord.moodAfter] || `${unburdeningRecord.moodAfter}/5`) : '',
       },
       curriculumReflections: {
         loading: !!curriculumReflectionsLoading,
@@ -954,7 +972,7 @@ function ClientsCaseload({ v }) {
             />
           )}
           {v.isClientTabLifeReflections && <LifeReflectionsTab lr={sc.lifeReflections} onClaim={sc.onClaim} />}
-          {v.isClientTabHealingJourney && <HealingJourneyTab ht={sc.healingTimeline} onClaim={sc.onClaim} />}
+          {v.isClientTabHealingJourney && <HealingJourneyTab ht={sc.healingTimeline} ub={sc.unburdening} onClaim={sc.onClaim} />}
           {v.isClientTabCurriculumReflections && <CurriculumReflectionsTab cr={sc.curriculumReflections} onClaim={sc.onClaim} />}
           {v.isClientTabTimeline && (
             <div style={CARD}>
@@ -1590,7 +1608,7 @@ const HEALING_SUMMARY_LABELS = [
   ['lifeIntegrationReflections', 'Life Integration reflections'], ['curriculumReflections', 'Curriculum reflections'],
 ];
 
-function HealingJourneyTab({ ht, onClaim }) {
+function HealingJourneyTab({ ht, ub, onClaim }) {
   if (!ht.canView) {
     return (
       <div style={CARD}>
@@ -1607,6 +1625,30 @@ function HealingJourneyTab({ ht, onClaim }) {
       <div style={{ fontSize: '12px', color: 'var(--muted)', padding: '2px 2px 0' }}>
         A gentler, milestone-oriented view of this client's progress — the same real activity the client sees on their own Healing Timeline.
       </div>
+      {ub.loading && <div style={{ ...CARD, textAlign: 'center', color: 'var(--muted)', fontSize: '13px' }}>Loading Unburdening Protocol status…</div>}
+      {ub.noRecord && <div style={{ ...CARD, textAlign: 'center', color: 'var(--muted)', fontSize: '13px' }}>This client hasn't started the Unburdening Protocol ceremony yet.</div>}
+      {ub.hasRecord && (
+        <div style={CARD}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
+            <span style={{ ...FR, fontSize: '13px' }}>Unburdening Protocol</span>
+            <span style={ub.statusChip}>{ub.completed ? 'Completed' : 'In progress'}</span>
+          </div>
+          <div style={{ marginTop: '10px', height: '6px', borderRadius: '4px', background: 'var(--surface-2)', overflow: 'hidden' }}>
+            <div style={{ width: ub.progressPct + '%', height: '100%', borderRadius: '4px', background: 'var(--emerald-2)' }} />
+          </div>
+          <div style={{ fontSize: '11.5px', color: 'var(--muted)', marginTop: '6px' }}>
+            {ub.stepLabel}{ub.stepTitle ? ` · ${ub.stepTitle}` : ''}{ub.completedDateLabel ? ` · Completed ${ub.completedDateLabel}` : ''}
+          </div>
+          {(ub.element || ub.quality || ub.bodyLocation || ub.moodAfterLabel) && (
+            <div style={{ display: 'flex', gap: '18px', marginTop: '12px', flexWrap: 'wrap' }}>
+              {ub.element && <div><span style={{ fontSize: '11px', color: 'var(--muted)' }}>Element</span><div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text)' }}>{ub.element}</div></div>}
+              {ub.quality && <div><span style={{ fontSize: '11px', color: 'var(--muted)' }}>Quality invited in</span><div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text)' }}>{ub.quality}</div></div>}
+              {ub.bodyLocation && <div><span style={{ fontSize: '11px', color: 'var(--muted)' }}>Body location</span><div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text)' }}>{ub.bodyLocation}</div></div>}
+              {ub.moodAfterLabel && <div><span style={{ fontSize: '11px', color: 'var(--muted)' }}>Mood after</span><div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text)' }}>{ub.moodAfterLabel}</div></div>}
+            </div>
+          )}
+        </div>
+      )}
       {ht.loading && <div style={{ ...CARD, textAlign: 'center', color: 'var(--muted)', fontSize: '13px' }}>Loading healing timeline…</div>}
       {ht.error && <div style={{ ...CARD, textAlign: 'center', color: 'var(--risk-high-text)', fontSize: '13px' }}>{ht.error}</div>}
       {ht.summary && (

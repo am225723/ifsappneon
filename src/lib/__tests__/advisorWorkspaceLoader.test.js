@@ -7,6 +7,7 @@ import { describe, it, expect, vi, afterAll, beforeEach } from 'vitest';
 // against ifs_generated_reports resolves to.
 let mockReportRows = { data: [], error: null };
 let mockSelfEnergyRows = { data: [], error: null };
+let mockUnburdeningResult = { data: null, error: null };
 vi.mock('../supabase', () => ({
   supabase: {
     from: (table) => ({
@@ -21,6 +22,11 @@ vi.mock('../supabase', () => ({
             order: () => ({
               limit: () => (table === 'ifs_interactive_data' ? mockSelfEnergyRows : { data: [], error: null }),
             }),
+          }),
+          // loadWorkspaceUnburdeningRecord's real query filters on client_id
+          // then module_id, then fetches a single row.
+          eq: () => ({
+            maybeSingle: () => (table === 'ifs_interactive_data' ? mockUnburdeningResult : { data: null, error: null }),
           }),
         }),
       }),
@@ -75,7 +81,7 @@ const {
   loadWorkspaceLifeReflections, buildClientReportHtml, markWorkspaceAgendaReviewed, loadWorkspaceHealingTimeline,
   loadCaseloadRiskAlerts, loadWorkspaceCurriculumReflections,
   markWorkspaceHomeworkReviewed, archiveWorkspaceHomework, refreshWorkspaceHomeworkForClient,
-  loadWorkspaceSelfEnergyTrend,
+  loadWorkspaceSelfEnergyTrend, loadWorkspaceUnburdeningRecord,
 } = await import('../advisorWorkspaceLoader.js');
 
 describe('initialsFrom', () => {
@@ -823,6 +829,86 @@ describe('loadWorkspaceSelfEnergyTrend', () => {
     const rows = await loadWorkspaceSelfEnergyTrend('c1', true);
     expect(rows).toEqual([]);
     mockSelfEnergyRows = { data: [], error: null };
+  });
+});
+
+describe('loadWorkspaceUnburdeningRecord', () => {
+  it('returns null without a clientId', async () => {
+    expect(await loadWorkspaceUnburdeningRecord(null, true)).toBeNull();
+  });
+
+  // ifs_interactive_data's RLS doesn't restrict reads to the client's
+  // assigned Advisor (same reasoning as loadWorkspaceCurriculumReflections/
+  // loadWorkspaceSelfEnergyTrend), so this refuses to fetch at all unless
+  // the caller has confirmed assignment.
+  it('returns null without calling the API when the caller has not confirmed assignment', async () => {
+    mockUnburdeningResult = { data: { data: { currentStep: 5 } }, error: null };
+    expect(await loadWorkspaceUnburdeningRecord('c1', false)).toBeNull();
+    expect(await loadWorkspaceUnburdeningRecord('c1')).toBeNull();
+    mockUnburdeningResult = { data: null, error: null };
+  });
+
+  it('returns null (not a stale record) when the client has no ceremony row yet', async () => {
+    mockUnburdeningResult = { data: null, error: null };
+    expect(await loadWorkspaceUnburdeningRecord('c1', true)).toBeNull();
+  });
+
+  it('maps a real in-progress row into structured completion metadata only', async () => {
+    mockUnburdeningResult = {
+      data: {
+        data: {
+          currentStep: 5,
+          completedAt: null,
+          element: 'water',
+          qualityChosen: null,
+          responses: { step1: { bodyLocation: 'Chest' } },
+        },
+        updated_at: '2026-07-20T00:00:00Z',
+      },
+      error: null,
+    };
+    const record = await loadWorkspaceUnburdeningRecord('c1', true);
+    expect(record.currentStep).toBe(5);
+    expect(record.completed).toBe(false);
+    expect(record.element).toBe('water');
+    expect(record.bodyLocation).toBe('Chest');
+    expect(record.moodAfter).toBeNull();
+    mockUnburdeningResult = { data: null, error: null };
+  });
+
+  it('maps a completed row, excluding any free-text journal fields', async () => {
+    mockUnburdeningResult = {
+      data: {
+        data: {
+          currentStep: 8,
+          completedAt: '2026-07-22T00:00:00Z',
+          element: 'fire',
+          qualityChosen: 'Peace',
+          responses: {
+            step1: { bodyLocation: 'Shoulders' },
+            step2: { burdenDescription: 'a long private description' },
+            step8: { mood: 4, integrationReflection: 'a long private reflection' },
+          },
+        },
+        updated_at: '2026-07-22T00:00:00Z',
+      },
+      error: null,
+    };
+    const record = await loadWorkspaceUnburdeningRecord('c1', true);
+    expect(record.completed).toBe(true);
+    expect(record.quality).toBe('Peace');
+    expect(record.moodAfter).toBe(4);
+    expect(record).not.toHaveProperty('burdenDescription');
+    expect(record).not.toHaveProperty('integrationReflection');
+    expect(JSON.stringify(record)).not.toContain('private');
+    mockUnburdeningResult = { data: null, error: null };
+  });
+
+  it('returns null (not a throw) when the API errors', async () => {
+    mockUnburdeningResult = { data: null, error: { message: 'forbidden' } };
+    const record = await loadWorkspaceUnburdeningRecord('c1', true);
+    expect(record).toBeNull();
+    mockUnburdeningResult = { data: null, error: null };
   });
 });
 
