@@ -14,6 +14,7 @@ let mockLifeIntegrationRows = { data: [], error: null };
 let mockJournalRows = { data: [], error: null };
 let mockInteractiveOrRows = { data: [], error: null };
 let mockLiveSessionRows = { data: [], error: null };
+let mockCoTherapyProgressRows = { data: [], error: null };
 vi.mock('../supabase', () => ({
   supabase: {
     from: (table) => ({
@@ -23,6 +24,9 @@ vi.mock('../supabase', () => ({
           // is awaited directly off a single .eq(), with no further chaining.
           ...(table === 'ifs_parts' ? mockExistingPartsResult : { data: [], error: null }),
           order: () => ({
+            // loadWorkspaceCoTherapyProgress's real query is awaited
+            // directly off .eq().order() — no .limit() call.
+            ...(table === 'ifs_therapy_activity_progress' ? mockCoTherapyProgressRows : { data: [], error: null }),
             limit: () => {
               if (table === 'ifs_generated_reports') return mockReportRows;
               if (table === 'ifs_assessment_results') return mockAssessmentResultsRows;
@@ -121,7 +125,7 @@ const {
   loadCaseloadRiskAlerts, loadWorkspaceCurriculumReflections,
   markWorkspaceHomeworkReviewed, archiveWorkspaceHomework, refreshWorkspaceHomeworkForClient,
   loadWorkspaceSelfEnergyTrend, loadWorkspaceUnburdeningRecord, loadWorkspacePartSuggestions,
-  loadWorkspaceClientDetail, loadWorkspaceActiveLiveSessions,
+  loadWorkspaceClientDetail, loadWorkspaceActiveLiveSessions, loadWorkspaceCoTherapyProgress,
 } = await import('../advisorWorkspaceLoader.js');
 
 describe('initialsFrom', () => {
@@ -1126,6 +1130,46 @@ describe('loadWorkspaceActiveLiveSessions', () => {
   it('returns an empty array (not a throw) when the API errors', async () => {
     mockLiveSessionRows = { data: null, error: { message: 'forbidden' } };
     expect(await loadWorkspaceActiveLiveSessions('therapist1')).toEqual([]);
+  });
+});
+
+describe('loadWorkspaceCoTherapyProgress', () => {
+  beforeEach(() => { mockCoTherapyProgressRows = { data: [], error: null }; });
+
+  it('returns an empty array without a clientId', async () => {
+    expect(await loadWorkspaceCoTherapyProgress(null, true)).toEqual([]);
+  });
+
+  // ifs_therapy_activity_progress technically has RLS "enabled" but its only
+  // policy is USING (true) WITH CHECK (true), so it's effectively open —
+  // this refuses to fetch at all unless the caller has confirmed assignment.
+  it('returns an empty array without calling the API when the caller has not confirmed assignment', async () => {
+    mockCoTherapyProgressRows = { data: [{ id: 'p1', activity_id: 'parts-dialogue', completed: true, updated_at: '2026-07-20T00:00:00Z' }], error: null };
+    expect(await loadWorkspaceCoTherapyProgress('c1', false)).toEqual([]);
+    expect(await loadWorkspaceCoTherapyProgress('c1')).toEqual([]);
+  });
+
+  it('maps a real completed activity row to a human title, excluding raw free-text fields', async () => {
+    mockCoTherapyProgressRows = {
+      data: [{ id: 'p1', activity_id: 'unburdening-ceremony', completed: true, updated_at: '2026-07-20T00:00:00Z', reflections: { 0: 'a private client reflection' }, progress_data: { data: { therapistNotes: { 0: 'a private advisor note' } } } }],
+      error: null,
+    };
+    const rows = await loadWorkspaceCoTherapyProgress('c1', true);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toEqual({ id: 'p1', activityId: 'unburdening-ceremony', activityTitle: 'Unburdening Ceremony Guide', completed: true, updatedAt: '2026-07-20T00:00:00Z' });
+    expect(JSON.stringify(rows)).not.toContain('private');
+  });
+
+  it('falls back to the raw activity_id if it is not in the known activity list', async () => {
+    mockCoTherapyProgressRows = { data: [{ id: 'p2', activity_id: 'some-future-activity', completed: false, updated_at: null }], error: null };
+    const rows = await loadWorkspaceCoTherapyProgress('c1', true);
+    expect(rows[0].activityTitle).toBe('some-future-activity');
+    expect(rows[0].completed).toBe(false);
+  });
+
+  it('returns an empty array (not a throw) when the API errors', async () => {
+    mockCoTherapyProgressRows = { data: null, error: { message: 'forbidden' } };
+    expect(await loadWorkspaceCoTherapyProgress('c1', true)).toEqual([]);
   });
 });
 

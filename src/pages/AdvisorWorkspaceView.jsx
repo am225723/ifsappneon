@@ -30,6 +30,7 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
     sessionSnapshot, changeSummary, moduleInsights, lifeReflections, lifeReflectionsLoading, healingTimeline, riskAlerts,
     curriculumReflections, curriculumReflectionsLoading, homeworkFeedbackDraft, selfEnergyTrend, selfEnergyTrendLoading,
     unburdeningRecord, unburdeningRecordLoading, partSuggestions, partSuggestionsLoading,
+    coTherapyProgress, coTherapyProgressLoading,
   } = S;
 
   const rootStyle = {
@@ -384,6 +385,19 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
         quality: unburdeningRecord?.quality || '',
         bodyLocation: unburdeningRecord?.bodyLocation || '',
         moodAfterLabel: unburdeningRecord?.moodAfter != null ? (UNBURDENING_MOOD_LABELS[unburdeningRecord.moodAfter] || `${unburdeningRecord.moodAfter}/5`) : '',
+      },
+      coTherapyProgress: {
+        loading: !!coTherapyProgressLoading,
+        canView: canWrite,
+        rows: canWrite ? coTherapyProgress.map((a) => ({
+          id: a.id,
+          title: a.activityTitle,
+          completed: a.completed,
+          statusLabel: a.completed ? 'Completed' : 'In progress',
+          statusChip: severityStyle(theme, a.completed ? 'low' : 'medium'),
+          dateLabel: a.updatedAt ? new Date(a.updatedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—',
+        })) : [],
+        noActivity: canWrite && !coTherapyProgressLoading && coTherapyProgress.length === 0,
       },
       curriculumReflections: {
         loading: !!curriculumReflectionsLoading,
@@ -1003,7 +1017,7 @@ function ClientsCaseload({ v }) {
             />
           )}
           {v.isClientTabLifeReflections && <LifeReflectionsTab lr={sc.lifeReflections} onClaim={sc.onClaim} />}
-          {v.isClientTabHealingJourney && <HealingJourneyTab ht={sc.healingTimeline} ub={sc.unburdening} onClaim={sc.onClaim} />}
+          {v.isClientTabHealingJourney && <HealingJourneyTab ht={sc.healingTimeline} ub={sc.unburdening} ct={sc.coTherapyProgress} onClaim={sc.onClaim} />}
           {v.isClientTabCurriculumReflections && <CurriculumReflectionsTab cr={sc.curriculumReflections} onClaim={sc.onClaim} />}
           {v.isClientTabTimeline && (
             <div style={CARD}>
@@ -1710,7 +1724,7 @@ const HEALING_SUMMARY_LABELS = [
   ['lifeIntegrationReflections', 'Life Integration reflections'], ['curriculumReflections', 'Curriculum reflections'],
 ];
 
-function HealingJourneyTab({ ht, ub, onClaim }) {
+function HealingJourneyTab({ ht, ub, ct, onClaim }) {
   if (!ht.canView) {
     return (
       <div style={CARD}>
@@ -1749,6 +1763,25 @@ function HealingJourneyTab({ ht, ub, onClaim }) {
               {ub.moodAfterLabel && <div><span style={{ fontSize: '11px', color: 'var(--muted)' }}>Mood after</span><div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text)' }}>{ub.moodAfterLabel}</div></div>}
             </div>
           )}
+        </div>
+      )}
+      {ct.loading && <div style={{ ...CARD, textAlign: 'center', color: 'var(--muted)', fontSize: '13px' }}>Loading Co-Therapy activity progress…</div>}
+      {ct.noActivity && <div style={{ ...CARD, textAlign: 'center', color: 'var(--muted)', fontSize: '13px' }}>No Co-Therapy in-session activities recorded yet.</div>}
+      {ct.rows.length > 0 && (
+        <div style={CARD}>
+          <span style={{ ...FR, fontSize: '13px' }}>Co-Therapy Activities</span>
+          <div style={{ fontSize: '12px', color: 'var(--muted)', marginTop: '4px' }}>Guided in-session activities completed together on the Co-Therapy tool.</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '14px' }}>
+            {ct.rows.map((a) => (
+              <div key={a.id} style={{ padding: '12px 14px', borderRadius: '14px', background: 'var(--surface-2)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', flexWrap: 'wrap' }}>
+                <span style={{ fontSize: '13px', color: 'var(--text)' }}>{a.title}</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <span style={{ fontSize: '11px', color: 'var(--muted)' }}>{a.dateLabel}</span>
+                  <span style={a.statusChip}>{a.statusLabel}</span>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
       {ht.loading && <div style={{ ...CARD, textAlign: 'center', color: 'var(--muted)', fontSize: '13px' }}>Loading healing timeline…</div>}

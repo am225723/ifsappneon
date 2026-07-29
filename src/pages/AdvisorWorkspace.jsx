@@ -12,7 +12,7 @@ import {
   loadCaseloadRiskAlerts, loadWorkspaceCurriculumReflections, loadWorkspaceSelfEnergyTrend, mapNoteEntry,
   markWorkspaceHomeworkReviewed, archiveWorkspaceHomework, refreshWorkspaceHomeworkForClient,
   loadWorkspaceUnburdeningRecord, loadWorkspacePartSuggestions, generateWorkspaceModuleInsights,
-  loadWorkspaceActiveLiveSessions,
+  loadWorkspaceActiveLiveSessions, loadWorkspaceCoTherapyProgress,
 } from '../lib/advisorWorkspaceLoader.js';
 import { loadAdvisorSessionSnapshot } from '../lib/unifiedGuidance.js';
 import { generateSessionPrepSummary } from '../lib/sessionPrepSummary.js';
@@ -61,6 +61,7 @@ export const INITIAL_STATE = {
   selfEnergyTrend: [], selfEnergyTrendLoading: false,
   unburdeningRecord: null, unburdeningRecordLoading: false,
   partSuggestions: null, partSuggestionsLoading: false,
+  coTherapyProgress: [], coTherapyProgressLoading: false,
   riskAlerts: [],
   accessOverrides: {}, settingsAccent: 'amber',
   extraClients: [], deletedIds: {},
@@ -99,6 +100,7 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
   const selfEnergyTrendLoadedFor = useRef(null);
   const unburdeningRecordLoadedFor = useRef(null);
   const partSuggestionsLoadedFor = useRef(null);
+  const coTherapyProgressLoadedFor = useRef(null);
   const riskAlertsLoaded = useRef(false);
   const liveSessionsLoaded = useRef(false);
   // Generation guard: bumped on therapist change / unmount so stale in-flight
@@ -280,6 +282,7 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
     selfEnergyTrendLoadedFor.current = null;
     unburdeningRecordLoadedFor.current = null;
     partSuggestionsLoadedFor.current = null;
+    coTherapyProgressLoadedFor.current = null;
     set({
       selectedClientId: id, activeTab: 'clients-caseload', activeClientTab: 'overview',
       sessionSnapshot: { loading: false, data: null, error: '' },
@@ -291,6 +294,7 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
       selfEnergyTrend: [], selfEnergyTrendLoading: false,
       unburdeningRecord: null, unburdeningRecordLoading: false,
       partSuggestions: null, partSuggestionsLoading: false,
+      coTherapyProgress: [], coTherapyProgressLoading: false,
     });
   };
   const setClientTab = (id) => set({ activeClientTab: id });
@@ -696,6 +700,29 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
     let isCanceled = false;
     loadWorkspaceUnburdeningRecord(S.selectedClientId, true).then((record) => {
       if (!isCanceled) set({ unburdeningRecord: record, unburdeningRecordLoading: false });
+    });
+    return () => {
+      isCanceled = true;
+    };
+  }, [isDemo, loadPhase, S.activeClientTab, S.selectedClientId, allClients]);
+
+  // Lazily load a client's real Co-Therapy activity completion tracker
+  // alongside the Healing Timeline — the standalone advisor-only /co-therapy
+  // page's guided in-session activities, just not previously reachable from
+  // the workspace. Structured completion facts only (which activity, done
+  // or not, when) — never the client's own reflection text or the
+  // advisor's per-step session notes from that tool. Same unassigned-client
+  // guard as the other ifs_interactive_data-adjacent loaders above.
+  useEffect(() => {
+    if (isDemo || loadPhase !== 'ready' || S.activeClientTab !== 'healingJourney' || !S.selectedClientId) return;
+    if (coTherapyProgressLoadedFor.current === S.selectedClientId) return;
+    const client = allClients().find((c) => c.id === S.selectedClientId);
+    if (!client || client.unassigned) return;
+    coTherapyProgressLoadedFor.current = S.selectedClientId;
+    set({ coTherapyProgressLoading: true });
+    let isCanceled = false;
+    loadWorkspaceCoTherapyProgress(S.selectedClientId, true).then((rows) => {
+      if (!isCanceled) set({ coTherapyProgress: rows, coTherapyProgressLoading: false });
     });
     return () => {
       isCanceled = true;

@@ -878,6 +878,43 @@ describe('buildView — Unburdening Protocol reflects the real ceremony record (
   });
 });
 
+describe('buildView — Co-Therapy activity progress reflects real completion rows (CoTherapySession.jsx)', () => {
+  const CLIENT_WITH_ACTIVITY = {
+    ...UNASSIGNED_CLIENT, id: 'ct1', name: 'Co-Therapy Test', unassigned: false,
+  };
+  const ROWS = [
+    { id: 'p1', activityId: 'unburdening-ceremony', activityTitle: 'Unburdening Ceremony Guide', completed: true, updatedAt: '2026-07-20T00:00:00Z' },
+    { id: 'p2', activityId: 'parts-dialogue', activityTitle: 'Guided Parts Dialogue', completed: false, updatedAt: '2026-07-22T00:00:00Z' },
+  ];
+
+  it('never surfaces co-therapy progress for an unassigned client', () => {
+    const v = makeView({ extraClients: [UNASSIGNED_CLIENT], selectedClientId: 'new1', coTherapyProgress: ROWS });
+    expect(v.selectedClient.coTherapyProgress.canView).toBe(false);
+    expect(v.selectedClient.coTherapyProgress.rows).toEqual([]);
+  });
+
+  it('maps real activity rows into title, completion status, and date', () => {
+    const v = makeView({ extraClients: [CLIENT_WITH_ACTIVITY], selectedClientId: 'ct1', coTherapyProgress: ROWS });
+    const ct = v.selectedClient.coTherapyProgress;
+    expect(ct.rows).toHaveLength(2);
+    expect(ct.rows[0]).toEqual(expect.objectContaining({ title: 'Unburdening Ceremony Guide', completed: true, statusLabel: 'Completed' }));
+    expect(ct.rows[1]).toEqual(expect.objectContaining({ title: 'Guided Parts Dialogue', completed: false, statusLabel: 'In progress' }));
+    expect(ct.noActivity).toBe(false);
+  });
+
+  it('shows the loading state, and the empty state once loaded with no activity', () => {
+    const loading = makeView({ extraClients: [CLIENT_WITH_ACTIVITY], selectedClientId: 'ct1', coTherapyProgress: [], coTherapyProgressLoading: true });
+    expect(loading.selectedClient.coTherapyProgress.loading).toBe(true);
+    expect(loading.selectedClient.coTherapyProgress.noActivity).toBe(false);
+
+    const loaded = makeView({ extraClients: [CLIENT_WITH_ACTIVITY], selectedClientId: 'ct1', coTherapyProgress: [], coTherapyProgressLoading: false });
+    expect(loaded.selectedClient.coTherapyProgress.noActivity).toBe(true);
+
+    const demo = makeView({ selectedClientId: 'c1' });
+    expect(demo.selectedClient.coTherapyProgress.rows).toEqual([]);
+  });
+});
+
 describe('buildView — Suggested Parts reflects the real suggestion engine (AdvisorInnerSystemMap.jsx)', () => {
   const CLIENT_WITH_ACTIVITY = {
     ...UNASSIGNED_CLIENT, id: 'ps1', name: 'Suggestion Test', unassigned: false,
