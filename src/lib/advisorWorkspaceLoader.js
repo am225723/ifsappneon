@@ -719,7 +719,12 @@ export async function loadWorkspaceClientDetail(base, therapistId) {
     loadAssignedHomeworkForClient(base.id).catch(() => ({ data: [] })),
     loadClientFreeformHomework(base.id),
     loadTherapistClientSessionAgendas(therapistId, base.id).catch(() => ({ data: [] })),
-    loadPartRelationships({ clientId: base.id }).catch(() => ({ data: [] })),
+    // ifs_part_relationships has no RLS policy scoping reads to the client's
+    // assigned Advisor (unlike most other tables here, it has no RLS enabled
+    // at all — see migration 034), and loadWorkspaceClientDetail is called
+    // for every caseload client including unassigned ones. Fail closed here
+    // rather than relying solely on the view layer to hide the result.
+    base.unassigned ? Promise.resolve({ data: [] }) : loadPartRelationships({ clientId: base.id }).catch(() => ({ data: [] })),
     loadClientAllParts(base.id),
     loadClientAssessmentExtras(base.id),
   ]);

@@ -333,6 +333,20 @@ describe('buildView — Part relationships', () => {
     expect(v.selectedClient.partRelationships).toEqual([]);
     expect(v.selectedClient.noPartRelationships).toBe(true);
   });
+
+  // ifs_part_relationships has no RLS policy scoping reads to the client's
+  // assigned Advisor at all, so this must never surface for an unassigned
+  // client even if the loader somehow still populated the field.
+  it('never surfaces part relationships for an unassigned client, even if the raw field is populated', () => {
+    const client = {
+      ...UNASSIGNED_CLIENT, id: 'pr2',
+      partRelationships: [{ id: 'r1', fromName: 'The Watcher', toName: 'The Wounded Child', typeLabel: 'protects', label: '', description: 'Shows up first in conflict.' }],
+    };
+    const v = makeView({ extraClients: [client], selectedClientId: 'pr2' });
+    const sc = v.selectedClient;
+    expect(sc.partRelationships).toEqual([]);
+    expect(sc.noPartRelationships).toBe(true);
+  });
 });
 
 describe('buildView — real caseload risk alerts (api/risk-alerts.js)', () => {
