@@ -18,7 +18,7 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
     clientMessageDraft, activeThreadId, safetyOverrides, engagementDismissed, partsClientFilter, tasks, taskFilter,
     newTaskTitle, newTaskClientId, docForm, docSources, generatedDoc, docGenerating, docError, clientReports, clientReportsLoading, deletedMessageIdx,
     sessionSnapshot, changeSummary, lifeReflections, lifeReflectionsLoading, healingTimeline, riskAlerts,
-    curriculumReflections, curriculumReflectionsLoading, homeworkFeedbackDraft,
+    curriculumReflections, curriculumReflectionsLoading, homeworkFeedbackDraft, selfEnergyTrend, selfEnergyTrendLoading,
   } = S;
 
   const rootStyle = {
@@ -210,6 +210,12 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
     const energyMax = Math.max(...rawBS.energyTrend.map((w) => w.value || 0), 1);
     const journalMax = Math.max(...rawBS.journalWeekly.map((w) => w.count || 0), 1);
     const sparkBar = (value, max, color) => ({ flex: 1, height: Math.max(6, Math.round((value / max) * 36)) + 'px', borderRadius: '3px 3px 0 0', background: color });
+    const selfEnergyMax = Math.max(...selfEnergyTrend.map((c) => c.selfEnergy || 0), 1);
+    const activePartsCounts = {};
+    selfEnergyTrend.forEach((c) => (c.activeParts || []).forEach((p) => { activePartsCounts[p] = (activePartsCounts[p] || 0) + 1; }));
+    const activePartsTop = Object.entries(activePartsCounts).sort((a, b) => b[1] - a[1]).slice(0, 8);
+    const activePartsMax = activePartsTop[0]?.[1] || 1;
+    const titleCase = (s) => String(s).replace(/-/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase());
     selectedClient = {
       id: rawSelected.id, name: rawSelected.name, initial: rawSelected.initial, email: rawSelected.email, phone: rawSelected.phone,
       statusLabel: rawSelected.status === 'active' ? 'Active' : 'Inactive', statusChip: severityStyle(theme, rawSelected.status === 'active' ? 'low' : 'medium'),
@@ -285,6 +291,27 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
           dateLabel: a.completedDateLabel ? `Completed ${a.completedDateLabel}` : (a.dueDateLabel ? `Due ${a.dueDateLabel}` : ''),
         })),
         noFreeformAssignments: !(rawBS.freeformAssignments || []).length,
+        selfEnergyTrendLoading: !!selfEnergyTrendLoading,
+        hasSelfEnergyData: canWrite && selfEnergyTrend.length > 0,
+        selfEnergyTrendBars: canWrite ? selfEnergyTrend.map((c) => ({
+          week: c.date ? new Date(c.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '—',
+          style: sparkBar(c.selfEnergy || 0, selfEnergyMax, '#10b98155'),
+        })) : [],
+        activePartsRows: canWrite ? activePartsTop.map(([name, count]) => ({
+          name: titleCase(name), count,
+          barStyle: { width: Math.round((count / activePartsMax) * 100) + '%', height: '100%', borderRadius: '4px', background: '#6366f1' },
+        })) : [],
+        noActiveParts: canWrite && activePartsTop.length === 0,
+        recentCheckins: canWrite ? selfEnergyTrend.slice(-7).reverse().map((c, i) => ({
+          id: `${c.date}-${i}`,
+          dateLabel: c.date ? new Date(c.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '—',
+          selfEnergyLabel: c.selfEnergy != null ? `${c.selfEnergy}/10` : '—',
+          moodLabel: c.mood != null ? (MOOD_LABELS[c.mood] || `${c.mood}/5`) : '—',
+          intention: c.intention || '',
+          activePartsLabels: (c.activeParts || []).slice(0, 4).map(titleCase),
+          extraPartsCount: Math.max(0, (c.activeParts || []).length - 4),
+        })) : [],
+        noCheckins: canWrite && !selfEnergyTrendLoading && selfEnergyTrend.length === 0,
       },
       snapshot: {
         loading: !!sessionSnapshot.loading,
@@ -1340,6 +1367,54 @@ function BetweenSessionTab({ bs, clientId, isDemo, unassigned, feedbackDraft, on
         <TrendChart title="Weekly mood (1–5)" bars={bs.moodTrendBars} noDataLabel="No mood check-ins recorded yet." />
         <TrendChart title="Weekly energy (1–10)" bars={bs.energyTrendBars} noDataLabel="No energy check-ins recorded yet." />
         <TrendChart title="Weekly journal entries" bars={bs.journalWeeklyBars} noDataLabel="No journal entries recorded yet." />
+        <TrendChart
+          title="Self-Energy (1–10)" bars={bs.selfEnergyTrendBars}
+          noDataLabel={bs.selfEnergyTrendLoading ? 'Loading Self-Energy check-ins…' : 'No Self-Energy check-ins recorded yet.'}
+        />
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px,1fr))', gap: '14px' }}>
+        <div style={CARD}>
+          <span style={{ ...FR, fontSize: '15px' }}>Active parts (daily check-ins)</span>
+          <div style={{ fontSize: '12px', color: 'var(--muted)', marginTop: '4px' }}>Parts this client has noticed as active during their daily Self-Energy check-ins.</div>
+          {bs.noActiveParts ? (
+            <p style={{ marginTop: '12px', fontSize: '12.5px', color: 'var(--muted)' }}>No active parts recorded yet.</p>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '14px' }}>
+              {bs.activePartsRows.map((p) => (
+                <div key={p.name}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: 'var(--text)' }}><span>{p.name}</span><span style={{ color: 'var(--muted)' }}>{p.count}×</span></div>
+                  <div style={{ height: '6px', borderRadius: '4px', background: 'var(--surface-2)', marginTop: '4px', overflow: 'hidden' }}><div style={p.barStyle} /></div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div style={CARD}>
+          <span style={{ ...FR, fontSize: '15px' }}>Recent Self-Energy check-ins</span>
+          {bs.noCheckins ? (
+            <p style={{ marginTop: '12px', fontSize: '12.5px', color: 'var(--muted)' }}>No check-ins recorded yet.</p>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '14px' }}>
+              {bs.recentCheckins.map((c) => (
+                <div key={c.id} style={{ paddingBottom: '10px', borderBottom: '1px solid var(--border)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', fontSize: '12px' }}>
+                    <span style={{ fontWeight: 600, color: 'var(--text)' }}>{c.dateLabel}</span>
+                    <span style={{ color: 'var(--muted)' }}>{c.moodLabel} · Self: {c.selfEnergyLabel}</span>
+                  </div>
+                  {c.intention && <p style={{ margin: '4px 0 0', fontSize: '11.5px', fontStyle: 'italic', color: 'var(--muted)' }}>&quot;{c.intention}&quot;</p>}
+                  {c.activePartsLabels.length > 0 && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '6px' }}>
+                      {c.activePartsLabels.map((label) => (<span key={label} style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '999px', background: 'var(--surface-2)', color: 'var(--text-2)' }}>{label}</span>))}
+                      {c.extraPartsCount > 0 && <span style={{ fontSize: '11px', color: 'var(--muted)' }}>+{c.extraPartsCount} more</span>}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       <div style={CARD}>

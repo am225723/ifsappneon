@@ -965,6 +965,54 @@ export async function loadWorkspaceCurriculumReflections(clientId, isAssigned) {
   }
 }
 
+function mapSelfEnergyCheckins(rows) {
+  if (!Array.isArray(rows)) return [];
+  return rows
+    .map((row) => {
+      const data = row.data || {};
+      return {
+        date: String(row.module_id || '').replace('daily_checkin_', ''),
+        selfEnergy: typeof data.selfEnergy === 'number' ? data.selfEnergy : null,
+        mood: typeof data.mood === 'number' ? data.mood : null,
+        activeParts: Array.isArray(data.activeParts) ? data.activeParts : [],
+        intention: typeof data.intention === 'string' ? data.intention : '',
+      };
+    })
+    .filter((c) => c.date)
+    .sort((a, b) => a.date.localeCompare(b.date));
+}
+
+// Real daily Self-Energy check-ins (DailyCheckin.jsx, table
+// ifs_interactive_data, module_id: daily_checkin_<date>) — a 1-10
+// Self-leadership rating, discrete mood, the parts noticed active that day,
+// and a short daily intention. MoodAnalytics.jsx's advisor mode already
+// reads this back and shows a therapist the Self-Energy trend, an
+// active-parts frequency chart, and each check-in's intention text (but
+// never the longer reflection/partsNotes fields) — this mirrors that same
+// boundary, just not previously reachable from the workspace.
+//
+// Like curriculum reflections, this goes through a direct Supabase query
+// (mirroring MoodAnalytics.jsx's own real query) rather than a
+// requireTherapistAssignment-gated API route, and ifs_interactive_data's RLS
+// policy doesn't itself restrict reads to the client's assigned Advisor — so
+// isAssigned must be confirmed by the caller before this fetches anything.
+export async function loadWorkspaceSelfEnergyTrend(clientId, isAssigned) {
+  if (!clientId || !isAssigned) return [];
+  try {
+    const { data, error } = await supabase
+      .from('ifs_interactive_data')
+      .select('module_id, data, updated_at')
+      .eq('client_id', clientId)
+      .like('module_id', 'daily_checkin_%')
+      .order('updated_at', { ascending: true })
+      .limit(60);
+    if (error) return [];
+    return mapSelfEnergyCheckins(data);
+  } catch {
+    return [];
+  }
+}
+
 // The client-facing Healing Timeline (/healing-timeline, api/healing-timeline/
 // client.js) already computes a richer, weekly-narrative milestone feed —
 // summary stats plus per-event title/description/source — from real data
