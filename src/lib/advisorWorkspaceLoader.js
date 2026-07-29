@@ -827,6 +827,36 @@ export async function generateWorkspaceReport({ clientId, reportType = 'clinical
   }
 }
 
+// AI Module Response Insights (api/ai-module-response-insights.js) — a
+// decision-support panel already generated on demand from a client's real
+// curriculum module responses, progress rows, and saved curriculum
+// reflections (requireTherapistAssignment-gated server-side, same as
+// generateWorkspaceReport above), rendered by TherapistDashboard.jsx's
+// legacy "Generate module insights" button. Distinct from the Session
+// Snapshot (session-level decision support) and Since Last Session
+// (last-week activity) panels already in the workspace — this one is
+// specifically about patterns across curriculum/module responses. Like
+// those, it's never saved as a note and never shown to the client.
+export async function generateWorkspaceModuleInsights({ clientId, rangeDays = 60 }) {
+  if (!clientId) return { data: null, error: { message: 'Select a client before generating module insights.' } };
+  try {
+    const token = await getClerkToken();
+    const response = await fetch('/api/ai-module-response-insights', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      body: JSON.stringify({ clientId, rangeDays }),
+    });
+    const json = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      const message = json?.error?.message || json?.error || 'Unable to generate module response insights.';
+      return { data: null, error: { message } };
+    }
+    return { data: json.data || null, error: null };
+  } catch (error) {
+    return { data: null, error: { message: error.message || 'Unable to generate module response insights.' } };
+  }
+}
+
 // Real generation history for a client — audit metadata only (title, type,
 // sections, date range, generated_at). The endpoint deliberately does not
 // store the rendered HTML itself, so a past entry can't be "reopened" — only

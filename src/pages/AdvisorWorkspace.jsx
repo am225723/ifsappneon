@@ -11,7 +11,7 @@ import {
   loadWorkspaceLifeReflections, buildClientReportHtml, markWorkspaceAgendaReviewed, loadWorkspaceHealingTimeline,
   loadCaseloadRiskAlerts, loadWorkspaceCurriculumReflections, loadWorkspaceSelfEnergyTrend, mapNoteEntry,
   markWorkspaceHomeworkReviewed, archiveWorkspaceHomework, refreshWorkspaceHomeworkForClient,
-  loadWorkspaceUnburdeningRecord, loadWorkspacePartSuggestions,
+  loadWorkspaceUnburdeningRecord, loadWorkspacePartSuggestions, generateWorkspaceModuleInsights,
 } from '../lib/advisorWorkspaceLoader.js';
 import { loadAdvisorSessionSnapshot } from '../lib/unifiedGuidance.js';
 import { generateSessionPrepSummary } from '../lib/sessionPrepSummary.js';
@@ -52,6 +52,7 @@ export const INITIAL_STATE = {
   generatedDoc: null, docGenerating: false, docError: '', clientReports: [], clientReportsLoading: false,
   sessionSnapshot: { loading: false, data: null, error: '' },
   changeSummary: { loading: false, data: null, error: '' },
+  moduleInsights: { loading: false, data: null, error: '' },
   lifeReflections: [], lifeReflectionsLoading: false,
   healingTimeline: { loading: false, data: null, error: '' },
   curriculumReflections: [], curriculumReflectionsLoading: false,
@@ -110,7 +111,9 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
   const snapshotGenRef = useRef(0);
   // Same pattern again, scoped to the Since Last Session change summary.
   const changeSummaryGenRef = useRef(0);
-  useEffect(() => () => { genRef.current += 1; docGenRef.current += 1; snapshotGenRef.current += 1; changeSummaryGenRef.current += 1; }, []);
+  // Same pattern again, scoped to AI Module Response Insights.
+  const moduleInsightsGenRef = useRef(0);
+  useEffect(() => () => { genRef.current += 1; docGenRef.current += 1; snapshotGenRef.current += 1; changeSummaryGenRef.current += 1; moduleInsightsGenRef.current += 1; }, []);
   // setState-compatible merge helper (accepts object or updater fn)
   const set = (patch) => setS((prev) => ({ ...prev, ...(typeof patch === 'function' ? patch(prev) : patch) }));
 
@@ -121,6 +124,7 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
     docGenRef.current += 1;
     snapshotGenRef.current += 1;
     changeSummaryGenRef.current += 1;
+    moduleInsightsGenRef.current += 1;
     let cancelled = false;
     setLoadPhase('loading');
     detailRequested.current = new Set();
@@ -265,6 +269,7 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
     // saved records — never leave a previous client's copy visible for a new one.
     snapshotGenRef.current += 1;
     changeSummaryGenRef.current += 1;
+    moduleInsightsGenRef.current += 1;
     lifeReflectionsLoadedFor.current = null;
     healingTimelineLoadedFor.current = null;
     curriculumReflectionsLoadedFor.current = null;
@@ -275,6 +280,7 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
       selectedClientId: id, activeTab: 'clients-caseload', activeClientTab: 'overview',
       sessionSnapshot: { loading: false, data: null, error: '' },
       changeSummary: { loading: false, data: null, error: '' },
+      moduleInsights: { loading: false, data: null, error: '' },
       lifeReflections: [], lifeReflectionsLoading: false,
       healingTimeline: { loading: false, data: null, error: '' },
       curriculumReflections: [], curriculumReflectionsLoading: false,
@@ -572,6 +578,26 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
     });
   };
 
+  // AI Module Response Insights — a decision-support panel generated on
+  // demand from a client's real curriculum module responses, progress, and
+  // saved curriculum reflections (api/ai-module-response-insights.js, the
+  // same one TherapistDashboard.jsx's legacy "Generate module insights"
+  // button already calls). Never saved as a note and never shown to the
+  // client.
+  const onGenerateModuleInsights = () => {
+    if (isDemo) { set({ moduleInsights: { loading: false, data: null, error: 'Module insights require a signed-in Advisor session.' } }); return; }
+    const clientId = S.selectedClientId;
+    if (!clientId) return;
+    set({ moduleInsights: { loading: true, data: null, error: '' } });
+    moduleInsightsGenRef.current += 1;
+    const gen = moduleInsightsGenRef.current;
+    generateWorkspaceModuleInsights({ clientId, rangeDays: 60 }).then(({ data, error }) => {
+      if (moduleInsightsGenRef.current !== gen) return;
+      if (error) { set({ moduleInsights: { loading: false, data: null, error: error.message || 'Unable to generate module response insights.' } }); return; }
+      set({ moduleInsights: { loading: false, data, error: '' } });
+    });
+  };
+
   // Lazily load a client's real report-generation history the first time the
   // Document Creator tab is opened for them (rather than eagerly on mount).
   useEffect(() => {
@@ -822,7 +848,7 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
       onClientMessageChange, onSendClientMessage, setActiveThread, addTaskFromMessage, onAcknowledgeSafety, onCreateSafetyPlan, setPartsClientFilter,
       setTaskFilter, onNewTaskTitleChange, onNewTaskClientChange, onAddTask, toggleTask, onDismissEngagement,
       onDocClientChange, onDocTypeChange, onDocDateChange, toggleDocSource, onGenerateDoc, onOpenGeneratedDoc, toggleNewClientForm, onNewClientFieldChange, onCreateClient,
-      onGenerateSnapshot, onCopySnapshot, onGenerateChangeSummary,
+      onGenerateSnapshot, onCopySnapshot, onGenerateChangeSummary, onGenerateModuleInsights,
       onStartDelete, onCancelDelete, onDeleteConfirmChange, onConfirmDelete, onPracticeGuidanceChange, onGeneratePracticeBatch, onUseBatchPractice,
       onDeleteMessage, applyQuickMessage, toggleLiveSession, endLiveSession, onMarkNotifRead, onMarkAllNotifsRead, onOpenNotifClient,
       onHomeworkAssigned, onHomeworkFeedbackChange, onMarkHomeworkReviewed, onArchiveHomework,
