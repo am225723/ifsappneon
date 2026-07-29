@@ -9,6 +9,7 @@ import {
   claimWorkspaceClient, mergeCaseloadRefresh, generateWorkspaceReport, loadWorkspaceReports,
   loadWorkspaceNotifications, markWorkspaceNotificationRead, markAllWorkspaceNotificationsRead,
   loadWorkspaceLifeReflections, buildClientReportHtml, markWorkspaceAgendaReviewed, loadWorkspaceHealingTimeline,
+  loadCaseloadRiskAlerts,
 } from '../lib/advisorWorkspaceLoader.js';
 import { loadAdvisorSessionSnapshot } from '../lib/unifiedGuidance.js';
 import { generateSessionPrepSummary } from '../lib/sessionPrepSummary.js';
@@ -50,6 +51,7 @@ export const INITIAL_STATE = {
   changeSummary: { loading: false, data: null, error: '' },
   lifeReflections: [], lifeReflectionsLoading: false,
   healingTimeline: { loading: false, data: null, error: '' },
+  riskAlerts: [],
   accessOverrides: {}, settingsAccent: 'amber',
   extraClients: [], deletedIds: {},
   showNewClientForm: false, newClientForm: { name: '', email: '', phone: '', sendEmail: true }, newClientResult: null,
@@ -83,6 +85,7 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
   const notificationsLoaded = useRef(false);
   const lifeReflectionsLoadedFor = useRef(null);
   const healingTimelineLoadedFor = useRef(null);
+  const riskAlertsLoaded = useRef(false);
   // Generation guard: bumped on therapist change / unmount so stale in-flight
   // detail merges are ignored without cancelling still-valid sibling requests.
   const genRef = useRef(0);
@@ -111,6 +114,7 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
     setLoadPhase('loading');
     detailRequested.current = new Set();
     notificationsLoaded.current = false;
+    riskAlertsLoaded.current = false;
     (async () => {
       try {
         const clients = await loadWorkspaceCaseload(therapistId);
@@ -120,7 +124,7 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
           ...prev,
           baseClients: clients,
           extraClients: [], deletedIds: {}, savedNotes: [],
-          tasks: [], notifications: [], liveSessions: [], coTherapyThread: [],
+          tasks: [], notifications: [], liveSessions: [], coTherapyThread: [], riskAlerts: [],
           selectedClientId: firstId, activeThreadId: firstId, planClientId: firstId,
           newTaskClientId: firstId,
           noteDraft: { ...prev.noteDraft, clientId: firstId },
@@ -182,6 +186,27 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
         .catch((error) => console.error('Failed to refresh caseload:', error));
     }, CASELOAD_REFRESH_MS);
     return () => clearInterval(interval);
+  }, [isDemo, loadPhase, therapistId]);
+
+  // Real caseload-wide risk detection (api/risk-alerts.js — already
+  // correctly scoped to this therapist's caseload) flags real low mood
+  // scores and real "stuck"/"crisis" language in session agendas, richer
+  // than mapClientRow's inactivity-only heuristic. It was built for a
+  // widget (RiskAlertWidget) that's never actually rendered anywhere in the
+  // app. Kept in its own state slice (not merged into baseClients) so the
+  // periodic caseload refresh above — which overwrites each client's risk
+  // field from a fresh fetch — can never silently clobber it; the view
+  // layer merges these real findings on top when building risk-facing UI.
+  useEffect(() => {
+    if (isDemo || loadPhase !== 'ready' || riskAlertsLoaded.current) return;
+    riskAlertsLoaded.current = true;
+    const gen = genRef.current;
+    loadCaseloadRiskAlerts()
+      .then((alerts) => {
+        if (genRef.current !== gen) return;
+        set({ riskAlerts: alerts });
+      })
+      .catch((error) => console.error('Failed to load risk alerts:', error));
   }, [isDemo, loadPhase, therapistId]);
 
   // Claim an unassigned client (e.g. a fresh signup) into this Advisor's

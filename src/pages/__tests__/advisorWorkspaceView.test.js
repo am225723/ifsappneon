@@ -335,6 +335,54 @@ describe('buildView — Part relationships', () => {
   });
 });
 
+describe('buildView — real caseload risk alerts (api/risk-alerts.js)', () => {
+  it('enriches a client with no base risk when a real alert exists, with a title matching the reason type', () => {
+    const v = makeView({ riskAlerts: [{ clientId: 'c1', reasons: ['Mood score 2/5 in the last 7 days'], type: 'mood', level: 'high', daysAgo: 1 }] });
+    const row = v.clientListFiltered.find((c) => c.id === 'c1');
+    expect(row.hasRisk).toBe(true);
+    const reviewItem = v.reviewItems.find((r) => r.id === 'risk-c1');
+    expect(reviewItem).toBeDefined();
+    expect(reviewItem.title).toBe('Low mood reported');
+    expect(reviewItem.detail).toBe('Mood score 2/5 in the last 7 days');
+  });
+
+  it('surfaces a concerning_language alert with the matching Review Queue title', () => {
+    const v = makeView({ riskAlerts: [{ clientId: 'c1', reasons: ['Latest pre-session agenda mentions "crisis"'], type: 'concerning_language', level: 'high', daysAgo: 0 }] });
+    const reviewItem = v.reviewItems.find((r) => r.id === 'risk-c1');
+    expect(reviewItem.title).toBe('Concerning language detected');
+    expect(reviewItem.sevLabel).toBe('High');
+  });
+
+  it('leaves a client\'s existing base risk untouched when no real alert exists for them', () => {
+    const v = makeView({ riskAlerts: [{ clientId: 'c1', reasons: ['Mood score 2/5 in the last 7 days'], type: 'mood', level: 'high', daysAgo: 1 }] });
+    // c3 (Sam Okafor) has a real base inactivity risk from mapClientRow/seed data — no alert entry for c3 here.
+    const reviewItem = v.reviewItems.find((r) => r.id === 'risk-c3');
+    expect(reviewItem.title).toBe('Extended inactivity');
+  });
+
+  it('enriches the Safety tab riskFactors/riskLevel for the selected client from a real alert', () => {
+    const v = makeView({ selectedClientId: 'c1', riskAlerts: [{ clientId: 'c1', reasons: ['Latest pre-session agenda mentions "stuck"'], type: 'concerning_language', level: 'high', daysAgo: 0 }] });
+    expect(v.selectedClient.safety.levelLabel).toBe('High');
+    expect(v.selectedClient.safety.riskFactors).toEqual(['Latest pre-session agenda mentions "stuck"']);
+  });
+
+  it('never downgrades an existing high/urgent safety status or erases its factors when a lower-severity alert also fires', () => {
+    // c2 (Jordan Reyes) already carries safety.riskLevel: 'high' with 3 real
+    // riskFactors and risk.level: 'high' in the seed data. A medium
+    // inactivity-only alert must augment, not replace, that assessment.
+    const v = makeView({
+      selectedClientId: 'c2',
+      riskAlerts: [{ clientId: 'c2', reasons: ['9+ days without login or module progress'], type: 'inactivity', level: 'medium', daysAgo: 9 }],
+    });
+    expect(v.selectedClient.safety.levelLabel).toBe('High'); // not downgraded to Monitor
+    expect(v.selectedClient.safety.riskFactors).toEqual(
+      expect.arrayContaining(['Recent hopelessness language', 'Reduced social contact', 'History of betrayal trauma', '9+ days without login or module progress']),
+    );
+    const reviewItem = v.reviewItems.find((r) => r.id === 'risk-c2');
+    expect(reviewItem.sevLabel).toBe('High'); // risk.level not downgraded to medium
+  });
+});
+
 describe('buildView — Healing Journey', () => {
   it('gates the tab for an unassigned client', () => {
     const v = makeView({ extraClients: [UNASSIGNED_CLIENT], selectedClientId: 'new1' });

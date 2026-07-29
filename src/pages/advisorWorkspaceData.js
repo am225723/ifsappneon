@@ -61,6 +61,7 @@ export function severityStyle(theme, level) {
 }
 export const RISK_LEVEL_TO_SEV = { none: 'low', monitor: 'low', elevated: 'medium', high: 'high', urgent: 'high' };
 export const RISK_LEVEL_LABEL = { none: 'No concern', monitor: 'Monitor', elevated: 'Elevated', high: 'High', urgent: 'Urgent' };
+export const RISK_LEVEL_RANK = { none: 0, monitor: 1, elevated: 2, high: 3, urgent: 4 };
 export const PART_CAT_META = {
   manager: { label: 'Manager', color: '#2563eb' },
   firefighter: { label: 'Firefighter', color: '#dc2626' },
@@ -306,6 +307,9 @@ export const CLIENT_TABS = [
   { id: 'practices', label: 'Practices' }, { id: 'safety', label: 'Safety' }, { id: 'messages', label: 'Messages' },
   { id: 'lifeReflections', label: 'Life Reflections' }, { id: 'healingJourney', label: 'Healing Journey' },
 ];
+export const RISK_TYPE_TITLE = {
+  concerning_language: 'Concerning language detected', mood: 'Low mood reported', inactivity: 'Extended inactivity',
+};
 export const TIMELINE_TYPE_META = {
   note: { label: 'NOTE', color: '#57534e' }, assessment: { label: 'ASSESSMENT', color: '#2563eb' },
   practice: { label: 'PRACTICE', color: '#059669' }, message: { label: 'MSG', color: '#0d9488' },
