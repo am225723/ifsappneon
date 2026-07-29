@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import AdvisorSessionNoteDraft from '../components/AdvisorSessionNoteDraft.jsx';
+import TreatmentPlanManager from '../components/TreatmentPlanManager.jsx';
 import {
   WOUND_META, woundChip, daysAgoText, severityStyle, RISK_LEVEL_TO_SEV, RISK_LEVEL_LABEL, RISK_LEVEL_RANK,
   PART_CAT_META, partChip, TEMPLATE_OPTIONS, PRACTICE_TYPE_META, LESSON_TITLES, PLAN_PHASES,
@@ -1982,6 +1983,13 @@ function PlansView({ v }) {
           </div>
         </div>
       </div>
+      {v.isDemo ? (
+        <div style={{ ...CARD, textAlign: 'center', color: 'var(--muted)', fontSize: '14px' }}>
+          Creating and editing treatment plans requires a signed-in Advisor session.
+        </div>
+      ) : (
+        <TreatmentPlanManager initialClientId={v.planClientId} assignedClients={v.clientOptions} />
+      )}
     </div>
   );
 }
