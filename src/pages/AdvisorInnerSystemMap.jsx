@@ -55,7 +55,7 @@ export default function AdvisorInnerSystemMap() {
         supabase.from('ifs_interactive_data').select('id, client_id, module_id, data, updated_at').eq('client_id', clientId).or('module_id.like.assessment_%,module_id.like.module%').order('updated_at', { ascending: false }).limit(80),
         supabase.from('ifs_assessment_results').select('id, client_id, assessment_type, data, results, created_at, updated_at').eq('client_id', clientId).order('updated_at', { ascending: false }).limit(20),
         supabase.from('ifs_life_integration_reflections').select('id, client_id, practice_id, reflection_type, data, responses, summary, created_at, updated_at').eq('client_id', clientId).order('updated_at', { ascending: false }).limit(40),
-        supabase.from('ifs_journal_entries').select('id, client_id, title, summary, created_at, updated_at').eq('client_id', clientId).order('updated_at', { ascending: false }).limit(20),
+        supabase.from('ifs_journal_entries').select('id, client_id, title, created_at, updated_at').eq('client_id', clientId).order('updated_at', { ascending: false }).limit(20),
         loadPartSuggestionState({ clientId })
       ]);
 
