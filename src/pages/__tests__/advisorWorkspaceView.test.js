@@ -915,6 +915,42 @@ describe('buildView — Co-Therapy activity progress reflects real completion ro
   });
 });
 
+describe('buildView — Personalized Curriculum reflects real AI-generated module rows (Assessments.jsx / TherapistDashboard.jsx)', () => {
+  const CLIENT_WITH_ACTIVITY = {
+    ...UNASSIGNED_CLIENT, id: 'pc1', name: 'Personalized Curriculum Test', unassigned: false,
+  };
+  const MODULES = [
+    { id: 'm1', moduleId: 'wound-abandonment-1', order: 1, title: 'Understanding Abandonment', description: 'An intro module.', woundFocus: 'abandonment', estimatedMinutes: 20, difficultyLevel: 'beginner', updatedAt: '2026-07-01T00:00:00Z' },
+    { id: 'm2', moduleId: 'wound-shame-1', order: 2, title: 'Working With Shame', description: '', woundFocus: '', estimatedMinutes: null, difficultyLevel: '', updatedAt: null },
+  ];
+
+  it('never surfaces personalized curriculum for an unassigned client', () => {
+    const v = makeView({ extraClients: [UNASSIGNED_CLIENT], selectedClientId: 'new1', personalizedCurriculum: MODULES });
+    expect(v.selectedClient.personalizedCurriculum.canView).toBe(false);
+    expect(v.selectedClient.personalizedCurriculum.rows).toEqual([]);
+  });
+
+  it('maps real module rows into title/order/wound/duration/difficulty labels', () => {
+    const v = makeView({ extraClients: [CLIENT_WITH_ACTIVITY], selectedClientId: 'pc1', personalizedCurriculum: MODULES });
+    const pc = v.selectedClient.personalizedCurriculum;
+    expect(pc.rows).toHaveLength(2);
+    expect(pc.rows[0]).toEqual(expect.objectContaining({ order: 1, title: 'Understanding Abandonment', woundLabel: 'Abandonment', durationLabel: '20 min', difficultyLabel: 'Beginner' }));
+    expect(pc.rows[1]).toEqual(expect.objectContaining({ title: 'Working With Shame', woundLabel: '', durationLabel: '', difficultyLabel: '' }));
+    expect(pc.noModules).toBe(false);
+  });
+
+  it('shows the loading state, and the empty state once loaded with no modules', () => {
+    const loading = makeView({ extraClients: [CLIENT_WITH_ACTIVITY], selectedClientId: 'pc1', personalizedCurriculum: [], personalizedCurriculumLoading: true });
+    expect(loading.selectedClient.personalizedCurriculum.loading).toBe(true);
+
+    const loaded = makeView({ extraClients: [CLIENT_WITH_ACTIVITY], selectedClientId: 'pc1', personalizedCurriculum: [], personalizedCurriculumLoading: false });
+    expect(loaded.selectedClient.personalizedCurriculum.noModules).toBe(true);
+
+    const demo = makeView({ selectedClientId: 'c1' });
+    expect(demo.selectedClient.personalizedCurriculum.rows).toEqual([]);
+  });
+});
+
 describe('buildView — Suggested Parts reflects the real suggestion engine (AdvisorInnerSystemMap.jsx)', () => {
   const CLIENT_WITH_ACTIVITY = {
     ...UNASSIGNED_CLIENT, id: 'ps1', name: 'Suggestion Test', unassigned: false,

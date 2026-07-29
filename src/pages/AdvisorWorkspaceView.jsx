@@ -30,7 +30,7 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
     sessionSnapshot, changeSummary, moduleInsights, lifeReflections, lifeReflectionsLoading, healingTimeline, riskAlerts,
     curriculumReflections, curriculumReflectionsLoading, homeworkFeedbackDraft, selfEnergyTrend, selfEnergyTrendLoading,
     unburdeningRecord, unburdeningRecordLoading, partSuggestions, partSuggestionsLoading,
-    coTherapyProgress, coTherapyProgressLoading,
+    coTherapyProgress, coTherapyProgressLoading, personalizedCurriculum, personalizedCurriculumLoading,
   } = S;
 
   const rootStyle = {
@@ -412,6 +412,20 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
           ].filter(([, v]) => v),
         })) : [],
         noReflections: canWrite && !curriculumReflectionsLoading && curriculumReflections.length === 0,
+      },
+      personalizedCurriculum: {
+        loading: !!personalizedCurriculumLoading,
+        canView: canWrite,
+        rows: canWrite ? personalizedCurriculum.map((m) => ({
+          id: m.id,
+          order: m.order,
+          title: m.title,
+          description: m.description,
+          woundLabel: m.woundFocus ? titleCase(m.woundFocus) : '',
+          durationLabel: m.estimatedMinutes ? `${m.estimatedMinutes} min` : '',
+          difficultyLabel: m.difficultyLevel ? titleCase(m.difficultyLevel) : '',
+        })) : [],
+        noModules: canWrite && !personalizedCurriculumLoading && personalizedCurriculum.length === 0,
       },
       parts: rawSelected.parts.map((p) => ({ ...p, catChip: partChip(p.category, isDark), catLabel: PART_CAT_META[p.category].label, barStyle: { width: p.activation + '%', height: '100%', borderRadius: '4px', background: PART_CAT_META[p.category].color } })),
       partRelationships: canWrite && Array.isArray(rawSelected.partRelationships) ? rawSelected.partRelationships : [],
@@ -1018,7 +1032,7 @@ function ClientsCaseload({ v }) {
           )}
           {v.isClientTabLifeReflections && <LifeReflectionsTab lr={sc.lifeReflections} onClaim={sc.onClaim} />}
           {v.isClientTabHealingJourney && <HealingJourneyTab ht={sc.healingTimeline} ub={sc.unburdening} ct={sc.coTherapyProgress} onClaim={sc.onClaim} />}
-          {v.isClientTabCurriculumReflections && <CurriculumReflectionsTab cr={sc.curriculumReflections} onClaim={sc.onClaim} />}
+          {v.isClientTabCurriculumReflections && <CurriculumReflectionsTab cr={sc.curriculumReflections} pc={sc.personalizedCurriculum} onClaim={sc.onClaim} />}
           {v.isClientTabTimeline && (
             <div style={CARD}>
               <span style={{ ...FR, fontSize: '15px' }}>Unified timeline</span>
@@ -1679,7 +1693,7 @@ function LifeReflectionsTab({ lr, onClaim }) {
   );
 }
 
-function CurriculumReflectionsTab({ cr, onClaim }) {
+function CurriculumReflectionsTab({ cr, pc, onClaim }) {
   if (!cr.canView) {
     return (
       <div style={CARD}>
@@ -1693,6 +1707,28 @@ function CurriculumReflectionsTab({ cr, onClaim }) {
   }
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+      {pc.loading && <div style={{ ...CARD, textAlign: 'center', color: 'var(--muted)', fontSize: '13px' }}>Loading personalized curriculum…</div>}
+      {pc.rows.length > 0 && (
+        <div style={CARD}>
+          <span style={{ ...FR, fontSize: '15px' }}>Personalized Curriculum</span>
+          <div style={{ fontSize: '12px', color: 'var(--muted)', marginTop: '4px' }}>The AI-tailored module sequence generated from this client's Wound Patterns Assessment.</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '14px' }}>
+            {pc.rows.map((m) => (
+              <div key={m.id} style={{ padding: '12px 14px', borderRadius: '14px', background: 'var(--surface-2)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
+                  <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text)' }}>{m.order}. {m.title}</span>
+                  <div style={{ display: 'flex', gap: '8px', fontSize: '11px', color: 'var(--muted)' }}>
+                    {m.woundLabel && <span>{m.woundLabel}</span>}
+                    {m.durationLabel && <span>· {m.durationLabel}</span>}
+                    {m.difficultyLabel && <span>· {m.difficultyLabel}</span>}
+                  </div>
+                </div>
+                {m.description && <div style={{ fontSize: '12.5px', color: 'var(--text-2)', marginTop: '6px', lineHeight: 1.5 }}>{m.description}</div>}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
       <div style={{ fontSize: '12px', color: 'var(--muted)', padding: '2px 2px 0' }}>
         Reflections this client wrote while completing curriculum modules, flagged as visible to their Advisor.
       </div>

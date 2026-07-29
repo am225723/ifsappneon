@@ -12,7 +12,7 @@ import {
   loadCaseloadRiskAlerts, loadWorkspaceCurriculumReflections, loadWorkspaceSelfEnergyTrend, mapNoteEntry,
   markWorkspaceHomeworkReviewed, archiveWorkspaceHomework, refreshWorkspaceHomeworkForClient,
   loadWorkspaceUnburdeningRecord, loadWorkspacePartSuggestions, generateWorkspaceModuleInsights,
-  loadWorkspaceActiveLiveSessions, loadWorkspaceCoTherapyProgress,
+  loadWorkspaceActiveLiveSessions, loadWorkspaceCoTherapyProgress, loadWorkspacePersonalizedCurriculum,
 } from '../lib/advisorWorkspaceLoader.js';
 import { loadAdvisorSessionSnapshot } from '../lib/unifiedGuidance.js';
 import { generateSessionPrepSummary } from '../lib/sessionPrepSummary.js';
@@ -58,6 +58,7 @@ export const INITIAL_STATE = {
   lifeReflections: [], lifeReflectionsLoading: false,
   healingTimeline: { loading: false, data: null, error: '' },
   curriculumReflections: [], curriculumReflectionsLoading: false,
+  personalizedCurriculum: [], personalizedCurriculumLoading: false,
   selfEnergyTrend: [], selfEnergyTrendLoading: false,
   unburdeningRecord: null, unburdeningRecordLoading: false,
   partSuggestions: null, partSuggestionsLoading: false,
@@ -97,6 +98,7 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
   const lifeReflectionsLoadedFor = useRef(null);
   const healingTimelineLoadedFor = useRef(null);
   const curriculumReflectionsLoadedFor = useRef(null);
+  const personalizedCurriculumLoadedFor = useRef(null);
   const selfEnergyTrendLoadedFor = useRef(null);
   const unburdeningRecordLoadedFor = useRef(null);
   const partSuggestionsLoadedFor = useRef(null);
@@ -283,6 +285,7 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
     unburdeningRecordLoadedFor.current = null;
     partSuggestionsLoadedFor.current = null;
     coTherapyProgressLoadedFor.current = null;
+    personalizedCurriculumLoadedFor.current = null;
     set({
       selectedClientId: id, activeTab: 'clients-caseload', activeClientTab: 'overview',
       sessionSnapshot: { loading: false, data: null, error: '' },
@@ -291,6 +294,7 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
       lifeReflections: [], lifeReflectionsLoading: false,
       healingTimeline: { loading: false, data: null, error: '' },
       curriculumReflections: [], curriculumReflectionsLoading: false,
+      personalizedCurriculum: [], personalizedCurriculumLoading: false,
       selfEnergyTrend: [], selfEnergyTrendLoading: false,
       unburdeningRecord: null, unburdeningRecordLoading: false,
       partSuggestions: null, partSuggestionsLoading: false,
@@ -771,6 +775,28 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
     let isCanceled = false;
     loadWorkspaceCurriculumReflections(S.selectedClientId, true).then((rows) => {
       if (!isCanceled) set({ curriculumReflections: rows, curriculumReflectionsLoading: false });
+    });
+    return () => {
+      isCanceled = true;
+    };
+  }, [isDemo, loadPhase, S.activeClientTab, S.selectedClientId, allClients]);
+
+  // Lazily load a client's real AI-personalized curriculum module sequence
+  // alongside the Curriculum Reflections tab — the same real data the
+  // legacy TherapistDashboard.jsx's Lesson Editor already reads, just not
+  // previously reachable from the workspace. Read-only summary; editing
+  // stays on that dedicated tool. Same unassigned-client guard as the other
+  // ifs_interactive_data-adjacent loaders above.
+  useEffect(() => {
+    if (isDemo || loadPhase !== 'ready' || S.activeClientTab !== 'curriculumReflections' || !S.selectedClientId) return;
+    if (personalizedCurriculumLoadedFor.current === S.selectedClientId) return;
+    const client = allClients().find((c) => c.id === S.selectedClientId);
+    if (!client || client.unassigned) return;
+    personalizedCurriculumLoadedFor.current = S.selectedClientId;
+    set({ personalizedCurriculumLoading: true });
+    let isCanceled = false;
+    loadWorkspacePersonalizedCurriculum(S.selectedClientId, true).then((rows) => {
+      if (!isCanceled) set({ personalizedCurriculum: rows, personalizedCurriculumLoading: false });
     });
     return () => {
       isCanceled = true;
