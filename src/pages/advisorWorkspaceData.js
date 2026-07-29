@@ -69,6 +69,13 @@ export const PART_CAT_META = {
 };
 // Matches the 1-5 categorical mood scale clients pick from in MoodTracker.jsx.
 export const MOOD_LABELS = { 1: 'Struggling', 2: 'Low', 3: 'Okay', 4: 'Good', 5: 'Great' };
+// Matches the distinct 1-5 post-ceremony mood scale in UnburdeningProtocol.jsx's step 8.
+export const UNBURDENING_MOOD_LABELS = { 1: 'Heavy', 2: 'Tender', 3: 'Neutral', 4: 'Lighter', 5: 'Free' };
+export const UNBURDENING_TOTAL_STEPS = 8;
+export const UNBURDENING_STEP_TITLES = [
+  'Find the Part', 'Witness the Burden', 'Get Permission', 'Acknowledge the Weight',
+  'Choose the Element', 'Release Ceremony', 'Fill the Space', 'Integration',
+];
 export function partChip(cat, isDark) {
   const meta = PART_CAT_META[cat] || PART_CAT_META.manager;
   return { background: isDark ? 'rgba(255,255,255,0.08)' : meta.color + '14', color: meta.color, fontSize: '10.5px', fontWeight: 700, padding: '3px 8px', borderRadius: '999px', whiteSpace: 'nowrap' };
