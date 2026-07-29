@@ -763,15 +763,18 @@ export async function archiveWorkspaceHomework(homeworkId) {
 
 // Re-fetches just one client's assigned-homework list after a write action
 // above, so the workspace doesn't need a full per-client detail reload to
-// reflect a new assignment, a review, or an archive.
+// reflect a new assignment, a review, or an archive. Returns null (not [])
+// on a missing clientId or a failed fetch, distinct from a real empty list,
+// so the caller can tell "nothing assigned" apart from "couldn't refresh"
+// and avoid wiping the currently-displayed assignments on a transient error.
 export async function refreshWorkspaceHomeworkForClient(clientId) {
-  if (!clientId) return [];
+  if (!clientId) return null;
   try {
     const { data, error } = await loadAssignedHomeworkForClient(clientId);
-    if (error) return [];
+    if (error) return null;
     return mapAssignedHomeworkDetail(data);
   } catch {
-    return [];
+    return null;
   }
 }
 

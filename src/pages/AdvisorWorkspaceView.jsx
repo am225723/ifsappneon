@@ -1357,7 +1357,7 @@ function BetweenSessionTab({ bs, clientId, isDemo, unassigned, feedbackDraft, on
                 <div style={{ fontSize: '11.5px', color: 'var(--muted)', marginTop: '3px' }}>{a.dateLabel}</div>
                 {a.instructions && <div style={{ fontSize: '12.5px', color: 'var(--text-2)', marginTop: '6px', lineHeight: 1.5 }}>{a.instructions}</div>}
                 {a.advisorFeedback && <div style={{ fontSize: '12px', color: 'var(--text-2)', marginTop: '6px', lineHeight: 1.5 }}><strong>Advisor feedback:</strong> {a.advisorFeedback}</div>}
-                {!isDemo && a.canReview && (
+                {!isDemo && !unassigned && a.canReview && (
                   <div style={{ marginTop: '8px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                     <input
                       value={feedbackDraft[a.id] || ''} onChange={(e) => onFeedbackChange(a.id, e.target.value)}
@@ -1367,7 +1367,7 @@ function BetweenSessionTab({ bs, clientId, isDemo, unassigned, feedbackDraft, on
                     <button type="button" onClick={() => onMarkReviewed(clientId, a.id)} style={{ fontSize: '11px', fontWeight: 700, padding: '7px 10px', borderRadius: '10px', border: 'none', background: 'var(--emerald-2)', color: '#fff', cursor: 'pointer', fontFamily: 'inherit' }}>Mark reviewed</button>
                   </div>
                 )}
-                {!isDemo && (
+                {!isDemo && !unassigned && (
                   <button type="button" onClick={() => onArchive(clientId, a.id)} style={{ marginTop: '8px', fontSize: '11px', fontWeight: 600, padding: '6px 10px', borderRadius: '10px', border: '1px solid var(--border)', background: 'transparent', color: 'var(--muted)', cursor: 'pointer', fontFamily: 'inherit' }}>Archive</button>
                 )}
               </div>

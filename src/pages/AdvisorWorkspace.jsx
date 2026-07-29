@@ -297,6 +297,10 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
   // status/timestamps are the server's to decide.
   const refreshClientHomework = (clientId) => {
     refreshWorkspaceHomeworkForClient(clientId).then((assignments) => {
+      // null means the refresh itself failed (missing id, fetch error) —
+      // keep whatever assignments are already displayed rather than wiping
+      // them with an empty list a transient failure isn't actually reporting.
+      if (assignments === null) { console.error('Failed to refresh homework for client:', clientId); return; }
       set((s) => ({
         baseClients: (s.baseClients || []).map((c) => (c.id !== clientId ? c : {
           ...c,

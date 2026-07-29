@@ -751,8 +751,8 @@ describe('archiveWorkspaceHomework', () => {
 });
 
 describe('refreshWorkspaceHomeworkForClient', () => {
-  it('returns an empty array without a clientId', async () => {
-    expect(await refreshWorkspaceHomeworkForClient(null)).toEqual([]);
+  it('returns null (not an empty array) without a clientId, so a caller never mistakes this for a real empty list', async () => {
+    expect(await refreshWorkspaceHomeworkForClient(null)).toBeNull();
   });
 
   it('maps the real refetched assignment rows into the display shape', async () => {
@@ -768,10 +768,10 @@ describe('refreshWorkspaceHomeworkForClient', () => {
     mockAssignedHomeworkResult = { data: [], error: null };
   });
 
-  it('returns an empty array (not a throw) when the API errors', async () => {
+  it('returns null (not a throw, and not an empty array) when the API errors, so a caller can tell "failed" apart from "genuinely empty" and avoid wiping already-displayed assignments', async () => {
     mockAssignedHomeworkResult = { data: null, error: { message: 'forbidden' } };
     const rows = await refreshWorkspaceHomeworkForClient('c1');
-    expect(rows).toEqual([]);
+    expect(rows).toBeNull();
     mockAssignedHomeworkResult = { data: [], error: null };
   });
 });
