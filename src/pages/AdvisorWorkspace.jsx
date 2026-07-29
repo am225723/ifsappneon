@@ -11,7 +11,7 @@ import {
   loadWorkspaceLifeReflections, buildClientReportHtml, markWorkspaceAgendaReviewed, loadWorkspaceHealingTimeline,
   loadCaseloadRiskAlerts, loadWorkspaceCurriculumReflections, loadWorkspaceSelfEnergyTrend, mapNoteEntry,
   markWorkspaceHomeworkReviewed, archiveWorkspaceHomework, refreshWorkspaceHomeworkForClient,
-  loadWorkspaceUnburdeningRecord,
+  loadWorkspaceUnburdeningRecord, loadWorkspacePartSuggestions,
 } from '../lib/advisorWorkspaceLoader.js';
 import { loadAdvisorSessionSnapshot } from '../lib/unifiedGuidance.js';
 import { generateSessionPrepSummary } from '../lib/sessionPrepSummary.js';
@@ -57,6 +57,7 @@ export const INITIAL_STATE = {
   curriculumReflections: [], curriculumReflectionsLoading: false,
   selfEnergyTrend: [], selfEnergyTrendLoading: false,
   unburdeningRecord: null, unburdeningRecordLoading: false,
+  partSuggestions: null, partSuggestionsLoading: false,
   riskAlerts: [],
   accessOverrides: {}, settingsAccent: 'amber',
   extraClients: [], deletedIds: {},
@@ -94,6 +95,7 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
   const curriculumReflectionsLoadedFor = useRef(null);
   const selfEnergyTrendLoadedFor = useRef(null);
   const unburdeningRecordLoadedFor = useRef(null);
+  const partSuggestionsLoadedFor = useRef(null);
   const riskAlertsLoaded = useRef(false);
   // Generation guard: bumped on therapist change / unmount so stale in-flight
   // detail merges are ignored without cancelling still-valid sibling requests.
@@ -268,6 +270,7 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
     curriculumReflectionsLoadedFor.current = null;
     selfEnergyTrendLoadedFor.current = null;
     unburdeningRecordLoadedFor.current = null;
+    partSuggestionsLoadedFor.current = null;
     set({
       selectedClientId: id, activeTab: 'clients-caseload', activeClientTab: 'overview',
       sessionSnapshot: { loading: false, data: null, error: '' },
@@ -277,6 +280,7 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
       curriculumReflections: [], curriculumReflectionsLoading: false,
       selfEnergyTrend: [], selfEnergyTrendLoading: false,
       unburdeningRecord: null, unburdeningRecordLoading: false,
+      partSuggestions: null, partSuggestionsLoading: false,
     });
   };
   const setClientTab = (id) => set({ activeClientTab: id });
@@ -640,6 +644,27 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
     let isCanceled = false;
     loadWorkspaceUnburdeningRecord(S.selectedClientId, true).then((record) => {
       if (!isCanceled) set({ unburdeningRecord: record, unburdeningRecordLoading: false });
+    });
+    return () => {
+      isCanceled = true;
+    };
+  }, [isDemo, loadPhase, S.activeClientTab, S.selectedClientId, allClients]);
+
+  // Lazily load a client's real Suggested Parts summary the first time the
+  // Parts tab is opened — the same real suggestion engine the standalone
+  // Inner System Map advisor page already computes, just not previously
+  // reachable from the workspace. Same unassigned-client guard as the
+  // other ifs_interactive_data-touching loaders above.
+  useEffect(() => {
+    if (isDemo || loadPhase !== 'ready' || S.activeClientTab !== 'parts' || !S.selectedClientId) return;
+    if (partSuggestionsLoadedFor.current === S.selectedClientId) return;
+    const client = allClients().find((c) => c.id === S.selectedClientId);
+    if (!client || client.unassigned) return;
+    partSuggestionsLoadedFor.current = S.selectedClientId;
+    set({ partSuggestionsLoading: true });
+    let isCanceled = false;
+    loadWorkspacePartSuggestions(S.selectedClientId, true).then((summary) => {
+      if (!isCanceled) set({ partSuggestions: summary, partSuggestionsLoading: false });
     });
     return () => {
       isCanceled = true;

@@ -805,6 +805,60 @@ describe('buildView — Unburdening Protocol reflects the real ceremony record (
   });
 });
 
+describe('buildView — Suggested Parts reflects the real suggestion engine (AdvisorInnerSystemMap.jsx)', () => {
+  const CLIENT_WITH_ACTIVITY = {
+    ...UNASSIGNED_CLIENT, id: 'ps1', name: 'Suggestion Test', unassigned: false,
+  };
+  const SUMMARY = {
+    pendingPartsCount: 2, pendingRelationshipsCount: 1, acceptedCount: 1, mergedCount: 0, dismissedCount: 1,
+    topSuggestions: [
+      { id: 's1', name: 'Part carrying shame', role: 'Carries shame that may be connected to an old wound.', type: 'exile', sourceLabel: 'Wound Patterns Assessment', confidence: 'strong signal' },
+      { id: 's2', name: 'Boundary Protector', role: 'Helps protect needs, limits, and space.', type: 'protector', sourceLabel: 'Curriculum reflection', confidence: 'possible signal' },
+    ],
+  };
+
+  it('never offers suggestions for an unassigned client, and hides the review link entirely', () => {
+    const v = makeView({ extraClients: [UNASSIGNED_CLIENT], selectedClientId: 'new1', partSuggestions: SUMMARY });
+    expect(v.selectedClient.partSuggestions.canView).toBe(false);
+    expect(v.selectedClient.partSuggestions.hasData).toBe(false);
+    expect(v.selectedClient.partSuggestions.topSuggestions).toEqual([]);
+  });
+
+  it('maps real suggestion counts and top suggestions, normalizing engine types to workspace part categories', () => {
+    const v = makeView({ extraClients: [CLIENT_WITH_ACTIVITY], selectedClientId: 'ps1', partSuggestions: SUMMARY });
+    const ps = v.selectedClient.partSuggestions;
+    expect(ps.hasData).toBe(true);
+    expect(ps.hasPending).toBe(true);
+    expect(ps.pendingPartsCount).toBe(2);
+    expect(ps.pendingRelationshipsCount).toBe(1);
+    expect(ps.topSuggestions).toHaveLength(2);
+    expect(ps.topSuggestions[0]).toEqual(expect.objectContaining({ name: 'Part carrying shame', catLabel: 'Exile' }));
+    // 'protector' (engine vocabulary) normalizes to the manager category, same as mapParts in advisorWorkspaceLoader.js.
+    expect(ps.topSuggestions[1]).toEqual(expect.objectContaining({ name: 'Boundary Protector', catLabel: 'Manager' }));
+    expect(ps.reviewLink).toBe('/advisor/inner-system-map/ps1');
+  });
+
+  it('shows the loading state, and the empty state once loaded with no pending signals', () => {
+    const loading = makeView({ extraClients: [CLIENT_WITH_ACTIVITY], selectedClientId: 'ps1', partSuggestions: null, partSuggestionsLoading: true });
+    expect(loading.selectedClient.partSuggestions.loading).toBe(true);
+    expect(loading.selectedClient.partSuggestions.noData).toBe(false);
+
+    const loaded = makeView({ extraClients: [CLIENT_WITH_ACTIVITY], selectedClientId: 'ps1', partSuggestions: null, partSuggestionsLoading: false });
+    expect(loaded.selectedClient.partSuggestions.noData).toBe(true);
+    expect(loaded.selectedClient.partSuggestions.hasData).toBe(false);
+
+    const zero = makeView({
+      extraClients: [CLIENT_WITH_ACTIVITY], selectedClientId: 'ps1',
+      partSuggestions: { pendingPartsCount: 0, pendingRelationshipsCount: 0, acceptedCount: 0, mergedCount: 0, dismissedCount: 0, topSuggestions: [] },
+    });
+    expect(zero.selectedClient.partSuggestions.hasData).toBe(true);
+    expect(zero.selectedClient.partSuggestions.hasPending).toBe(false);
+
+    const demo = makeView({ selectedClientId: 'c1' });
+    expect(demo.selectedClient.partSuggestions.hasData).toBe(false);
+  });
+});
+
 describe('buildView — unified timeline gives every event a stable key', () => {
   it('falls back to a synthetic id when a timeline entry has none (demo seed data)', () => {
     const v = makeView({ selectedClientId: 'c1' }); // seeded demo timeline entries carry no id field
