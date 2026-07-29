@@ -309,7 +309,7 @@ export const NAV_CONFIG = [
 ];
 
 export const CLIENT_TABS = [
-  { id: 'overview', label: 'Overview' }, { id: 'snapshot', label: 'AI Snapshot' }, { id: 'changeSummary', label: 'Since Last Session' }, { id: 'assessments', label: 'Assessments' }, { id: 'timeline', label: 'Timeline' }, { id: 'betweenSession', label: 'Between Sessions' }, { id: 'notes', label: 'Notes' },
+  { id: 'overview', label: 'Overview' }, { id: 'snapshot', label: 'AI Snapshot' }, { id: 'changeSummary', label: 'Since Last Session' }, { id: 'moduleInsights', label: 'Module Insights' }, { id: 'assessments', label: 'Assessments' }, { id: 'timeline', label: 'Timeline' }, { id: 'betweenSession', label: 'Between Sessions' }, { id: 'notes', label: 'Notes' },
   { id: 'plan', label: 'Treatment Plan' }, { id: 'mbc', label: 'MBC' }, { id: 'parts', label: 'Parts' },
   { id: 'practices', label: 'Practices' }, { id: 'safety', label: 'Safety' }, { id: 'messages', label: 'Messages' },
   { id: 'lifeReflections', label: 'Life Reflections' }, { id: 'healingJourney', label: 'Healing Journey' },

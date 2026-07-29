@@ -110,7 +110,7 @@ vi.mock('../curriculumReflections.js', () => ({
 
 const {
   initialsFrom, daysSince, mapClientRow, mapNoteEntry, deriveWorkspaceDetail, WORKSPACE_WOUNDS, mergeCaseloadRefresh,
-  generateWorkspaceReport, loadWorkspaceReports, loadWorkspaceNotifications, markWorkspaceNotificationRead, markAllWorkspaceNotificationsRead,
+  generateWorkspaceReport, generateWorkspaceModuleInsights, loadWorkspaceReports, loadWorkspaceNotifications, markWorkspaceNotificationRead, markAllWorkspaceNotificationsRead,
   loadWorkspaceLifeReflections, buildClientReportHtml, markWorkspaceAgendaReviewed, loadWorkspaceHealingTimeline,
   loadCaseloadRiskAlerts, loadWorkspaceCurriculumReflections,
   markWorkspaceHomeworkReviewed, archiveWorkspaceHomework, refreshWorkspaceHomeworkForClient,
@@ -662,6 +662,46 @@ describe('generateWorkspaceReport', () => {
   it('handles a network failure gracefully', async () => {
     globalThis.fetch = vi.fn(async () => { throw new Error('network down'); });
     const { data, error } = await generateWorkspaceReport({ clientId: 'c1' });
+    expect(data).toBeNull();
+    expect(error.message).toBe('network down');
+  });
+});
+
+describe('generateWorkspaceModuleInsights', () => {
+  const originalFetch = globalThis.fetch;
+  afterAll(() => { globalThis.fetch = originalFetch; });
+
+  it('requires a clientId before calling the API', async () => {
+    const { data, error } = await generateWorkspaceModuleInsights({ clientId: null });
+    expect(data).toBeNull();
+    expect(error).toBeTruthy();
+  });
+
+  it('returns the generated insights text on success', async () => {
+    globalThis.fetch = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({ data: { insights: '1. Common themes\nSome patterns.', disclaimer: 'AI-generated preparation aid.', generatedAt: '2026-07-29T00:00:00Z', dataSources: { moduleResponseGroups: 3, curriculumProgress: 2, curriculumReflections: 0 } }, error: null }),
+    }));
+    const { data, error } = await generateWorkspaceModuleInsights({ clientId: 'c1', rangeDays: 60 });
+    expect(error).toBeNull();
+    expect(data.insights).toContain('Common themes');
+    expect(data.dataSources.moduleResponseGroups).toBe(3);
+    expect(globalThis.fetch).toHaveBeenCalledWith('/api/ai-module-response-insights', expect.objectContaining({ method: 'POST' }));
+  });
+
+  it('surfaces a server-provided error message instead of throwing', async () => {
+    globalThis.fetch = vi.fn(async () => ({
+      ok: false,
+      json: async () => ({ error: { message: 'Client is not assigned to this therapist' } }),
+    }));
+    const { data, error } = await generateWorkspaceModuleInsights({ clientId: 'unassigned1' });
+    expect(data).toBeNull();
+    expect(error.message).toBe('Client is not assigned to this therapist');
+  });
+
+  it('handles a network failure gracefully', async () => {
+    globalThis.fetch = vi.fn(async () => { throw new Error('network down'); });
+    const { data, error } = await generateWorkspaceModuleInsights({ clientId: 'c1' });
     expect(data).toBeNull();
     expect(error.message).toBe('network down');
   });

@@ -510,6 +510,34 @@ describe('buildView — Since Last Session change summary', () => {
   });
 });
 
+describe('buildView — AI Module Insights (api/ai-module-response-insights.js)', () => {
+  it('surfaces loading/error/data state', () => {
+    const idle = makeView({ selectedClientId: 'c1' });
+    expect(idle.selectedClient.moduleInsights.loading).toBe(false);
+    expect(idle.selectedClient.moduleInsights.data).toBeNull();
+
+    const loading = makeView({ selectedClientId: 'c1', moduleInsights: { loading: true, data: null, error: '' } });
+    expect(loading.selectedClient.moduleInsights.loading).toBe(true);
+
+    const errored = makeView({ selectedClientId: 'c1', moduleInsights: { loading: false, data: null, error: 'Unable to generate module response insights.' } });
+    expect(errored.selectedClient.moduleInsights.error).toBe('Unable to generate module response insights.');
+
+    const insightsData = { insights: '1. Common themes\nRecurring shame-related language.', disclaimer: 'AI-generated preparation aid for Advisor review only.', generatedAt: '2026-07-20T00:00:00Z', dataSources: { moduleResponseGroups: 3, curriculumProgress: 2, curriculumReflections: 1 } };
+    const ready = makeView({ selectedClientId: 'c1', moduleInsights: { loading: false, data: insightsData, error: '' } });
+    expect(ready.selectedClient.moduleInsights.data.insights).toContain('Common themes');
+  });
+
+  it('never offers module-insights generation for an unassigned client', () => {
+    const v = makeView({ extraClients: [UNASSIGNED_CLIENT], selectedClientId: 'new1' });
+    expect(v.selectedClient.moduleInsights.onGenerate).toBeUndefined();
+  });
+
+  it('keeps module-insights generation wired for an assigned client', () => {
+    const v = makeView({ selectedClientId: 'c1' });
+    expect(typeof v.selectedClient.moduleInsights.onGenerate).toBe('function');
+  });
+});
+
 describe('buildView — real notification feed', () => {
   const REAL_NOTIFICATIONS = [
     { id: 'n1', clientId: 'c1', type: 'homework_completed', priority: 'high', title: 'Practice completed', message: 'Maya finished a module.', date: 'Today', read: false },

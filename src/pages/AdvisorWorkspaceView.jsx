@@ -27,7 +27,7 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
     assignedLessons, coTherapyShare, coTherapyMessage, coTherapyThread, reports, settingsToggles, clientMessages,
     clientMessageDraft, activeThreadId, safetyOverrides, engagementDismissed, partsClientFilter, tasks, taskFilter,
     newTaskTitle, newTaskClientId, docForm, docSources, generatedDoc, docGenerating, docError, clientReports, clientReportsLoading, deletedMessageIdx,
-    sessionSnapshot, changeSummary, lifeReflections, lifeReflectionsLoading, healingTimeline, riskAlerts,
+    sessionSnapshot, changeSummary, moduleInsights, lifeReflections, lifeReflectionsLoading, healingTimeline, riskAlerts,
     curriculumReflections, curriculumReflectionsLoading, homeworkFeedbackDraft, selfEnergyTrend, selfEnergyTrendLoading,
     unburdeningRecord, unburdeningRecordLoading, partSuggestions, partSuggestionsLoading,
   } = S;
@@ -338,6 +338,12 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
         data: changeSummary.data,
         onGenerate: canWrite ? H.onGenerateChangeSummary : undefined,
       },
+      moduleInsights: {
+        loading: !!moduleInsights.loading,
+        error: moduleInsights.error || '',
+        data: moduleInsights.data,
+        onGenerate: canWrite ? H.onGenerateModuleInsights : undefined,
+      },
       lifeReflections: {
         loading: !!lifeReflectionsLoading,
         canView: canWrite,
@@ -627,6 +633,7 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
     isSessionsLive: activeTab === 'sessions-live',
     isMessages: activeTab === 'messages', isNotifications: activeTab === 'notifications', isTasks: activeTab === 'tasks',
     isClientTabSnapshot: activeClientTab === 'snapshot', isClientTabChangeSummary: activeClientTab === 'changeSummary',
+    isClientTabModuleInsights: activeClientTab === 'moduleInsights',
     isClientTabBetweenSession: activeClientTab === 'betweenSession', isClientTabLifeReflections: activeClientTab === 'lifeReflections',
     isClientTabHealingJourney: activeClientTab === 'healingJourney', isClientTabCurriculumReflections: activeClientTab === 'curriculumReflections',
     isClinicalNotes: activeTab === 'clinical-notes', isClinicalPlans: activeTab === 'clinical-plans', isClinicalMbc: activeTab === 'clinical-mbc', isClinicalParts: activeTab === 'clinical-parts',
@@ -986,6 +993,7 @@ function ClientsCaseload({ v }) {
           {v.isClientTabAssessments && <AssessmentHistoryTab history={sc.assessmentHistory} empty={sc.noAssessmentHistory} />}
           {v.isClientTabSnapshot && <SnapshotTab snapshot={sc.snapshot} primaryBtnStyle={v.primaryBtnStyle} secondaryBtnStyle={v.secondaryBtnStyle} />}
           {v.isClientTabChangeSummary && <ChangeSummaryTab changeSummary={sc.changeSummary} primaryBtnStyle={v.primaryBtnStyle} />}
+          {v.isClientTabModuleInsights && <ModuleInsightsTab moduleInsights={sc.moduleInsights} primaryBtnStyle={v.primaryBtnStyle} />}
           {v.isClientTabBetweenSession && (
             <BetweenSessionTab
               bs={sc.betweenSession} clientId={sc.id} isDemo={v.isDemo} unassigned={sc.unassigned}
@@ -1389,6 +1397,42 @@ function ChangeSummaryTab({ changeSummary, primaryBtnStyle }) {
         <div style={{ marginTop: '16px' }}>
           {d.disclaimer && <div style={{ padding: '10px 12px', borderRadius: '10px', background: 'var(--surface-2)', fontSize: '11.5px', color: 'var(--text-2)' }}>{d.disclaimer}</div>}
           <div style={{ marginTop: '14px' }}><ChangeSummaryContent text={d.summary} /></div>
+          <div style={{ marginTop: '14px', fontSize: '11px', color: 'var(--muted)' }}>
+            Generated {d.generatedAt ? new Date(d.generatedAt).toLocaleString() : '—'} · {sourceCount} data source{sourceCount === 1 ? '' : 's'} referenced
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ModuleInsightsTab({ moduleInsights, primaryBtnStyle }) {
+  const d = moduleInsights.data;
+  const sourceCount = d?.dataSources ? Object.values(d.dataSources).filter((v) => v > 0).length : 0;
+  return (
+    <div style={CARD}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
+        <div>
+          <span style={{ ...FR, fontSize: '15px' }}>AI Module Insights</span>
+          <div style={{ fontSize: '12px', color: 'var(--muted)', marginTop: '4px', maxWidth: '52ch' }}>Generate patterns across this client's curriculum module responses, progress, and saved reflections — for Advisor review ahead of your next session. Not saved as a note and not shown to the client.</div>
+        </div>
+        <button
+          className="aw-primary"
+          onClick={moduleInsights.onGenerate}
+          disabled={!moduleInsights.onGenerate || moduleInsights.loading}
+          style={{ ...primaryBtnStyle, opacity: !moduleInsights.onGenerate || moduleInsights.loading ? 0.6 : 1, cursor: !moduleInsights.onGenerate || moduleInsights.loading ? 'not-allowed' : 'pointer' }}
+        >
+          {moduleInsights.loading ? 'Generating…' : 'Generate insights'}
+        </button>
+      </div>
+
+      {!moduleInsights.onGenerate && <div style={{ marginTop: '12px', fontSize: '12px', color: 'var(--muted)' }}>Add this client to your caseload to generate module insights.</div>}
+      {moduleInsights.error && <div style={{ marginTop: '12px', fontSize: '12px', color: 'var(--risk-high-text)' }}>{moduleInsights.error}</div>}
+
+      {d && (
+        <div style={{ marginTop: '16px' }}>
+          {d.disclaimer && <div style={{ padding: '10px 12px', borderRadius: '10px', background: 'var(--surface-2)', fontSize: '11.5px', color: 'var(--text-2)' }}>{d.disclaimer}</div>}
+          <div style={{ marginTop: '14px' }}><ChangeSummaryContent text={d.insights} /></div>
           <div style={{ marginTop: '14px', fontSize: '11px', color: 'var(--muted)' }}>
             Generated {d.generatedAt ? new Date(d.generatedAt).toLocaleString() : '—'} · {sourceCount} data source{sourceCount === 1 ? '' : 's'} referenced
           </div>
