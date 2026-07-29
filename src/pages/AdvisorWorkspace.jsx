@@ -12,9 +12,11 @@ import {
   loadCaseloadRiskAlerts, loadWorkspaceCurriculumReflections, loadWorkspaceSelfEnergyTrend, mapNoteEntry,
   markWorkspaceHomeworkReviewed, archiveWorkspaceHomework, refreshWorkspaceHomeworkForClient,
   loadWorkspaceUnburdeningRecord, loadWorkspacePartSuggestions, generateWorkspaceModuleInsights,
+  loadWorkspaceActiveLiveSessions,
 } from '../lib/advisorWorkspaceLoader.js';
 import { loadAdvisorSessionSnapshot } from '../lib/unifiedGuidance.js';
 import { generateSessionPrepSummary } from '../lib/sessionPrepSummary.js';
+import { pauseLiveActivity, resumeLiveActivity, endLiveSession as endLiveSessionApi } from '../lib/liveSession.js';
 
 const CASELOAD_REFRESH_MS = 45000;
 
@@ -98,6 +100,7 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
   const unburdeningRecordLoadedFor = useRef(null);
   const partSuggestionsLoadedFor = useRef(null);
   const riskAlertsLoaded = useRef(false);
+  const liveSessionsLoaded = useRef(false);
   // Generation guard: bumped on therapist change / unmount so stale in-flight
   // detail merges are ignored without cancelling still-valid sibling requests.
   const genRef = useRef(0);
@@ -130,6 +133,7 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
     detailRequested.current = new Set();
     notificationsLoaded.current = false;
     riskAlertsLoaded.current = false;
+    liveSessionsLoaded.current = false;
     (async () => {
       try {
         const clients = await loadWorkspaceCaseload(therapistId);
@@ -618,6 +622,20 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
     loadWorkspaceNotifications().then((rows) => set({ notifications: rows }));
   }, [isDemo, loadPhase, S.activeTab]);
 
+  // Lazily load the Advisor's real active/paused live guided-session rows
+  // (ifs_live_sessions) the first time the Live Sessions tab is opened —
+  // this tab's UI has always been fully built, just previously fed by
+  // hardcoded demo rows that never reflected any real session.
+  const refreshLiveSessions = () => {
+    if (isDemo || !therapistId) return;
+    loadWorkspaceActiveLiveSessions(therapistId).then((rows) => set({ liveSessions: rows }));
+  };
+  useEffect(() => {
+    if (isDemo || loadPhase !== 'ready' || S.activeTab !== 'sessions-live' || liveSessionsLoaded.current) return;
+    liveSessionsLoaded.current = true;
+    refreshLiveSessions();
+  }, [isDemo, loadPhase, S.activeTab, therapistId]);
+
   // Lazily load a client's real shared Life Integration reflections the
   // first time the Life Reflections tab is opened for them — the same
   // Advisor-scoped data already shown by the standalone
@@ -792,8 +810,21 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
   const onUseBatchPractice = (item) => set((s) => ({ generatedPractice: item.text, practiceForm: { ...s.practiceForm, type: item.type }, practiceBatchResults: [] }));
   const onDeleteMessage = (clientId, idx) => set((s) => ({ deletedMessageIdx: { ...s.deletedMessageIdx, [clientId]: { ...(s.deletedMessageIdx[clientId] || {}), [idx]: true } } }));
   const applyQuickMessage = (text) => set({ clientMessageDraft: text });
-  const toggleLiveSession = (id) => set((s) => ({ liveSessions: s.liveSessions.map((l) => (l.id === id ? { ...l, status: l.status === 'active' ? 'paused' : 'active' } : l)) }));
-  const endLiveSession = (id) => set((s) => ({ liveSessions: s.liveSessions.filter((l) => l.id !== id) }));
+  // Real pause/resume/end actions (api/live-session.js, via src/lib/liveSession.js)
+  // — same session-control API the standalone LiveCoTherapy.jsx page already
+  // uses. In demo mode these still update local-only seed rows, matching the
+  // rest of the workspace's demo-vs-real split.
+  const toggleLiveSession = (id) => {
+    if (isDemo) { set((s) => ({ liveSessions: s.liveSessions.map((l) => (l.id === id ? { ...l, status: l.status === 'active' ? 'paused' : 'active' } : l)) })); return; }
+    const session = (S.liveSessions || []).find((l) => l.id === id);
+    if (!session) return;
+    const action = session.status === 'active' ? pauseLiveActivity : resumeLiveActivity;
+    action({ sessionId: id }).then(({ error }) => { if (!error) refreshLiveSessions(); });
+  };
+  const endLiveSession = (id) => {
+    if (isDemo) { set((s) => ({ liveSessions: s.liveSessions.filter((l) => l.id !== id) })); return; }
+    endLiveSessionApi({ sessionId: id }).then(({ error }) => { if (!error) refreshLiveSessions(); });
+  };
   const onMarkNotifRead = (id) => {
     set((s) => ({ notifications: s.notifications.map((n) => (n.id === id ? { ...n, read: true } : n)) }));
     if (!isDemo) {
