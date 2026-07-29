@@ -582,16 +582,22 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
   useEffect(() => {
     if (isDemo || loadPhase !== 'ready' || S.activeClientTab !== 'curriculumReflections' || !S.selectedClientId) return;
     if (curriculumReflectionsLoadedFor.current === S.selectedClientId) return;
+    // loadWorkspaceCurriculumReflections bypasses a real requireTherapistAssignment
+    // check server-side (see its comment in advisorWorkspaceLoader.js), so an
+    // unassigned client must never reach it — fail closed here rather than
+    // relying solely on the view layer's canView gating to hide the result.
+    const client = allClients().find((c) => c.id === S.selectedClientId);
+    if (!client || client.unassigned) return;
     curriculumReflectionsLoadedFor.current = S.selectedClientId;
     set({ curriculumReflectionsLoading: true });
     let isCanceled = false;
-    loadWorkspaceCurriculumReflections(S.selectedClientId).then((rows) => {
+    loadWorkspaceCurriculumReflections(S.selectedClientId, true).then((rows) => {
       if (!isCanceled) set({ curriculumReflections: rows, curriculumReflectionsLoading: false });
     });
     return () => {
       isCanceled = true;
     };
-  }, [isDemo, loadPhase, S.activeClientTab, S.selectedClientId]);
+  }, [isDemo, loadPhase, S.activeClientTab, S.selectedClientId, allClients]);
 
   const toggleNewClientForm = () => set((s) => ({ showNewClientForm: !s.showNewClientForm, newClientResult: null }));
   const onNewClientFieldChange = (field) => (e) => set((s) => ({ newClientForm: { ...s.newClientForm, [field]: field === 'sendEmail' ? e.target.checked : e.target.value } }));

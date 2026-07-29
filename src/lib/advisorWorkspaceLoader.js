@@ -906,8 +906,15 @@ export async function loadWorkspaceLifeReflections(clientId) {
 // The workspace's Healing Journey summary already surfaces an aggregate
 // count of these (mapHealingTimeline below); this loads the actual
 // reflection content, which previously had no Advisor-side consumer.
-export async function loadWorkspaceCurriculumReflections(clientId) {
-  if (!clientId) return [];
+//
+// Unlike its siblings (life reflections, healing timeline), this goes
+// through a direct Supabase query rather than a requireTherapistAssignment-
+// gated API route, and ifs_interactive_data's RLS policy doesn't itself
+// restrict reads to the client's assigned Advisor — so isAssigned must be
+// confirmed by the caller (from the already-loaded caseload) before this
+// fetches anything, rather than trusting the backend to enforce it.
+export async function loadWorkspaceCurriculumReflections(clientId, isAssigned) {
+  if (!clientId || !isAssigned) return [];
   try {
     const { data, error } = await loadCurriculumReflections({ clientId });
     if (error) return [];

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, afterAll } from 'vitest';
+import { describe, it, expect, vi, afterAll, beforeEach } from 'vitest';
 
 // The loader imports supabase (browser client) transitively; stub it so the
 // pure mappers can be tested in the Node test environment.
@@ -47,8 +47,9 @@ vi.mock('../healingTimeline.js', () => ({
 }));
 
 let mockCurriculumReflectionsResult = { data: [], error: null };
+const mockLoadCurriculumReflections = vi.fn(async () => mockCurriculumReflectionsResult);
 vi.mock('../curriculumReflections.js', () => ({
-  loadCurriculumReflections: async () => mockCurriculumReflectionsResult,
+  loadCurriculumReflections: mockLoadCurriculumReflections,
 }));
 
 const {
@@ -772,8 +773,23 @@ describe('loadWorkspaceHealingTimeline', () => {
 });
 
 describe('loadWorkspaceCurriculumReflections', () => {
+  beforeEach(() => {
+    mockLoadCurriculumReflections.mockClear();
+  });
+
   it('returns an empty array without a clientId, without calling the API', async () => {
-    expect(await loadWorkspaceCurriculumReflections(null)).toEqual([]);
+    expect(await loadWorkspaceCurriculumReflections(null, true)).toEqual([]);
+    expect(mockLoadCurriculumReflections).not.toHaveBeenCalled();
+  });
+
+  // ifs_interactive_data's RLS doesn't restrict reads to the client's
+  // assigned Advisor (unlike the API-backed life reflections/healing
+  // timeline siblings), so this loader refuses to fetch at all unless the
+  // caller has already confirmed the client is assigned.
+  it('returns an empty array without calling the API when the caller has not confirmed assignment', async () => {
+    expect(await loadWorkspaceCurriculumReflections('c1', false)).toEqual([]);
+    expect(await loadWorkspaceCurriculumReflections('c1')).toEqual([]);
+    expect(mockLoadCurriculumReflections).not.toHaveBeenCalled();
   });
 
   it('maps real curriculum reflection rows into the display shape', async () => {
@@ -785,7 +801,7 @@ describe('loadWorkspaceCurriculumReflections', () => {
       }],
       error: null,
     };
-    const rows = await loadWorkspaceCurriculumReflections('c1');
+    const rows = await loadWorkspaceCurriculumReflections('c1', true);
     expect(rows).toHaveLength(1);
     expect(rows[0].moduleTitle).toBe('Meeting Your Parts');
     expect(rows[0].insight).toBe('I noticed a protector show up early.');
@@ -795,7 +811,7 @@ describe('loadWorkspaceCurriculumReflections', () => {
 
   it('returns an empty array (not a throw) when the API errors', async () => {
     mockCurriculumReflectionsResult = { data: null, error: { message: 'forbidden' } };
-    const rows = await loadWorkspaceCurriculumReflections('c1');
+    const rows = await loadWorkspaceCurriculumReflections('c1', true);
     expect(rows).toEqual([]);
     mockCurriculumReflectionsResult = { data: [], error: null };
   });
