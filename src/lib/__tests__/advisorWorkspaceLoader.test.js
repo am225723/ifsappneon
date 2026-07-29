@@ -15,6 +15,7 @@ let mockJournalRows = { data: [], error: null };
 let mockInteractiveOrRows = { data: [], error: null };
 let mockLiveSessionRows = { data: [], error: null };
 let mockCoTherapyProgressRows = { data: [], error: null };
+let mockPersonalizedCurriculumRows = { data: [], error: null };
 vi.mock('../supabase', () => ({
   supabase: {
     from: (table) => ({
@@ -24,9 +25,12 @@ vi.mock('../supabase', () => ({
           // is awaited directly off a single .eq(), with no further chaining.
           ...(table === 'ifs_parts' ? mockExistingPartsResult : { data: [], error: null }),
           order: () => ({
-            // loadWorkspaceCoTherapyProgress's real query is awaited
-            // directly off .eq().order() — no .limit() call.
-            ...(table === 'ifs_therapy_activity_progress' ? mockCoTherapyProgressRows : { data: [], error: null }),
+            // loadWorkspaceCoTherapyProgress's and
+            // loadWorkspacePersonalizedCurriculum's real queries are both
+            // awaited directly off .eq().order() — no .limit() call.
+            ...(table === 'ifs_therapy_activity_progress' ? mockCoTherapyProgressRows
+              : table === 'ifs_personalized_curriculum' ? mockPersonalizedCurriculumRows
+              : { data: [], error: null }),
             limit: () => {
               if (table === 'ifs_generated_reports') return mockReportRows;
               if (table === 'ifs_assessment_results') return mockAssessmentResultsRows;
@@ -126,6 +130,7 @@ const {
   markWorkspaceHomeworkReviewed, archiveWorkspaceHomework, refreshWorkspaceHomeworkForClient,
   loadWorkspaceSelfEnergyTrend, loadWorkspaceUnburdeningRecord, loadWorkspacePartSuggestions,
   loadWorkspaceClientDetail, loadWorkspaceActiveLiveSessions, loadWorkspaceCoTherapyProgress,
+  loadWorkspacePersonalizedCurriculum,
 } = await import('../advisorWorkspaceLoader.js');
 
 describe('initialsFrom', () => {
@@ -1170,6 +1175,41 @@ describe('loadWorkspaceCoTherapyProgress', () => {
   it('returns an empty array (not a throw) when the API errors', async () => {
     mockCoTherapyProgressRows = { data: null, error: { message: 'forbidden' } };
     expect(await loadWorkspaceCoTherapyProgress('c1', true)).toEqual([]);
+  });
+});
+
+describe('loadWorkspacePersonalizedCurriculum', () => {
+  beforeEach(() => { mockPersonalizedCurriculumRows = { data: [], error: null }; });
+
+  it('returns an empty array without a clientId', async () => {
+    expect(await loadWorkspacePersonalizedCurriculum(null, true)).toEqual([]);
+  });
+
+  // ifs_personalized_curriculum's only RLS policy is USING (true), so this
+  // refuses to fetch at all unless the caller has confirmed assignment.
+  it('returns an empty array without calling the API when the caller has not confirmed assignment', async () => {
+    mockPersonalizedCurriculumRows = { data: [{ id: 'm1', module_id: 'wound-abandonment-1', module_order: 1, module_title: 'Understanding Abandonment', completed: false }], error: null };
+    expect(await loadWorkspacePersonalizedCurriculum('c1', false)).toEqual([]);
+    expect(await loadWorkspacePersonalizedCurriculum('c1')).toEqual([]);
+  });
+
+  it('maps real module rows in order, excluding the generated lesson content', async () => {
+    mockPersonalizedCurriculumRows = {
+      data: [
+        { id: 'm1', module_id: 'wound-abandonment-1', module_order: 1, module_title: 'Understanding Abandonment', module_description: 'An intro module.', primary_wound_focus: 'abandonment', estimated_minutes: 20, difficulty_level: 'beginner', updated_at: '2026-07-01T00:00:00Z', customized_content: { lessonBody: 'a long private generated lesson' }, customization_notes: 'a private advisor note' },
+        { id: 'm2', module_id: 'wound-shame-1', module_order: 2, module_title: 'Working With Shame', module_description: '', primary_wound_focus: null, estimated_minutes: null, difficulty_level: '', updated_at: null },
+      ],
+      error: null,
+    };
+    const rows = await loadWorkspacePersonalizedCurriculum('c1', true);
+    expect(rows).toHaveLength(2);
+    expect(rows[0]).toEqual({ id: 'm1', moduleId: 'wound-abandonment-1', order: 1, title: 'Understanding Abandonment', description: 'An intro module.', woundFocus: 'abandonment', estimatedMinutes: 20, difficultyLevel: 'beginner', updatedAt: '2026-07-01T00:00:00Z' });
+    expect(JSON.stringify(rows)).not.toContain('private');
+  });
+
+  it('returns an empty array (not a throw) when the API errors', async () => {
+    mockPersonalizedCurriculumRows = { data: null, error: { message: 'forbidden' } };
+    expect(await loadWorkspacePersonalizedCurriculum('c1', true)).toEqual([]);
   });
 });
 

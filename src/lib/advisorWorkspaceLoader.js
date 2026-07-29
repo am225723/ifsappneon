@@ -1328,6 +1328,52 @@ export async function loadWorkspaceCoTherapyProgress(clientId, isAssigned) {
   }
 }
 
+// After a client completes the Wound Patterns Assessment, Assessments.jsx
+// already generates and saves an AI-personalized module sequence
+// (aiCurriculumPersonalizer -> supabaseHelpers.savePersonalizedCurriculum,
+// one row per module in ifs_personalized_curriculum) — the same real data
+// TherapistDashboard.jsx's legacy Lesson Editor already reads and lets an
+// Advisor view/edit, just not previously reachable from the unified
+// Workspace. This is a read-only summary; editing stays on that dedicated
+// tool rather than duplicating its write flow here.
+//
+// Surfaces only structured, AI-generated planning fields (title, order,
+// short description, wound focus, estimated minutes, difficulty) —
+// deliberately excludes customized_content (the full generated lesson
+// body) and customization_notes (free-text with no established precedent
+// of being shown outside the Lesson Editor itself).
+function mapPersonalizedCurriculumModule(row) {
+  return {
+    id: row.id,
+    moduleId: row.module_id,
+    order: row.module_order,
+    title: row.module_title,
+    description: row.module_description || '',
+    woundFocus: row.primary_wound_focus || '',
+    estimatedMinutes: row.estimated_minutes ?? null,
+    difficultyLevel: row.difficulty_level || '',
+    updatedAt: row.updated_at || null,
+  };
+}
+
+// Same fail-closed pattern as the other tables above whose only RLS policy
+// is USING (true) — the caller must confirm assignment before this fetches
+// anything.
+export async function loadWorkspacePersonalizedCurriculum(clientId, isAssigned) {
+  if (!clientId || !isAssigned) return [];
+  try {
+    const { data, error } = await supabase
+      .from('ifs_personalized_curriculum')
+      .select('id, module_id, module_order, module_title, module_description, primary_wound_focus, estimated_minutes, difficulty_level, updated_at')
+      .eq('client_id', clientId)
+      .order('module_order', { ascending: true });
+    if (error) return [];
+    return (data || []).map(mapPersonalizedCurriculumModule);
+  } catch {
+    return [];
+  }
+}
+
 function escapeHtml(value) {
   return String(value ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
