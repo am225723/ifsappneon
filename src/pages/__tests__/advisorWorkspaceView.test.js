@@ -1147,3 +1147,52 @@ describe('buildView — real homework review/archive actions (assignedHomework.j
     expect(assignedClientId).toBe('c1');
   });
 });
+
+describe('buildView — Resource Library surfaces the curated healing-library content', () => {
+  it('lists every resource unfiltered by default', () => {
+    const v = makeView({ activeTab: 'clinical-resources' });
+    expect(v.isClinicalResources).toBe(true);
+    expect(v.resourceRows.length).toBe(32);
+    expect(v.noResources).toBe(false);
+  });
+
+  it('filters by search term across title, author, and description', () => {
+    const v = makeView({ activeTab: 'clinical-resources', resourceSearch: 'No Bad Parts' });
+    expect(v.resourceRows.map((r) => r.title)).toEqual(['No Bad Parts']);
+  });
+
+  it('filters by content type', () => {
+    const v = makeView({ activeTab: 'clinical-resources', resourceType: 'meditation' });
+    expect(v.resourceRows.every((r) => r.typeLabel === 'Meditations')).toBe(true);
+    expect(v.resourceRows.length).toBeGreaterThan(0);
+  });
+
+  it('filters by wound, only including resources tagged for it', () => {
+    const v = makeView({ activeTab: 'clinical-resources', resourceWound: 'shame' });
+    expect(v.resourceRows.every((r) => r.woundChips.some((w) => w.id === 'shame'))).toBe(true);
+  });
+
+  it('filters by healing stage', () => {
+    const v = makeView({ activeTab: 'clinical-resources', resourceStage: 'unburdening' });
+    expect(v.resourceRows.every((r) => r.stageLabel === 'Unburdening')).toBe(true);
+    expect(v.resourceRows.length).toBeGreaterThan(0);
+  });
+
+  it('combines filters and reports an empty state when nothing matches', () => {
+    // Every article-type resource is tagged discovery/understanding — none integration.
+    const v = makeView({ activeTab: 'clinical-resources', resourceType: 'article', resourceStage: 'integration' });
+    expect(v.resourceRows).toEqual([]);
+    expect(v.noResources).toBe(true);
+  });
+
+  it('marks in-app resources for internal navigation and external resources for a new tab', () => {
+    const v = makeView({ activeTab: 'clinical-resources', resourceSearch: 'Unburdening Protocol' });
+    const appResource = v.resourceRows.find((r) => r.title === 'Unburdening Protocol');
+    expect(appResource.isAppLink).toBe(true);
+    expect(appResource.href).toBe('/unburdening');
+
+    const externalResource = makeView({ activeTab: 'clinical-resources', resourceSearch: 'No Bad Parts' }).resourceRows[0];
+    expect(externalResource.isAppLink).toBe(false);
+    expect(externalResource.href).toContain('https://');
+  });
+});

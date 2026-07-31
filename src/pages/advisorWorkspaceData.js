@@ -12,6 +12,24 @@ export const WOUND_META = {
   helplessness: { label: 'Helplessness', hue: 295 },
 };
 
+export const RESOURCE_TYPES = [
+  { id: 'all', label: 'All' },
+  { id: 'book', label: 'Books' },
+  { id: 'article', label: 'Articles' },
+  { id: 'exercise', label: 'Exercises' },
+  { id: 'meditation', label: 'Meditations' },
+  { id: 'video', label: 'Videos' },
+  { id: 'audio', label: 'Audio' },
+];
+
+export const HEALING_STAGES = [
+  { id: 'discovery', label: 'Discovery' },
+  { id: 'understanding', label: 'Understanding' },
+  { id: 'protector_work', label: 'Protector Work' },
+  { id: 'unburdening', label: 'Unburdening' },
+  { id: 'integration', label: 'Integration' },
+];
+
 export const LIGHT = {
   bg: '#faf9f5', surface: '#ffffff', surface2: '#f6f3ed', surface3: '#efeae1', border: '#e7e2d9',
   text: '#1c1917', text2: '#44403c', muted: '#78716c', accent: '#b45309', accent2: '#d97706',
@@ -294,6 +312,7 @@ export const NAV_CONFIG = [
     { id: 'clinical-practice-interactive', label: 'Interactive Modules' },
     { id: 'clinical-lessons', label: 'Curriculum Library' },
     { id: 'clinical-curriculum-builder', label: 'Custom Curriculum' },
+    { id: 'clinical-resources', label: 'Resource Library' },
     { id: 'clinical-docs', label: 'Document Creator' },
   ] },
   { id: 'insights', label: 'Insights & Reports', swatch: 'var(--emerald)', children: [
@@ -342,6 +361,7 @@ export const TAB_TITLES = {
   'clinical-parts': ['Parts Studio', 'Parts across your caseload'],
   'clinical-practice': ['Practice Generator', 'AI-assisted homework and practice suggestions'],
   'clinical-lessons': ['Curriculum Library', 'IFS curriculum modules and caseload completion'],
+  'clinical-resources': ['Resource Library', 'Curated books, exercises, and media to recommend'],
   'clinical-docs': ['Document Creator', 'Generate clinical documents from client records'],
   'clinical-practice-interactive': ['Interactive Practice Builder', 'More than prompts — guided, multi-step modules'],
   'clinical-curriculum-builder': ['Custom Curriculum', 'Build and assign individualized curriculum per client'],
