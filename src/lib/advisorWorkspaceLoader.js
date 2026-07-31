@@ -15,6 +15,7 @@ import { loadAssignedHomeworkForClient, markAssignedHomeworkReviewed, archiveAss
 import { loadTherapistClientSessionAgendas, markSessionAgendaReviewed } from './sessionAgendas.js';
 import { loadPartRelationships } from './partRelationships.js';
 import { loadNotifications, markNotificationRead, markAllNotificationsRead } from './notifications.js';
+import { loadAdvisorTasks, createAdvisorTask, toggleAdvisorTask } from './advisorTasks.js';
 import { loadSharedLifeIntegrationReflectionsForAdvisor } from './lifeIntegration.js';
 import { normalizeLifeReflection } from './lifeIntegrationDisplay.js';
 import { loadHealingTimeline } from './healingTimeline.js';
@@ -952,6 +953,56 @@ export async function markWorkspaceNotificationRead(notificationId) {
 
 export async function markAllWorkspaceNotificationsRead() {
   return markAllNotificationsRead();
+}
+
+function dueDateLabel(value) {
+  if (!value) return 'No due date';
+  const due = new Date(`${value}T00:00:00`);
+  if (Number.isNaN(due.getTime())) return 'No due date';
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const diffDays = Math.round((due.getTime() - today.getTime()) / 86400000);
+  if (diffDays === 0) return 'Today';
+  if (diffDays === 1) return 'Tomorrow';
+  if (diffDays < 0) return 'Overdue';
+  return due.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+function mapTaskRow(row) {
+  return {
+    id: row.id,
+    title: row.title,
+    clientId: row.client_id,
+    priority: row.priority,
+    status: row.status,
+    category: row.category,
+    due: dueDateLabel(row.due_date),
+  };
+}
+
+// The Advisor's real clinical tasks (ifs_advisor_tasks) — previously the
+// Tasks tab lived only in local React state (four hardcoded demo rows),
+// discarding anything added or checked off on every reload.
+export async function loadWorkspaceTasks() {
+  try {
+    const { data, error } = await loadAdvisorTasks({ filter: 'all' });
+    if (error) return [];
+    return (data || []).map(mapTaskRow);
+  } catch {
+    return [];
+  }
+}
+
+export async function createWorkspaceTask({ title, clientId, category, priority, dueDate }) {
+  const { data, error } = await createAdvisorTask({ title, clientId, category, priority, dueDate });
+  if (error) throw new Error(error.message || 'Failed to create task');
+  return mapTaskRow(data);
+}
+
+export async function toggleWorkspaceTask(taskId) {
+  const { data, error } = await toggleAdvisorTask(taskId);
+  if (error) throw new Error(error.message || 'Failed to update task');
+  return mapTaskRow(data);
 }
 
 // Real, already-Advisor-scoped Life Integration reflections a client has

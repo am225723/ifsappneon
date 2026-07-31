@@ -13,6 +13,7 @@ import {
   markWorkspaceHomeworkReviewed, archiveWorkspaceHomework, refreshWorkspaceHomeworkForClient,
   loadWorkspaceUnburdeningRecord, loadWorkspacePartSuggestions, generateWorkspaceModuleInsights,
   loadWorkspaceActiveLiveSessions, loadWorkspaceCoTherapyProgress, loadWorkspacePersonalizedCurriculum,
+  loadWorkspaceTasks, createWorkspaceTask, toggleWorkspaceTask,
 } from '../lib/advisorWorkspaceLoader.js';
 import { loadAdvisorSessionSnapshot } from '../lib/unifiedGuidance.js';
 import { generateSessionPrepSummary } from '../lib/sessionPrepSummary.js';
@@ -24,6 +25,11 @@ function todayIso() { return new Date().toISOString().slice(0, 10); }
 function sixMonthsAgoIso() {
   const d = new Date();
   d.setMonth(d.getMonth() - 6);
+  return d.toISOString().slice(0, 10);
+}
+function addDaysIso(days) {
+  const d = new Date();
+  d.setDate(d.getDate() + days);
   return d.toISOString().slice(0, 10);
 }
 
@@ -105,6 +111,7 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
   const coTherapyProgressLoadedFor = useRef(null);
   const riskAlertsLoaded = useRef(false);
   const liveSessionsLoaded = useRef(false);
+  const tasksLoaded = useRef(false);
   // Generation guard: bumped on therapist change / unmount so stale in-flight
   // detail merges are ignored without cancelling still-valid sibling requests.
   const genRef = useRef(0);
@@ -138,6 +145,7 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
     notificationsLoaded.current = false;
     riskAlertsLoaded.current = false;
     liveSessionsLoaded.current = false;
+    tasksLoaded.current = false;
     (async () => {
       try {
         const clients = await loadWorkspaceCaseload(therapistId);
@@ -472,7 +480,14 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
   const addTaskFromMessage = () => {
     const clientId = currentThreadClientId();
     const client = allClients().find((c) => c.id === clientId);
-    set((s) => ({ tasks: [{ id: 'task-' + Date.now(), title: 'Follow up on message — ' + (client ? client.name : ''), clientId, priority: 'medium', due: 'Tomorrow', status: 'open', category: 'Follow-up' }, ...s.tasks] }));
+    const title = 'Follow up on message — ' + (client ? client.name : '');
+    const tempId = 'task-' + Date.now();
+    set((s) => ({ tasks: [{ id: tempId, title, clientId, priority: 'medium', due: 'Tomorrow', status: 'open', category: 'Follow-up' }, ...s.tasks] }));
+    if (!isDemo) {
+      createWorkspaceTask({ title, clientId, category: 'Follow-up', priority: 'medium', dueDate: addDaysIso(1) })
+        .then((task) => set((s) => ({ tasks: s.tasks.map((t) => (t.id === tempId ? task : t)) })))
+        .catch((error) => console.error('Failed to create task:', error));
+    }
   };
   const onAcknowledgeSafety = (clientId) => set((s) => ({ safetyOverrides: { ...s.safetyOverrides, [clientId]: { ...(s.safetyOverrides[clientId] || {}), acknowledged: true } } }));
   const onCreateSafetyPlan = (clientId) => set((s) => ({ safetyOverrides: { ...s.safetyOverrides, [clientId]: { ...(s.safetyOverrides[clientId] || {}), hasPlanOverride: true } } }));
@@ -483,9 +498,21 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
   const onAddTask = () => {
     const title = S.newTaskTitle.trim();
     if (!title) return;
-    set((s) => ({ tasks: [{ id: 'task-' + Date.now(), title, clientId: s.newTaskClientId, priority: 'medium', due: 'This week', status: 'open', category: 'General' }, ...s.tasks], newTaskTitle: '' }));
+    const clientId = S.newTaskClientId;
+    const tempId = 'task-' + Date.now();
+    set((s) => ({ tasks: [{ id: tempId, title, clientId, priority: 'medium', due: 'This week', status: 'open', category: 'General' }, ...s.tasks], newTaskTitle: '' }));
+    if (!isDemo) {
+      createWorkspaceTask({ title, clientId, category: 'General', priority: 'medium', dueDate: addDaysIso(7) })
+        .then((task) => set((s) => ({ tasks: s.tasks.map((t) => (t.id === tempId ? task : t)) })))
+        .catch((error) => console.error('Failed to create task:', error));
+    }
   };
-  const toggleTask = (id) => set((s) => ({ tasks: s.tasks.map((t) => (t.id === id ? { ...t, status: t.status === 'open' ? 'done' : 'open' } : t)) }));
+  const toggleTask = (id) => {
+    set((s) => ({ tasks: s.tasks.map((t) => (t.id === id ? { ...t, status: t.status === 'open' ? 'done' : 'open' } : t)) }));
+    if (!isDemo && !String(id).startsWith('task-')) {
+      toggleWorkspaceTask(id).catch((error) => console.error('Failed to update task:', error));
+    }
+  };
   const onDismissEngagement = (clientId) => set((s) => ({ engagementDismissed: { ...s.engagementDismissed, [clientId]: !s.engagementDismissed[clientId] } }));
   const refreshClientReports = (clientId) => {
     if (isDemo || !clientId) { set({ clientReports: [] }); return; }
@@ -628,6 +655,15 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
     if (isDemo || loadPhase !== 'ready' || S.activeTab !== 'notifications' || notificationsLoaded.current) return;
     notificationsLoaded.current = true;
     loadWorkspaceNotifications().then((rows) => set({ notifications: rows }));
+  }, [isDemo, loadPhase, S.activeTab]);
+
+  // Lazily load the Advisor's real clinical tasks (ifs_advisor_tasks) the
+  // first time the Tasks tab is opened — previously local-only state that
+  // reset to the same four demo rows on every reload.
+  useEffect(() => {
+    if (isDemo || loadPhase !== 'ready' || S.activeTab !== 'tasks' || tasksLoaded.current) return;
+    tasksLoaded.current = true;
+    loadWorkspaceTasks().then((rows) => set({ tasks: rows }));
   }, [isDemo, loadPhase, S.activeTab]);
 
   // Lazily load the Advisor's real active/paused live guided-session rows
