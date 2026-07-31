@@ -70,6 +70,7 @@ async function toggleTask(user, body) {
     SET status = CASE WHEN status = 'open' THEN 'done' ELSE 'open' END, updated_at = CURRENT_TIMESTAMP
     WHERE id = ${taskId}
       AND therapist_id = ${user.id}
+      AND archived_at IS NULL
     RETURNING *
   `;
   if (!rows[0]) throw Object.assign(new Error('Task not found'), { statusCode: 404, code: 'not_found' });

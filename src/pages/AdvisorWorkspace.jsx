@@ -112,6 +112,10 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
   const riskAlertsLoaded = useRef(false);
   const liveSessionsLoaded = useRef(false);
   const tasksLoaded = useRef(false);
+  // Tracks temp ids toggled locally before their create request resolved, so
+  // that resolution can apply (and persist) the toggle instead of silently
+  // reverting the row to the server's initial 'open' status.
+  const pendingToggledTaskIds = useRef(new Set());
   // Generation guard: bumped on therapist change / unmount so stale in-flight
   // detail merges are ignored without cancelling still-valid sibling requests.
   const genRef = useRef(0);
@@ -477,6 +481,25 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
     }
   };
   const setActiveThread = (id) => set((s) => ({ activeThreadId: id, activeTab: 'messages', readThreads: { ...s.readThreads, [id]: true } }));
+  // Reconciles a just-persisted task with local state once its create
+  // request resolves. Looks the temp row up by id rather than assuming it's
+  // still there (a concurrent Tasks-tab reload may have already replaced
+  // S.tasks wholesale) and, if the row was toggled locally while the create
+  // was still in flight (persistence for temp ids is intentionally skipped —
+  // see toggleTask), re-applies and persists that toggle now that a real id
+  // exists instead of letting the server's initial 'open' status win.
+  const resolveCreatedTask = (tempId, task) => {
+    const wasToggled = pendingToggledTaskIds.current.has(tempId);
+    pendingToggledTaskIds.current.delete(tempId);
+    const resolved = wasToggled ? { ...task, status: task.status === 'open' ? 'done' : 'open' } : task;
+    set((s) => {
+      const existing = s.tasks.some((t) => t.id === tempId);
+      return { tasks: existing ? s.tasks.map((t) => (t.id === tempId ? resolved : t)) : [resolved, ...s.tasks] };
+    });
+    if (wasToggled) {
+      toggleWorkspaceTask(resolved.id).catch((error) => console.error('Failed to sync task status:', error));
+    }
+  };
   const addTaskFromMessage = () => {
     const clientId = currentThreadClientId();
     const client = allClients().find((c) => c.id === clientId);
@@ -485,7 +508,7 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
     set((s) => ({ tasks: [{ id: tempId, title, clientId, priority: 'medium', due: 'Tomorrow', status: 'open', category: 'Follow-up' }, ...s.tasks] }));
     if (!isDemo) {
       createWorkspaceTask({ title, clientId, category: 'Follow-up', priority: 'medium', dueDate: addDaysIso(1) })
-        .then((task) => set((s) => ({ tasks: s.tasks.map((t) => (t.id === tempId ? task : t)) })))
+        .then((task) => resolveCreatedTask(tempId, task))
         .catch((error) => console.error('Failed to create task:', error));
     }
   };
@@ -503,15 +526,22 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
     set((s) => ({ tasks: [{ id: tempId, title, clientId, priority: 'medium', due: 'This week', status: 'open', category: 'General' }, ...s.tasks], newTaskTitle: '' }));
     if (!isDemo) {
       createWorkspaceTask({ title, clientId, category: 'General', priority: 'medium', dueDate: addDaysIso(7) })
-        .then((task) => set((s) => ({ tasks: s.tasks.map((t) => (t.id === tempId ? task : t)) })))
+        .then((task) => resolveCreatedTask(tempId, task))
         .catch((error) => console.error('Failed to create task:', error));
     }
   };
   const toggleTask = (id) => {
     set((s) => ({ tasks: s.tasks.map((t) => (t.id === id ? { ...t, status: t.status === 'open' ? 'done' : 'open' } : t)) }));
-    if (!isDemo && !String(id).startsWith('task-')) {
-      toggleWorkspaceTask(id).catch((error) => console.error('Failed to update task:', error));
+    if (isDemo) return;
+    if (String(id).startsWith('task-')) {
+      // Still pending creation — flag it so resolveCreatedTask re-applies
+      // and persists this toggle once the real id comes back, instead of
+      // the server's initial 'open' status silently overwriting it.
+      if (pendingToggledTaskIds.current.has(id)) pendingToggledTaskIds.current.delete(id);
+      else pendingToggledTaskIds.current.add(id);
+      return;
     }
+    toggleWorkspaceTask(id).catch((error) => console.error('Failed to update task:', error));
   };
   const onDismissEngagement = (clientId) => set((s) => ({ engagementDismissed: { ...s.engagementDismissed, [clientId]: !s.engagementDismissed[clientId] } }));
   const refreshClientReports = (clientId) => {
@@ -663,7 +693,12 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
   useEffect(() => {
     if (isDemo || loadPhase !== 'ready' || S.activeTab !== 'tasks' || tasksLoaded.current) return;
     tasksLoaded.current = true;
-    loadWorkspaceTasks().then((rows) => set({ tasks: rows }));
+    // Preserve any task still awaiting its create response (a temp id added
+    // in the instant before this load resolves) instead of wholesale
+    // replacing S.tasks and dropping it.
+    loadWorkspaceTasks().then((rows) => set((s) => ({
+      tasks: [...s.tasks.filter((t) => String(t.id).startsWith('task-')), ...rows],
+    })));
   }, [isDemo, loadPhase, S.activeTab]);
 
   // Lazily load the Advisor's real active/paused live guided-session rows
