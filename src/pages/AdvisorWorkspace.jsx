@@ -47,7 +47,7 @@ export const INITIAL_STATE = {
   reports: [{ title: 'Caseload Summary — June 2026', date: 'Jul 1, 2026' }],
   settingsToggles: { riskAlerts: true, weeklyDigest: true, sessionReminders: false },
   clientMessages: {}, clientMessageDraft: '', activeThreadId: 'c2', readThreads: {},
-  safetyOverrides: {}, engagementDismissed: {}, partsClientFilter: 'all',
+  safetyOverrides: {}, engagementDismissed: {}, engagementExpanded: {}, partsClientFilter: 'all',
   tasks: [
     { id: 't1', title: 'Sign session note — Maya Chen', clientId: 'c1', priority: 'medium', due: 'Today', status: 'open', category: 'Documentation' },
     { id: 't2', title: 'Review safety plan — Jordan Reyes', clientId: 'c2', priority: 'high', due: 'Today', status: 'open', category: 'Safety' },
@@ -549,6 +549,7 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
     toggleWorkspaceTask(id).catch((error) => console.error('Failed to update task:', error));
   };
   const onDismissEngagement = (clientId) => set((s) => ({ engagementDismissed: { ...s.engagementDismissed, [clientId]: !s.engagementDismissed[clientId] } }));
+  const toggleEngagementExpanded = (clientId) => set((s) => ({ engagementExpanded: { ...s.engagementExpanded, [clientId]: !s.engagementExpanded[clientId] } }));
   const refreshClientReports = (clientId) => {
     if (isDemo || !clientId) { set({ clientReports: [] }); return; }
     set({ clientReportsLoading: true });
@@ -1014,7 +1015,7 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
       onPlanClientChange, onPracticeClientChange, onPracticeWoundChange, onPracticeTypeChange, onGeneratePractice, onAssignPractice, toggleAssignLesson,
       onCoTherapyMessageChange, onSendCoTherapyMessage, toggleCoTherapyShare, onGenerateReport, isGroupExpanded, toggleGroup,
       onClientMessageChange, onSendClientMessage, setActiveThread, addTaskFromMessage, onAcknowledgeSafety, onCreateSafetyPlan, setPartsClientFilter,
-      setTaskFilter, onNewTaskTitleChange, onNewTaskClientChange, onAddTask, toggleTask, onDismissEngagement,
+      setTaskFilter, onNewTaskTitleChange, onNewTaskClientChange, onAddTask, toggleTask, onDismissEngagement, toggleEngagementExpanded,
       onResourceSearchChange, setResourceType, setResourceWound, setResourceStage,
       onDocClientChange, onDocTypeChange, onDocDateChange, toggleDocSource, onGenerateDoc, onOpenGeneratedDoc, toggleNewClientForm, onNewClientFieldChange, onCreateClient,
       onGenerateSnapshot, onCopySnapshot, onGenerateChangeSummary, onGenerateModuleInsights,

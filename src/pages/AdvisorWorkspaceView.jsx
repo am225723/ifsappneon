@@ -27,7 +27,7 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
     activeTab, isDark, viewMode, selectedClientId, activeClientTab, search, filterWound, reviewedIds,
     sessionPrepOpenId, noteDraft, savedNotes, planClientId, practiceForm, generatedPractice, assignedPractices,
     assignedLessons, coTherapyShare, coTherapyMessage, coTherapyThread, reports, settingsToggles, clientMessages,
-    clientMessageDraft, activeThreadId, safetyOverrides, engagementDismissed, partsClientFilter, tasks, taskFilter,
+    clientMessageDraft, activeThreadId, safetyOverrides, engagementDismissed, engagementExpanded, partsClientFilter, tasks, taskFilter,
     newTaskTitle, newTaskClientId, docForm, docSources, generatedDoc, docGenerating, docError, clientReports, clientReportsLoading, deletedMessageIdx,
     sessionSnapshot, changeSummary, moduleInsights, lifeReflections, lifeReflectionsLoading, healingTimeline, riskAlerts,
     curriculumReflections, curriculumReflectionsLoading, homeworkFeedbackDraft, selfEnergyTrend, selfEnergyTrendLoading,
@@ -641,7 +641,23 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
     const status = engagementStatusFor(c.lastActiveDays);
     const sev = status === 'Highly engaged' || status === 'Engaged' ? 'low' : (status === 'Reduced engagement' ? 'medium' : 'high');
     const activitySummary = c.lastActiveDays >= 900 ? 'No activity recorded' : `${c.lastActiveDays}d since last activity`;
-    return { id: c.id, initial: c.initial, name: c.name, indicatorsSummary: `${activitySummary} · ${c.pendingReview ? '1 pending review' : 'no pending items'}`, statusLabel: status, statusChip: severityStyle(theme, sev), onOutreach: () => H.setActiveThread(c.id), dismissLabel: 'Dismiss flag', onDismiss: () => H.onDismissEngagement(c.id) };
+    const expanded = !!engagementExpanded[c.id];
+    // Every bullet below reads off fields the workspace already loads for
+    // this client (real streak/level, homework completion, pending review,
+    // risk detection) — no new data source, just previously-hidden detail
+    // behind the one-line summary chip.
+    const evidence = [
+      { label: 'Last activity', value: c.lastActiveDays >= 900 ? 'No activity recorded' : daysAgoText(c.lastActiveDays) },
+      { label: 'Practice streak', value: c.streak > 0 ? `${c.streak} day${c.streak === 1 ? '' : 's'} (level ${c.level})` : 'No active streak' },
+      { label: 'Homework completion', value: `${c.progressPct}% (${c.modulesCompleted} module${c.modulesCompleted === 1 ? '' : 's'} completed)` },
+      { label: 'Pending review', value: c.pendingReview ? `${c.pendingReview.label} · ${daysAgoText(c.pendingReview.daysAgo)}` : 'None' },
+      { label: 'Risk flag', value: c.risk ? `${RISK_TYPE_TITLE[c.risk.type] || c.risk.type} (${c.risk.level})` : 'None detected' },
+    ];
+    return {
+      id: c.id, initial: c.initial, name: c.name, indicatorsSummary: `${activitySummary} · ${c.pendingReview ? '1 pending review' : 'no pending items'}`,
+      statusLabel: status, statusChip: severityStyle(theme, sev), onOutreach: () => H.setActiveThread(c.id), dismissLabel: 'Dismiss flag', onDismiss: () => H.onDismissEngagement(c.id),
+      expanded, evidence, expandLabel: expanded ? 'Hide details' : 'View details', onToggleExpand: () => H.toggleEngagementExpanded(c.id),
+    };
   });
 
   const settingsTogglesList = Object.keys(TOGGLE_META).map((key) => {
@@ -2693,7 +2709,18 @@ function EngagementView({ v }) {
             </div>
             <span style={e.statusChip}>{e.statusLabel}</span>
           </div>
+          {e.expanded && (
+            <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid var(--border)', display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(180px,1fr))', gap: '10px' }}>
+              {e.evidence.map((ev) => (
+                <div key={ev.label}>
+                  <div style={{ fontSize: '10.5px', fontWeight: 700, color: 'var(--muted)', letterSpacing: '0.04em', textTransform: 'uppercase' }}>{ev.label}</div>
+                  <div style={{ fontSize: '13px', color: 'var(--text)', marginTop: '2px' }}>{ev.value}</div>
+                </div>
+              ))}
+            </div>
+          )}
           <div style={{ display: 'flex', gap: '8px', marginTop: '12px', justifyContent: 'flex-end' }}>
+            <button onClick={e.onToggleExpand} style={v.secondaryBtnStyle}>{e.expandLabel}</button>
             <button onClick={e.onOutreach} style={v.secondaryBtnStyle}>Send check-in</button>
             <button onClick={e.onDismiss} style={v.secondaryBtnStyle}>{e.dismissLabel}</button>
           </div>
