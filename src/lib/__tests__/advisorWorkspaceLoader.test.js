@@ -96,6 +96,17 @@ vi.mock('../lifeIntegration.js', () => ({
   loadSharedLifeIntegrationReflectionsForAdvisor: async () => mockLifeReflectionsResult,
 }));
 
+let mockTasksResult = { data: [], error: null };
+let mockCreateTaskResult = { data: null, error: null };
+let mockToggleTaskResult = { data: null, error: null };
+const mockCreateTaskCalls = [];
+const mockToggleTaskCalls = [];
+vi.mock('../advisorTasks.js', () => ({
+  loadAdvisorTasks: async () => mockTasksResult,
+  createAdvisorTask: async (payload) => { mockCreateTaskCalls.push(payload); return mockCreateTaskResult; },
+  toggleAdvisorTask: async (id) => { mockToggleTaskCalls.push(id); return mockToggleTaskResult; },
+}));
+
 const mockMarkAgendaReviewedCalls = [];
 vi.mock('../sessionAgendas.js', () => ({
   loadTherapistClientSessionAgendas: async () => ({ data: [], error: null }),
@@ -131,6 +142,7 @@ const {
   loadWorkspaceSelfEnergyTrend, loadWorkspaceUnburdeningRecord, loadWorkspacePartSuggestions,
   loadWorkspaceClientDetail, loadWorkspaceActiveLiveSessions, loadWorkspaceCoTherapyProgress,
   loadWorkspacePersonalizedCurriculum,
+  loadWorkspaceTasks, createWorkspaceTask, toggleWorkspaceTask,
 } = await import('../advisorWorkspaceLoader.js');
 
 describe('initialsFrom', () => {
@@ -838,6 +850,52 @@ describe('markWorkspaceNotificationRead / markAllWorkspaceNotificationsRead', ()
     expect(mockMarkReadCalls).toContain('n1');
     await markAllWorkspaceNotificationsRead();
     expect(mockMarkAllReadCalls.length).toBeGreaterThan(0);
+  });
+});
+
+describe('loadWorkspaceTasks', () => {
+  it('maps real ifs_advisor_tasks rows into the workspace task shape, labeling due dates', async () => {
+    const todayIso = new Date().toISOString().slice(0, 10);
+    mockTasksResult = {
+      data: [
+        { id: 't1', client_id: 'c1', title: 'Sign session note', category: 'Documentation', priority: 'medium', status: 'open', due_date: todayIso },
+        { id: 't2', client_id: 'c2', title: 'Review safety plan', category: 'Safety', priority: 'high', status: 'done', due_date: null },
+      ],
+      error: null,
+    };
+    const rows = await loadWorkspaceTasks();
+    expect(rows).toHaveLength(2);
+    expect(rows[0]).toMatchObject({ id: 't1', clientId: 'c1', title: 'Sign session note', priority: 'medium', status: 'open', due: 'Today' });
+    expect(rows[1]).toMatchObject({ id: 't2', status: 'done', due: 'No due date' });
+    mockTasksResult = { data: [], error: null };
+  });
+
+  it('returns an empty array (not a throw) when the API errors', async () => {
+    mockTasksResult = { data: null, error: { message: 'unauthorized' } };
+    const rows = await loadWorkspaceTasks();
+    expect(rows).toEqual([]);
+    mockTasksResult = { data: [], error: null };
+  });
+});
+
+describe('createWorkspaceTask / toggleWorkspaceTask', () => {
+  it('creates a task and maps the persisted row back into the workspace shape', async () => {
+    mockCreateTaskResult = { data: { id: 't3', client_id: 'c1', title: 'Follow up', category: 'Follow-up', priority: 'medium', status: 'open', due_date: null }, error: null };
+    const task = await createWorkspaceTask({ title: 'Follow up', clientId: 'c1', category: 'Follow-up', priority: 'medium', dueDate: null });
+    expect(mockCreateTaskCalls[mockCreateTaskCalls.length - 1]).toMatchObject({ title: 'Follow up', clientId: 'c1' });
+    expect(task).toMatchObject({ id: 't3', clientId: 'c1', title: 'Follow up', status: 'open' });
+  });
+
+  it('throws when task creation fails, so the caller can leave the optimistic row in place', async () => {
+    mockCreateTaskResult = { data: null, error: { message: 'title_required' } };
+    await expect(createWorkspaceTask({ title: '', clientId: 'c1' })).rejects.toThrow('title_required');
+  });
+
+  it('toggles a task and maps the persisted row back into the workspace shape', async () => {
+    mockToggleTaskResult = { data: { id: 't1', client_id: 'c1', title: 'Sign session note', category: 'Documentation', priority: 'medium', status: 'done', due_date: null }, error: null };
+    const task = await toggleWorkspaceTask('t1');
+    expect(mockToggleTaskCalls).toContain('t1');
+    expect(task).toMatchObject({ id: 't1', status: 'done' });
   });
 });
 
