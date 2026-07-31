@@ -8,7 +8,9 @@ import {
   DOC_TYPES, DOC_SOURCES, NAV_CONFIG, CLIENT_TABS, TIMELINE_TYPE_META, TAB_TITLES, TOGGLE_META,
   QUICK_MESSAGES, engagementStatusFor, MOOD_LABELS, RISK_TYPE_TITLE,
   UNBURDENING_MOOD_LABELS, UNBURDENING_TOTAL_STEPS, UNBURDENING_STEP_TITLES,
+  RESOURCE_TYPES, HEALING_STAGES,
 } from './advisorWorkspaceData.js';
+import { resources as RESOURCE_LIBRARY } from '../data/resourceLibraryData.js';
 
 // Mirrors partSuggestionEngine.js's type vocabulary ('protector', 'self',
 // legacy-import 'unknown', etc.) down onto the workspace's existing
@@ -31,6 +33,7 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
     curriculumReflections, curriculumReflectionsLoading, homeworkFeedbackDraft, selfEnergyTrend, selfEnergyTrendLoading,
     unburdeningRecord, unburdeningRecordLoading, partSuggestions, partSuggestionsLoading,
     coTherapyProgress, coTherapyProgressLoading, personalizedCurriculum, personalizedCurriculumLoading,
+    resourceSearch, resourceType, resourceWound, resourceStage,
   } = S;
 
   const rootStyle = {
@@ -545,6 +548,40 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
   });
   const noTasks = taskRows.length === 0;
 
+  // Curated IFS reading/exercise/media library (src/data/resourceLibraryData.js)
+  // — previously only reachable from the standalone /resource-library page,
+  // never surfaced inside the workspace an Advisor actually works from.
+  const resourceTypeFilters = RESOURCE_TYPES.map((t) => ({
+    id: t.id, label: t.label, onClick: () => H.setResourceType(t.id),
+    style: { padding: '6px 12px', borderRadius: '999px', border: '1px solid ' + (resourceType === t.id ? theme.accent2 : theme.border), background: resourceType === t.id ? theme.accent2 : 'transparent', color: resourceType === t.id ? '#fff' : theme.text2, fontSize: '12px', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' },
+  }));
+  const resourceWoundFilters = [{ id: 'all', label: 'All wounds' }, ...Object.keys(WOUND_META).map((w) => ({ id: w, label: WOUND_META[w].label }))].map((w) => ({
+    id: w.id, label: w.label, onClick: () => H.setResourceWound(w.id),
+    style: { padding: '6px 12px', borderRadius: '999px', border: '1px solid ' + (resourceWound === w.id ? theme.emerald2 : theme.border), background: resourceWound === w.id ? theme.emerald2 : 'transparent', color: resourceWound === w.id ? '#fff' : theme.text2, fontSize: '12px', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' },
+  }));
+  const resourceStageFilters = [{ id: 'all', label: 'All stages' }, ...HEALING_STAGES].map((s) => ({
+    id: s.id, label: s.label, onClick: () => H.setResourceStage(s.id),
+    style: { padding: '6px 12px', borderRadius: '999px', border: '1px solid ' + (resourceStage === s.id ? theme.accent2 : theme.border), background: resourceStage === s.id ? theme.accent2 : 'transparent', color: resourceStage === s.id ? '#fff' : theme.text2, fontSize: '12px', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' },
+  }));
+  const resourceSearchLower = (resourceSearch || '').trim().toLowerCase();
+  const resourceRows = RESOURCE_LIBRARY.filter((r) => {
+    const matchesSearch = !resourceSearchLower
+      || r.title.toLowerCase().includes(resourceSearchLower)
+      || r.author.toLowerCase().includes(resourceSearchLower)
+      || r.description.toLowerCase().includes(resourceSearchLower);
+    const matchesType = resourceType === 'all' || r.type === resourceType;
+    const matchesWound = resourceWound === 'all' || r.wounds.includes(resourceWound);
+    const matchesStage = resourceStage === 'all' || r.stage === resourceStage;
+    return matchesSearch && matchesType && matchesWound && matchesStage;
+  }).map((r) => ({
+    id: r.id, title: r.title, author: r.author, description: r.description,
+    typeLabel: RESOURCE_TYPES.find((t) => t.id === r.type)?.label || r.type,
+    stageLabel: HEALING_STAGES.find((s) => s.id === r.stage)?.label || r.stage,
+    woundChips: r.wounds.map((w) => ({ id: w, label: WOUND_META[w]?.label || w, style: woundChip(w, isDark, true) })),
+    isAppLink: !!r.appLink, href: r.appLink || r.link,
+  }));
+  const noResources = resourceRows.length === 0;
+
   const clientOptions = assignedClients.map((c) => ({ id: c.id, name: c.name }));
   const currentTemplate = TEMPLATE_OPTIONS.find((t) => t.id === noteDraft.template) || TEMPLATE_OPTIONS[0];
   const allGoals = assignedClients.flatMap((c) => c.goals.map((g) => ({ clientName: c.name, title: g.title, reviewLabel: 'Review in ' + g.reviewInDays + 'd', style: { fontSize: '11px', fontWeight: 700, color: g.reviewInDays <= 7 ? theme.riskMedText : theme.muted, whiteSpace: 'nowrap' } })));
@@ -667,6 +704,7 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
     isClinicalNotes: activeTab === 'clinical-notes', isClinicalPlans: activeTab === 'clinical-plans', isClinicalMbc: activeTab === 'clinical-mbc', isClinicalParts: activeTab === 'clinical-parts',
     isClinicalPractice: activeTab === 'clinical-practice', isClinicalPracticeInteractive: activeTab === 'clinical-practice-interactive',
     isClinicalLessons: activeTab === 'clinical-lessons', isClinicalCurriculumBuilder: activeTab === 'clinical-curriculum-builder', isClinicalDocs: activeTab === 'clinical-docs',
+    isClinicalResources: activeTab === 'clinical-resources',
     isInsightsReports: activeTab === 'insights-reports', isAdminAccess: activeTab === 'admin-access', isAdminTeam: activeTab === 'admin-team', isAdminAudit: activeTab === 'admin-audit', isSettings: activeTab === 'settings',
     isJourney: viewMode === 'journey', isCommandMode: viewMode === 'command',
     disclaimerStyle,
@@ -682,6 +720,7 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
     clientMessageDraft, onClientMessageChange: H.onClientMessageChange, onSendClientMessage: H.onSendClientMessage,
     threadList, activeThread,
     taskFilters, taskRows, noTasks, newTaskTitle, newTaskClientId, onNewTaskTitleChange: H.onNewTaskTitleChange, onNewTaskClientChange: H.onNewTaskClientChange, onAddTask: H.onAddTask,
+    resourceSearch, onResourceSearchChange: H.onResourceSearchChange, resourceTypeFilters, resourceWoundFilters, resourceStageFilters, resourceRows, noResources,
     noteDraft: { ...noteDraft, placeholder: currentTemplate.placeholder }, clientOptions, templateOptions: TEMPLATE_OPTIONS,
     onNoteClientChange: H.onNoteClientChange, onNoteTemplateChange: H.onNoteTemplateChange, onNoteTextChange: H.onNoteTextChange, onSaveNote: H.onSaveNote, onSignNote: H.onSignNote, onAiNoteSaved: H.onAiNoteSaved, isDemo,
     homeworkFeedbackDraft, onHomeworkAssigned: H.onHomeworkAssigned, onHomeworkFeedbackChange: H.onHomeworkFeedbackChange,
@@ -819,6 +858,7 @@ function CommandCenter({ v }) {
       {v.isClinicalParts && <PartsView v={v} />}
       {v.isClinicalPractice && <PracticeView v={v} />}
       {v.isClinicalLessons && <LessonsView v={v} />}
+      {v.isClinicalResources && <ResourceLibraryView v={v} />}
       {v.isClinicalDocs && <DocsView v={v} />}
       {v.isClientsAnalytics && <AnalyticsView v={v} />}
       {v.isClientsEngagement && <EngagementView v={v} />}
@@ -2458,6 +2498,48 @@ function LessonsView({ v }) {
           <button onClick={l.onToggleAssign} style={l.assignBtnStyle}>{l.assignLabel}</button>
         </div>
       ))}
+    </div>
+  );
+}
+
+function ResourceLibraryView({ v }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', maxWidth: '980px' }}>
+      <input value={v.resourceSearch} onChange={v.onResourceSearchChange} placeholder="Search resources by title, author, or description..." style={{ ...inp(), width: '100%' }} />
+      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+        {v.resourceTypeFilters.map((f) => (<button key={f.id} onClick={f.onClick} style={f.style}>{f.label}</button>))}
+      </div>
+      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+        {v.resourceWoundFilters.map((f) => (<button key={f.id} onClick={f.onClick} style={f.style}>{f.label}</button>))}
+      </div>
+      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+        {v.resourceStageFilters.map((f) => (<button key={f.id} onClick={f.onClick} style={f.style}>{f.label}</button>))}
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: '14px' }}>
+        {v.resourceRows.map((r) => {
+          const cardBody = (
+            <div style={{ ...CARD, borderRadius: '18px', padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: '8px', height: '100%' }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '10px' }}>
+                <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--muted)', letterSpacing: '0.04em', textTransform: 'uppercase' }}>{r.typeLabel}</span>
+                <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                  {r.woundChips.map((w) => (<span key={w.id} style={w.style}>{w.label}</span>))}
+                </div>
+              </div>
+              <span style={{ fontSize: '14.5px', fontWeight: 600, color: 'var(--text)' }}>{r.title}</span>
+              <span style={{ fontSize: '11.5px', color: 'var(--muted)' }}>by {r.author}</span>
+              <span style={{ fontSize: '13px', color: 'var(--text-2)', lineHeight: 1.5 }}>{r.description}</span>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto', paddingTop: '6px' }}>
+                <span style={{ fontSize: '11px', color: 'var(--muted)', textTransform: 'capitalize' }}>{r.stageLabel}</span>
+                <span style={{ fontSize: '12.5px', fontWeight: 600, color: r.isAppLink ? 'var(--accent)' : 'var(--emerald)' }}>{r.isAppLink ? 'Open in app →' : 'Learn more →'}</span>
+              </div>
+            </div>
+          );
+          return r.isAppLink
+            ? <Link key={r.id} to={r.href} style={{ textDecoration: 'none' }}>{cardBody}</Link>
+            : <a key={r.id} href={r.href} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none' }}>{cardBody}</a>;
+        })}
+        {v.noResources && <div style={{ padding: '20px', textAlign: 'center', color: 'var(--muted)', fontSize: '13px', gridColumn: '1 / -1' }}>No resources match these filters.</div>}
+      </div>
     </div>
   );
 }

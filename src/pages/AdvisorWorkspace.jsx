@@ -71,6 +71,7 @@ export const INITIAL_STATE = {
   coTherapyProgress: [], coTherapyProgressLoading: false,
   riskAlerts: [],
   accessOverrides: {}, settingsAccent: 'amber',
+  resourceSearch: '', resourceType: 'all', resourceWound: 'all', resourceStage: 'all',
   extraClients: [], deletedIds: {},
   showNewClientForm: false, newClientForm: { name: '', email: '', phone: '', sendEmail: true }, newClientResult: null,
   deletingClientId: null, deleteConfirmText: '',
@@ -516,6 +517,10 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
   const onCreateSafetyPlan = (clientId) => set((s) => ({ safetyOverrides: { ...s.safetyOverrides, [clientId]: { ...(s.safetyOverrides[clientId] || {}), hasPlanOverride: true } } }));
   const setPartsClientFilter = (id) => set({ partsClientFilter: id });
   const setTaskFilter = (f) => set({ taskFilter: f });
+  const onResourceSearchChange = (e) => set({ resourceSearch: e.target.value });
+  const setResourceType = (id) => set({ resourceType: id });
+  const setResourceWound = (id) => set({ resourceWound: id });
+  const setResourceStage = (id) => set({ resourceStage: id });
   const onNewTaskTitleChange = (e) => set({ newTaskTitle: e.target.value });
   const onNewTaskClientChange = (e) => set({ newTaskClientId: e.target.value });
   const onAddTask = () => {
@@ -1010,6 +1015,7 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
       onCoTherapyMessageChange, onSendCoTherapyMessage, toggleCoTherapyShare, onGenerateReport, isGroupExpanded, toggleGroup,
       onClientMessageChange, onSendClientMessage, setActiveThread, addTaskFromMessage, onAcknowledgeSafety, onCreateSafetyPlan, setPartsClientFilter,
       setTaskFilter, onNewTaskTitleChange, onNewTaskClientChange, onAddTask, toggleTask, onDismissEngagement,
+      onResourceSearchChange, setResourceType, setResourceWound, setResourceStage,
       onDocClientChange, onDocTypeChange, onDocDateChange, toggleDocSource, onGenerateDoc, onOpenGeneratedDoc, toggleNewClientForm, onNewClientFieldChange, onCreateClient,
       onGenerateSnapshot, onCopySnapshot, onGenerateChangeSummary, onGenerateModuleInsights,
       onStartDelete, onCancelDelete, onDeleteConfirmChange, onConfirmDelete, onPracticeGuidanceChange, onGeneratePracticeBatch, onUseBatchPractice,
