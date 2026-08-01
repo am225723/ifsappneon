@@ -1196,3 +1196,45 @@ describe('buildView — Resource Library surfaces the curated healing-library co
     expect(externalResource.href).toContain('https://');
   });
 });
+
+describe('buildView — Engagement & Dropout Risk evidence drill-down', () => {
+  it('stays collapsed by default, with an expand toggle per client', () => {
+    const v = makeView({ activeTab: 'clients-engagement' });
+    const maya = v.engagementRows.find((r) => r.id === 'c1');
+    expect(maya.expanded).toBe(false);
+    expect(maya.expandLabel).toBe('View details');
+  });
+
+  it('surfaces real per-client indicators (streak, homework, pending review, risk) when expanded', () => {
+    const v = makeView({ activeTab: 'clients-engagement', engagementExpanded: { c1: true } });
+    const maya = v.engagementRows.find((r) => r.id === 'c1');
+    expect(maya.expanded).toBe(true);
+    expect(maya.expandLabel).toBe('Hide details');
+    const byLabel = Object.fromEntries(maya.evidence.map((e) => [e.label, e.value]));
+    expect(byLabel['Last activity']).toBe('Today');
+    expect(byLabel['Practice streak']).toBe('12 days (level 5)');
+    expect(byLabel['Homework completion']).toBe('78% (9 modules completed)');
+    expect(byLabel['Pending review']).toBe('Self-Connection Journal · 3 days ago');
+    expect(byLabel['Risk flag']).toBe('None detected');
+  });
+
+  it('surfaces the real detected risk type and level for a flagged client', () => {
+    const v = makeView({ activeTab: 'clients-engagement', engagementExpanded: { c2: true } });
+    const jordan = v.engagementRows.find((r) => r.id === 'c2');
+    const byLabel = Object.fromEntries(jordan.evidence.map((e) => [e.label, e.value]));
+    expect(byLabel['Risk flag']).toBe('Concerning language detected (high)');
+  });
+
+  it('toggles expansion independently per client via the handler', () => {
+    let toggledId = null;
+    const S = { ...INITIAL_STATE, activeTab: 'clients-engagement' };
+    const view = buildView({
+      S, theme: LIGHT, allClients: () => CLIENTS,
+      buildTreatmentPlan: (c) => ({ clientName: c.name, phases: [], milestones: [], currentPhaseLabel: '', currentPhaseDesc: '' }),
+      handlers: new Proxy({ isGroupExpanded: () => false, toggleEngagementExpanded: (id) => { toggledId = id; } }, { get: (t, p) => t[p] || (() => {}) }),
+      isAdmin: true,
+    });
+    view.engagementRows.find((r) => r.id === 'c1').onToggleExpand();
+    expect(toggledId).toBe('c1');
+  });
+});
