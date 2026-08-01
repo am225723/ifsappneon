@@ -34,6 +34,7 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
     unburdeningRecord, unburdeningRecordLoading, partSuggestions, partSuggestionsLoading,
     coTherapyProgress, coTherapyProgressLoading, personalizedCurriculum, personalizedCurriculumLoading,
     resourceSearch, resourceType, resourceWound, resourceStage, dischargedClients,
+    practiceGenerating, practiceError,
   } = S;
 
   const rootStyle = {
@@ -760,6 +761,7 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
     planClientId, onPlanClientChange: H.onPlanClientChange, treatmentPlan, hasPlanClient,
     practiceForm, woundOptions, practiceTypeOptions, onPracticeClientChange: H.onPracticeClientChange, onPracticeWoundChange: H.onPracticeWoundChange, onPracticeTypeChange: H.onPracticeTypeChange,
     onGeneratePractice: H.onGeneratePractice, hasGeneratedPractice: generatedPractice != null, generatedPractice,
+    practiceGenerating, practiceError,
     onPracticeDraftChange: H.onPracticeDraftChange, onRejectPractice: H.onRejectPractice,
     onAssignPractice: H.onAssignPractice, assignedPractices, noAssignedPractices: assignedPractices.length === 0,
     lessons, mbcCaseloadRows, partsClientFilters, partsAllRows,
@@ -2505,16 +2507,17 @@ function PracticeView({ v }) {
         </div>
         <input value={v.practiceGuidance} onChange={v.onPracticeGuidanceChange} placeholder="Additional guidance (optional) — e.g. focus on inner critic, something gentle..." style={{ ...inp(), width: '100%', marginTop: '10px', padding: '10px 14px', borderRadius: '12px' }} />
         <div style={{ display: 'flex', gap: '10px', marginTop: '14px', flexWrap: 'wrap' }}>
-          <button className="aw-primary" onClick={v.onGeneratePractice} style={v.primaryBtnStyle}>✨ Generate one</button>
-          <button onClick={v.onGeneratePracticeBatch} style={v.secondaryBtnStyle}>Generate set of 4</button>
+          <button className="aw-primary" onClick={v.onGeneratePractice} disabled={v.practiceGenerating} style={{ ...v.primaryBtnStyle, opacity: v.practiceGenerating ? 0.6 : 1, cursor: v.practiceGenerating ? 'not-allowed' : 'pointer' }}>{v.practiceGenerating ? 'Generating…' : '✨ Generate one'}</button>
+          <button onClick={v.onGeneratePracticeBatch} disabled={v.practiceGenerating} style={{ ...v.secondaryBtnStyle, opacity: v.practiceGenerating ? 0.6 : 1, cursor: v.practiceGenerating ? 'not-allowed' : 'pointer' }}>{v.practiceGenerating ? 'Generating…' : 'Generate set of 4'}</button>
         </div>
+        {v.practiceError && <div style={{ fontSize: '12px', color: 'var(--risk-high-text)', marginTop: '10px' }}>{v.practiceError}</div>}
         {v.hasGeneratedPractice && (
           <div style={{ marginTop: '16px', padding: '16px', borderRadius: '14px', background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
             <textarea value={v.generatedPractice || ''} onChange={v.onPracticeDraftChange} rows={5} aria-label="Generated practice draft" style={{ ...inp(), width: '100%', resize: 'vertical', fontSize: '13px', lineHeight: 1.6 }} />
             <div style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '8px' }}>AI-generated draft — edit as needed, then approve, regenerate, or reject.</div>
             <div style={{ display: 'flex', gap: '8px', marginTop: '10px', flexWrap: 'wrap' }}>
               <button onClick={v.onAssignPractice} style={v.secondaryBtnStyle}>Approve &amp; assign to client</button>
-              <button onClick={v.onGeneratePractice} style={v.secondaryBtnStyle}>🔁 Regenerate</button>
+              <button onClick={v.onGeneratePractice} disabled={v.practiceGenerating} style={{ ...v.secondaryBtnStyle, opacity: v.practiceGenerating ? 0.6 : 1, cursor: v.practiceGenerating ? 'not-allowed' : 'pointer' }}>{v.practiceGenerating ? 'Regenerating…' : '🔁 Regenerate'}</button>
               <button onClick={v.onRejectPractice} style={v.secondaryBtnStyle}>Reject</button>
             </div>
           </div>

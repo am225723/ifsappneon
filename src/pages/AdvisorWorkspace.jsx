@@ -15,6 +15,7 @@ import {
   loadWorkspaceActiveLiveSessions, loadWorkspaceCoTherapyProgress, loadWorkspacePersonalizedCurriculum,
   loadWorkspaceTasks, createWorkspaceTask, toggleWorkspaceTask,
   deactivateWorkspaceClientAssignment, reactivateWorkspaceClientAssignment, loadWorkspaceDischargedClients,
+  generateWorkspacePractice, generateWorkspacePracticeBatch, assignWorkspacePractice,
 } from '../lib/advisorWorkspaceLoader.js';
 import { loadAdvisorSessionSnapshot } from '../lib/unifiedGuidance.js';
 import { generateSessionPrepSummary } from '../lib/sessionPrepSummary.js';
@@ -33,6 +34,11 @@ function addDaysIso(days) {
   d.setDate(d.getDate() + days);
   return d.toISOString().slice(0, 10);
 }
+// The Quick Practice Generator's local "type" vocabulary (journal/somatic/
+// worksheet/meditation) predates api/ai-assigned-practice.js's own category
+// vocabulary (general/journaling/parts-work/meditation/exercise/reading/
+// self-care) — this maps the former onto the latter as a generation hint.
+const PRACTICE_TYPE_TO_AI_CATEGORY = { journal: 'journaling', somatic: 'exercise', worksheet: 'general', meditation: 'meditation' };
 
 export const INITIAL_STATE = {
   baseClients: CLIENTS,
@@ -42,7 +48,8 @@ export const INITIAL_STATE = {
   noteDraft: { clientId: 'c1', template: 'none', text: '' }, savedNotes: [],
   homeworkFeedbackDraft: {},
   planClientId: 'c1', practiceForm: { clientId: 'c1', wound: 'abandonment', type: 'journal' },
-  generatedPractice: null, assignedPractices: [], assignedLessons: {},
+  generatedPractice: null, generatedPracticeMeta: null, practiceGenerating: false, practiceError: '',
+  assignedPractices: [], assignedLessons: {},
   coTherapyShare: true, coTherapyMessage: '',
   coTherapyThread: [{ author: 'Dr. Patel', text: 'Flagging Jordan’s risk note for joint review before Thursday.', date: 'Yesterday' }],
   reports: [{ title: 'Caseload Summary — June 2026', date: 'Jul 1, 2026' }],
@@ -141,7 +148,11 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
   // silently re-adding a just-deactivated client or dropping a
   // just-reactivated one back out of view.
   const lifecycleGenRef = useRef(0);
-  useEffect(() => () => { genRef.current += 1; docGenRef.current += 1; snapshotGenRef.current += 1; changeSummaryGenRef.current += 1; moduleInsightsGenRef.current += 1; }, []);
+  // Same pattern again, scoped to the AI Practice Generator: bumped on every
+  // onGeneratePractice/onGeneratePracticeBatch call, client switch, therapist
+  // switch, and unmount.
+  const practiceGenRef = useRef(0);
+  useEffect(() => () => { genRef.current += 1; docGenRef.current += 1; snapshotGenRef.current += 1; changeSummaryGenRef.current += 1; moduleInsightsGenRef.current += 1; practiceGenRef.current += 1; }, []);
   // setState-compatible merge helper (accepts object or updater fn)
   const set = (patch) => setS((prev) => ({ ...prev, ...(typeof patch === 'function' ? patch(prev) : patch) }));
 
@@ -153,6 +164,7 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
     snapshotGenRef.current += 1;
     changeSummaryGenRef.current += 1;
     moduleInsightsGenRef.current += 1;
+    practiceGenRef.current += 1;
     let cancelled = false;
     setLoadPhase('loading');
     detailRequested.current = new Set();
@@ -481,33 +493,79 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
     reportWindow.document.close();
   };
   const openPlanFor = (clientId) => set({ activeTab: 'clinical-plans', planClientId: clientId });
+  // Same invalidatePendingDoc pattern as the Document Creator: bumping the
+  // ref here (rather than only inside onGeneratePractice/onGeneratePracticeBatch
+  // themselves) means switching client/wound/type while a request is still
+  // in flight discards that response instead of letting a stale draft for
+  // the previous client populate the form under the newly selected one.
+  const invalidatePendingPractice = () => {
+    practiceGenRef.current += 1;
+    set((s) => (s.practiceGenerating ? { practiceGenerating: false } : null));
+  };
   const openPracticeFor = (clientId) => {
     const client = allClients().find((c) => c.id === clientId);
-    set((s) => ({ activeTab: 'clinical-practice', practiceForm: { ...s.practiceForm, clientId, wound: client ? client.primaryWound : s.practiceForm.wound }, generatedPractice: null }));
+    invalidatePendingPractice();
+    set((s) => ({ activeTab: 'clinical-practice', practiceForm: { ...s.practiceForm, clientId, wound: client ? client.primaryWound : s.practiceForm.wound }, generatedPractice: null, generatedPracticeMeta: null }));
   };
   const onPlanClientChange = (e) => set({ planClientId: e.target.value });
   const onPracticeClientChange = (e) => {
     const client = allClients().find((c) => c.id === e.target.value);
-    set((s) => ({ practiceForm: { ...s.practiceForm, clientId: e.target.value, wound: client ? client.primaryWound : s.practiceForm.wound }, generatedPractice: null }));
+    invalidatePendingPractice();
+    set((s) => ({ practiceForm: { ...s.practiceForm, clientId: e.target.value, wound: client ? client.primaryWound : s.practiceForm.wound }, generatedPractice: null, generatedPracticeMeta: null }));
   };
-  const onPracticeWoundChange = (e) => set((s) => ({ practiceForm: { ...s.practiceForm, wound: e.target.value }, generatedPractice: null }));
-  const onPracticeTypeChange = (e) => set((s) => ({ practiceForm: { ...s.practiceForm, type: e.target.value }, generatedPractice: null }));
+  const onPracticeWoundChange = (e) => { invalidatePendingPractice(); set((s) => ({ practiceForm: { ...s.practiceForm, wound: e.target.value }, generatedPractice: null, generatedPracticeMeta: null })); };
+  const onPracticeTypeChange = (e) => { invalidatePendingPractice(); set((s) => ({ practiceForm: { ...s.practiceForm, type: e.target.value }, generatedPractice: null, generatedPracticeMeta: null })); };
   const onGeneratePractice = () => {
-    const { wound, type } = S.practiceForm;
+    const { clientId, wound, type } = S.practiceForm;
     const meta = WOUND_META[wound] || WOUND_META.abandonment;
     const typeMeta = PRACTICE_TYPE_META[type] || PRACTICE_TYPE_META.journal;
-    set({ generatedPractice: typeMeta.tmpl(meta.label.toLowerCase()) });
+    if (isDemo) {
+      set({ generatedPractice: typeMeta.tmpl(meta.label.toLowerCase()), generatedPracticeMeta: null, practiceError: '' });
+      return;
+    }
+    const client = allClients().find((c) => c.id === clientId);
+    set({ practiceGenerating: true, practiceError: '' });
+    practiceGenRef.current += 1;
+    const gen = practiceGenRef.current;
+    generateWorkspacePractice({
+      clientId, clientName: client?.name, woundType: wound, secondaryWound: client?.secondaryWound,
+      category: PRACTICE_TYPE_TO_AI_CATEGORY[type] || 'general', guidance: S.practiceGuidance,
+    }).then(({ data, error }) => {
+      if (practiceGenRef.current !== gen) return;
+      if (error) { set({ practiceGenerating: false, practiceError: error.message || 'Unable to generate a practice draft.' }); return; }
+      set({
+        practiceGenerating: false, generatedPractice: data.description,
+        generatedPracticeMeta: { title: data.title, category: data.category, priority: data.priority, activityBlocks: data.activityBlocks },
+      });
+    });
   };
   const onPracticeDraftChange = (e) => set({ generatedPractice: e.target.value });
-  const onRejectPractice = () => set({ generatedPractice: null });
+  const onRejectPractice = () => set({ generatedPractice: null, generatedPracticeMeta: null });
   const onAssignPractice = () => {
-    const { practiceForm, generatedPractice } = S;
+    const { practiceForm, generatedPractice, generatedPracticeMeta } = S;
     const text = generatedPractice?.trim();
     if (!text) return;
     const client = allClients().find((c) => c.id === practiceForm.clientId);
     const typeMeta = PRACTICE_TYPE_META[practiceForm.type] || PRACTICE_TYPE_META.journal;
-    const entry = { clientName: client ? client.name : 'Client', typeLabel: typeMeta.label, text, date: 'Just now' };
-    set((s) => ({ assignedPractices: [entry, ...s.assignedPractices], generatedPractice: null }));
+    // For a real (non-demo) AI batch selection, practiceForm.type is left
+    // unchanged (batch items carry no local type — see onUseBatchPractice),
+    // so typeMeta.label alone could describe a different practice than the
+    // one actually generated and persisted below. Prefer the AI's own title.
+    const entry = { clientName: client ? client.name : 'Client', typeLabel: generatedPracticeMeta?.title || typeMeta.label, text, date: 'Just now' };
+    set((s) => ({ assignedPractices: [entry, ...s.assignedPractices], generatedPractice: null, generatedPracticeMeta: null }));
+    if (!isDemo && practiceForm.clientId) {
+      assignWorkspacePractice({
+        clientId: practiceForm.clientId, therapistId,
+        title: generatedPracticeMeta?.title || typeMeta.label,
+        description: text,
+        category: generatedPracticeMeta?.category || PRACTICE_TYPE_TO_AI_CATEGORY[practiceForm.type] || 'general',
+        priority: generatedPracticeMeta?.priority || 'normal',
+        activityBlocks: generatedPracticeMeta?.activityBlocks || [],
+      }).then(({ error, warning }) => {
+        if (error) console.error('Failed to persist assigned practice:', error);
+        else if (warning) console.warn(warning);
+      });
+    }
   };
   const toggleAssignLesson = (idx) => set((s) => ({ assignedLessons: { ...s.assignedLessons, [idx]: !s.assignedLessons[idx] } }));
   const onCoTherapyMessageChange = (e) => set({ coTherapyMessage: e.target.value });
@@ -1001,15 +1059,40 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
   };
   const onPracticeGuidanceChange = (e) => set({ practiceGuidance: e.target.value });
   const onGeneratePracticeBatch = () => {
-    const { wound } = S.practiceForm;
-    const meta = WOUND_META[wound] || WOUND_META.abandonment;
-    const w = meta.label.toLowerCase();
-    const guidance = S.practiceGuidance.trim();
-    const suffix = guidance ? ` (focus: ${guidance})` : '';
-    const batch = Object.keys(PRACTICE_TYPE_META).map((key) => ({ type: key, label: PRACTICE_TYPE_META[key].label, text: PRACTICE_TYPE_META[key].tmpl(w) + suffix }));
-    set({ practiceBatchResults: batch });
+    const { clientId, wound } = S.practiceForm;
+    if (isDemo) {
+      const meta = WOUND_META[wound] || WOUND_META.abandonment;
+      const w = meta.label.toLowerCase();
+      const guidance = S.practiceGuidance.trim();
+      const suffix = guidance ? ` (focus: ${guidance})` : '';
+      const batch = Object.keys(PRACTICE_TYPE_META).map((key) => ({ type: key, label: PRACTICE_TYPE_META[key].label, text: PRACTICE_TYPE_META[key].tmpl(w) + suffix, meta: null }));
+      set({ practiceBatchResults: batch, practiceError: '' });
+      return;
+    }
+    const client = allClients().find((c) => c.id === clientId);
+    set({ practiceGenerating: true, practiceError: '', practiceBatchResults: [] });
+    practiceGenRef.current += 1;
+    const gen = practiceGenRef.current;
+    generateWorkspacePracticeBatch({
+      clientId, clientName: client?.name, woundType: wound, secondaryWound: client?.secondaryWound, guidance: S.practiceGuidance, count: 4,
+    }).then(({ data, error }) => {
+      if (practiceGenRef.current !== gen) return;
+      if (error) { set({ practiceGenerating: false, practiceError: error.message || 'Unable to generate practice drafts.' }); return; }
+      const batch = (data || []).map((item) => ({
+        label: item.title, text: item.description,
+        meta: { title: item.title, category: item.category, priority: item.priority, activityBlocks: item.activityBlocks },
+      }));
+      set({ practiceGenerating: false, practiceBatchResults: batch });
+    });
   };
-  const onUseBatchPractice = (item) => set((s) => ({ generatedPractice: item.text, practiceForm: { ...s.practiceForm, type: item.type }, practiceBatchResults: [] }));
+  // item.type is only present for demo-mode batch results (one per local
+  // PRACTICE_TYPE_META key) — real AI batch items don't carry it, so the
+  // type dropdown is left as-is for those.
+  const onUseBatchPractice = (item) => set((s) => ({
+    generatedPractice: item.text, generatedPracticeMeta: item.meta,
+    practiceForm: item.type ? { ...s.practiceForm, type: item.type } : s.practiceForm,
+    practiceBatchResults: [],
+  }));
   const onDeleteMessage = (clientId, idx) => set((s) => ({ deletedMessageIdx: { ...s.deletedMessageIdx, [clientId]: { ...(s.deletedMessageIdx[clientId] || {}), [idx]: true } } }));
   const applyQuickMessage = (text) => set({ clientMessageDraft: text });
   // Real pause/resume/end actions (api/live-session.js, via src/lib/liveSession.js)
