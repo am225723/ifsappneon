@@ -35,6 +35,25 @@ describe('buildView — overview metrics', () => {
     expect(v.stats.upcomingSessions).toBe(2); // Maya + Jordan submitted
     expect(v.stats.pendingReviews).toBe(2); // Maya + Jordan pending
   });
+  it('surfaces unread messages and open tasks as dashboard tiles, not just nav badges', () => {
+    // Maya + Jordan each have an unread client message in the seed data; Sam has none.
+    expect(v.stats.unreadMessages).toBe(2);
+    // 4 seeded demo tasks, all open.
+    expect(v.stats.openTasks).toBe(4);
+  });
+  it('the unread-messages and open-tasks tiles jump to their respective tabs', () => {
+    let tabSet = null;
+    const view = buildView({
+      S: { ...INITIAL_STATE }, theme: LIGHT, allClients: () => CLIENTS,
+      buildTreatmentPlan: (c) => ({ clientName: c.name, phases: [], milestones: [], currentPhaseLabel: '', currentPhaseDesc: '' }),
+      handlers: new Proxy({ isGroupExpanded: () => false, setTab: (id) => { tabSet = id; } }, { get: (t, p) => t[p] || (() => {}) }),
+      isAdmin: true,
+    });
+    view.goToMessages();
+    expect(tabSet).toBe('messages');
+    view.goToTasks();
+    expect(tabSet).toBe('tasks');
+  });
 });
 
 describe('buildView — navigation', () => {
