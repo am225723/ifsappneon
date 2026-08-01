@@ -1362,4 +1362,20 @@ describe('buildView — AI-Generated Practices draft can be edited, regenerated,
     expect(v.hasGeneratedPractice).toBe(true);
     expect(v.generatedPractice).toBe('');
   });
+
+  it('exposes a loading state while the real AI generation request is in flight', () => {
+    const v = makeView({ activeTab: 'clinical-practice', practiceGenerating: true });
+    expect(v.practiceGenerating).toBe(true);
+  });
+
+  it('surfaces a generation error message from the real AI backend', () => {
+    const v = makeView({ activeTab: 'clinical-practice', practiceError: 'Unable to generate a practice draft.' });
+    expect(v.practiceError).toBe('Unable to generate a practice draft.');
+  });
+
+  it('has no loading or error state by default', () => {
+    const v = makeView({ activeTab: 'clinical-practice' });
+    expect(v.practiceGenerating).toBe(false);
+    expect(v.practiceError).toBe('');
+  });
 });
