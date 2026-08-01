@@ -2517,7 +2517,7 @@ function PracticeView({ v }) {
             <div style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '8px' }}>AI-generated draft — edit as needed, then approve, regenerate, or reject.</div>
             <div style={{ display: 'flex', gap: '8px', marginTop: '10px', flexWrap: 'wrap' }}>
               <button onClick={v.onAssignPractice} style={v.secondaryBtnStyle}>Approve &amp; assign to client</button>
-              <button onClick={v.onGeneratePractice} style={v.secondaryBtnStyle}>🔁 Regenerate</button>
+              <button onClick={v.onGeneratePractice} disabled={v.practiceGenerating} style={{ ...v.secondaryBtnStyle, opacity: v.practiceGenerating ? 0.6 : 1, cursor: v.practiceGenerating ? 'not-allowed' : 'pointer' }}>{v.practiceGenerating ? 'Regenerating…' : '🔁 Regenerate'}</button>
               <button onClick={v.onRejectPractice} style={v.secondaryBtnStyle}>Reject</button>
             </div>
           </div>

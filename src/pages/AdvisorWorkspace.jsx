@@ -493,17 +493,28 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
     reportWindow.document.close();
   };
   const openPlanFor = (clientId) => set({ activeTab: 'clinical-plans', planClientId: clientId });
+  // Same invalidatePendingDoc pattern as the Document Creator: bumping the
+  // ref here (rather than only inside onGeneratePractice/onGeneratePracticeBatch
+  // themselves) means switching client/wound/type while a request is still
+  // in flight discards that response instead of letting a stale draft for
+  // the previous client populate the form under the newly selected one.
+  const invalidatePendingPractice = () => {
+    practiceGenRef.current += 1;
+    set((s) => (s.practiceGenerating ? { practiceGenerating: false } : null));
+  };
   const openPracticeFor = (clientId) => {
     const client = allClients().find((c) => c.id === clientId);
-    set((s) => ({ activeTab: 'clinical-practice', practiceForm: { ...s.practiceForm, clientId, wound: client ? client.primaryWound : s.practiceForm.wound }, generatedPractice: null }));
+    invalidatePendingPractice();
+    set((s) => ({ activeTab: 'clinical-practice', practiceForm: { ...s.practiceForm, clientId, wound: client ? client.primaryWound : s.practiceForm.wound }, generatedPractice: null, generatedPracticeMeta: null }));
   };
   const onPlanClientChange = (e) => set({ planClientId: e.target.value });
   const onPracticeClientChange = (e) => {
     const client = allClients().find((c) => c.id === e.target.value);
-    set((s) => ({ practiceForm: { ...s.practiceForm, clientId: e.target.value, wound: client ? client.primaryWound : s.practiceForm.wound }, generatedPractice: null }));
+    invalidatePendingPractice();
+    set((s) => ({ practiceForm: { ...s.practiceForm, clientId: e.target.value, wound: client ? client.primaryWound : s.practiceForm.wound }, generatedPractice: null, generatedPracticeMeta: null }));
   };
-  const onPracticeWoundChange = (e) => set((s) => ({ practiceForm: { ...s.practiceForm, wound: e.target.value }, generatedPractice: null }));
-  const onPracticeTypeChange = (e) => set((s) => ({ practiceForm: { ...s.practiceForm, type: e.target.value }, generatedPractice: null }));
+  const onPracticeWoundChange = (e) => { invalidatePendingPractice(); set((s) => ({ practiceForm: { ...s.practiceForm, wound: e.target.value }, generatedPractice: null, generatedPracticeMeta: null })); };
+  const onPracticeTypeChange = (e) => { invalidatePendingPractice(); set((s) => ({ practiceForm: { ...s.practiceForm, type: e.target.value }, generatedPractice: null, generatedPracticeMeta: null })); };
   const onGeneratePractice = () => {
     const { clientId, wound, type } = S.practiceForm;
     const meta = WOUND_META[wound] || WOUND_META.abandonment;
@@ -536,7 +547,11 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
     if (!text) return;
     const client = allClients().find((c) => c.id === practiceForm.clientId);
     const typeMeta = PRACTICE_TYPE_META[practiceForm.type] || PRACTICE_TYPE_META.journal;
-    const entry = { clientName: client ? client.name : 'Client', typeLabel: typeMeta.label, text, date: 'Just now' };
+    // For a real (non-demo) AI batch selection, practiceForm.type is left
+    // unchanged (batch items carry no local type — see onUseBatchPractice),
+    // so typeMeta.label alone could describe a different practice than the
+    // one actually generated and persisted below. Prefer the AI's own title.
+    const entry = { clientName: client ? client.name : 'Client', typeLabel: generatedPracticeMeta?.title || typeMeta.label, text, date: 'Just now' };
     set((s) => ({ assignedPractices: [entry, ...s.assignedPractices], generatedPractice: null, generatedPracticeMeta: null }));
     if (!isDemo && practiceForm.clientId) {
       assignWorkspacePractice({
@@ -546,8 +561,9 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
         category: generatedPracticeMeta?.category || PRACTICE_TYPE_TO_AI_CATEGORY[practiceForm.type] || 'general',
         priority: generatedPracticeMeta?.priority || 'normal',
         activityBlocks: generatedPracticeMeta?.activityBlocks || [],
-      }).then(({ error }) => {
+      }).then(({ error, warning }) => {
         if (error) console.error('Failed to persist assigned practice:', error);
+        else if (warning) console.warn(warning);
       });
     }
   };
