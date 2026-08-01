@@ -1294,11 +1294,18 @@ describe('buildView — Caseload Management shows email, level, safety, and a de
     expect(v.deactivatedClients).toEqual([]);
   });
 
-  it('surfaces deactivated clients with a Reactivate action wired to onReactivateClient', () => {
+  it('surfaces deactivated clients with a Reactivate action, and keeps them out of the active caseload, stats, review, and safety views', () => {
     let reactivatedId = null;
-    const S = { ...INITIAL_STATE, dischargedClients: [{ id: 'c1', name: 'Maya Chen', dischargedAt: '2026-07-15T00:00:00.000Z' }] };
+    // Mirrors what onDeactivateClient actually does in production: c1 is
+    // removed from baseClients (the driving list for allClients()) *and*
+    // added to dischargedClients — not just the latter in isolation.
+    const S = {
+      ...INITIAL_STATE,
+      baseClients: CLIENTS.filter((c) => c.id !== 'c1'),
+      dischargedClients: [{ id: 'c1', name: 'Maya Chen', dischargedAt: '2026-07-15T00:00:00.000Z' }],
+    };
     const view = buildView({
-      S, theme: LIGHT, allClients: () => CLIENTS,
+      S, theme: LIGHT, allClients: () => S.baseClients,
       buildTreatmentPlan: (c) => ({ clientName: c.name, phases: [], milestones: [], currentPhaseLabel: '', currentPhaseDesc: '' }),
       handlers: new Proxy({ isGroupExpanded: () => false, onReactivateClient: (id) => { reactivatedId = id; } }, { get: (t, p) => t[p] || (() => {}) }),
       isAdmin: true,
@@ -1308,6 +1315,11 @@ describe('buildView — Caseload Management shows email, level, safety, and a de
     expect(view.deactivatedClients[0].name).toBe('Maya Chen');
     view.deactivatedClients[0].onReactivate();
     expect(reactivatedId).toBe('c1');
+
+    expect(view.clientListFiltered.some((c) => c.id === 'c1')).toBe(false);
+    expect(view.stats.caseload).toBe(1); // Jordan only — Maya deactivated, Sam inactive
+    expect(view.reviewItems.some((r) => r.clientName === 'Maya Chen')).toBe(false);
+    expect(view.safetyRows.some((s) => s.name === 'Maya Chen')).toBe(false);
   });
 });
 

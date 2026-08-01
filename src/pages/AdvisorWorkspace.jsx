@@ -115,7 +115,6 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
   const riskAlertsLoaded = useRef(false);
   const liveSessionsLoaded = useRef(false);
   const tasksLoaded = useRef(false);
-  const dischargedClientsLoaded = useRef(false);
   // Tracks temp ids toggled locally before their create request resolved, so
   // that resolution can apply (and persist) the toggle instead of silently
   // reverting the row to the server's initial 'open' status.
@@ -135,6 +134,13 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
   const changeSummaryGenRef = useRef(0);
   // Same pattern again, scoped to AI Module Response Insights.
   const moduleInsightsGenRef = useRef(0);
+  // Same pattern again, scoped to caseload-assignment lifecycle mutations
+  // (deactivate/reactivate): bumped whenever one starts, so a periodic
+  // caseload refresh (or a reactivate's own follow-up refresh) that was
+  // already in flight when the mutation landed gets discarded instead of
+  // silently re-adding a just-deactivated client or dropping a
+  // just-reactivated one back out of view.
+  const lifecycleGenRef = useRef(0);
   useEffect(() => () => { genRef.current += 1; docGenRef.current += 1; snapshotGenRef.current += 1; changeSummaryGenRef.current += 1; moduleInsightsGenRef.current += 1; }, []);
   // setState-compatible merge helper (accepts object or updater fn)
   const set = (patch) => setS((prev) => ({ ...prev, ...(typeof patch === 'function' ? patch(prev) : patch) }));
@@ -154,17 +160,23 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
     riskAlertsLoaded.current = false;
     liveSessionsLoaded.current = false;
     tasksLoaded.current = false;
-    dischargedClientsLoaded.current = false;
     (async () => {
       try {
-        const clients = await loadWorkspaceCaseload(therapistId);
+        // Loaded alongside the active caseload (not lazily on Caseload-tab
+        // open) so an Advisor whose entire caseload has been deactivated
+        // still has something to render — otherwise the empty-caseload
+        // check below would strand them with no way back to Reactivate.
+        const [clients, discharged] = await Promise.all([
+          loadWorkspaceCaseload(therapistId),
+          loadWorkspaceDischargedClients(therapistId),
+        ]);
         if (cancelled) return;
         const firstId = clients[0]?.id || '';
         setS((prev) => ({
           ...prev,
           baseClients: clients,
           extraClients: [], deletedIds: {}, savedNotes: [],
-          tasks: [], notifications: [], liveSessions: [], coTherapyThread: [], riskAlerts: [], dischargedClients: [],
+          tasks: [], notifications: [], liveSessions: [], coTherapyThread: [], riskAlerts: [], dischargedClients: discharged,
           selectedClientId: firstId, activeThreadId: firstId, planClientId: firstId,
           newTaskClientId: firstId,
           noteDraft: { ...prev.noteDraft, clientId: firstId },
@@ -218,9 +230,20 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
     if (isDemo || loadPhase !== 'ready') return;
     const gen = genRef.current;
     const interval = setInterval(() => {
+      // Captured per-tick (not once outside the interval, like `gen` above):
+      // a deactivate/reactivate can land between ticks, and this tick's own
+      // in-flight request must still be discarded if one lands *during* it.
+      const lifecycleGen = lifecycleGenRef.current;
       loadWorkspaceCaseloadWithStatus(therapistId)
         .then(({ clients, complete }) => {
           if (genRef.current !== gen) return;
+          if (lifecycleGenRef.current !== lifecycleGen) {
+            // A deactivate/reactivate mutation landed while this refresh was
+            // in flight — it's already applied the authoritative state, so
+            // this now-stale snapshot must not silently re-add or drop a
+            // client out from under it.
+            return;
+          }
           if (!complete) {
             // A degraded/partial fetch (e.g. the fallback chain hit an error
             // partway through) is not an authoritative snapshot — applying it
@@ -278,6 +301,7 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
   const onDeactivateClient = (clientId) => {
     if (!therapistId || !clientId) return;
     const client = allClients().find((c) => c.id === clientId);
+    lifecycleGenRef.current += 1;
     deactivateWorkspaceClientAssignment(therapistId, clientId)
       .then(({ error }) => {
         if (error) { console.error('Failed to deactivate client assignment:', error); return; }
@@ -291,11 +315,14 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
   };
   const onReactivateClient = (clientId) => {
     if (!therapistId || !clientId) return;
+    lifecycleGenRef.current += 1;
+    const lifecycleGen = lifecycleGenRef.current;
     reactivateWorkspaceClientAssignment(therapistId, clientId)
       .then(({ error }) => {
         if (error) { console.error('Failed to reactivate client assignment:', error); return; }
         set((s) => ({ dischargedClients: s.dischargedClients.filter((d) => d.id !== clientId) }));
-        loadWorkspaceCaseload(therapistId).then((clients) => {
+        loadWorkspaceCaseloadWithStatus(therapistId).then(({ clients, complete }) => {
+          if (lifecycleGenRef.current !== lifecycleGen || !complete) return;
           set((s) => ({ baseClients: mergeCaseloadRefresh(s.baseClients, clients) }));
         });
       });
@@ -744,16 +771,6 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
     })));
   }, [isDemo, loadPhase, S.activeTab]);
 
-  // Lazily load this Advisor's deactivated (discharged) clients the first
-  // time the Caseload tab is opened — the same ifs_therapist_clients rows
-  // CaseloadManager.jsx already surfaces at /caseload, just not previously
-  // reachable from the workspace's own Caseload Management tab.
-  useEffect(() => {
-    if (isDemo || loadPhase !== 'ready' || S.activeTab !== 'clients-caseload' || dischargedClientsLoaded.current) return;
-    dischargedClientsLoaded.current = true;
-    loadWorkspaceDischargedClients(therapistId).then((rows) => set({ dischargedClients: rows }));
-  }, [isDemo, loadPhase, S.activeTab, therapistId]);
-
   // Lazily load the Advisor's real active/paused live guided-session rows
   // (ifs_live_sessions) the first time the Live Sessions tab is opened —
   // this tab's UI has always been fully built, just previously fed by
@@ -1050,7 +1067,11 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
     return <WorkspaceStatus theme={theme} message="We couldn’t load your caseload. Please refresh and try again." />;
   }
 
-  if (allClients().length === 0) {
+  // An Advisor whose whole caseload is deactivated (0 active, N discharged)
+  // still needs the real workspace shell to reach Caseload Management and
+  // Reactivate someone — only show the truly-empty state when there's
+  // nothing at all, active or discharged.
+  if (allClients().length === 0 && (S.dischargedClients || []).length === 0) {
     return <EmptyCaseload theme={theme} onReset={isDemo ? () => set(INITIAL_STATE) : undefined} />;
   }
 

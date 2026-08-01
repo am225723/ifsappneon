@@ -1054,7 +1054,7 @@ function ClientsCaseload({ v }) {
               {c.unassigned && (
                 <button type="button" onClick={c.onClaim} title="Add this client to my caseload" style={{ flexShrink: 0, fontSize: '11px', fontWeight: 700, padding: '8px 10px', borderRadius: '10px', border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text-2)', cursor: 'pointer', fontFamily: 'inherit' }}>Claim</button>
               )}
-              {!c.unassigned && (
+              {!v.isDemo && !c.unassigned && (
                 <button type="button" onClick={c.onDeactivate} title="Deactivate this client's assignment to your caseload" style={{ flexShrink: 0, fontSize: '11px', fontWeight: 700, padding: '8px 10px', borderRadius: '10px', border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text-2)', cursor: 'pointer', fontFamily: 'inherit' }}>Deactivate</button>
               )}
             </div>
