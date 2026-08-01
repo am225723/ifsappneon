@@ -416,7 +416,8 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
   useEffect(() => {
     if (loadPhase !== 'ready' || S.activeTab !== 'admin-access' || accessControlInitialized.current) return;
     accessControlInitialized.current = true;
-    const clientId = S.selectedClientId || allClients()[0]?.id || '';
+    const assigned = allClients().filter((c) => !c.unassigned);
+    const clientId = (assigned.some((c) => c.id === S.selectedClientId) ? S.selectedClientId : assigned[0]?.id) || '';
     if (clientId) onAccessControlClientChange(clientId);
   }, [loadPhase, S.activeTab]);
 
