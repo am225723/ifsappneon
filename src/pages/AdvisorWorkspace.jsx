@@ -437,12 +437,15 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
     const typeMeta = PRACTICE_TYPE_META[type] || PRACTICE_TYPE_META.journal;
     set({ generatedPractice: typeMeta.tmpl(meta.label.toLowerCase()) });
   };
+  const onPracticeDraftChange = (e) => set({ generatedPractice: e.target.value });
+  const onRejectPractice = () => set({ generatedPractice: null });
   const onAssignPractice = () => {
     const { practiceForm, generatedPractice } = S;
-    if (!generatedPractice) return;
+    const text = generatedPractice?.trim();
+    if (!text) return;
     const client = allClients().find((c) => c.id === practiceForm.clientId);
     const typeMeta = PRACTICE_TYPE_META[practiceForm.type] || PRACTICE_TYPE_META.journal;
-    const entry = { clientName: client ? client.name : 'Client', typeLabel: typeMeta.label, text: generatedPractice, date: 'Just now' };
+    const entry = { clientName: client ? client.name : 'Client', typeLabel: typeMeta.label, text, date: 'Just now' };
     set((s) => ({ assignedPractices: [entry, ...s.assignedPractices], generatedPractice: null }));
   };
   const toggleAssignLesson = (idx) => set((s) => ({ assignedLessons: { ...s.assignedLessons, [idx]: !s.assignedLessons[idx] } }));
@@ -1012,7 +1015,7 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
     handlers: {
       setTab, setViewMode, toggleTheme, selectClient, setClientTab, onSearch, setFilterWound, markReviewed, toggleSessionPrep, onClaimClient, onMarkAgendaReviewed,
       onNoteClientChange, onNoteTemplateChange, onNoteTextChange, onSaveNote, onSignNote, onAiNoteSaved, toggleSetting, draftNoteFor, openPrepFor, openPlanFor, openPracticeFor, onExportReport,
-      onPlanClientChange, onPracticeClientChange, onPracticeWoundChange, onPracticeTypeChange, onGeneratePractice, onAssignPractice, toggleAssignLesson,
+      onPlanClientChange, onPracticeClientChange, onPracticeWoundChange, onPracticeTypeChange, onGeneratePractice, onPracticeDraftChange, onRejectPractice, onAssignPractice, toggleAssignLesson,
       onCoTherapyMessageChange, onSendCoTherapyMessage, toggleCoTherapyShare, onGenerateReport, isGroupExpanded, toggleGroup,
       onClientMessageChange, onSendClientMessage, setActiveThread, addTaskFromMessage, onAcknowledgeSafety, onCreateSafetyPlan, setPartsClientFilter,
       setTaskFilter, onNewTaskTitleChange, onNewTaskClientChange, onAddTask, toggleTask, onDismissEngagement, toggleEngagementExpanded,
