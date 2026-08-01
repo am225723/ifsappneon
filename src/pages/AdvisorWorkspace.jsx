@@ -441,10 +441,11 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
   const onRejectPractice = () => set({ generatedPractice: null });
   const onAssignPractice = () => {
     const { practiceForm, generatedPractice } = S;
-    if (!generatedPractice) return;
+    const text = generatedPractice?.trim();
+    if (!text) return;
     const client = allClients().find((c) => c.id === practiceForm.clientId);
     const typeMeta = PRACTICE_TYPE_META[practiceForm.type] || PRACTICE_TYPE_META.journal;
-    const entry = { clientName: client ? client.name : 'Client', typeLabel: typeMeta.label, text: generatedPractice, date: 'Just now' };
+    const entry = { clientName: client ? client.name : 'Client', typeLabel: typeMeta.label, text, date: 'Just now' };
     set((s) => ({ assignedPractices: [entry, ...s.assignedPractices], generatedPractice: null }));
   };
   const toggleAssignLesson = (idx) => set((s) => ({ assignedLessons: { ...s.assignedLessons, [idx]: !s.assignedLessons[idx] } }));

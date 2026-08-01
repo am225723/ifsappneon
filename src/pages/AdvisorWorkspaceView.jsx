@@ -744,7 +744,7 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
     savedNotes: savedNotes.map((n) => ({ ...n, statusStyle: severityStyle(theme, n.status === 'Signed & Locked' ? 'low' : 'medium'), statusLabel: n.status })), allGoals,
     planClientId, onPlanClientChange: H.onPlanClientChange, treatmentPlan, hasPlanClient,
     practiceForm, woundOptions, practiceTypeOptions, onPracticeClientChange: H.onPracticeClientChange, onPracticeWoundChange: H.onPracticeWoundChange, onPracticeTypeChange: H.onPracticeTypeChange,
-    onGeneratePractice: H.onGeneratePractice, hasGeneratedPractice: !!generatedPractice, generatedPractice,
+    onGeneratePractice: H.onGeneratePractice, hasGeneratedPractice: generatedPractice != null, generatedPractice,
     onPracticeDraftChange: H.onPracticeDraftChange, onRejectPractice: H.onRejectPractice,
     onAssignPractice: H.onAssignPractice, assignedPractices, noAssignedPractices: assignedPractices.length === 0,
     lessons, mbcCaseloadRows, partsClientFilters, partsAllRows,
@@ -2469,7 +2469,7 @@ function PracticeView({ v }) {
         </div>
         {v.hasGeneratedPractice && (
           <div style={{ marginTop: '16px', padding: '16px', borderRadius: '14px', background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
-            <textarea value={v.generatedPractice} onChange={v.onPracticeDraftChange} rows={5} style={{ ...inp(), width: '100%', resize: 'vertical', fontSize: '13px', lineHeight: 1.6 }} />
+            <textarea value={v.generatedPractice || ''} onChange={v.onPracticeDraftChange} rows={5} aria-label="Generated practice draft" style={{ ...inp(), width: '100%', resize: 'vertical', fontSize: '13px', lineHeight: 1.6 }} />
             <div style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '8px' }}>AI-generated draft — edit as needed, then approve, regenerate, or reject.</div>
             <div style={{ display: 'flex', gap: '8px', marginTop: '10px', flexWrap: 'wrap' }}>
               <button onClick={v.onAssignPractice} style={v.secondaryBtnStyle}>Approve &amp; assign to client</button>

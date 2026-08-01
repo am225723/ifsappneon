@@ -1269,4 +1269,13 @@ describe('buildView — AI-Generated Practices draft can be edited, regenerated,
     expect(v.hasGeneratedPractice).toBe(false);
     expect(v.generatedPractice).toBeNull();
   });
+
+  it('keeps the draft (and its Reject/Regenerate actions) mounted even after the Advisor clears all the text', () => {
+    // A falsy-but-present '' must stay distinguishable from the null
+    // "nothing generated yet" state, or clearing the textarea would yank
+    // the whole editor (and the way back to it) out from under the Advisor.
+    const v = makeView({ activeTab: 'clinical-practice', generatedPractice: '' });
+    expect(v.hasGeneratedPractice).toBe(true);
+    expect(v.generatedPractice).toBe('');
+  });
 });
