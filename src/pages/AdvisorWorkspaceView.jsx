@@ -11,6 +11,7 @@ import {
   RESOURCE_TYPES, HEALING_STAGES,
 } from './advisorWorkspaceData.js';
 import { resources as RESOURCE_LIBRARY } from '../data/resourceLibraryData.js';
+import { MODULE_SEQUENCE as ACCESS_MODULE_SEQUENCE, ASSESSMENT_LABELS, FEATURE_LABELS } from '../data/accessControlData.js';
 
 // Mirrors partSuggestionEngine.js's type vocabulary ('protector', 'self',
 // legacy-import 'unknown', etc.) down onto the workspace's existing
@@ -35,6 +36,7 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
     coTherapyProgress, coTherapyProgressLoading, personalizedCurriculum, personalizedCurriculumLoading,
     resourceSearch, resourceType, resourceWound, resourceStage, dischargedClients,
     practiceGenerating, practiceError,
+    accessControlClientId, accessControlFullAccess, accessControlForm, accessControlSaving, accessControlSaved,
   } = S;
 
   const rootStyle = {
@@ -702,6 +704,38 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
     return { key, label: TOGGLE_META[key].label, desc: TOGGLE_META[key].desc, onClick: () => H.toggleSetting(key), trackStyle: { width: '40px', height: '22px', borderRadius: '999px', border: 'none', cursor: 'pointer', background: on ? theme.emerald2 : theme.border, position: 'relative', padding: '3px', display: 'flex', justifyContent: on ? 'flex-end' : 'flex-start' }, knobStyle: { width: '16px', height: '16px', borderRadius: '50%', background: '#fff' } };
   });
 
+  const accessToggleTrackStyle = (on, disabled) => ({
+    width: '40px', height: '22px', borderRadius: '999px', border: 'none', cursor: disabled ? 'default' : 'pointer',
+    background: on ? theme.emerald2 : theme.border, position: 'relative', padding: '3px',
+    display: 'flex', justifyContent: on ? 'flex-end' : 'flex-start', opacity: disabled ? 0.5 : 1,
+  });
+  const accessToggleKnobStyle = { width: '16px', height: '16px', borderRadius: '50%', background: '#fff' };
+  const accessControlClientOptions = assignedClients.map((c) => ({ id: c.id, name: c.name }));
+  const accessControlClient = ALL_CLIENTS.find((c) => c.id === accessControlClientId) || null;
+  const accessControlEffectiveForm = accessControlForm || { modules: [], assessments: [], features: {} };
+  const accessControlModuleRows = ACCESS_MODULE_SEQUENCE.map((m) => {
+    const on = accessControlFullAccess || accessControlEffectiveForm.modules.includes(m.id);
+    return {
+      key: m.id, label: `${m.order}. ${m.title}`, onClick: () => H.toggleAccessControlModule(m.id),
+      disabled: accessControlFullAccess, trackStyle: accessToggleTrackStyle(on, accessControlFullAccess), knobStyle: accessToggleKnobStyle,
+    };
+  });
+  const accessControlAssessmentRows = Object.keys(ASSESSMENT_LABELS).map((key) => {
+    const on = accessControlFullAccess || accessControlEffectiveForm.assessments.includes(key);
+    return {
+      key, label: ASSESSMENT_LABELS[key], onClick: () => H.toggleAccessControlAssessment(key),
+      disabled: accessControlFullAccess, trackStyle: accessToggleTrackStyle(on, accessControlFullAccess), knobStyle: accessToggleKnobStyle,
+    };
+  });
+  const accessControlFeatureRows = Object.keys(FEATURE_LABELS).map((key) => {
+    const on = accessControlFullAccess || accessControlEffectiveForm.features[key] !== false;
+    return {
+      key, label: FEATURE_LABELS[key], onClick: () => H.toggleAccessControlFeature(key),
+      disabled: accessControlFullAccess, trackStyle: accessToggleTrackStyle(on, accessControlFullAccess), knobStyle: accessToggleKnobStyle,
+    };
+  });
+  const accessControlFullAccessTrackStyle = accessToggleTrackStyle(accessControlFullAccess, false);
+
   const deletingClient = S.deletingClientId ? ALL_CLIENTS.find((c) => c.id === S.deletingClientId) : null;
   const deleteConfirmMatches = !!(deletingClient && S.deleteConfirmText.trim() === deletingClient.name);
 
@@ -804,6 +838,14 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
     notificationRows, noNotifications, notifUnreadCount, onMarkAllNotifsRead: H.onMarkAllNotifsRead,
     practiceGuidance: S.practiceGuidance, onPracticeGuidanceChange: H.onPracticeGuidanceChange, onGeneratePracticeBatch: H.onGeneratePracticeBatch, practiceBatchRows, hasPracticeBatch: practiceBatchRows.length > 0,
     quickMessages,
+    accessControlClientOptions, accessControlClientId, hasAccessControlClient: !!accessControlClient,
+    accessControlClientName: accessControlClient ? accessControlClient.name : '',
+    onAccessControlClientChange: H.onAccessControlClientChange,
+    accessControlFullAccess, accessControlFullAccessTrackStyle, accessControlFullAccessKnobStyle: accessToggleKnobStyle,
+    onToggleAccessControlFullAccess: H.toggleAccessControlFullAccess,
+    accessControlModuleRows, accessControlAssessmentRows, accessControlFeatureRows,
+    accessControlSaving: !!accessControlSaving, accessControlSaved,
+    onSaveAccessControl: H.onSaveAccessControl,
   };
 }
 
@@ -924,7 +966,7 @@ function CommandCenter({ v }) {
       {v.isClinicalPracticeInteractive && <ImportPanel title="Interactive Practice Builder" desc="Build guided, multi-step interactive modules — more than static prompts — and assign them to clients." to="/curriculum" linkLabel="Open Curriculum" />}
       {v.isClinicalCurriculumBuilder && <ImportPanel title="Custom Curriculum" desc="Design and assign an individualized curriculum path per client from the module library." to="/assessment-builder" linkLabel="Open Builder" />}
       {v.isInsightsReports && <ImportPanel title="Report Generator" desc="Create and export multiple report types across your caseload — progress summaries, treatment plan overviews, and more." to="/reports" linkLabel="Open Reports" />}
-      {v.isAdminAccess && <ImportPanel title="Access Control" desc="Manage roles and client access across your team." to="/admin-hub" linkLabel="Open Admin Hub" />}
+      {v.isAdminAccess && <AccessControlView v={v} />}
       {v.isAdminTeam && <ImportPanel title="Team & Caseloads" desc="Reassign clients across Advisors and supervisors." to="/admin-hub" linkLabel="Open Admin Hub" />}
       {v.isAdminAudit && <ImportPanel title="Audit & Consent Log" desc="Chronological record of clinical actions and consent events." to="/admin-hub" linkLabel="Open Admin Hub" />}
     </>
@@ -2801,6 +2843,64 @@ function EngagementView({ v }) {
           </div>
         </div>
       ))}
+    </div>
+  );
+}
+
+function AccessControlView({ v }) {
+  return (
+    <div style={{ maxWidth: '640px', ...CARD, display: 'flex', flexDirection: 'column', gap: '4px' }}>
+      <span style={{ ...FR, fontSize: '16px' }}>Client Access</span>
+      <div style={{ fontSize: '12.5px', color: 'var(--muted)', marginBottom: '14px' }}>
+        Control which modules, assessments, and features a client can reach in their own portal.
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
+        <select value={v.accessControlClientId} onChange={(e) => v.onAccessControlClientChange(e.target.value)} style={v.selectStyle}>
+          <option value="">Select a client…</option>
+          {v.accessControlClientOptions.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+        </select>
+      </div>
+      {v.hasAccessControlClient && (
+        <>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 4px', borderTop: '1px solid var(--border)' }}>
+            <div>
+              <div style={{ fontSize: '13.5px', fontWeight: 600, color: 'var(--text)' }}>Full access</div>
+              <div style={{ fontSize: '12px', color: 'var(--muted)', marginTop: '2px' }}>When on, {v.accessControlClientName} can reach every module, assessment, and feature.</div>
+            </div>
+            <button onClick={v.onToggleAccessControlFullAccess} style={v.accessControlFullAccessTrackStyle}><div style={v.accessControlFullAccessKnobStyle} /></button>
+          </div>
+
+          <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.04em', marginTop: '14px', paddingTop: '10px', borderTop: '1px solid var(--border)' }}>Modules</div>
+          {v.accessControlModuleRows.map((m) => (
+            <div key={m.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 4px' }}>
+              <div style={{ fontSize: '13px', color: 'var(--text)' }}>{m.label}</div>
+              <button onClick={m.onClick} disabled={m.disabled} style={m.trackStyle}><div style={m.knobStyle} /></button>
+            </div>
+          ))}
+
+          <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.04em', marginTop: '14px', paddingTop: '10px', borderTop: '1px solid var(--border)' }}>Assessments</div>
+          {v.accessControlAssessmentRows.map((a) => (
+            <div key={a.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 4px' }}>
+              <div style={{ fontSize: '13px', color: 'var(--text)' }}>{a.label}</div>
+              <button onClick={a.onClick} disabled={a.disabled} style={a.trackStyle}><div style={a.knobStyle} /></button>
+            </div>
+          ))}
+
+          <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.04em', marginTop: '14px', paddingTop: '10px', borderTop: '1px solid var(--border)' }}>Features</div>
+          {v.accessControlFeatureRows.map((f) => (
+            <div key={f.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 4px' }}>
+              <div style={{ fontSize: '13px', color: 'var(--text)' }}>{f.label}</div>
+              <button onClick={f.onClick} disabled={f.disabled} style={f.trackStyle}><div style={f.knobStyle} /></button>
+            </div>
+          ))}
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '18px', paddingTop: '14px', borderTop: '1px solid var(--border)' }}>
+            <button onClick={v.onSaveAccessControl} disabled={v.accessControlSaving || v.isDemo} style={v.primaryBtnStyle}>{v.accessControlSaving ? 'Saving…' : 'Save access'}</button>
+            {v.accessControlSaved && <span style={{ fontSize: '12.5px', color: 'var(--emerald-2)', fontWeight: 600 }}>{v.accessControlSaved}</span>}
+            {v.isDemo && <span style={{ fontSize: '12px', color: 'var(--muted)' }}>Sign in to save changes.</span>}
+          </div>
+        </>
+      )}
     </div>
   );
 }

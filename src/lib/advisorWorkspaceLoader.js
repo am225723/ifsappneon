@@ -96,6 +96,7 @@ export function mapClientRow(row) {
     phone: row.phone || '',
     status,
     unassigned,
+    accessRestrictions: row.access_restrictions || null,
     supportPriority: 'standard',
     primaryWound: 'abandonment',
     secondaryWound: 'shame',
@@ -723,6 +724,17 @@ export async function loadWorkspaceDischargedClients(therapistId) {
   } catch {
     return [];
   }
+}
+
+// Writes ifs_clients.access_restrictions exactly as TherapistDashboard.jsx's
+// own Access Controls modal already does (null = full access; otherwise
+// {modules, assessments, features}) — src/lib/accessControl.js already
+// reads this shape app-wide, just never previously writable from the
+// workspace's own admin-access tab.
+export async function updateWorkspaceClientAccessRestrictions(clientId, value) {
+  if (!clientId) return { error: { message: 'Missing client id' } };
+  const { error } = await supabase.from('ifs_clients').update({ access_restrictions: value }).eq('id', clientId);
+  return { error: error || null };
 }
 
 // Merge a freshly-loaded caseload into the previously-loaded one: new clients

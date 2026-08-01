@@ -176,6 +176,14 @@ describe('mapClientRow', () => {
     expect(c.messages).toEqual([]);
     expect(c.session.status).toBe('none');
     expect(c._detailLoaded).toBe(false);
+    expect(c.accessRestrictions).toBeNull();
+  });
+
+  it('carries through ifs_clients.access_restrictions when present', () => {
+    const restrictions = { modules: ['module-1-intro-ifs'], assessments: ['wounds'], features: { exercises: true } };
+    const row = { id: 'x3', name: 'Restricted Client', last_active: new Date().toISOString(), access_restrictions: restrictions };
+    const c = mapClientRow(row);
+    expect(c.accessRestrictions).toEqual(restrictions);
   });
 
   it('flags extended inactivity as a risk and inactive status', () => {
