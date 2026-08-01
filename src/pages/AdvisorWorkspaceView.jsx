@@ -149,7 +149,7 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
     caseload: assignedClients.filter((c) => c.status === 'active').length, needsAttention: needsAttentionRaw.length,
     upcomingSessions: assignedClients.filter((c) => c.session.status === 'submitted').length,
     pendingReviews: assignedClients.filter((c) => c.pendingReview && !reviewedIds['practice-' + c.id]).length,
-    unassigned: unassignedCount,
+    unassigned: unassignedCount, unreadMessages, openTasks: openTasksCount,
   };
   const quickActions = [
     { label: '+ Add client', onClick: () => H.setTab('clients-caseload') },
@@ -726,6 +726,7 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
     disclaimerStyle,
     stats, quickActions, needsAttention: needsAttentionRaw, noAttentionNeeded: needsAttentionRaw.length === 0,
     todaysSessions, caseloadSnapshot, goToReview: () => H.setTab('review'), goToClients: () => H.setTab('clients-caseload'),
+    goToMessages: () => H.setTab('messages'), goToTasks: () => H.setTab('tasks'),
     woundFilters, clientListFiltered, hasSelectedClient, selectedClient, clientTabs,
     isClientTabOverview: activeClientTab === 'overview', isClientTabAssessments: activeClientTab === 'assessments', isClientTabTimeline: activeClientTab === 'timeline', isClientTabNotes: activeClientTab === 'notes',
     isClientTabPlan: activeClientTab === 'plan', isClientTabMbc: activeClientTab === 'mbc', isClientTabParts: activeClientTab === 'parts',
@@ -897,18 +898,23 @@ function Overview({ v }) {
     { key: 'needs', color: 'var(--risk-high-text)', value: v.stats.needsAttention, label: 'Need attention' },
     { key: 'upcoming', color: 'var(--emerald)', value: v.stats.upcomingSessions, label: 'Upcoming sessions' },
     { key: 'pending', color: 'var(--risk-med-text)', value: v.stats.pendingReviews, label: 'Pending reviews' },
+    { key: 'messages', color: 'var(--accent-2)', value: v.stats.unreadMessages, label: 'Unread messages', onClick: () => v.goToMessages() },
+    { key: 'tasks', color: 'var(--emerald-2)', value: v.stats.openTasks, label: 'Open tasks', onClick: () => v.goToTasks() },
   ];
   const hasUnassigned = (v.stats.unassigned || 0) > 0;
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '22px' }}>
-      <div style={{ display: 'grid', gridTemplateColumns: `repeat(${hasUnassigned ? 5 : 4},1fr)`, gap: '16px' }}>
-        {statCards.map((s) => (
-          <div key={s.key} style={{ ...CARD, borderRadius: '18px', padding: '18px 20px' }}>
-            <div style={{ width: '8px', height: '8px', borderRadius: '2px', background: s.color, marginBottom: '10px' }} />
-            <div style={{ fontSize: '26px', fontWeight: 700, color: 'var(--text)', fontFamily: "'Fraunces',serif" }}>{s.value}</div>
-            <div style={{ fontSize: '12.5px', color: 'var(--muted)', marginTop: '2px' }}>{s.label}</div>
-          </div>
-        ))}
+      <div style={{ display: 'grid', gridTemplateColumns: `repeat(${hasUnassigned ? statCards.length + 1 : statCards.length},1fr)`, gap: '16px' }}>
+        {statCards.map((s) => {
+          const Tag = s.onClick ? 'button' : 'div';
+          return (
+            <Tag key={s.key} type={s.onClick ? 'button' : undefined} onClick={s.onClick} style={{ ...CARD, borderRadius: '18px', padding: '18px 20px', textAlign: 'left', cursor: s.onClick ? 'pointer' : 'default', font: 'inherit' }}>
+              <div style={{ width: '8px', height: '8px', borderRadius: '2px', background: s.color, marginBottom: '10px' }} />
+              <div style={{ fontSize: '26px', fontWeight: 700, color: 'var(--text)', fontFamily: "'Fraunces',serif" }}>{s.value}</div>
+              <div style={{ fontSize: '12.5px', color: 'var(--muted)', marginTop: '2px' }}>{s.label}</div>
+            </Tag>
+          );
+        })}
         {hasUnassigned && (
           <button type="button" onClick={v.goToClients} style={{ ...CARD, borderRadius: '18px', padding: '18px 20px', textAlign: 'left', cursor: 'pointer', font: 'inherit' }}>
             <div style={{ width: '8px', height: '8px', borderRadius: '2px', background: 'var(--risk-med-text)', marginBottom: '10px' }} />
