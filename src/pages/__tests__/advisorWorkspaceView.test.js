@@ -1238,3 +1238,35 @@ describe('buildView — Engagement & Dropout Risk evidence drill-down', () => {
     expect(toggledId).toBe('c1');
   });
 });
+
+describe('buildView — AI-Generated Practices draft can be edited, regenerated, or rejected', () => {
+  it('wires the draft textarea to an edit handler and exposes regenerate/reject actions', () => {
+    let editedTo = null; let regenerated = false; let rejected = false;
+    const S = { ...INITIAL_STATE, generatedPractice: 'Original AI-generated draft text.' };
+    const view = buildView({
+      S, theme: LIGHT, allClients: () => CLIENTS,
+      buildTreatmentPlan: (c) => ({ clientName: c.name, phases: [], milestones: [], currentPhaseLabel: '', currentPhaseDesc: '' }),
+      handlers: new Proxy({
+        isGroupExpanded: () => false,
+        onPracticeDraftChange: (e) => { editedTo = e.target.value; },
+        onGeneratePractice: () => { regenerated = true; },
+        onRejectPractice: () => { rejected = true; },
+      }, { get: (t, p) => t[p] || (() => {}) }),
+      isAdmin: true,
+    });
+    expect(view.hasGeneratedPractice).toBe(true);
+    expect(view.generatedPractice).toBe('Original AI-generated draft text.');
+    view.onPracticeDraftChange({ target: { value: 'Edited by the Advisor before assigning.' } });
+    expect(editedTo).toBe('Edited by the Advisor before assigning.');
+    view.onGeneratePractice();
+    expect(regenerated).toBe(true);
+    view.onRejectPractice();
+    expect(rejected).toBe(true);
+  });
+
+  it('has no draft to show, edit, or reject before anything is generated', () => {
+    const v = makeView({ activeTab: 'clinical-practice' });
+    expect(v.hasGeneratedPractice).toBe(false);
+    expect(v.generatedPractice).toBeNull();
+  });
+});

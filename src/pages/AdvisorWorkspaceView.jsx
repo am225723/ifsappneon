@@ -744,7 +744,9 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
     savedNotes: savedNotes.map((n) => ({ ...n, statusStyle: severityStyle(theme, n.status === 'Signed & Locked' ? 'low' : 'medium'), statusLabel: n.status })), allGoals,
     planClientId, onPlanClientChange: H.onPlanClientChange, treatmentPlan, hasPlanClient,
     practiceForm, woundOptions, practiceTypeOptions, onPracticeClientChange: H.onPracticeClientChange, onPracticeWoundChange: H.onPracticeWoundChange, onPracticeTypeChange: H.onPracticeTypeChange,
-    onGeneratePractice: H.onGeneratePractice, hasGeneratedPractice: !!generatedPractice, generatedPractice, onAssignPractice: H.onAssignPractice, assignedPractices, noAssignedPractices: assignedPractices.length === 0,
+    onGeneratePractice: H.onGeneratePractice, hasGeneratedPractice: !!generatedPractice, generatedPractice,
+    onPracticeDraftChange: H.onPracticeDraftChange, onRejectPractice: H.onRejectPractice,
+    onAssignPractice: H.onAssignPractice, assignedPractices, noAssignedPractices: assignedPractices.length === 0,
     lessons, mbcCaseloadRows, partsClientFilters, partsAllRows,
     docForm, docTypeOptions, docSourceRows,
     onDocClientChange: H.onDocClientChange, onDocTypeChange: H.onDocTypeChange, onDocDateChange: H.onDocDateChange,
@@ -2467,9 +2469,13 @@ function PracticeView({ v }) {
         </div>
         {v.hasGeneratedPractice && (
           <div style={{ marginTop: '16px', padding: '16px', borderRadius: '14px', background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
-            <div style={{ fontSize: '13px', color: 'var(--text)', lineHeight: 1.6 }}>{v.generatedPractice}</div>
-            <div style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '8px' }}>AI-generated draft — requires Advisor review before assigning.</div>
-            <button onClick={v.onAssignPractice} style={{ ...v.secondaryBtnStyle, marginTop: '10px' }}>Approve &amp; assign to client</button>
+            <textarea value={v.generatedPractice} onChange={v.onPracticeDraftChange} rows={5} style={{ ...inp(), width: '100%', resize: 'vertical', fontSize: '13px', lineHeight: 1.6 }} />
+            <div style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '8px' }}>AI-generated draft — edit as needed, then approve, regenerate, or reject.</div>
+            <div style={{ display: 'flex', gap: '8px', marginTop: '10px', flexWrap: 'wrap' }}>
+              <button onClick={v.onAssignPractice} style={v.secondaryBtnStyle}>Approve &amp; assign to client</button>
+              <button onClick={v.onGeneratePractice} style={v.secondaryBtnStyle}>🔁 Regenerate</button>
+              <button onClick={v.onRejectPractice} style={v.secondaryBtnStyle}>Reject</button>
+            </div>
           </div>
         )}
         {v.hasPracticeBatch && (
