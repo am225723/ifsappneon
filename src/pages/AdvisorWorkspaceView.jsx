@@ -33,7 +33,7 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
     curriculumReflections, curriculumReflectionsLoading, homeworkFeedbackDraft, selfEnergyTrend, selfEnergyTrendLoading,
     unburdeningRecord, unburdeningRecordLoading, partSuggestions, partSuggestionsLoading,
     coTherapyProgress, coTherapyProgressLoading, personalizedCurriculum, personalizedCurriculumLoading,
-    resourceSearch, resourceType, resourceWound, resourceStage,
+    resourceSearch, resourceType, resourceWound, resourceStage, dischargedClients,
   } = S;
 
   const rootStyle = {
@@ -180,15 +180,28 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
     .filter((c) => c.name.toLowerCase().includes(search.toLowerCase()))
     .map((c) => {
       const selected = c.id === selectedClientId;
+      const safety = getSafety(c);
+      const hasElevatedSafety = safety.riskLevel === 'high' || safety.riskLevel === 'urgent';
       return {
-        id: c.id, name: c.name, initial: c.initial, lastActiveText: c.lastActiveText,
+        id: c.id, name: c.name, initial: c.initial, lastActiveText: c.lastActiveText, email: c.email, level: c.level,
         woundChip: woundChip(c.primaryWound, isDark, true), woundLabel: WOUND_META[c.primaryWound].label, hasRisk: !!c.risk,
+        hasElevatedSafety, safetyChip: severityStyle(theme, safety.riskLevel === 'urgent' ? 'high' : 'medium'), safetyLabel: safety.riskLevel === 'urgent' ? 'Urgent safety' : 'Safety risk',
         unassigned: !!c.unassigned, unassignedChip: severityStyle(theme, 'medium'),
         rowStyle: { display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', borderRadius: '16px', cursor: 'pointer', background: selected ? 'var(--surface-2)' : 'transparent', border: '1px solid ' + (selected ? theme.border : (c.unassigned ? theme.riskMedBorder : 'transparent')) },
         onClick: () => H.selectClient(c.id),
         onClaim: () => H.onClaimClient(c.id),
+        onDeactivate: (e) => { e.stopPropagation(); H.onDeactivateClient(c.id); },
       };
     });
+
+  // Clients this Advisor has deactivated (ifs_therapist_clients status =
+  // 'discharged') — kept in a separate state slice rather than baseClients
+  // so they never leak into caseload-wide stats, needs-attention, etc.
+  const deactivatedClients = (dischargedClients || []).map((d) => ({
+    id: d.id, name: d.name,
+    dischargedLabel: d.dischargedAt ? `Deactivated ${new Date(d.dischargedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}` : 'Deactivated',
+    onReactivate: () => H.onReactivateClient(d.id),
+  }));
 
   const hasSelectedClient = enrichedClients.some((c) => c.id === selectedClientId);
   const rawSelected = enrichedClients.find((c) => c.id === selectedClientId) || enrichedClients[0];
@@ -728,6 +741,7 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
     todaysSessions, caseloadSnapshot, goToReview: () => H.setTab('review'), goToClients: () => H.setTab('clients-caseload'),
     goToMessages: () => H.setTab('messages'), goToTasks: () => H.setTab('tasks'),
     woundFilters, clientListFiltered, hasSelectedClient, selectedClient, clientTabs,
+    deactivatedClients, hasDeactivatedClients: deactivatedClients.length > 0,
     isClientTabOverview: activeClientTab === 'overview', isClientTabAssessments: activeClientTab === 'assessments', isClientTabTimeline: activeClientTab === 'timeline', isClientTabNotes: activeClientTab === 'notes',
     isClientTabPlan: activeClientTab === 'plan', isClientTabMbc: activeClientTab === 'mbc', isClientTabParts: activeClientTab === 'parts',
     isClientTabPractices: activeClientTab === 'practices', isClientTabSafety: activeClientTab === 'safety', isClientTabMessages: activeClientTab === 'messages',
@@ -1023,12 +1037,15 @@ function ClientsCaseload({ v }) {
                 <div style={{ width: '38px', height: '38px', borderRadius: '50%', background: 'var(--accent-2)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '13px', flexShrink: 0 }}>{c.initial}</div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text)' }}>{c.name}</div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '3px' }}>
+                  {c.email && <div style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '1px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.email}</div>}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '3px', flexWrap: 'wrap' }}>
                     {c.unassigned ? (
                       <span style={c.unassignedChip}>Unassigned</span>
                     ) : (
                       <span style={c.woundChip}>{c.woundLabel}</span>
                     )}
+                    <span style={{ fontSize: '10.5px', color: 'var(--muted)', fontWeight: 600 }}>Lvl {c.level}</span>
+                    {c.hasElevatedSafety && <span style={c.safetyChip}>{c.safetyLabel}</span>}
                     <span style={{ fontSize: '11.5px', color: 'var(--muted)' }}>{c.lastActiveText}</span>
                   </div>
                 </div>
@@ -1037,9 +1054,27 @@ function ClientsCaseload({ v }) {
               {c.unassigned && (
                 <button type="button" onClick={c.onClaim} title="Add this client to my caseload" style={{ flexShrink: 0, fontSize: '11px', fontWeight: 700, padding: '8px 10px', borderRadius: '10px', border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text-2)', cursor: 'pointer', fontFamily: 'inherit' }}>Claim</button>
               )}
+              {!c.unassigned && (
+                <button type="button" onClick={c.onDeactivate} title="Deactivate this client's assignment to your caseload" style={{ flexShrink: 0, fontSize: '11px', fontWeight: 700, padding: '8px 10px', borderRadius: '10px', border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text-2)', cursor: 'pointer', fontFamily: 'inherit' }}>Deactivate</button>
+              )}
             </div>
           ))}
         </div>
+
+        {v.hasDeactivatedClients && (
+          <div style={{ ...CARD, borderRadius: '16px', padding: '14px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--muted)', letterSpacing: '0.03em', textTransform: 'uppercase' }}>Deactivated ({v.deactivatedClients.length})</span>
+            {v.deactivatedClients.map((d) => (
+              <div key={d.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 0' }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text)' }}>{d.name}</div>
+                  <div style={{ fontSize: '11px', color: 'var(--muted)' }}>{d.dischargedLabel}</div>
+                </div>
+                <button type="button" onClick={d.onReactivate} style={{ flexShrink: 0, fontSize: '11px', fontWeight: 700, padding: '7px 10px', borderRadius: '10px', border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text-2)', cursor: 'pointer', fontFamily: 'inherit' }}>Reactivate</button>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {v.hasSelectedClient && sc && (

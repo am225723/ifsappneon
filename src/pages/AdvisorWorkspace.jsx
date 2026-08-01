@@ -14,6 +14,7 @@ import {
   loadWorkspaceUnburdeningRecord, loadWorkspacePartSuggestions, generateWorkspaceModuleInsights,
   loadWorkspaceActiveLiveSessions, loadWorkspaceCoTherapyProgress, loadWorkspacePersonalizedCurriculum,
   loadWorkspaceTasks, createWorkspaceTask, toggleWorkspaceTask,
+  deactivateWorkspaceClientAssignment, reactivateWorkspaceClientAssignment, loadWorkspaceDischargedClients,
 } from '../lib/advisorWorkspaceLoader.js';
 import { loadAdvisorSessionSnapshot } from '../lib/unifiedGuidance.js';
 import { generateSessionPrepSummary } from '../lib/sessionPrepSummary.js';
@@ -72,6 +73,7 @@ export const INITIAL_STATE = {
   riskAlerts: [],
   accessOverrides: {}, settingsAccent: 'amber',
   resourceSearch: '', resourceType: 'all', resourceWound: 'all', resourceStage: 'all',
+  dischargedClients: [],
   extraClients: [], deletedIds: {},
   showNewClientForm: false, newClientForm: { name: '', email: '', phone: '', sendEmail: true }, newClientResult: null,
   deletingClientId: null, deleteConfirmText: '',
@@ -113,6 +115,7 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
   const riskAlertsLoaded = useRef(false);
   const liveSessionsLoaded = useRef(false);
   const tasksLoaded = useRef(false);
+  const dischargedClientsLoaded = useRef(false);
   // Tracks temp ids toggled locally before their create request resolved, so
   // that resolution can apply (and persist) the toggle instead of silently
   // reverting the row to the server's initial 'open' status.
@@ -151,6 +154,7 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
     riskAlertsLoaded.current = false;
     liveSessionsLoaded.current = false;
     tasksLoaded.current = false;
+    dischargedClientsLoaded.current = false;
     (async () => {
       try {
         const clients = await loadWorkspaceCaseload(therapistId);
@@ -160,7 +164,7 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
           ...prev,
           baseClients: clients,
           extraClients: [], deletedIds: {}, savedNotes: [],
-          tasks: [], notifications: [], liveSessions: [], coTherapyThread: [], riskAlerts: [],
+          tasks: [], notifications: [], liveSessions: [], coTherapyThread: [], riskAlerts: [], dischargedClients: [],
           selectedClientId: firstId, activeThreadId: firstId, planClientId: firstId,
           newTaskClientId: firstId,
           noteDraft: { ...prev.noteDraft, clientId: firstId },
@@ -264,6 +268,36 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
         set((s) => ({
           baseClients: (s.baseClients || []).map((c) => (c.id === clientId ? { ...c, unassigned: false, _detailLoaded: false } : c)),
         }));
+      });
+  };
+
+  // Deactivate/reactivate this Advisor's own assignment to a client
+  // (discharge vs. active on ifs_therapist_clients). Reversible via
+  // Reactivate below, so no confirmation prompt — unlike onConfirmDelete,
+  // which permanently removes a client and requires typing their name.
+  const onDeactivateClient = (clientId) => {
+    if (!therapistId || !clientId) return;
+    const client = allClients().find((c) => c.id === clientId);
+    deactivateWorkspaceClientAssignment(therapistId, clientId)
+      .then(({ error }) => {
+        if (error) { console.error('Failed to deactivate client assignment:', error); return; }
+        const remaining = (S.baseClients || []).filter((c) => c.id !== clientId);
+        set((s) => ({
+          baseClients: (s.baseClients || []).filter((c) => c.id !== clientId),
+          selectedClientId: s.selectedClientId === clientId ? (remaining[0]?.id || '') : s.selectedClientId,
+          dischargedClients: [{ id: clientId, name: client?.name || 'Client', dischargedAt: new Date().toISOString() }, ...s.dischargedClients],
+        }));
+      });
+  };
+  const onReactivateClient = (clientId) => {
+    if (!therapistId || !clientId) return;
+    reactivateWorkspaceClientAssignment(therapistId, clientId)
+      .then(({ error }) => {
+        if (error) { console.error('Failed to reactivate client assignment:', error); return; }
+        set((s) => ({ dischargedClients: s.dischargedClients.filter((d) => d.id !== clientId) }));
+        loadWorkspaceCaseload(therapistId).then((clients) => {
+          set((s) => ({ baseClients: mergeCaseloadRefresh(s.baseClients, clients) }));
+        });
       });
   };
 
@@ -710,6 +744,16 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
     })));
   }, [isDemo, loadPhase, S.activeTab]);
 
+  // Lazily load this Advisor's deactivated (discharged) clients the first
+  // time the Caseload tab is opened — the same ifs_therapist_clients rows
+  // CaseloadManager.jsx already surfaces at /caseload, just not previously
+  // reachable from the workspace's own Caseload Management tab.
+  useEffect(() => {
+    if (isDemo || loadPhase !== 'ready' || S.activeTab !== 'clients-caseload' || dischargedClientsLoaded.current) return;
+    dischargedClientsLoaded.current = true;
+    loadWorkspaceDischargedClients(therapistId).then((rows) => set({ dischargedClients: rows }));
+  }, [isDemo, loadPhase, S.activeTab, therapistId]);
+
   // Lazily load the Advisor's real active/paused live guided-session rows
   // (ifs_live_sessions) the first time the Live Sessions tab is opened —
   // this tab's UI has always been fully built, just previously fed by
@@ -1014,6 +1058,7 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
     S, theme, allClients, buildTreatmentPlan, isAdmin, isDemo,
     handlers: {
       setTab, setViewMode, toggleTheme, selectClient, setClientTab, onSearch, setFilterWound, markReviewed, toggleSessionPrep, onClaimClient, onMarkAgendaReviewed,
+      onDeactivateClient, onReactivateClient,
       onNoteClientChange, onNoteTemplateChange, onNoteTextChange, onSaveNote, onSignNote, onAiNoteSaved, toggleSetting, draftNoteFor, openPrepFor, openPlanFor, openPracticeFor, onExportReport,
       onPlanClientChange, onPracticeClientChange, onPracticeWoundChange, onPracticeTypeChange, onGeneratePractice, onPracticeDraftChange, onRejectPractice, onAssignPractice, toggleAssignLesson,
       onCoTherapyMessageChange, onSendCoTherapyMessage, toggleCoTherapyShare, onGenerateReport, isGroupExpanded, toggleGroup,
