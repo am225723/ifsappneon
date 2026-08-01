@@ -1283,6 +1283,15 @@ describe('buildView — Messages search filters threads by name and by message c
     expect(v.noThreadsMatchSearch).toBe(true);
   });
 
+  it('excludes a deleted message from search matching and from the preview', () => {
+    // Maya's messages[0] is the "sister" message onDeleteMessage would mark
+    // deleted at index 0 (same [...c.messages, ...clientMessages] order the
+    // thread derivation and onDeleteMessage both use).
+    const v = makeView({ messageSearch: 'sister', deletedMessageIdx: { c1: { 0: true } } });
+    expect(v.threadList).toEqual([]);
+    expect(v.noThreadsMatchSearch).toBe(true);
+  });
+
   it('wires the search input to a change handler', () => {
     let searched = null;
     const S = { ...INITIAL_STATE };

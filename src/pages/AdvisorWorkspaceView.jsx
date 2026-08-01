@@ -538,9 +538,12 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
   // one, so it's clear why the thread matched.
   const messageSearchLower = (messageSearch || '').trim().toLowerCase();
   const threadList = enrichedClients
-    .filter((c) => c.messages.length > 0 || (clientMessages[c.id] || []).length > 0)
     .map((c) => {
-      const all = [...c.messages, ...(clientMessages[c.id] || [])];
+      // Same index-based delete map onDeleteMessage/activeThread already use
+      // (built over this identical [...c.messages, ...clientMessages] order)
+      // — a deleted message must not resurface via search or as a preview.
+      const deletedIdx = deletedMessageIdx[c.id] || {};
+      const all = [...c.messages, ...(clientMessages[c.id] || [])].filter((_, idx) => !deletedIdx[idx]);
       const last = all[all.length - 1];
       const hasUnread = hasUnreadFor(c);
       const nameMatches = !messageSearchLower || c.name.toLowerCase().includes(messageSearchLower);
@@ -551,11 +554,12 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
         id: c.id, initial: c.initial, name: c.name,
         preview: matchingMessage ? matchingMessage.text : (last ? last.text : ''),
         hasUnread, onClick: () => H.setActiveThread(c.id),
+        hasMessages: all.length > 0,
         rowStyle: { display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', borderRadius: '14px', cursor: 'pointer', background: activeThreadId === c.id ? theme.surface2 : 'transparent' },
         matches: nameMatches || !!matchingMessage,
       };
     })
-    .filter((t) => t.matches);
+    .filter((t) => t.hasMessages && t.matches);
   const noThreadsMatchSearch = messageSearchLower.length > 0 && threadList.length === 0;
   const activeThreadClient = enrichedClients.find((c) => c.id === activeThreadId) || enrichedClients[0];
   const activeThreadMsgs = [...activeThreadClient.messages, ...(clientMessages[activeThreadClient.id] || [])];
