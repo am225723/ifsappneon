@@ -54,7 +54,7 @@ export const INITIAL_STATE = {
   coTherapyThread: [{ author: 'Dr. Patel', text: 'Flagging Jordan’s risk note for joint review before Thursday.', date: 'Yesterday' }],
   reports: [{ title: 'Caseload Summary — June 2026', date: 'Jul 1, 2026' }],
   settingsToggles: { riskAlerts: true, weeklyDigest: true, sessionReminders: false },
-  clientMessages: {}, clientMessageDraft: '', activeThreadId: 'c2', readThreads: {},
+  clientMessages: {}, clientMessageDraft: '', activeThreadId: 'c2', readThreads: {}, messageSearch: '',
   safetyOverrides: {}, engagementDismissed: {}, engagementExpanded: {}, partsClientFilter: 'all',
   tasks: [
     { id: 't1', title: 'Sign session note — Maya Chen', clientId: 'c1', priority: 'medium', due: 'Today', status: 'open', category: 'Documentation' },
@@ -589,6 +589,7 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
   };
 
   const onClientMessageChange = (e) => set({ clientMessageDraft: e.target.value });
+  const onMessageSearchChange = (e) => set({ messageSearch: e.target.value });
   const currentThreadClientId = () => (S.activeTab === 'messages' ? S.activeThreadId : S.selectedClientId);
   const onSendClientMessage = () => {
     const text = S.clientMessageDraft.trim();
@@ -1166,7 +1167,7 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
       onNoteClientChange, onNoteTemplateChange, onNoteTextChange, onSaveNote, onSignNote, onAiNoteSaved, toggleSetting, draftNoteFor, openPrepFor, openPlanFor, openPracticeFor, onExportReport,
       onPlanClientChange, onPracticeClientChange, onPracticeWoundChange, onPracticeTypeChange, onGeneratePractice, onPracticeDraftChange, onRejectPractice, onAssignPractice, toggleAssignLesson,
       onCoTherapyMessageChange, onSendCoTherapyMessage, toggleCoTherapyShare, onGenerateReport, isGroupExpanded, toggleGroup,
-      onClientMessageChange, onSendClientMessage, setActiveThread, addTaskFromMessage, onAcknowledgeSafety, onCreateSafetyPlan, setPartsClientFilter,
+      onClientMessageChange, onSendClientMessage, onMessageSearchChange, setActiveThread, addTaskFromMessage, onAcknowledgeSafety, onCreateSafetyPlan, setPartsClientFilter,
       setTaskFilter, onNewTaskTitleChange, onNewTaskClientChange, onAddTask, toggleTask, onDismissEngagement, toggleEngagementExpanded,
       onResourceSearchChange, setResourceType, setResourceWound, setResourceStage,
       onDocClientChange, onDocTypeChange, onDocDateChange, toggleDocSource, onGenerateDoc, onOpenGeneratedDoc, toggleNewClientForm, onNewClientFieldChange, onCreateClient,
