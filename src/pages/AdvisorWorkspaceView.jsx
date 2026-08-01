@@ -27,7 +27,7 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
     activeTab, isDark, viewMode, selectedClientId, activeClientTab, search, filterWound, reviewedIds,
     sessionPrepOpenId, noteDraft, savedNotes, planClientId, practiceForm, generatedPractice, assignedPractices,
     assignedLessons, coTherapyShare, coTherapyMessage, coTherapyThread, reports, settingsToggles, clientMessages,
-    clientMessageDraft, activeThreadId, safetyOverrides, engagementDismissed, engagementExpanded, partsClientFilter, tasks, taskFilter,
+    clientMessageDraft, activeThreadId, safetyOverrides, engagementDismissed, engagementExpanded, partsClientFilter, tasks, taskFilter, messageSearch,
     newTaskTitle, newTaskClientId, docForm, docSources, generatedDoc, docGenerating, docError, clientReports, clientReportsLoading, deletedMessageIdx,
     sessionSnapshot, changeSummary, moduleInsights, lifeReflections, lifeReflectionsLoading, healingTimeline, riskAlerts,
     curriculumReflections, curriculumReflectionsLoading, homeworkFeedbackDraft, selfEnergyTrend, selfEnergyTrendLoading,
@@ -532,12 +532,35 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
     shareKnobStyle: { width: '16px', height: '16px', borderRadius: '50%', background: '#fff' }, onRequestConsult: () => H.onSendCoTherapyMessage(),
   } : null;
 
-  const threadList = enrichedClients.filter((c) => c.messages.length > 0 || (clientMessages[c.id] || []).length > 0).map((c) => {
-    const all = [...c.messages, ...(clientMessages[c.id] || [])];
-    const last = all[all.length - 1];
-    const hasUnread = hasUnreadFor(c);
-    return { id: c.id, initial: c.initial, name: c.name, preview: last ? last.text : '', hasUnread, onClick: () => H.setActiveThread(c.id), rowStyle: { display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', borderRadius: '14px', cursor: 'pointer', background: activeThreadId === c.id ? theme.surface2 : 'transparent' } };
-  });
+  // Searches both the client name and every message in the thread — a
+  // thread whose name doesn't match but contains a matching message still
+  // surfaces, with that message shown as the preview instead of the last
+  // one, so it's clear why the thread matched.
+  const messageSearchLower = (messageSearch || '').trim().toLowerCase();
+  const threadList = enrichedClients
+    .map((c) => {
+      // Same index-based delete map onDeleteMessage/activeThread already use
+      // (built over this identical [...c.messages, ...clientMessages] order)
+      // — a deleted message must not resurface via search or as a preview.
+      const deletedIdx = deletedMessageIdx[c.id] || {};
+      const all = [...c.messages, ...(clientMessages[c.id] || [])].filter((_, idx) => !deletedIdx[idx]);
+      const last = all[all.length - 1];
+      const hasUnread = hasUnreadFor(c);
+      const nameMatches = !messageSearchLower || c.name.toLowerCase().includes(messageSearchLower);
+      const matchingMessage = messageSearchLower && !nameMatches
+        ? [...all].reverse().find((m) => m.text.toLowerCase().includes(messageSearchLower))
+        : null;
+      return {
+        id: c.id, initial: c.initial, name: c.name,
+        preview: matchingMessage ? matchingMessage.text : (last ? last.text : ''),
+        hasUnread, onClick: () => H.setActiveThread(c.id),
+        hasMessages: all.length > 0,
+        rowStyle: { display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', borderRadius: '14px', cursor: 'pointer', background: activeThreadId === c.id ? theme.surface2 : 'transparent' },
+        matches: nameMatches || !!matchingMessage,
+      };
+    })
+    .filter((t) => t.hasMessages && t.matches);
+  const noThreadsMatchSearch = messageSearchLower.length > 0 && threadList.length === 0;
   const activeThreadClient = enrichedClients.find((c) => c.id === activeThreadId) || enrichedClients[0];
   const activeThreadMsgs = [...activeThreadClient.messages, ...(clientMessages[activeThreadClient.id] || [])];
   const activeThreadDeleted = deletedMessageIdx[activeThreadClient.id] || {};
@@ -750,7 +773,7 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
     reviewItems, reviewQueueEmpty, safetyRows,
     prepList, coTherapy, hasCoTherapyClient, coTherapyMessage, onCoTherapyMessageChange: H.onCoTherapyMessageChange, onSendCoTherapyMessage: H.onSendCoTherapyMessage,
     clientMessageDraft, onClientMessageChange: H.onClientMessageChange, onSendClientMessage: H.onSendClientMessage,
-    threadList, activeThread,
+    threadList, activeThread, messageSearch, onMessageSearchChange: H.onMessageSearchChange, noThreadsMatchSearch,
     taskFilters, taskRows, noTasks, newTaskTitle, newTaskClientId, onNewTaskTitleChange: H.onNewTaskTitleChange, onNewTaskClientChange: H.onNewTaskClientChange, onAddTask: H.onAddTask,
     resourceSearch, onResourceSearchChange: H.onResourceSearchChange, resourceTypeFilters, resourceWoundFilters, resourceStageFilters, resourceRows, noResources,
     noteDraft: { ...noteDraft, placeholder: currentTemplate.placeholder }, clientOptions, templateOptions: TEMPLATE_OPTIONS,
@@ -2146,6 +2169,8 @@ function MessagesView({ v }) {
       <div style={v.disclaimerStyle}>Messages are checked during business hours and are not monitored for emergencies. In a crisis, call 911 or a local crisis line.</div>
       <div style={{ display: 'grid', gridTemplateColumns: '300px 1fr', gap: '20px', alignItems: 'start' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <input value={v.messageSearch} onChange={v.onMessageSearchChange} placeholder="Search threads and messages..." style={inp()} />
+          {v.noThreadsMatchSearch && <div style={{ padding: '14px', textAlign: 'center', color: 'var(--muted)', fontSize: '12.5px' }}>No threads or messages match.</div>}
           {v.threadList.map((t) => (
             <div key={t.id} onClick={t.onClick} style={t.rowStyle}>
               <div style={avatar(36)}>{t.initial}</div>

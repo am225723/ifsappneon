@@ -1258,6 +1258,54 @@ describe('buildView — Engagement & Dropout Risk evidence drill-down', () => {
   });
 });
 
+describe('buildView — Messages search filters threads by name and by message content', () => {
+  it('lists every thread with messages unfiltered by default', () => {
+    const v = makeView();
+    expect(v.threadList.map((t) => t.name).sort()).toEqual(['Jordan Reyes', 'Maya Chen']);
+    expect(v.noThreadsMatchSearch).toBe(false);
+  });
+
+  it('filters by client name', () => {
+    const v = makeView({ messageSearch: 'Jordan' });
+    expect(v.threadList.map((t) => t.name)).toEqual(['Jordan Reyes']);
+  });
+
+  it('surfaces a thread whose name does not match but whose message content does, previewing the matching message', () => {
+    const v = makeView({ messageSearch: 'sister' });
+    expect(v.threadList).toHaveLength(1);
+    expect(v.threadList[0].name).toBe('Maya Chen');
+    expect(v.threadList[0].preview).toContain('sister');
+  });
+
+  it('reports no matches (without crashing) for a search that hits nothing', () => {
+    const v = makeView({ messageSearch: 'xyz-not-in-any-thread' });
+    expect(v.threadList).toEqual([]);
+    expect(v.noThreadsMatchSearch).toBe(true);
+  });
+
+  it('excludes a deleted message from search matching and from the preview', () => {
+    // Maya's messages[0] is the "sister" message onDeleteMessage would mark
+    // deleted at index 0 (same [...c.messages, ...clientMessages] order the
+    // thread derivation and onDeleteMessage both use).
+    const v = makeView({ messageSearch: 'sister', deletedMessageIdx: { c1: { 0: true } } });
+    expect(v.threadList).toEqual([]);
+    expect(v.noThreadsMatchSearch).toBe(true);
+  });
+
+  it('wires the search input to a change handler', () => {
+    let searched = null;
+    const S = { ...INITIAL_STATE };
+    const view = buildView({
+      S, theme: LIGHT, allClients: () => CLIENTS,
+      buildTreatmentPlan: (c) => ({ clientName: c.name, phases: [], milestones: [], currentPhaseLabel: '', currentPhaseDesc: '' }),
+      handlers: new Proxy({ isGroupExpanded: () => false, onMessageSearchChange: (e) => { searched = e.target.value; } }, { get: (t, p) => t[p] || (() => {}) }),
+      isAdmin: true,
+    });
+    view.onMessageSearchChange({ target: { value: 'boundary' } });
+    expect(searched).toBe('boundary');
+  });
+});
+
 describe('buildView — Caseload Management shows email, level, safety, and a deactivate control', () => {
   it('shows each row\'s email and gamification level, previously only visible after opening the client', () => {
     const v = makeView();
