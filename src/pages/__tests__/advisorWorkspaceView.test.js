@@ -1258,6 +1258,71 @@ describe('buildView — Engagement & Dropout Risk evidence drill-down', () => {
   });
 });
 
+describe('buildView — Caseload Management shows email, level, safety, and a deactivate control', () => {
+  it('shows each row\'s email and gamification level, previously only visible after opening the client', () => {
+    const v = makeView();
+    const maya = v.clientListFiltered.find((c) => c.id === 'c1');
+    expect(maya.email).toBe('maya.chen@example.com');
+    expect(maya.level).toBe(5);
+  });
+
+  it('flags a client with an elevated (high/urgent) safety risk level, but not a "monitor"-level one', () => {
+    const v = makeView();
+    const jordan = v.clientListFiltered.find((c) => c.id === 'c2'); // riskLevel: 'high'
+    expect(jordan.hasElevatedSafety).toBe(true);
+    expect(jordan.safetyLabel).toBe('Safety risk');
+    const maya = v.clientListFiltered.find((c) => c.id === 'c1'); // riskLevel: 'none'
+    expect(maya.hasElevatedSafety).toBe(false);
+  });
+
+  it('wires each row\'s Deactivate action through to onDeactivateClient', () => {
+    let deactivatedId = null;
+    const view = buildView({
+      S: { ...INITIAL_STATE }, theme: LIGHT, allClients: () => CLIENTS,
+      buildTreatmentPlan: (c) => ({ clientName: c.name, phases: [], milestones: [], currentPhaseLabel: '', currentPhaseDesc: '' }),
+      handlers: new Proxy({ isGroupExpanded: () => false, onDeactivateClient: (id) => { deactivatedId = id; } }, { get: (t, p) => t[p] || (() => {}) }),
+      isAdmin: true,
+    });
+    const maya = view.clientListFiltered.find((c) => c.id === 'c1');
+    maya.onDeactivate({ stopPropagation: () => {} });
+    expect(deactivatedId).toBe('c1');
+  });
+
+  it('has no deactivated clients to show by default', () => {
+    const v = makeView();
+    expect(v.hasDeactivatedClients).toBe(false);
+    expect(v.deactivatedClients).toEqual([]);
+  });
+
+  it('surfaces deactivated clients with a Reactivate action, and keeps them out of the active caseload, stats, review, and safety views', () => {
+    let reactivatedId = null;
+    // Mirrors what onDeactivateClient actually does in production: c1 is
+    // removed from baseClients (the driving list for allClients()) *and*
+    // added to dischargedClients — not just the latter in isolation.
+    const S = {
+      ...INITIAL_STATE,
+      baseClients: CLIENTS.filter((c) => c.id !== 'c1'),
+      dischargedClients: [{ id: 'c1', name: 'Maya Chen', dischargedAt: '2026-07-15T00:00:00.000Z' }],
+    };
+    const view = buildView({
+      S, theme: LIGHT, allClients: () => S.baseClients,
+      buildTreatmentPlan: (c) => ({ clientName: c.name, phases: [], milestones: [], currentPhaseLabel: '', currentPhaseDesc: '' }),
+      handlers: new Proxy({ isGroupExpanded: () => false, onReactivateClient: (id) => { reactivatedId = id; } }, { get: (t, p) => t[p] || (() => {}) }),
+      isAdmin: true,
+    });
+    expect(view.hasDeactivatedClients).toBe(true);
+    expect(view.deactivatedClients).toHaveLength(1);
+    expect(view.deactivatedClients[0].name).toBe('Maya Chen');
+    view.deactivatedClients[0].onReactivate();
+    expect(reactivatedId).toBe('c1');
+
+    expect(view.clientListFiltered.some((c) => c.id === 'c1')).toBe(false);
+    expect(view.stats.caseload).toBe(1); // Jordan only — Maya deactivated, Sam inactive
+    expect(view.reviewItems.some((r) => r.clientName === 'Maya Chen')).toBe(false);
+    expect(view.safetyRows.some((s) => s.name === 'Maya Chen')).toBe(false);
+  });
+});
+
 describe('buildView — AI-Generated Practices draft can be edited, regenerated, or rejected', () => {
   it('wires the draft textarea to an edit handler and exposes regenerate/reject actions', () => {
     let editedTo = null; let regenerated = false; let rejected = false;

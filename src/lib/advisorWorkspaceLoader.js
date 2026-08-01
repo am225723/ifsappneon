@@ -7,7 +7,7 @@
 // source (e.g. MBC measures, structured safety plans) degrade to neutral empty
 // states rather than inventing data.
 
-import { loadAssignedClients, loadAssignedClientsWithStatus, assignClientToTherapist } from './therapistAssignments';
+import { loadAssignedClients, loadAssignedClientsWithStatus, loadCaseloadClients, assignClientToTherapist, dischargeClientAssignment, reactivateClientAssignment } from './therapistAssignments';
 import { loadClientAnalytics } from './clientAnalytics';
 import { loadTherapistNotesForClient, createTherapistNote } from './therapistNotes';
 import { loadActiveTreatmentPlansForClient } from './treatmentPlans';
@@ -688,6 +688,39 @@ export async function claimWorkspaceClient(therapistId, clientId, names = {}) {
   if (!therapistId || !clientId) return { error: { message: 'Missing therapist or client id' } };
   const { error } = await assignClientToTherapist(therapistId, clientId, 'active', names);
   return { error: error || null };
+}
+
+// Deactivate/reactivate this Advisor's own assignment to a client (discharge
+// vs. active on ifs_therapist_clients) — the "activate/deactivate control"
+// the feature audit flagged as missing from Caseload Management. Client data
+// itself is untouched; this only controls whether the client shows up in
+// this Advisor's active caseload.
+export async function deactivateWorkspaceClientAssignment(therapistId, clientId) {
+  if (!therapistId || !clientId) return { error: { message: 'Missing therapist or client id' } };
+  const { error } = await dischargeClientAssignment(therapistId, clientId);
+  return { error: error || null };
+}
+
+export async function reactivateWorkspaceClientAssignment(therapistId, clientId) {
+  if (!therapistId || !clientId) return { error: { message: 'Missing therapist or client id' } };
+  const { error } = await reactivateClientAssignment(therapistId, clientId);
+  return { error: error || null };
+}
+
+// This Advisor's deactivated (discharged) clients — same underlying
+// ifs_therapist_clients rows CaseloadManager.jsx already surfaces at
+// /caseload, just not previously reachable from the workspace's own
+// Caseload Management tab.
+export async function loadWorkspaceDischargedClients(therapistId) {
+  if (!therapistId) return [];
+  try {
+    const rows = await loadCaseloadClients();
+    return (rows || [])
+      .filter((row) => row.assignment_status && row.assignment_status !== 'active')
+      .map((row) => ({ id: row.id, name: row.name || 'Unnamed client', dischargedAt: row.discharged_at || null }));
+  } catch {
+    return [];
+  }
 }
 
 // Merge a freshly-loaded caseload into the previously-loaded one: new clients
