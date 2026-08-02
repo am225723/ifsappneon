@@ -738,6 +738,34 @@ export async function updateWorkspaceClientAccessRestrictions(clientId, value) {
   return { error: error || null };
 }
 
+// Same two real, working queries AdminHub.jsx's loadData already runs
+// (ifs_clients filtered to staff roles, and active ifs_therapist_clients
+// assignments) — the workspace's own Admin > Team & Caseloads tab was a
+// link-out placeholder with none of this wired in.
+export async function loadWorkspaceTeamAssignments() {
+  try {
+    const [{ data: therapistRows, error: therapistError }, { data: assignmentRows, error: assignmentError }] = await Promise.all([
+      supabase.from('ifs_clients').select('id, name, email, user_role').in('user_role', ['therapist', 'advisor', 'admin', 'supervisor']).order('name', { ascending: true }),
+      supabase.from('ifs_therapist_clients').select('*').eq('status', 'active').order('assigned_at', { ascending: false }),
+    ]);
+    if (therapistError || assignmentError) return { therapists: [], assignments: [] };
+    return { therapists: therapistRows || [], assignments: assignmentRows || [] };
+  } catch {
+    return { therapists: [], assignments: [] };
+  }
+}
+
+// Same update AdminHub.jsx's reassignClient already runs.
+export async function reassignWorkspaceClient({ clientId, fromTherapistId, toTherapistId, toTherapistName }) {
+  if (!clientId || !fromTherapistId || !toTherapistId) return { error: { message: 'Missing reassignment details' } };
+  const { error } = await supabase
+    .from('ifs_therapist_clients')
+    .update({ therapist_id: toTherapistId, therapist_name: toTherapistName || null, assigned_at: new Date().toISOString() })
+    .eq('therapist_id', fromTherapistId)
+    .eq('client_id', clientId);
+  return { error: error || null };
+}
+
 // Merge a freshly-loaded caseload into the previously-loaded one: new clients
 // (e.g. a signup that landed after the page opened) are added as-is; clients
 // that already had their detail records loaded keep that enrichment and only

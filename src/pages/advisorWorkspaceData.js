@@ -68,6 +68,26 @@ export function daysAgoText(n) {
   if (n === 1) return 'Yesterday';
   return n + ' days ago';
 }
+// Same column set and quoting TherapistDashboard.jsx's handleExportCSV
+// already builds (minus pin/joinDate, which aren't mapped onto the workspace
+// client shape) — the Advisor Workspace's own Caseload view had no export
+// action at all.
+export function buildCaseloadCsv(clients) {
+  const headers = ['Name', 'Email', 'Status', 'Primary Wound', 'Secondary Wound', 'Progress %', 'Modules Completed', 'Last Active'];
+  const rows = (clients || []).map((c) => [
+    c.name,
+    c.email,
+    c.status,
+    WOUND_META[c.primaryWound]?.label || c.primaryWound,
+    WOUND_META[c.secondaryWound]?.label || c.secondaryWound,
+    c.progressPct,
+    c.modulesCompleted,
+    daysAgoText(c.lastActiveDays),
+  ]);
+  return [headers, ...rows]
+    .map((row) => row.map((cell) => `"${String(cell ?? '').replace(/"/g, '""')}"`).join(','))
+    .join('\n');
+}
 export function severityStyle(theme, level) {
   const map = {
     high: { bg: theme.riskHighBg, text: theme.riskHighText, border: theme.riskHighBorder },

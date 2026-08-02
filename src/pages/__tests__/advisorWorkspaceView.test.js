@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { buildView } from '../AdvisorWorkspaceView.jsx';
 import { INITIAL_STATE } from '../AdvisorWorkspace.jsx';
-import { LIGHT, CLIENTS, PLAN_PHASES, daysAgoText } from '../advisorWorkspaceData.js';
+import { LIGHT, CLIENTS, PLAN_PHASES, daysAgoText, buildCaseloadCsv } from '../advisorWorkspaceData.js';
 
 // Minimal, side-effect-free harness that drives the real derivation engine the
 // Advisor Workspace UI renders from.
@@ -1586,6 +1586,97 @@ describe('buildView — Assessments tab can set a review reminder (reuses create
     const unassigned = { ...CLIENT_WITH_ASSESSMENT, id: 'as-unassigned', unassigned: true };
     const v = makeView({ extraClients: [unassigned], selectedClientId: 'as-unassigned' });
     expect(v.selectedClient.assessmentHistory[0].onRemind).toBeUndefined();
+  });
+});
+
+describe('buildCaseloadCsv — Caseload CSV export (mirrors TherapistDashboard.jsx\'s handleExportCSV)', () => {
+  it('builds a header row plus one quoted row per client', () => {
+    const csv = buildCaseloadCsv([
+      { name: 'Maya Chen', email: 'maya@example.com', status: 'active', primaryWound: 'abandonment', secondaryWound: 'shame', progressPct: 42, modulesCompleted: 5, lastActiveDays: 0 },
+    ]);
+    const lines = csv.split('\n');
+    expect(lines[0]).toBe('"Name","Email","Status","Primary Wound","Secondary Wound","Progress %","Modules Completed","Last Active"');
+    expect(lines[1]).toContain('"Maya Chen"');
+    expect(lines[1]).toContain('"maya@example.com"');
+    expect(lines[1]).toContain('"Today"');
+  });
+
+  it('escapes embedded quotes and handles an empty caseload', () => {
+    const csv = buildCaseloadCsv([{ name: 'Say "Hi"', email: '', status: 'active', primaryWound: 'abandonment', secondaryWound: 'shame', progressPct: 0, modulesCompleted: 0, lastActiveDays: null }]);
+    expect(csv).toContain('"Say ""Hi"""');
+    expect(buildCaseloadCsv([]).split('\n')).toHaveLength(1);
+  });
+
+  it('wires the Caseload view\'s Export CSV button to onExportCaseloadCsv', () => {
+    let exported = false;
+    const view = buildView({
+      S: { ...INITIAL_STATE }, theme: LIGHT, allClients: () => CLIENTS,
+      buildTreatmentPlan: (c) => ({ clientName: c.name, phases: [], milestones: [], currentPhaseLabel: '', currentPhaseDesc: '' }),
+      handlers: new Proxy({ isGroupExpanded: () => false, onExportCaseloadCsv: () => { exported = true; } }, { get: (t, p) => t[p] || (() => {}) }),
+      isAdmin: true,
+    });
+    view.onExportCaseloadCsv();
+    expect(exported).toBe(true);
+  });
+});
+
+describe('buildView — Admin Team & Caseloads reassignment (mirrors AdminHub.jsx)', () => {
+  const THERAPISTS = [{ id: 'th1', name: 'Dr. Rivera', email: 'rivera@example.com', user_role: 'therapist' }, { id: 'th2', name: 'Dr. Patel', email: 'patel@example.com', user_role: 'supervisor' }];
+  const ASSIGNMENTS = [{ therapist_id: 'th1', client_id: 'c1', client_name: 'Maya Chen', assigned_at: '2026-06-01T00:00:00Z', status: 'active' }];
+
+  it('groups active assignments under each staff member', () => {
+    const v = makeView({ teamTherapists: THERAPISTS, teamAssignments: ASSIGNMENTS });
+    const rivera = v.teamRows.find((t) => t.id === 'th1');
+    expect(rivera.caseloadCount).toBe(1);
+    expect(rivera.clients[0].name).toBe('Maya Chen');
+    const patel = v.teamRows.find((t) => t.id === 'th2');
+    expect(patel.caseloadCount).toBe(0);
+    expect(v.noTeamRows).toBe(false);
+  });
+
+  it('reports no staff accounts when the team list is empty and not loading', () => {
+    const v = makeView();
+    expect(v.teamRows).toEqual([]);
+    expect(v.noTeamRows).toBe(true);
+  });
+
+  it('wires a client\'s Reassign action, offering every other staff member as a target', () => {
+    let selected = null;
+    const view = buildView({
+      S: { ...INITIAL_STATE, teamTherapists: THERAPISTS, teamAssignments: ASSIGNMENTS },
+      theme: LIGHT, allClients: () => CLIENTS,
+      buildTreatmentPlan: (c) => ({ clientName: c.name, phases: [], milestones: [], currentPhaseLabel: '', currentPhaseDesc: '' }),
+      handlers: new Proxy({ isGroupExpanded: () => false, onSelectReassignTarget: (therapistId, clientId, clientName) => { selected = [therapistId, clientId, clientName]; } }, { get: (t, p) => t[p] || (() => {}) }),
+      isAdmin: true,
+    });
+    view.teamRows.find((t) => t.id === 'th1').clients[0].onReassign();
+    expect(selected).toEqual(['th1', 'c1', 'Maya Chen']);
+  });
+
+  it('shows the reassignment panel once a target is selected, excluding the current Advisor from the options', () => {
+    const v = makeView({ teamTherapists: THERAPISTS, reassignTherapistId: 'th1', reassignClientId: 'c1', reassignClientName: 'Maya Chen' });
+    expect(v.hasReassignTarget).toBe(true);
+    expect(v.reassignTargetOptions.map((o) => o.id)).toEqual(['th2']);
+  });
+
+  it('wires the save/cancel/select actions', () => {
+    const calls = {};
+    const view = buildView({
+      S: { ...INITIAL_STATE, teamTherapists: THERAPISTS, reassignTherapistId: 'th1', reassignClientId: 'c1', reassignClientName: 'Maya Chen', reassignToTherapistId: 'th2' },
+      theme: LIGHT, allClients: () => CLIENTS,
+      buildTreatmentPlan: (c) => ({ clientName: c.name, phases: [], milestones: [], currentPhaseLabel: '', currentPhaseDesc: '' }),
+      handlers: new Proxy({
+        isGroupExpanded: () => false,
+        onCancelReassign: () => { calls.cancelled = true; },
+        onReassignToTherapistChange: (e) => { calls.changedTo = e.target.value; },
+        onSaveReassignment: () => { calls.saved = true; },
+      }, { get: (t, p) => t[p] || (() => {}) }),
+      isAdmin: true,
+    });
+    view.onCancelReassign();
+    view.onReassignToTherapistChange({ target: { value: 'th2' } });
+    view.onSaveReassignment();
+    expect(calls).toEqual({ cancelled: true, changedTo: 'th2', saved: true });
   });
 });
 
