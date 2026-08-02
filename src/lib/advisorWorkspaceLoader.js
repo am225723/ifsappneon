@@ -850,6 +850,15 @@ export async function sendWorkspaceMessage(therapistId, clientId, text) {
   return { error: error || null };
 }
 
+// Same delete already used by TherapistMessages.jsx's handleDelete — the
+// Advisor Workspace's own "delete" only hid a message locally
+// (deletedMessageIdx), so it silently reappeared on the next reload.
+export async function deleteWorkspaceMessage(therapistId, messageId) {
+  if (!therapistId || !messageId) return { error: { message: 'Missing message id' } };
+  const { error } = await supabase.from('ifs_messages').delete().eq('id', messageId).eq('therapist_id', therapistId);
+  return { error: error || null };
+}
+
 // Generates a real clinical/progress report via api/generate-report.js, which
 // aggregates the client's actual treatment plans, notes, session agendas,
 // homework, parts, mood entries, journals, and module responses into an HTML
@@ -918,6 +927,26 @@ export async function loadWorkspaceReports(clientId, limit = 8) {
       .from('ifs_generated_reports')
       .select('id, report_type, title, sections_included, date_range_start, date_range_end, generated_at')
       .eq('client_id', clientId)
+      .order('generated_at', { ascending: false })
+      .limit(limit);
+    if (error) return [];
+    return data || [];
+  } catch {
+    return [];
+  }
+}
+
+// Caseload-wide variant of loadWorkspaceReports above — same
+// ifs_generated_reports table (already populated by the Document Creator's
+// real backend, api/generate-report.js), just not filtered to one client.
+// The Insights & Reports nav item previously only linked out to /reports.
+export async function loadWorkspaceCaseloadReports(therapistId, limit = 20) {
+  if (!therapistId) return [];
+  try {
+    const { data, error } = await supabase
+      .from('ifs_generated_reports')
+      .select('id, client_id, report_type, title, sections_included, date_range_start, date_range_end, generated_at')
+      .eq('therapist_id', therapistId)
       .order('generated_at', { ascending: false })
       .limit(limit);
     if (error) return [];

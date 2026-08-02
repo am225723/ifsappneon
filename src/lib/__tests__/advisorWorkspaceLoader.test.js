@@ -146,7 +146,7 @@ vi.mock('../curriculumReflections.js', () => ({
 
 const {
   initialsFrom, daysSince, mapClientRow, mapNoteEntry, deriveWorkspaceDetail, WORKSPACE_WOUNDS, mergeCaseloadRefresh,
-  generateWorkspaceReport, generateWorkspaceModuleInsights, loadWorkspaceReports, loadWorkspaceNotifications, markWorkspaceNotificationRead, markAllWorkspaceNotificationsRead,
+  generateWorkspaceReport, generateWorkspaceModuleInsights, loadWorkspaceReports, loadWorkspaceCaseloadReports, loadWorkspaceNotifications, markWorkspaceNotificationRead, markAllWorkspaceNotificationsRead,
   loadWorkspaceLifeReflections, buildClientReportHtml, markWorkspaceAgendaReviewed, loadWorkspaceHealingTimeline,
   loadCaseloadRiskAlerts, loadWorkspaceCurriculumReflections,
   markWorkspaceHomeworkReviewed, archiveWorkspaceHomework, refreshWorkspaceHomeworkForClient,
@@ -827,6 +827,27 @@ describe('loadWorkspaceReports', () => {
   it('returns an empty array (not a throw) when the query errors', async () => {
     mockReportRows = { data: null, error: { message: 'db down' } };
     const rows = await loadWorkspaceReports('c1');
+    expect(rows).toEqual([]);
+    mockReportRows = { data: [], error: null };
+  });
+});
+
+describe('loadWorkspaceCaseloadReports', () => {
+  it('returns an empty array without a therapistId', async () => {
+    expect(await loadWorkspaceCaseloadReports(null)).toEqual([]);
+  });
+
+  it('returns mapped report audit rows across the whole caseload, including client_id', async () => {
+    mockReportRows = { data: [{ id: 'r1', client_id: 'c1', report_type: 'clinical_summary', title: 'Clinical Summary — Maya Chen', sections_included: ['Growth Goals'], generated_at: '2026-07-01T00:00:00Z' }], error: null };
+    const rows = await loadWorkspaceCaseloadReports('t1');
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ id: 'r1', client_id: 'c1', title: 'Clinical Summary — Maya Chen' });
+    mockReportRows = { data: [], error: null };
+  });
+
+  it('returns an empty array (not a throw) when the query errors', async () => {
+    mockReportRows = { data: null, error: { message: 'db down' } };
+    const rows = await loadWorkspaceCaseloadReports('t1');
     expect(rows).toEqual([]);
     mockReportRows = { data: [], error: null };
   });

@@ -5,8 +5,8 @@ import {
   DOC_SOURCES_DEFAULT, NAV_CONFIG, DEFAULT_NOTIFICATION_PREFS,
 } from './advisorWorkspaceData.js';
 import {
-  loadWorkspaceCaseload, loadWorkspaceCaseloadWithStatus, loadWorkspaceClientDetail, sendWorkspaceMessage, persistTherapistNote,
-  claimWorkspaceClient, mergeCaseloadRefresh, generateWorkspaceReport, loadWorkspaceReports,
+  loadWorkspaceCaseload, loadWorkspaceCaseloadWithStatus, loadWorkspaceClientDetail, sendWorkspaceMessage, deleteWorkspaceMessage, persistTherapistNote,
+  claimWorkspaceClient, mergeCaseloadRefresh, generateWorkspaceReport, loadWorkspaceReports, loadWorkspaceCaseloadReports,
   loadWorkspaceNotifications, markWorkspaceNotificationRead, markAllWorkspaceNotificationsRead,
   loadWorkspaceLifeReflections, buildClientReportHtml, markWorkspaceAgendaReviewed, loadWorkspaceHealingTimeline,
   loadCaseloadRiskAlerts, loadWorkspaceCurriculumReflections, loadWorkspaceSelfEnergyTrend, mapNoteEntry,
@@ -69,6 +69,7 @@ export const INITIAL_STATE = {
   docForm: { clientId: 'c1', type: 'clinical_summary', dateRangeStart: sixMonthsAgoIso(), dateRangeEnd: todayIso() },
   docSources: { ...DOC_SOURCES_DEFAULT },
   generatedDoc: null, docGenerating: false, docError: '', clientReports: [], clientReportsLoading: false,
+  caseloadReports: [], caseloadReportsLoading: false,
   sessionSnapshot: { loading: false, data: null, error: '' },
   changeSummary: { loading: false, data: null, error: '' },
   moduleInsights: { loading: false, data: null, error: '' },
@@ -128,6 +129,7 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
   const tasksLoaded = useRef(false);
   const accessControlInitialized = useRef(false);
   const notificationPrefsLoaded = useRef(false);
+  const caseloadReportsLoaded = useRef(false);
   // Tracks temp ids toggled locally before their create request resolved, so
   // that resolution can apply (and persist) the toggle instead of silently
   // reverting the row to the server's initial 'open' status.
@@ -185,6 +187,7 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
     liveSessionsLoaded.current = false;
     tasksLoaded.current = false;
     notificationPrefsLoaded.current = false;
+    caseloadReportsLoaded.current = false;
     (async () => {
       try {
         // Loaded alongside the active caseload (not lazily on Caseload-tab
@@ -969,6 +972,19 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
     loadWorkspaceNotificationPreferences().then((prefs) => { if (prefs) set({ notificationPrefs: prefs }); });
   }, [isDemo, loadPhase, S.activeTab]);
 
+  // Lazily load the Advisor's real, caseload-wide report history
+  // (ifs_generated_reports, already populated by the Document Creator's real
+  // backend) the first time the Insights & Reports tab is opened — this tab
+  // previously only linked out to /reports.
+  useEffect(() => {
+    if (isDemo || loadPhase !== 'ready' || S.activeTab !== 'insights-reports' || caseloadReportsLoaded.current) return;
+    caseloadReportsLoaded.current = true;
+    set({ caseloadReportsLoading: true });
+    loadWorkspaceCaseloadReports(therapistId)
+      .then((rows) => set({ caseloadReports: rows, caseloadReportsLoading: false }))
+      .catch(() => set({ caseloadReportsLoading: false }));
+  }, [isDemo, loadPhase, S.activeTab, therapistId]);
+
   // Lazily load the Advisor's real clinical tasks (ifs_advisor_tasks) the
   // first time the Tasks tab is opened — previously local-only state that
   // reset to the same four demo rows on every reload.
@@ -1247,7 +1263,16 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
     practiceForm: item.type ? { ...s.practiceForm, type: item.type } : s.practiceForm,
     practiceBatchResults: [],
   }));
-  const onDeleteMessage = (clientId, idx) => set((s) => ({ deletedMessageIdx: { ...s.deletedMessageIdx, [clientId]: { ...(s.deletedMessageIdx[clientId] || {}), [idx]: true } } }));
+  // Locally-composed messages sent this session (clientMessages) never come
+  // back with a real ifs_messages id (sendWorkspaceMessage doesn't return
+  // the inserted row), so only a message with a real id can be deleted
+  // server-side — the local hide-map is still applied either way so the
+  // Advisor always sees it disappear immediately.
+  const onDeleteMessage = (clientId, idx, messageId) => {
+    set((s) => ({ deletedMessageIdx: { ...s.deletedMessageIdx, [clientId]: { ...(s.deletedMessageIdx[clientId] || {}), [idx]: true } } }));
+    if (isDemo || !messageId) return;
+    deleteWorkspaceMessage(therapistId, messageId).catch((error) => console.error('Failed to delete message:', error));
+  };
   const applyQuickMessage = (text) => set({ clientMessageDraft: text });
   // Real pause/resume/end actions (api/live-session.js, via src/lib/liveSession.js)
   // — same session-control API the standalone LiveCoTherapy.jsx page already

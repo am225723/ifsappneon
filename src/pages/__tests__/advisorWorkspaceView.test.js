@@ -657,6 +657,36 @@ describe('buildView — Document Creator reflects the real report-generation bac
   });
 });
 
+describe('buildView — Insights & Reports surfaces real caseload-wide report history (previously an ImportPanel stub)', () => {
+  it('maps real report audit rows with the client name attached, most recent first', () => {
+    const v = makeView({
+      caseloadReports: [
+        { id: 'r1', client_id: 'c1', report_type: 'clinical_summary', title: 'Clinical Summary — Maya Chen', sections_included: ['Growth Goals'], generated_at: '2026-07-01T00:00:00Z' },
+        { id: 'r2', client_id: 'c2', report_type: 'client_progress_summary', title: null, sections_included: [], generated_at: '2026-06-15T00:00:00Z' },
+      ],
+    });
+    expect(v.caseloadReportRows).toHaveLength(2);
+    expect(v.caseloadReportRows[0]).toMatchObject({ id: 'r1', title: 'Clinical Summary — Maya Chen', clientName: 'Maya Chen' });
+    // r2 has no title, so it falls back to the doc-type label, and its client
+    // name comes from a lookup against the real caseload, not the raw row.
+    expect(v.caseloadReportRows[1].clientName).toBe('Jordan Reyes');
+    expect(v.noCaseloadReports).toBe(false);
+  });
+
+  it('reports no reports and no loading state by default', () => {
+    const v = makeView();
+    expect(v.caseloadReportRows).toEqual([]);
+    expect(v.noCaseloadReports).toBe(true);
+    expect(v.caseloadReportsLoading).toBe(false);
+  });
+
+  it('surfaces a loading state distinct from empty', () => {
+    const v = makeView({ caseloadReportsLoading: true });
+    expect(v.caseloadReportsLoading).toBe(true);
+    expect(v.noCaseloadReports).toBe(false);
+  });
+});
+
 describe('buildView — Assessments tab reflects the real wound-pattern assessment history', () => {
   const CLIENT_WITH_HISTORY = {
     ...UNASSIGNED_CLIENT, id: 'ah1', name: 'History Test', unassigned: false,
@@ -1290,6 +1320,30 @@ describe('buildView — Messages search filters threads by name and by message c
     const v = makeView({ messageSearch: 'sister', deletedMessageIdx: { c1: { 0: true } } });
     expect(v.threadList).toEqual([]);
     expect(v.noThreadsMatchSearch).toBe(true);
+  });
+
+  it('wires each message\'s delete action with its real ifs_messages id, not just its list index', () => {
+    let deletedWith = null;
+    const view = buildView({
+      S: { ...INITIAL_STATE, selectedClientId: 'c1' }, theme: LIGHT, allClients: () => CLIENTS,
+      buildTreatmentPlan: (c) => ({ clientName: c.name, phases: [], milestones: [], currentPhaseLabel: '', currentPhaseDesc: '' }),
+      handlers: new Proxy({ isGroupExpanded: () => false, onDeleteMessage: (clientId, idx, messageId) => { deletedWith = [clientId, idx, messageId]; } }, { get: (t, p) => t[p] || (() => {}) }),
+      isAdmin: true,
+    });
+    view.selectedClient.messages[0].onDelete();
+    expect(deletedWith).toEqual(['c1', 0, 'm1']);
+  });
+
+  it('wires onDelete with the real id on the global Messages thread view too', () => {
+    let deletedWith = null;
+    const view = buildView({
+      S: { ...INITIAL_STATE, activeThreadId: 'c1' }, theme: LIGHT, allClients: () => CLIENTS,
+      buildTreatmentPlan: (c) => ({ clientName: c.name, phases: [], milestones: [], currentPhaseLabel: '', currentPhaseDesc: '' }),
+      handlers: new Proxy({ isGroupExpanded: () => false, onDeleteMessage: (clientId, idx, messageId) => { deletedWith = [clientId, idx, messageId]; } }, { get: (t, p) => t[p] || (() => {}) }),
+      isAdmin: true,
+    });
+    view.activeThread.messages[0].onDelete();
+    expect(deletedWith).toEqual(['c1', 0, 'm1']);
   });
 
   it('wires the search input to a change handler', () => {
