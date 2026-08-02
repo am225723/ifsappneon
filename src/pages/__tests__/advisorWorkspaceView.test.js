@@ -1306,6 +1306,89 @@ describe('buildView — Messages search filters threads by name and by message c
   });
 });
 
+describe('buildView — Access Control edits ifs_clients.access_restrictions (mirrors TherapistDashboard.jsx)', () => {
+  it('lists assigned clients as options and shows no client selected by default', () => {
+    const v = makeView();
+    expect(v.accessControlClientOptions.map((c) => c.id)).toContain('c1');
+    expect(v.accessControlClientOptions.map((c) => c.id)).toContain('c2');
+    expect(v.hasAccessControlClient).toBe(false);
+  });
+
+  it('defaults to full access with every module, assessment, and feature toggled on for a client with no restrictions', () => {
+    const v = makeView({ accessControlClientId: 'c1', accessControlFullAccess: true, accessControlForm: null });
+    expect(v.hasAccessControlClient).toBe(true);
+    expect(v.accessControlClientName).toBe('Maya Chen');
+    expect(v.accessControlModuleRows).toHaveLength(10);
+    expect(v.accessControlModuleRows.every((m) => m.trackStyle.justifyContent === 'flex-end')).toBe(true);
+    expect(v.accessControlAssessmentRows).toHaveLength(4);
+    expect(v.accessControlAssessmentRows.every((a) => a.trackStyle.justifyContent === 'flex-end')).toBe(true);
+    expect(v.accessControlFeatureRows).toHaveLength(14);
+    expect(v.accessControlFeatureRows.every((f) => f.trackStyle.justifyContent === 'flex-end')).toBe(true);
+    // Full access disables individual toggles — they only make sense once
+    // full access is switched off.
+    expect(v.accessControlModuleRows.every((m) => m.disabled)).toBe(true);
+  });
+
+  it('reflects a partially-restricted client: only the allowed modules/assessments/features show on', () => {
+    const v = makeView({
+      accessControlClientId: 'c1',
+      accessControlFullAccess: false,
+      accessControlForm: {
+        modules: ['module-1-intro-ifs'],
+        assessments: ['wounds'],
+        features: { exercises: true, meditations: false },
+      },
+    });
+    const on = (rows) => rows.filter((r) => r.trackStyle.justifyContent === 'flex-end').map((r) => r.key);
+    expect(on(v.accessControlModuleRows)).toEqual(['module-1-intro-ifs']);
+    expect(on(v.accessControlAssessmentRows)).toEqual(['wounds']);
+    expect(v.accessControlFeatureRows.find((f) => f.key === 'exercises').trackStyle.justifyContent).toBe('flex-end');
+    expect(v.accessControlFeatureRows.find((f) => f.key === 'meditations').trackStyle.justifyContent).toBe('flex-start');
+    // A feature key not present in the saved form defaults to allowed (true),
+    // matching src/lib/accessControl.js's canAccessFeature default.
+    expect(v.accessControlFeatureRows.find((f) => f.key === 'journal').trackStyle.justifyContent).toBe('flex-end');
+    expect(v.accessControlModuleRows.every((m) => !m.disabled)).toBe(true);
+  });
+
+  it('wires the client picker, full-access toggle, and per-item toggles to their handlers', () => {
+    const calls = {};
+    const view = buildView({
+      S: { ...INITIAL_STATE, accessControlClientId: 'c1', accessControlFullAccess: false, accessControlForm: { modules: [], assessments: [], features: {} } },
+      theme: LIGHT, allClients: () => CLIENTS,
+      buildTreatmentPlan: (c) => ({ clientName: c.name, phases: [], milestones: [], currentPhaseLabel: '', currentPhaseDesc: '' }),
+      handlers: new Proxy({
+        isGroupExpanded: () => false,
+        onAccessControlClientChange: (id) => { calls.client = id; },
+        toggleAccessControlFullAccess: () => { calls.fullAccess = true; },
+        toggleAccessControlModule: (id) => { calls.module = id; },
+        toggleAccessControlAssessment: (id) => { calls.assessment = id; },
+        toggleAccessControlFeature: (id) => { calls.feature = id; },
+        onSaveAccessControl: () => { calls.saved = true; },
+      }, { get: (t, p) => t[p] || (() => {}) }),
+      isAdmin: true,
+    });
+    view.onAccessControlClientChange('c2');
+    view.onToggleAccessControlFullAccess();
+    view.accessControlModuleRows[0].onClick();
+    view.accessControlAssessmentRows[0].onClick();
+    view.accessControlFeatureRows[0].onClick();
+    view.onSaveAccessControl();
+    expect(calls.client).toBe('c2');
+    expect(calls.fullAccess).toBe(true);
+    expect(calls.module).toBe('module-1-intro-ifs');
+    expect(calls.assessment).toBe('wounds');
+    expect(calls.feature).toBe('exercises');
+    expect(calls.saved).toBe(true);
+  });
+
+  it('reports save-in-progress and a saved confirmation from state', () => {
+    const saving = makeView({ accessControlClientId: 'c1', accessControlSaving: true });
+    expect(saving.accessControlSaving).toBe(true);
+    const saved = makeView({ accessControlClientId: 'c1', accessControlSaved: 'Saved' });
+    expect(saved.accessControlSaved).toBe('Saved');
+  });
+});
+
 describe('buildView — Caseload Management shows email, level, safety, and a deactivate control', () => {
   it('shows each row\'s email and gamification level, previously only visible after opening the client', () => {
     const v = makeView();

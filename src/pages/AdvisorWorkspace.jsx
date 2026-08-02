@@ -16,7 +16,9 @@ import {
   loadWorkspaceTasks, createWorkspaceTask, toggleWorkspaceTask,
   deactivateWorkspaceClientAssignment, reactivateWorkspaceClientAssignment, loadWorkspaceDischargedClients,
   generateWorkspacePractice, generateWorkspacePracticeBatch, assignWorkspacePractice,
+  updateWorkspaceClientAccessRestrictions,
 } from '../lib/advisorWorkspaceLoader.js';
+import { DEFAULT_ACCESS_FORM } from '../data/accessControlData.js';
 import { loadAdvisorSessionSnapshot } from '../lib/unifiedGuidance.js';
 import { generateSessionPrepSummary } from '../lib/sessionPrepSummary.js';
 import { pauseLiveActivity, resumeLiveActivity, endLiveSession as endLiveSessionApi } from '../lib/liveSession.js';
@@ -81,6 +83,7 @@ export const INITIAL_STATE = {
   accessOverrides: {}, settingsAccent: 'amber',
   resourceSearch: '', resourceType: 'all', resourceWound: 'all', resourceStage: 'all',
   dischargedClients: [],
+  accessControlClientId: '', accessControlFullAccess: true, accessControlForm: null, accessControlSaving: false, accessControlSaved: '',
   extraClients: [], deletedIds: {},
   showNewClientForm: false, newClientForm: { name: '', email: '', phone: '', sendEmail: true }, newClientResult: null,
   deletingClientId: null, deleteConfirmText: '',
@@ -122,6 +125,7 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
   const riskAlertsLoaded = useRef(false);
   const liveSessionsLoaded = useRef(false);
   const tasksLoaded = useRef(false);
+  const accessControlInitialized = useRef(false);
   // Tracks temp ids toggled locally before their create request resolved, so
   // that resolution can apply (and persist) the toggle instead of silently
   // reverting the row to the server's initial 'open' status.
@@ -155,6 +159,7 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
   useEffect(() => () => { genRef.current += 1; docGenRef.current += 1; snapshotGenRef.current += 1; changeSummaryGenRef.current += 1; moduleInsightsGenRef.current += 1; practiceGenRef.current += 1; }, []);
   // setState-compatible merge helper (accepts object or updater fn)
   const set = (patch) => setS((prev) => ({ ...prev, ...(typeof patch === 'function' ? patch(prev) : patch) }));
+  const allClients = () => (S.baseClients || []).concat(S.extraClients || []).filter((c) => !S.deletedIds[c.id]);
 
   // Load the therapist's real caseload, resetting demo-only collections.
   useEffect(() => {
@@ -340,6 +345,82 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
       });
   };
 
+  // Client access restrictions (ifs_clients.access_restrictions), mirroring
+  // TherapistDashboard.jsx's own Access Controls modal so it's editable from
+  // inside the workspace instead of only from the standalone dashboard.
+  const onAccessControlClientChange = (clientId) => {
+    const client = allClients().find((c) => c.id === clientId);
+    const restrictions = client?.accessRestrictions || null;
+    set({
+      accessControlClientId: clientId,
+      accessControlFullAccess: !restrictions,
+      accessControlForm: restrictions
+        ? {
+            modules: restrictions.modules || [],
+            assessments: restrictions.assessments || [],
+            features: { ...DEFAULT_ACCESS_FORM.features, ...(restrictions.features || {}) },
+          }
+        : DEFAULT_ACCESS_FORM,
+      accessControlSaved: '',
+    });
+  };
+  const toggleAccessControlFullAccess = () => {
+    set((s) => ({ accessControlFullAccess: !s.accessControlFullAccess, accessControlSaved: '' }));
+  };
+  const toggleAccessControlModule = (moduleId) => {
+    set((s) => {
+      const form = s.accessControlForm || DEFAULT_ACCESS_FORM;
+      const modules = form.modules.includes(moduleId)
+        ? form.modules.filter((m) => m !== moduleId)
+        : [...form.modules, moduleId];
+      return { accessControlForm: { ...form, modules }, accessControlSaved: '' };
+    });
+  };
+  const toggleAccessControlAssessment = (assessmentId) => {
+    set((s) => {
+      const form = s.accessControlForm || DEFAULT_ACCESS_FORM;
+      const assessments = form.assessments.includes(assessmentId)
+        ? form.assessments.filter((a) => a !== assessmentId)
+        : [...form.assessments, assessmentId];
+      return { accessControlForm: { ...form, assessments }, accessControlSaved: '' };
+    });
+  };
+  const toggleAccessControlFeature = (featureKey) => {
+    set((s) => {
+      const form = s.accessControlForm || DEFAULT_ACCESS_FORM;
+      return {
+        accessControlForm: { ...form, features: { ...form.features, [featureKey]: !form.features[featureKey] } },
+        accessControlSaved: '',
+      };
+    });
+  };
+  const onSaveAccessControl = () => {
+    if (isDemo || !S.accessControlClientId) return;
+    const clientId = S.accessControlClientId;
+    const value = S.accessControlFullAccess ? null : (S.accessControlForm || DEFAULT_ACCESS_FORM);
+    set({ accessControlSaving: true, accessControlSaved: '' });
+    updateWorkspaceClientAccessRestrictions(clientId, value).then(({ error }) => {
+      if (error) { console.error('Failed to update access restrictions:', error); set({ accessControlSaving: false }); return; }
+      set((s) => ({
+        accessControlSaving: false,
+        accessControlSaved: 'Saved',
+        baseClients: (s.baseClients || []).map((c) => (c.id === clientId ? { ...c, accessRestrictions: value } : c)),
+        extraClients: (s.extraClients || []).map((c) => (c.id === clientId ? { ...c, accessRestrictions: value } : c)),
+      }));
+    });
+  };
+
+  // Default the Access Control panel to the currently selected client the
+  // first time the Admin Access tab is opened (rather than requiring the
+  // therapist to pick a client before seeing anything).
+  useEffect(() => {
+    if (loadPhase !== 'ready' || S.activeTab !== 'admin-access' || accessControlInitialized.current) return;
+    accessControlInitialized.current = true;
+    const assigned = allClients().filter((c) => !c.unassigned);
+    const clientId = (assigned.some((c) => c.id === S.selectedClientId) ? S.selectedClientId : assigned[0]?.id) || '';
+    if (clientId) onAccessControlClientChange(clientId);
+  }, [loadPhase, S.activeTab]);
+
   useEffect(() => {
     if (!document.getElementById(FONT_LINK_ID)) {
       const link = document.createElement('link');
@@ -351,8 +432,6 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
   }, []);
 
   const theme = S.isDark ? DARK : LIGHT;
-
-  const allClients = () => (S.baseClients || []).concat(S.extraClients || []).filter((c) => !S.deletedIds[c.id]);
 
   // ---- handlers -----------------------------------------------------------
   const setTab = (id) => set({ activeTab: id });
@@ -1175,6 +1254,7 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
       onStartDelete, onCancelDelete, onDeleteConfirmChange, onConfirmDelete, onPracticeGuidanceChange, onGeneratePracticeBatch, onUseBatchPractice,
       onDeleteMessage, applyQuickMessage, toggleLiveSession, endLiveSession, onMarkNotifRead, onMarkAllNotifsRead, onOpenNotifClient,
       onHomeworkAssigned, onHomeworkFeedbackChange, onMarkHomeworkReviewed, onArchiveHomework,
+      onAccessControlClientChange, toggleAccessControlFullAccess, toggleAccessControlModule, toggleAccessControlAssessment, toggleAccessControlFeature, onSaveAccessControl,
     },
   });
 
