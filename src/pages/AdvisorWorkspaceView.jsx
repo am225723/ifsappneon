@@ -29,7 +29,7 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
     sessionPrepOpenId, noteDraft, savedNotes, planClientId, practiceForm, generatedPractice, assignedPractices,
     assignedLessons, coTherapyShare, coTherapyMessage, coTherapyThread, reports, notificationPrefs, notificationPrefsSaving, clientMessages,
     clientMessageDraft, activeThreadId, safetyOverrides, engagementDismissed, engagementExpanded, partsClientFilter, tasks, taskFilter, messageSearch,
-    newTaskTitle, newTaskClientId, docForm, docSources, generatedDoc, docGenerating, docError, clientReports, clientReportsLoading, deletedMessageIdx,
+    newTaskTitle, newTaskClientId, docForm, docSources, generatedDoc, docGenerating, docError, clientReports, clientReportsLoading, caseloadReports, caseloadReportsLoading, deletedMessageIdx,
     sessionSnapshot, changeSummary, moduleInsights, lifeReflections, lifeReflectionsLoading, healingTimeline, riskAlerts,
     curriculumReflections, curriculumReflectionsLoading, homeworkFeedbackDraft, selfEnergyTrend, selfEnergyTrendLoading,
     unburdeningRecord, unburdeningRecordLoading, partSuggestions, partSuggestionsLoading,
@@ -489,7 +489,7 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
         onAddToNote: canWrite ? () => H.draftNoteFor(rawSelected.id) : undefined,
         onCreateTask: canWrite ? () => H.onCreateTaskFromSafety(rawSelected.id) : undefined,
       },
-      messages: allMsgs.map((m, idx) => ({ idx, authorLabel: m.from === 'client' ? rawSelected.name : 'You', text: m.text, date: m.date, readTick: m.from === 'advisor' ? '✓✓' : '', onDelete: () => H.onDeleteMessage(rawSelected.id, idx), bubbleStyle: { alignSelf: m.from === 'advisor' ? 'flex-end' : 'flex-start', maxWidth: '85%', padding: '10px 14px', borderRadius: '14px', background: m.from === 'advisor' ? theme.accent2 : theme.surface2, color: m.from === 'advisor' ? '#fff' : theme.text } })).filter((m) => !((deletedMessageIdx[rawSelected.id] || {})[m.idx])),
+      messages: allMsgs.map((m, idx) => ({ idx, authorLabel: m.from === 'client' ? rawSelected.name : 'You', text: m.text, date: m.date, readTick: m.from === 'advisor' ? '✓✓' : '', onDelete: () => H.onDeleteMessage(rawSelected.id, idx, m.id), bubbleStyle: { alignSelf: m.from === 'advisor' ? 'flex-end' : 'flex-start', maxWidth: '85%', padding: '10px 14px', borderRadius: '14px', background: m.from === 'advisor' ? theme.accent2 : theme.surface2, color: m.from === 'advisor' ? '#fff' : theme.text } })).filter((m) => !((deletedMessageIdx[rawSelected.id] || {})[m.idx])),
       canWrite,
       onDraftNote: canWrite ? () => H.draftNoteFor(rawSelected.id) : undefined,
       onOpenPrep: canWrite ? () => H.openPrepFor(rawSelected.id) : undefined,
@@ -579,7 +579,7 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
   const activeThreadDeleted = deletedMessageIdx[activeThreadClient.id] || {};
   const activeThread = {
     name: activeThreadClient.name,
-    messages: activeThreadMsgs.map((m, idx) => ({ idx, authorLabel: m.from === 'client' ? activeThreadClient.name : 'You', text: m.text, date: m.date, readTick: m.from === 'advisor' ? '✓✓' : '', onDelete: () => H.onDeleteMessage(activeThreadClient.id, idx), bubbleStyle: { alignSelf: m.from === 'advisor' ? 'flex-end' : 'flex-start', maxWidth: '85%', padding: '10px 14px', borderRadius: '14px', background: m.from === 'advisor' ? theme.accent2 : theme.surface2, color: m.from === 'advisor' ? '#fff' : theme.text } })).filter((m) => !activeThreadDeleted[m.idx]),
+    messages: activeThreadMsgs.map((m, idx) => ({ idx, authorLabel: m.from === 'client' ? activeThreadClient.name : 'You', text: m.text, date: m.date, readTick: m.from === 'advisor' ? '✓✓' : '', onDelete: () => H.onDeleteMessage(activeThreadClient.id, idx, m.id), bubbleStyle: { alignSelf: m.from === 'advisor' ? 'flex-end' : 'flex-start', maxWidth: '85%', padding: '10px 14px', borderRadius: '14px', background: m.from === 'advisor' ? theme.accent2 : theme.surface2, color: m.from === 'advisor' ? '#fff' : theme.text } })).filter((m) => !activeThreadDeleted[m.idx]),
     onAddToNote: () => H.draftNoteFor(activeThreadClient.id), onAddToTask: H.addTaskFromMessage,
   };
 
@@ -670,6 +670,14 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
     sectionsSummary: Array.isArray(r.sections_included) ? r.sections_included.join(', ') : '',
   }));
   const noClientReports = !clientReportsLoading && clientReportRows.length === 0;
+  const caseloadReportRows = (caseloadReports || []).map((r) => ({
+    id: r.id,
+    title: r.title || (DOC_TYPES.find((t) => t.id === r.report_type)?.label || 'Report'),
+    clientName: ALL_CLIENTS.find((c) => c.id === r.client_id)?.name || 'Unknown client',
+    date: r.generated_at ? new Date(r.generated_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—',
+    sectionsSummary: Array.isArray(r.sections_included) ? r.sections_included.join(', ') : '',
+  }));
+  const noCaseloadReports = !caseloadReportsLoading && caseloadReportRows.length === 0;
 
   const total = Math.max(1, assignedClients.length);
   const woundDistribution = Object.keys(WOUND_META).map((k) => { const count = assignedClients.filter((c) => c.primaryWound === k).length; return { label: WOUND_META[k].label, count, barStyle: { width: Math.round((count / total) * 100) + '%', height: '100%', borderRadius: '5px', background: theme.accent2 } }; });
@@ -839,6 +847,7 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
     onGenerateDoc: H.onGenerateDoc, onOpenGeneratedDoc: H.onOpenGeneratedDoc,
     hasGeneratedDoc: !!generatedDoc, generatedDoc, docGenerating: !!docGenerating, docError,
     clientReportRows, noClientReports, clientReportsLoading: !!clientReportsLoading,
+    caseloadReportRows, noCaseloadReports, caseloadReportsLoading: !!caseloadReportsLoading,
     woundDistribution, engagementList, moodTrend, insightBullets, reports, onGenerateReport: H.onGenerateReport,
     engagementRows,
     settingsToggles: settingsTogglesList, notificationPrefsSaving: !!notificationPrefsSaving,
@@ -977,7 +986,7 @@ function CommandCenter({ v }) {
       {v.isSettings && <SettingsView v={v} />}
       {v.isClinicalPracticeInteractive && <ImportPanel title="Interactive Practice Builder" desc="Build guided, multi-step interactive modules — more than static prompts — and assign them to clients." to="/curriculum" linkLabel="Open Curriculum" />}
       {v.isClinicalCurriculumBuilder && <ImportPanel title="Custom Curriculum" desc="Design and assign an individualized curriculum path per client from the module library." to="/assessment-builder" linkLabel="Open Builder" />}
-      {v.isInsightsReports && <ImportPanel title="Report Generator" desc="Create and export multiple report types across your caseload — progress summaries, treatment plan overviews, and more." to="/reports" linkLabel="Open Reports" />}
+      {v.isInsightsReports && <CaseloadReportsView v={v} />}
       {v.isAdminAccess && <AccessControlView v={v} />}
       {v.isAdminTeam && <ImportPanel title="Team & Caseloads" desc="Reassign clients across Advisors and supervisors." to="/admin-hub" linkLabel="Open Admin Hub" />}
       {v.isAdminAudit && <ImportPanel title="Audit & Consent Log" desc="Chronological record of clinical actions and consent events." to="/admin-hub" linkLabel="Open Admin Hub" />}
@@ -2718,6 +2727,36 @@ function ResourceLibraryView({ v }) {
             : <a key={r.id} href={r.href} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none' }}>{cardBody}</a>;
         })}
         {v.noResources && <div style={{ padding: '20px', textAlign: 'center', color: 'var(--muted)', fontSize: '13px', gridColumn: '1 / -1' }}>No resources match these filters.</div>}
+      </div>
+    </div>
+  );
+}
+
+// Same ifs_generated_reports table the per-client Document Creator already
+// reads (loadWorkspaceReports), just not filtered to one client — this tab
+// previously only linked out to /reports with no real data of its own.
+function CaseloadReportsView({ v }) {
+  return (
+    <div style={{ maxWidth: '820px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+      <div style={{ ...CARD, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
+        <div>
+          <span style={{ ...FR, fontSize: '16px' }}>Recent reports across your caseload</span>
+          <div style={{ fontSize: '12px', color: 'var(--muted)', marginTop: '4px' }}>Generated from the Document Creator, most recent first.</div>
+        </div>
+        <Link to="/reports" style={{ fontSize: '12px', fontWeight: 700, padding: '9px 14px', borderRadius: '10px', border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text-2)', textDecoration: 'none' }}>Open Report Generator →</Link>
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        {v.caseloadReportsLoading && <div style={{ padding: '20px', textAlign: 'center', color: 'var(--muted)', fontSize: '13px' }}>Loading…</div>}
+        {v.caseloadReportRows.map((r) => (
+          <div key={r.id} style={{ ...CARD, borderRadius: '16px', padding: '14px 18px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap' }}>
+              <span style={{ fontSize: '13.5px', fontWeight: 600, color: 'var(--text)' }}>{r.title}</span>
+              <span style={{ fontSize: '11.5px', color: 'var(--muted)' }}>{r.date}</span>
+            </div>
+            <div style={{ fontSize: '12px', color: 'var(--text-2)', marginTop: '4px' }}>{r.clientName}{r.sectionsSummary ? ' · ' + r.sectionsSummary : ''}</div>
+          </div>
+        ))}
+        {v.noCaseloadReports && <div style={{ padding: '20px', textAlign: 'center', color: 'var(--muted)', fontSize: '13px' }}>No reports generated yet. Create one from Document Creator or the Report Generator.</div>}
       </div>
     </div>
   );
