@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { buildView, WorkspaceShell, EmptyCaseload, WorkspaceStatus } from './AdvisorWorkspaceView.jsx';
 import {
   WOUND_META, LIGHT, DARK, CLIENTS, TEMPLATE_OPTIONS, PRACTICE_TYPE_META, PLAN_PHASES,
-  DOC_SOURCES_DEFAULT, NAV_CONFIG,
+  DOC_SOURCES_DEFAULT, NAV_CONFIG, DEFAULT_NOTIFICATION_PREFS,
 } from './advisorWorkspaceData.js';
 import {
   loadWorkspaceCaseload, loadWorkspaceCaseloadWithStatus, loadWorkspaceClientDetail, sendWorkspaceMessage, persistTherapistNote,
@@ -13,7 +13,8 @@ import {
   markWorkspaceHomeworkReviewed, archiveWorkspaceHomework, refreshWorkspaceHomeworkForClient,
   loadWorkspaceUnburdeningRecord, loadWorkspacePartSuggestions, generateWorkspaceModuleInsights,
   loadWorkspaceActiveLiveSessions, loadWorkspaceCoTherapyProgress, loadWorkspacePersonalizedCurriculum,
-  loadWorkspaceTasks, createWorkspaceTask, toggleWorkspaceTask,
+  loadWorkspaceTasks, createWorkspaceTask, toggleWorkspaceTask, archiveWorkspaceTask,
+  loadWorkspaceNotificationPreferences, updateWorkspaceNotificationPreferences,
   deactivateWorkspaceClientAssignment, reactivateWorkspaceClientAssignment, loadWorkspaceDischargedClients,
   generateWorkspacePractice, generateWorkspacePracticeBatch, assignWorkspacePractice,
   updateWorkspaceClientAccessRestrictions,
@@ -55,7 +56,7 @@ export const INITIAL_STATE = {
   coTherapyShare: true, coTherapyMessage: '',
   coTherapyThread: [{ author: 'Dr. Patel', text: 'Flagging Jordan’s risk note for joint review before Thursday.', date: 'Yesterday' }],
   reports: [{ title: 'Caseload Summary — June 2026', date: 'Jul 1, 2026' }],
-  settingsToggles: { riskAlerts: true, weeklyDigest: true, sessionReminders: false },
+  notificationPrefs: DEFAULT_NOTIFICATION_PREFS, notificationPrefsSaving: false,
   clientMessages: {}, clientMessageDraft: '', activeThreadId: 'c2', readThreads: {}, messageSearch: '',
   safetyOverrides: {}, engagementDismissed: {}, engagementExpanded: {}, partsClientFilter: 'all',
   tasks: [
@@ -126,6 +127,7 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
   const liveSessionsLoaded = useRef(false);
   const tasksLoaded = useRef(false);
   const accessControlInitialized = useRef(false);
+  const notificationPrefsLoaded = useRef(false);
   // Tracks temp ids toggled locally before their create request resolved, so
   // that resolution can apply (and persist) the toggle instead of silently
   // reverting the row to the server's initial 'open' status.
@@ -554,7 +556,15 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
     const entry = { ...mapNoteEntry(note, note.client_id), clientName: client ? client.name : 'Client', _isLocal: true };
     set((s) => ({ savedNotes: [entry, ...s.savedNotes] }));
   };
-  const toggleSetting = (key) => set((s) => ({ settingsToggles: { ...s.settingsToggles, [key]: !s.settingsToggles[key] } }));
+  const toggleSetting = (key) => {
+    const nextValue = !S.notificationPrefs[key];
+    set((s) => ({ notificationPrefs: { ...s.notificationPrefs, [key]: nextValue } }));
+    if (isDemo) return;
+    set({ notificationPrefsSaving: true });
+    updateWorkspaceNotificationPreferences({ [key]: nextValue })
+      .then((prefs) => set({ notificationPrefs: prefs, notificationPrefsSaving: false }))
+      .catch((error) => { console.error('Failed to update notification preferences:', error); set({ notificationPrefsSaving: false }); });
+  };
   const draftNoteFor = (clientId) => set((s) => ({ activeTab: 'clinical-notes', noteDraft: { ...s.noteDraft, clientId } }));
   const openPrepFor = (clientId) => set({ activeTab: 'sessions-prep', sessionPrepOpenId: clientId });
   // Builds a printable HTML report entirely from data already loaded for this
@@ -717,6 +727,34 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
   };
   const onAcknowledgeSafety = (clientId) => set((s) => ({ safetyOverrides: { ...s.safetyOverrides, [clientId]: { ...(s.safetyOverrides[clientId] || {}), acknowledged: true } } }));
   const onCreateSafetyPlan = (clientId) => set((s) => ({ safetyOverrides: { ...s.safetyOverrides, [clientId]: { ...(s.safetyOverrides[clientId] || {}), hasPlanOverride: true } } }));
+  // Same add-to-note / create-task action pair the Messages tab already uses
+  // (draftNoteFor / addTaskFromMessage), reused here so a risk flag can go
+  // straight to a note or a follow-up task without leaving the Safety tab.
+  const onCreateTaskFromSafety = (clientId) => {
+    const client = allClients().find((c) => c.id === clientId);
+    const title = 'Review safety flag — ' + (client ? client.name : '');
+    const tempId = 'task-' + Date.now();
+    set((s) => ({ tasks: [{ id: tempId, title, clientId, priority: 'high', due: 'Tomorrow', status: 'open', category: 'Safety' }, ...s.tasks] }));
+    if (!isDemo) {
+      createWorkspaceTask({ title, clientId, category: 'Safety', priority: 'high', dueDate: addDaysIso(1) })
+        .then((task) => resolveCreatedTask(tempId, task))
+        .catch((error) => console.error('Failed to create task:', error));
+    }
+  };
+  // Same createWorkspaceTask path as onAddTask/addTaskFromMessage/
+  // onCreateTaskFromSafety, seeded from an assessment retake entry so it's
+  // reachable straight from the Assessments tab instead of only Tasks.
+  const onCreateTaskFromAssessment = (clientId, dateLabel) => {
+    const client = allClients().find((c) => c.id === clientId);
+    const title = 'Review assessment (' + dateLabel + ') — ' + (client ? client.name : '');
+    const tempId = 'task-' + Date.now();
+    set((s) => ({ tasks: [{ id: tempId, title, clientId, priority: 'medium', due: 'This week', status: 'open', category: 'Assessment' }, ...s.tasks] }));
+    if (!isDemo) {
+      createWorkspaceTask({ title, clientId, category: 'Assessment', priority: 'medium', dueDate: addDaysIso(7) })
+        .then((task) => resolveCreatedTask(tempId, task))
+        .catch((error) => console.error('Failed to create task:', error));
+    }
+  };
   const setPartsClientFilter = (id) => set({ partsClientFilter: id });
   const setTaskFilter = (f) => set({ taskFilter: f });
   const onResourceSearchChange = (e) => set({ resourceSearch: e.target.value });
@@ -749,6 +787,14 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
       return;
     }
     toggleWorkspaceTask(id).catch((error) => console.error('Failed to update task:', error));
+  };
+  // api/tasks.js's archive action already exists (sets archived_at, and the
+  // list query already excludes archived rows) — it just had no caller
+  // anywhere in the app before this.
+  const onArchiveTask = (id) => {
+    set((s) => ({ tasks: s.tasks.filter((t) => t.id !== id) }));
+    if (isDemo || String(id).startsWith('task-')) return;
+    archiveWorkspaceTask(id).catch((error) => console.error('Failed to archive task:', error));
   };
   const onDismissEngagement = (clientId) => set((s) => ({ engagementDismissed: { ...s.engagementDismissed, [clientId]: !s.engagementDismissed[clientId] } }));
   const toggleEngagementExpanded = (clientId) => set((s) => ({ engagementExpanded: { ...s.engagementExpanded, [clientId]: !s.engagementExpanded[clientId] } }));
@@ -893,6 +939,17 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
     if (isDemo || loadPhase !== 'ready' || S.activeTab !== 'notifications' || notificationsLoaded.current) return;
     notificationsLoaded.current = true;
     loadWorkspaceNotifications().then((rows) => set({ notifications: rows }));
+  }, [isDemo, loadPhase, S.activeTab]);
+
+  // Lazily load the Advisor's real, persisted notification preferences
+  // (ifs_notification_preferences) the first time the Settings tab is
+  // opened — previously 3 local-only toggles that reset to the same
+  // defaults on every reload and never reached the backend that already
+  // powers the client-facing notification settings.
+  useEffect(() => {
+    if (isDemo || loadPhase !== 'ready' || S.activeTab !== 'settings' || notificationPrefsLoaded.current) return;
+    notificationPrefsLoaded.current = true;
+    loadWorkspaceNotificationPreferences().then((prefs) => { if (prefs) set({ notificationPrefs: prefs }); });
   }, [isDemo, loadPhase, S.activeTab]);
 
   // Lazily load the Advisor's real clinical tasks (ifs_advisor_tasks) the
@@ -1246,8 +1303,8 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
       onNoteClientChange, onNoteTemplateChange, onNoteTextChange, onSaveNote, onSignNote, onAiNoteSaved, toggleSetting, draftNoteFor, openPrepFor, openPlanFor, openPracticeFor, onExportReport,
       onPlanClientChange, onPracticeClientChange, onPracticeWoundChange, onPracticeTypeChange, onGeneratePractice, onPracticeDraftChange, onRejectPractice, onAssignPractice, toggleAssignLesson,
       onCoTherapyMessageChange, onSendCoTherapyMessage, toggleCoTherapyShare, onGenerateReport, isGroupExpanded, toggleGroup,
-      onClientMessageChange, onSendClientMessage, onMessageSearchChange, setActiveThread, addTaskFromMessage, onAcknowledgeSafety, onCreateSafetyPlan, setPartsClientFilter,
-      setTaskFilter, onNewTaskTitleChange, onNewTaskClientChange, onAddTask, toggleTask, onDismissEngagement, toggleEngagementExpanded,
+      onClientMessageChange, onSendClientMessage, onMessageSearchChange, setActiveThread, addTaskFromMessage, onAcknowledgeSafety, onCreateSafetyPlan, onCreateTaskFromSafety, onCreateTaskFromAssessment, setPartsClientFilter,
+      setTaskFilter, onNewTaskTitleChange, onNewTaskClientChange, onAddTask, toggleTask, onArchiveTask, onDismissEngagement, toggleEngagementExpanded,
       onResourceSearchChange, setResourceType, setResourceWound, setResourceStage,
       onDocClientChange, onDocTypeChange, onDocDateChange, toggleDocSource, onGenerateDoc, onOpenGeneratedDoc, toggleNewClientForm, onNewClientFieldChange, onCreateClient,
       onGenerateSnapshot, onCopySnapshot, onGenerateChangeSummary, onGenerateModuleInsights,

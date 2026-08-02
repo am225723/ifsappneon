@@ -15,7 +15,7 @@ import { loadAssignedHomeworkForClient, markAssignedHomeworkReviewed, archiveAss
 import { loadTherapistClientSessionAgendas, markSessionAgendaReviewed } from './sessionAgendas.js';
 import { loadPartRelationships } from './partRelationships.js';
 import { loadNotifications, markNotificationRead, markAllNotificationsRead } from './notifications.js';
-import { loadAdvisorTasks, createAdvisorTask, toggleAdvisorTask } from './advisorTasks.js';
+import { loadAdvisorTasks, createAdvisorTask, toggleAdvisorTask, archiveAdvisorTask } from './advisorTasks.js';
 import { loadSharedLifeIntegrationReflectionsForAdvisor } from './lifeIntegration.js';
 import { normalizeLifeReflection } from './lifeIntegrationDisplay.js';
 import { loadHealingTimeline } from './healingTimeline.js';
@@ -27,6 +27,7 @@ import { supabase } from './supabase';
 import { generateHomework, generateHomeworkBatch } from './homeworkAI.js';
 import { isMissingWorksheetPersistenceColumn, WORKSHEET_MIGRATION_ADMIN_WARNING } from './worksheetPersistenceFallback';
 import { getClerkToken } from './apiAuth.js';
+import { loadNotificationPreferences, updateNotificationPreferences } from './notificationPreferences.js';
 
 export const WORKSPACE_WOUNDS = ['abandonment', 'shame', 'neglect', 'betrayal', 'helplessness'];
 
@@ -1050,6 +1051,29 @@ export async function toggleWorkspaceTask(taskId) {
   const { data, error } = await toggleAdvisorTask(taskId);
   if (error) throw new Error(error.message || 'Failed to update task');
   return mapTaskRow(data);
+}
+
+// api/tasks.js's archive action (sets archived_at) already exists and works
+// — it just had no caller anywhere in the app before this.
+export async function archiveWorkspaceTask(taskId) {
+  const { data, error } = await archiveAdvisorTask(taskId);
+  if (error) throw new Error(error.message || 'Failed to archive task');
+  return mapTaskRow(data);
+}
+
+// The real ifs_notification_preferences backend (api/notification-preferences.js)
+// already powers the client-facing notification settings — the workspace's
+// Settings tab previously only had 3 local-only toggles that reset on reload.
+export async function loadWorkspaceNotificationPreferences() {
+  const { data, error } = await loadNotificationPreferences();
+  if (error) return null;
+  return data;
+}
+
+export async function updateWorkspaceNotificationPreferences(patch) {
+  const { data, error } = await updateNotificationPreferences(patch);
+  if (error) throw new Error(error.message || 'Failed to update notification preferences');
+  return data;
 }
 
 // Real, already-Advisor-scoped Life Integration reflections a client has

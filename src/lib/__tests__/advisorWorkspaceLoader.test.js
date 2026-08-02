@@ -99,12 +99,23 @@ vi.mock('../lifeIntegration.js', () => ({
 let mockTasksResult = { data: [], error: null };
 let mockCreateTaskResult = { data: null, error: null };
 let mockToggleTaskResult = { data: null, error: null };
+let mockArchiveTaskResult = { data: null, error: null };
 const mockCreateTaskCalls = [];
 const mockToggleTaskCalls = [];
+const mockArchiveTaskCalls = [];
 vi.mock('../advisorTasks.js', () => ({
   loadAdvisorTasks: async () => mockTasksResult,
   createAdvisorTask: async (payload) => { mockCreateTaskCalls.push(payload); return mockCreateTaskResult; },
   toggleAdvisorTask: async (id) => { mockToggleTaskCalls.push(id); return mockToggleTaskResult; },
+  archiveAdvisorTask: async (id) => { mockArchiveTaskCalls.push(id); return mockArchiveTaskResult; },
+}));
+
+let mockLoadNotificationPrefsResult = { data: null, error: null };
+let mockUpdateNotificationPrefsResult = { data: null, error: null };
+const mockUpdateNotificationPrefsCalls = [];
+vi.mock('../notificationPreferences.js', () => ({
+  loadNotificationPreferences: async () => mockLoadNotificationPrefsResult,
+  updateNotificationPreferences: async (patch) => { mockUpdateNotificationPrefsCalls.push(patch); return mockUpdateNotificationPrefsResult; },
 }));
 
 const mockMarkAgendaReviewedCalls = [];
@@ -142,7 +153,8 @@ const {
   loadWorkspaceSelfEnergyTrend, loadWorkspaceUnburdeningRecord, loadWorkspacePartSuggestions,
   loadWorkspaceClientDetail, loadWorkspaceActiveLiveSessions, loadWorkspaceCoTherapyProgress,
   loadWorkspacePersonalizedCurriculum,
-  loadWorkspaceTasks, createWorkspaceTask, toggleWorkspaceTask,
+  loadWorkspaceTasks, createWorkspaceTask, toggleWorkspaceTask, archiveWorkspaceTask,
+  loadWorkspaceNotificationPreferences, updateWorkspaceNotificationPreferences,
 } = await import('../advisorWorkspaceLoader.js');
 
 describe('initialsFrom', () => {
@@ -904,6 +916,46 @@ describe('createWorkspaceTask / toggleWorkspaceTask', () => {
     const task = await toggleWorkspaceTask('t1');
     expect(mockToggleTaskCalls).toContain('t1');
     expect(task).toMatchObject({ id: 't1', status: 'done' });
+  });
+});
+
+describe('archiveWorkspaceTask', () => {
+  it('archives a task via api/tasks.js\'s existing archive action and maps the row back', async () => {
+    mockArchiveTaskResult = { data: { id: 't1', client_id: 'c1', title: 'Sign session note', category: 'Documentation', priority: 'medium', status: 'open', due_date: null }, error: null };
+    const task = await archiveWorkspaceTask('t1');
+    expect(mockArchiveTaskCalls).toContain('t1');
+    expect(task).toMatchObject({ id: 't1', clientId: 'c1' });
+  });
+
+  it('throws when archiving fails', async () => {
+    mockArchiveTaskResult = { data: null, error: { message: 'not_found' } };
+    await expect(archiveWorkspaceTask('missing')).rejects.toThrow('not_found');
+  });
+});
+
+describe('loadWorkspaceNotificationPreferences / updateWorkspaceNotificationPreferences', () => {
+  it('loads real ifs_notification_preferences', async () => {
+    mockLoadNotificationPrefsResult = { data: { in_app_enabled: true, homework_enabled: false }, error: null };
+    const prefs = await loadWorkspaceNotificationPreferences();
+    expect(prefs).toMatchObject({ in_app_enabled: true, homework_enabled: false });
+  });
+
+  it('returns null (not a throw) when loading fails', async () => {
+    mockLoadNotificationPrefsResult = { data: null, error: { message: 'unauthorized' } };
+    const prefs = await loadWorkspaceNotificationPreferences();
+    expect(prefs).toBeNull();
+  });
+
+  it('persists an update and returns the saved row', async () => {
+    mockUpdateNotificationPrefsResult = { data: { in_app_enabled: true, homework_enabled: true, report_enabled: false }, error: null };
+    const prefs = await updateWorkspaceNotificationPreferences({ report_enabled: false });
+    expect(mockUpdateNotificationPrefsCalls[mockUpdateNotificationPrefsCalls.length - 1]).toEqual({ report_enabled: false });
+    expect(prefs.report_enabled).toBe(false);
+  });
+
+  it('throws when the update fails', async () => {
+    mockUpdateNotificationPrefsResult = { data: null, error: { message: 'invalid_preferences' } };
+    await expect(updateWorkspaceNotificationPreferences({ bogus: true })).rejects.toThrow('invalid_preferences');
   });
 });
 
