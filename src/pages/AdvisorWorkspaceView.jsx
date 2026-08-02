@@ -37,6 +37,8 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
     resourceSearch, resourceType, resourceWound, resourceStage, dischargedClients,
     practiceGenerating, practiceError,
     accessControlClientId, accessControlFullAccess, accessControlForm, accessControlSaving, accessControlSaved,
+    teamTherapists, teamAssignments, teamLoading,
+    reassignTherapistId, reassignClientId, reassignClientName, reassignToTherapistId, reassignSaving,
   } = S;
 
   const rootStyle = {
@@ -756,6 +758,24 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
   });
   const accessControlFullAccessTrackStyle = accessToggleTrackStyle(accessControlFullAccess, false);
 
+  // Same ifs_clients (staff roles) + active ifs_therapist_clients rows
+  // AdminHub.jsx's loadData already queries — grouped by therapist here into
+  // an expandable caseload list with a Reassign action per client.
+  const teamRows = (teamTherapists || []).map((t) => {
+    const caseload = (teamAssignments || []).filter((a) => a.therapist_id === t.id);
+    return {
+      id: t.id, name: t.name || 'Unnamed Advisor', email: t.email || '', caseloadCount: caseload.length,
+      clients: caseload.map((a) => ({
+        key: `${a.therapist_id}-${a.client_id}`, clientId: a.client_id, name: a.client_name || a.client_id,
+        assignedLabel: a.assigned_at ? new Date(a.assigned_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'date unknown',
+        onReassign: () => H.onSelectReassignTarget(t.id, a.client_id, a.client_name || a.client_id),
+      })),
+    };
+  });
+  const noTeamRows = !teamLoading && teamRows.length === 0;
+  const hasReassignTarget = !!(reassignTherapistId && reassignClientId);
+  const reassignTargetOptions = (teamTherapists || []).filter((t) => t.id !== reassignTherapistId).map((t) => ({ id: t.id, name: t.name || t.email || 'Unnamed Advisor' }));
+
   const deletingClient = S.deletingClientId ? ALL_CLIENTS.find((c) => c.id === S.deletingClientId) : null;
   const deleteConfirmMatches = !!(deletingClient && S.deleteConfirmText.trim() === deletingClient.name);
 
@@ -852,6 +872,7 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
     engagementRows,
     settingsToggles: settingsTogglesList, notificationPrefsSaving: !!notificationPrefsSaving,
     showNewClientForm: S.showNewClientForm, newClientForm: S.newClientForm, newClientResult: S.newClientResult, onToggleNewClientForm: H.toggleNewClientForm,
+    onExportCaseloadCsv: H.onExportCaseloadCsv,
     onNewClientNameChange: H.onNewClientFieldChange('name'), onNewClientEmailChange: H.onNewClientFieldChange('email'), onNewClientPhoneChange: H.onNewClientFieldChange('phone'), onNewClientSendEmailChange: H.onNewClientFieldChange('sendEmail'), onCreateClient: H.onCreateClient,
     deletingClientId: S.deletingClientId, deletingClientName: deletingClient ? deletingClient.name : '', deleteConfirmText: S.deleteConfirmText, deleteConfirmMatches, notDeleteConfirmMatches: !deleteConfirmMatches, deleteConfirmOpacity: deleteConfirmMatches ? 1 : 0.5,
     onCancelDelete: H.onCancelDelete, onDeleteConfirmChange: H.onDeleteConfirmChange, onConfirmDelete: H.onConfirmDelete,
@@ -867,6 +888,9 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
     accessControlModuleRows, accessControlAssessmentRows, accessControlFeatureRows,
     accessControlSaving: !!accessControlSaving, accessControlSaved,
     onSaveAccessControl: H.onSaveAccessControl,
+    teamRows, noTeamRows, teamLoading: !!teamLoading, onRefreshTeam: H.onRefreshTeam,
+    hasReassignTarget, reassignClientName, reassignToTherapistId, reassignTargetOptions, reassignSaving: !!reassignSaving,
+    onCancelReassign: H.onCancelReassign, onReassignToTherapistChange: H.onReassignToTherapistChange, onSaveReassignment: H.onSaveReassignment,
   };
 }
 
@@ -988,7 +1012,7 @@ function CommandCenter({ v }) {
       {v.isClinicalCurriculumBuilder && <ImportPanel title="Custom Curriculum" desc="Design and assign an individualized curriculum path per client from the module library." to="/assessment-builder" linkLabel="Open Builder" />}
       {v.isInsightsReports && <CaseloadReportsView v={v} />}
       {v.isAdminAccess && <AccessControlView v={v} />}
-      {v.isAdminTeam && <ImportPanel title="Team & Caseloads" desc="Reassign clients across Advisors and supervisors." to="/admin-hub" linkLabel="Open Admin Hub" />}
+      {v.isAdminTeam && <AdminTeamView v={v} />}
       {v.isAdminAudit && <ImportPanel title="Audit & Consent Log" desc="Chronological record of clinical actions and consent events." to="/admin-hub" linkLabel="Open Admin Hub" />}
     </>
   );
@@ -1097,7 +1121,10 @@ function ClientsCaseload({ v }) {
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '320px 1fr', gap: '20px', alignItems: 'start' }}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-        <button onClick={v.onToggleNewClientForm} style={{ ...v.secondaryBtnStyle, width: '100%' }}>+ New client</button>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <button onClick={v.onToggleNewClientForm} style={{ ...v.secondaryBtnStyle, flex: 1 }}>+ New client</button>
+          <button onClick={v.onExportCaseloadCsv} style={v.secondaryBtnStyle}>Export CSV</button>
+        </div>
         {v.showNewClientForm && (
           <div style={{ ...CARD, borderRadius: '16px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
             <input value={v.newClientForm.name} onChange={v.onNewClientNameChange} placeholder="Full name" style={inp()} />
@@ -2985,6 +3012,60 @@ function AccessControlView({ v }) {
             {v.isDemo && <span style={{ fontSize: '12px', color: 'var(--muted)' }}>Sign in to save changes.</span>}
           </div>
         </>
+      )}
+    </div>
+  );
+}
+
+function AdminTeamView({ v }) {
+  return (
+    <div style={{ maxWidth: '820px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+      <div style={{ ...CARD, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
+        <div>
+          <span style={{ ...FR, fontSize: '16px' }}>Team & Caseloads</span>
+          <div style={{ fontSize: '12px', color: 'var(--muted)', marginTop: '4px' }}>Reassign clients across Advisors and supervisors.</div>
+        </div>
+        <button onClick={v.onRefreshTeam} disabled={v.teamLoading} style={v.secondaryBtnStyle}>{v.teamLoading ? 'Loading…' : 'Refresh'}</button>
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+        {v.teamRows.map((t) => (
+          <div key={t.id} style={{ ...CARD, borderRadius: '18px', padding: '18px 20px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap' }}>
+              <div>
+                <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text)' }}>{t.name}</div>
+                <div style={{ fontSize: '11.5px', color: 'var(--muted)' }}>{t.email} · {t.caseloadCount} active client{t.caseloadCount === 1 ? '' : 's'}</div>
+              </div>
+            </div>
+            {t.clients.length > 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '12px', paddingTop: '12px', borderTop: '1px solid var(--border)' }}>
+                {t.clients.map((c) => (
+                  <div key={c.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap' }}>
+                    <div>
+                      <div style={{ fontSize: '13px', color: 'var(--text)' }}>{c.name}</div>
+                      <div style={{ fontSize: '11px', color: 'var(--muted)' }}>Assigned {c.assignedLabel}</div>
+                    </div>
+                    <button onClick={c.onReassign} style={v.secondaryBtnStyle}>Reassign</button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        ))}
+        {v.noTeamRows && <div style={{ padding: '20px', textAlign: 'center', color: 'var(--muted)', fontSize: '13px' }}>No staff accounts found.</div>}
+      </div>
+      {v.hasReassignTarget && (
+        <div style={{ ...CARD, borderRadius: '18px', padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          <span style={{ fontSize: '13.5px', fontWeight: 600, color: 'var(--text)' }}>Move {v.reassignClientName} to another Advisor</span>
+          <select value={v.reassignToTherapistId} onChange={v.onReassignToTherapistChange} style={{ ...v.selectStyle, width: '100%' }}>
+            <option value="">Choose Advisor…</option>
+            {v.reassignTargetOptions.map((o) => (<option key={o.id} value={o.id}>{o.name}</option>))}
+          </select>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button onClick={v.onCancelReassign} style={v.secondaryBtnStyle}>Cancel</button>
+            <button onClick={v.onSaveReassignment} disabled={!v.reassignToTherapistId || v.reassignSaving || v.isDemo} style={v.primaryBtnStyle}>{v.reassignSaving ? 'Saving…' : 'Save reassignment'}</button>
+            {v.isDemo && <span style={{ fontSize: '12px', color: 'var(--muted)', alignSelf: 'center' }}>Sign in to save changes.</span>}
+          </div>
+        </div>
       )}
     </div>
   );

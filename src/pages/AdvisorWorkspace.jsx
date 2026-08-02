@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { buildView, WorkspaceShell, EmptyCaseload, WorkspaceStatus } from './AdvisorWorkspaceView.jsx';
 import {
   WOUND_META, LIGHT, DARK, CLIENTS, TEMPLATE_OPTIONS, PRACTICE_TYPE_META, PLAN_PHASES,
-  DOC_SOURCES_DEFAULT, NAV_CONFIG, DEFAULT_NOTIFICATION_PREFS,
+  DOC_SOURCES_DEFAULT, NAV_CONFIG, DEFAULT_NOTIFICATION_PREFS, buildCaseloadCsv,
 } from './advisorWorkspaceData.js';
 import {
   loadWorkspaceCaseload, loadWorkspaceCaseloadWithStatus, loadWorkspaceClientDetail, sendWorkspaceMessage, deleteWorkspaceMessage, persistTherapistNote,
@@ -18,6 +18,7 @@ import {
   deactivateWorkspaceClientAssignment, reactivateWorkspaceClientAssignment, loadWorkspaceDischargedClients,
   generateWorkspacePractice, generateWorkspacePracticeBatch, assignWorkspacePractice,
   updateWorkspaceClientAccessRestrictions,
+  loadWorkspaceTeamAssignments, reassignWorkspaceClient,
 } from '../lib/advisorWorkspaceLoader.js';
 import { DEFAULT_ACCESS_FORM } from '../data/accessControlData.js';
 import { loadAdvisorSessionSnapshot } from '../lib/unifiedGuidance.js';
@@ -86,6 +87,8 @@ export const INITIAL_STATE = {
   resourceSearch: '', resourceType: 'all', resourceWound: 'all', resourceStage: 'all',
   dischargedClients: [],
   accessControlClientId: '', accessControlFullAccess: true, accessControlForm: null, accessControlSaving: false, accessControlSaved: '',
+  teamTherapists: [], teamAssignments: [], teamLoading: false,
+  reassignTherapistId: '', reassignClientId: '', reassignClientName: '', reassignToTherapistId: '', reassignSaving: false,
   extraClients: [], deletedIds: {},
   showNewClientForm: false, newClientForm: { name: '', email: '', phone: '', sendEmail: true }, newClientResult: null,
   deletingClientId: null, deleteConfirmText: '',
@@ -130,6 +133,7 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
   const accessControlInitialized = useRef(false);
   const notificationPrefsLoaded = useRef(false);
   const caseloadReportsLoaded = useRef(false);
+  const teamAssignmentsLoaded = useRef(false);
   // Tracks temp ids toggled locally before their create request resolved, so
   // that resolution can apply (and persist) the toggle instead of silently
   // reverting the row to the server's initial 'open' status.
@@ -188,6 +192,7 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
     tasksLoaded.current = false;
     notificationPrefsLoaded.current = false;
     caseloadReportsLoaded.current = false;
+    teamAssignmentsLoaded.current = false;
     (async () => {
       try {
         // Loaded alongside the active caseload (not lazily on Caseload-tab
@@ -432,6 +437,38 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
     if (clientId) onAccessControlClientChange(clientId);
   }, [loadPhase, S.activeTab]);
 
+  // Same real data AdminHub.jsx's loadData already queries (staff-role
+  // ifs_clients rows + active ifs_therapist_clients assignments) — the
+  // workspace's own Admin > Team & Caseloads tab was a link-out placeholder.
+  const refreshTeamAssignments = () => {
+    set({ teamLoading: true });
+    loadWorkspaceTeamAssignments().then(({ therapists, assignments }) => {
+      set({ teamTherapists: therapists, teamAssignments: assignments, teamLoading: false });
+    });
+  };
+  useEffect(() => {
+    if (loadPhase !== 'ready' || S.activeTab !== 'admin-team' || teamAssignmentsLoaded.current) return;
+    teamAssignmentsLoaded.current = true;
+    refreshTeamAssignments();
+  }, [loadPhase, S.activeTab]);
+  const onSelectReassignTarget = (therapistId, clientId, clientName) => set({ reassignTherapistId: therapistId, reassignClientId: clientId, reassignClientName: clientName, reassignToTherapistId: '' });
+  const onCancelReassign = () => set({ reassignTherapistId: '', reassignClientId: '', reassignClientName: '', reassignToTherapistId: '' });
+  const onReassignToTherapistChange = (e) => set({ reassignToTherapistId: e.target.value });
+  const onSaveReassignment = () => {
+    if (isDemo || !S.reassignTherapistId || !S.reassignClientId || !S.reassignToTherapistId) return;
+    const toTherapist = S.teamTherapists.find((t) => t.id === S.reassignToTherapistId);
+    set({ reassignSaving: true });
+    reassignWorkspaceClient({
+      clientId: S.reassignClientId, fromTherapistId: S.reassignTherapistId,
+      toTherapistId: S.reassignToTherapistId, toTherapistName: toTherapist?.name || null,
+    }).then(({ error }) => {
+      set({ reassignSaving: false });
+      if (error) { console.error('Failed to reassign client:', error); return; }
+      set({ reassignTherapistId: '', reassignClientId: '', reassignClientName: '', reassignToTherapistId: '' });
+      refreshTeamAssignments();
+    });
+  };
+
   useEffect(() => {
     if (!document.getElementById(FONT_LINK_ID)) {
       const link = document.createElement('link');
@@ -599,6 +636,18 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
     if (!reportWindow) return;
     reportWindow.document.write(html);
     reportWindow.document.close();
+  };
+  // Same client-side CSV build TherapistDashboard.jsx's handleExportCSV
+  // already does — the workspace's own Caseload view had no export action.
+  const onExportCaseloadCsv = () => {
+    const csvContent = buildCaseloadCsv(allClients());
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `clients_export_${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
   };
   const openPlanFor = (clientId) => set({ activeTab: 'clinical-plans', planClientId: clientId });
   // Same invalidatePendingDoc pattern as the Document Creator: bumping the
@@ -1342,7 +1391,7 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
     handlers: {
       setTab, setViewMode, toggleTheme, selectClient, setClientTab, onSearch, setFilterWound, markReviewed, toggleSessionPrep, onClaimClient, onMarkAgendaReviewed,
       onDeactivateClient, onReactivateClient,
-      onNoteClientChange, onNoteTemplateChange, onNoteTextChange, onSaveNote, onSignNote, onAiNoteSaved, toggleSetting, draftNoteFor, openPrepFor, openPlanFor, openPracticeFor, onExportReport,
+      onNoteClientChange, onNoteTemplateChange, onNoteTextChange, onSaveNote, onSignNote, onAiNoteSaved, toggleSetting, draftNoteFor, openPrepFor, openPlanFor, openPracticeFor, onExportReport, onExportCaseloadCsv,
       onPlanClientChange, onPracticeClientChange, onPracticeWoundChange, onPracticeTypeChange, onGeneratePractice, onPracticeDraftChange, onRejectPractice, onAssignPractice, toggleAssignLesson,
       onCoTherapyMessageChange, onSendCoTherapyMessage, toggleCoTherapyShare, onGenerateReport, isGroupExpanded, toggleGroup,
       onClientMessageChange, onSendClientMessage, onMessageSearchChange, setActiveThread, addTaskFromMessage, onAcknowledgeSafety, onCreateSafetyPlan, onCreateTaskFromSafety, onCreateTaskFromAssessment, setPartsClientFilter,
@@ -1354,6 +1403,7 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
       onDeleteMessage, applyQuickMessage, toggleLiveSession, endLiveSession, onMarkNotifRead, onMarkAllNotifsRead, onOpenNotifClient,
       onHomeworkAssigned, onHomeworkFeedbackChange, onMarkHomeworkReviewed, onArchiveHomework,
       onAccessControlClientChange, toggleAccessControlFullAccess, toggleAccessControlModule, toggleAccessControlAssessment, toggleAccessControlFeature, onSaveAccessControl,
+      onSelectReassignTarget, onCancelReassign, onReassignToTherapistChange, onSaveReassignment, onRefreshTeam: refreshTeamAssignments,
     },
   });
 
