@@ -328,7 +328,7 @@ export const NAV_CONFIG = [
 ];
 
 export const CLIENT_TABS = [
-  { id: 'overview', label: 'Overview' }, { id: 'snapshot', label: 'AI Snapshot' }, { id: 'changeSummary', label: 'Since Last Session' }, { id: 'moduleInsights', label: 'Module Insights' }, { id: 'assessments', label: 'Assessments' }, { id: 'timeline', label: 'Timeline' }, { id: 'betweenSession', label: 'Between Sessions' }, { id: 'notes', label: 'Notes' },
+  { id: 'overview', label: 'Overview' }, { id: 'snapshot', label: 'AI Snapshot' }, { id: 'changeSummary', label: 'Since Last Session' }, { id: 'moduleInsights', label: 'Module Insights' }, { id: 'sessionPrep', label: 'Session Prep' }, { id: 'assessments', label: 'Assessments' }, { id: 'timeline', label: 'Timeline' }, { id: 'betweenSession', label: 'Between Sessions' }, { id: 'notes', label: 'Notes' },
   { id: 'plan', label: 'Treatment Plan' }, { id: 'mbc', label: 'MBC' }, { id: 'parts', label: 'Parts' },
   { id: 'practices', label: 'Practices' }, { id: 'safety', label: 'Safety' }, { id: 'messages', label: 'Messages' },
   { id: 'lifeReflections', label: 'Life Reflections' }, { id: 'healingJourney', label: 'Healing Journey' },
@@ -372,11 +372,23 @@ export const TAB_TITLES = {
   'admin-team': ['Team & Caseloads', 'Reassign clients across Advisors and supervisors'],
   settings: ['Settings', 'Preferences for this workspace'],
 };
-export const TOGGLE_META = {
-  riskAlerts: { label: 'Risk & safety alerts', desc: 'Notify me immediately when concerning language is detected' },
-  weeklyDigest: { label: 'Weekly caseload digest', desc: 'Email summary of caseload progress every Monday' },
-  sessionReminders: { label: 'Session prep reminders', desc: 'Remind me the evening before a client submits a check-in' },
+// Mirrors ifs_notification_preferences' real boolean columns
+// (api/_notificationPreferences.js's ALLOWED_NOTIFICATION_PREFERENCE_FIELDS /
+// NOTIFICATION_CATEGORY_BY_TYPE), the same backend that already powers the
+// client-facing notification settings — just not previously editable from
+// the Advisor Workspace's own Settings tab (which only had 3 local-only,
+// never-persisted toggles).
+export const NOTIFICATION_PREF_META = {
+  in_app_enabled: { label: 'All notifications', desc: 'Master switch for in-app notifications' },
+  homework_enabled: { label: 'Homework activity', desc: 'Assigned, started, completed, and reviewed homework' },
+  session_agenda_enabled: { label: 'Session agendas', desc: 'Client-submitted session prep agendas' },
+  treatment_plan_enabled: { label: 'Treatment plan updates', desc: 'Goals created, updated, or completed' },
+  live_session_enabled: { label: 'Live sessions', desc: 'Live session start, join, and end events' },
+  report_enabled: { label: 'Reports', desc: 'Generated client reports' },
+  therapist_note_activity_enabled: { label: 'Note activity', desc: 'Therapist note creation events' },
+  general_updates_enabled: { label: 'General updates', desc: 'Everything else' },
 };
+export const DEFAULT_NOTIFICATION_PREFS = Object.fromEntries(Object.keys(NOTIFICATION_PREF_META).map((key) => [key, true]));
 export const QUICK_MESSAGES = [
   'Great progress this week — keep it up!',
   'Remember your daily Self-energy practice.',

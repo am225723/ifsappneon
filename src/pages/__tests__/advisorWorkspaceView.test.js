@@ -1389,6 +1389,152 @@ describe('buildView — Access Control edits ifs_clients.access_restrictions (mi
   });
 });
 
+describe('buildView — Clinical Tasks archive action (api/tasks.js archive, previously never called)', () => {
+  it('wires each task row\'s Archive action through to onArchiveTask', () => {
+    let archivedId = null;
+    const view = buildView({
+      S: { ...INITIAL_STATE }, theme: LIGHT, allClients: () => CLIENTS,
+      buildTreatmentPlan: (c) => ({ clientName: c.name, phases: [], milestones: [], currentPhaseLabel: '', currentPhaseDesc: '' }),
+      handlers: new Proxy({ isGroupExpanded: () => false, onArchiveTask: (id) => { archivedId = id; } }, { get: (t, p) => t[p] || (() => {}) }),
+      isAdmin: true,
+    });
+    const row = view.taskRows.find((t) => t.id === 't1');
+    row.onArchive();
+    expect(archivedId).toBe('t1');
+  });
+});
+
+describe('buildView — Session Preparation is reachable as a per-client tab', () => {
+  const CLIENT_WITH_AGENDA = {
+    ...CLIENTS[0], id: 'sp2', name: 'Prep Tab Test',
+    agendas: [
+      { id: 'ag2', dateLabel: 'Jul 22', statusLabel: 'Submitted', reviewed: false, topics: 'Grief processing', activeParts: ['The Mourner'], stuckPoints: '', goalsForSession: '', currentStressLevel: 4, currentMoodLabel: 'Sad', safetyConcerns: '' },
+    ],
+    qaAnswers: [{ question: 'How was your week?', answer: 'Rough, but manageable.' }],
+  };
+
+  it('flags the sessionPrep client tab and surfaces the same agenda + check-in data as the global Session Prep view', () => {
+    const v = makeView({ extraClients: [CLIENT_WITH_AGENDA], selectedClientId: 'sp2', activeClientTab: 'sessionPrep' });
+    expect(v.isClientTabSessionPrep).toBe(true);
+    const sc = v.selectedClient;
+    expect(sc.sessionPrepAgendas).toHaveLength(1);
+    expect(sc.sessionPrepAgendas[0].topics).toBe('Grief processing');
+    expect(sc.noSessionPrepAgendas).toBe(false);
+    expect(sc.qaAnswers[0].answer).toBe('Rough, but manageable.');
+  });
+
+  it('wires the agenda\'s Mark reviewed action and the Draft note action for the selected client', () => {
+    const calls = {};
+    const view = buildView({
+      S: { ...INITIAL_STATE, extraClients: [CLIENT_WITH_AGENDA], selectedClientId: 'sp2', activeClientTab: 'sessionPrep' },
+      theme: LIGHT, allClients: () => CLIENTS.concat([CLIENT_WITH_AGENDA]),
+      buildTreatmentPlan: (c) => ({ clientName: c.name, phases: [], milestones: [], currentPhaseLabel: '', currentPhaseDesc: '' }),
+      handlers: new Proxy({
+        isGroupExpanded: () => false,
+        onMarkAgendaReviewed: (clientId, agendaId) => { calls.reviewed = [clientId, agendaId]; },
+        draftNoteFor: (clientId) => { calls.drafted = clientId; },
+      }, { get: (t, p) => t[p] || (() => {}) }),
+      isAdmin: true,
+    });
+    const sc = view.selectedClient;
+    sc.sessionPrepAgendas[0].onMarkReviewed();
+    sc.onDraftNoteFromPrep();
+    expect(calls.reviewed).toEqual(['sp2', 'ag2']);
+    expect(calls.drafted).toBe('sp2');
+  });
+
+  it('reports no agendas submitted yet for a client with none', () => {
+    const v = makeView({ selectedClientId: 'c1', activeClientTab: 'sessionPrep' });
+    expect(v.selectedClient.noSessionPrepAgendas).toBe(true);
+  });
+});
+
+describe('buildView — Safety tab can add a risk flag to a note or a follow-up task', () => {
+  it('wires onAddToNote and onCreateTask for an assigned client', () => {
+    const calls = {};
+    const view = buildView({
+      S: { ...INITIAL_STATE, selectedClientId: 'c2' }, theme: LIGHT, allClients: () => CLIENTS,
+      buildTreatmentPlan: (c) => ({ clientName: c.name, phases: [], milestones: [], currentPhaseLabel: '', currentPhaseDesc: '' }),
+      handlers: new Proxy({
+        isGroupExpanded: () => false,
+        draftNoteFor: (clientId) => { calls.drafted = clientId; },
+        onCreateTaskFromSafety: (clientId) => { calls.taskFor = clientId; },
+      }, { get: (t, p) => t[p] || (() => {}) }),
+      isAdmin: true,
+    });
+    const s = view.selectedClient.safety;
+    s.onAddToNote();
+    s.onCreateTask();
+    expect(calls.drafted).toBe('c2');
+    expect(calls.taskFor).toBe('c2');
+  });
+
+  it('does not offer add-to-note/create-task for an unassigned client', () => {
+    const unassigned = { ...CLIENTS[0], id: 'unassigned-safety', unassigned: true };
+    const v = makeView({ extraClients: [unassigned], selectedClientId: 'unassigned-safety' });
+    expect(v.selectedClient.safety.onAddToNote).toBeUndefined();
+    expect(v.selectedClient.safety.onCreateTask).toBeUndefined();
+  });
+});
+
+describe('buildView — Settings persists real notification preferences (ifs_notification_preferences)', () => {
+  it('builds one toggle row per real preference category, reading on/off from state', () => {
+    const v = makeView({ notificationPrefs: { in_app_enabled: true, homework_enabled: false, session_agenda_enabled: true, treatment_plan_enabled: true, live_session_enabled: true, report_enabled: true, therapist_note_activity_enabled: true, general_updates_enabled: true } });
+    expect(v.settingsToggles.map((s) => s.key)).toContain('homework_enabled');
+    const homework = v.settingsToggles.find((s) => s.key === 'homework_enabled');
+    expect(homework.trackStyle.justifyContent).toBe('flex-start');
+    const inApp = v.settingsToggles.find((s) => s.key === 'in_app_enabled');
+    expect(inApp.trackStyle.justifyContent).toBe('flex-end');
+  });
+
+  it('wires each toggle to toggleSetting with its own preference key', () => {
+    let toggledKey = null;
+    const view = buildView({
+      S: { ...INITIAL_STATE }, theme: LIGHT, allClients: () => CLIENTS,
+      buildTreatmentPlan: (c) => ({ clientName: c.name, phases: [], milestones: [], currentPhaseLabel: '', currentPhaseDesc: '' }),
+      handlers: new Proxy({ isGroupExpanded: () => false, toggleSetting: (key) => { toggledKey = key; } }, { get: (t, p) => t[p] || (() => {}) }),
+      isAdmin: true,
+    });
+    view.settingsToggles.find((s) => s.key === 'report_enabled').onClick();
+    expect(toggledKey).toBe('report_enabled');
+  });
+
+  it('surfaces a saving indicator from state', () => {
+    const v = makeView({ notificationPrefsSaving: true });
+    expect(v.notificationPrefsSaving).toBe(true);
+  });
+});
+
+describe('buildView — Assessments tab can set a review reminder (reuses createWorkspaceTask)', () => {
+  const CLIENT_WITH_ASSESSMENT = {
+    ...CLIENTS[0], id: 'as1', name: 'Assessment Test',
+    assessmentHistory: [{ id: 'a1', dateLabel: 'Jun 1, 2026', primaryWound: 'abandonment', secondaryWound: null, subscales: [], tertiaryWounds: [], protectorTypes: [] }],
+  };
+
+  it('wires the Remind me to review action with the client id and the entry\'s date label', () => {
+    let calledWith = null;
+    const view = buildView({
+      S: { ...INITIAL_STATE, extraClients: [CLIENT_WITH_ASSESSMENT], selectedClientId: 'as1' },
+      theme: LIGHT, allClients: () => CLIENTS.concat([CLIENT_WITH_ASSESSMENT]),
+      buildTreatmentPlan: (c) => ({ clientName: c.name, phases: [], milestones: [], currentPhaseLabel: '', currentPhaseDesc: '' }),
+      handlers: new Proxy({
+        isGroupExpanded: () => false,
+        onCreateTaskFromAssessment: (clientId, dateLabel) => { calledWith = [clientId, dateLabel]; },
+      }, { get: (t, p) => t[p] || (() => {}) }),
+      isAdmin: true,
+    });
+    const entry = view.selectedClient.assessmentHistory[0];
+    entry.onRemind();
+    expect(calledWith).toEqual(['as1', 'Jun 1, 2026']);
+  });
+
+  it('does not offer a reminder action for an unassigned client', () => {
+    const unassigned = { ...CLIENT_WITH_ASSESSMENT, id: 'as-unassigned', unassigned: true };
+    const v = makeView({ extraClients: [unassigned], selectedClientId: 'as-unassigned' });
+    expect(v.selectedClient.assessmentHistory[0].onRemind).toBeUndefined();
+  });
+});
+
 describe('buildView — Caseload Management shows email, level, safety, and a deactivate control', () => {
   it('shows each row\'s email and gamification level, previously only visible after opening the client', () => {
     const v = makeView();

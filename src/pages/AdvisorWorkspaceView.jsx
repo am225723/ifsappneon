@@ -5,7 +5,7 @@ import TherapistHomeworkBuilder from '../components/TherapistHomeworkBuilder.jsx
 import {
   WOUND_META, woundChip, daysAgoText, severityStyle, RISK_LEVEL_TO_SEV, RISK_LEVEL_LABEL, RISK_LEVEL_RANK,
   PART_CAT_META, partChip, TEMPLATE_OPTIONS, PRACTICE_TYPE_META, LESSON_TITLES, PLAN_PHASES,
-  DOC_TYPES, DOC_SOURCES, NAV_CONFIG, CLIENT_TABS, TIMELINE_TYPE_META, TAB_TITLES, TOGGLE_META,
+  DOC_TYPES, DOC_SOURCES, NAV_CONFIG, CLIENT_TABS, TIMELINE_TYPE_META, TAB_TITLES, NOTIFICATION_PREF_META,
   QUICK_MESSAGES, engagementStatusFor, MOOD_LABELS, RISK_TYPE_TITLE,
   UNBURDENING_MOOD_LABELS, UNBURDENING_TOTAL_STEPS, UNBURDENING_STEP_TITLES,
   RESOURCE_TYPES, HEALING_STAGES,
@@ -27,7 +27,7 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
   const {
     activeTab, isDark, viewMode, selectedClientId, activeClientTab, search, filterWound, reviewedIds,
     sessionPrepOpenId, noteDraft, savedNotes, planClientId, practiceForm, generatedPractice, assignedPractices,
-    assignedLessons, coTherapyShare, coTherapyMessage, coTherapyThread, reports, settingsToggles, clientMessages,
+    assignedLessons, coTherapyShare, coTherapyMessage, coTherapyThread, reports, notificationPrefs, notificationPrefsSaving, clientMessages,
     clientMessageDraft, activeThreadId, safetyOverrides, engagementDismissed, engagementExpanded, partsClientFilter, tasks, taskFilter, messageSearch,
     newTaskTitle, newTaskClientId, docForm, docSources, generatedDoc, docGenerating, docError, clientReports, clientReportsLoading, deletedMessageIdx,
     sessionSnapshot, changeSummary, moduleInsights, lifeReflections, lifeReflectionsLoading, healingTimeline, riskAlerts,
@@ -263,6 +263,14 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
       goals: rawSelected.goals.map((g) => ({ title: g.title, reviewLabel: 'Review in ' + g.reviewInDays + 'd', style: { fontSize: '11px', fontWeight: 700, color: g.reviewInDays <= 7 ? theme.riskMedText : theme.muted } })),
       qaAnswers: Array.isArray(rawSelected.qaAnswers) ? rawSelected.qaAnswers : [],
       noQaAnswers: !Array.isArray(rawSelected.qaAnswers) || rawSelected.qaAnswers.length === 0,
+      sessionPrepAgendas: (Array.isArray(rawSelected.agendas) ? rawSelected.agendas : []).map((a) => ({
+        id: a.id, dateLabel: a.dateLabel, statusLabel: a.statusLabel, reviewed: a.reviewed,
+        topics: a.topics, activeParts: a.activeParts, stuckPoints: a.stuckPoints, goalsForSession: a.goalsForSession,
+        currentStressLevel: a.currentStressLevel, currentMoodLabel: a.currentMoodLabel, safetyConcerns: a.safetyConcerns,
+        onMarkReviewed: () => H.onMarkAgendaReviewed(rawSelected.id, a.id),
+      })),
+      noSessionPrepAgendas: !Array.isArray(rawSelected.agendas) || rawSelected.agendas.length === 0,
+      onDraftNoteFromPrep: () => H.draftNoteFor(rawSelected.id),
       timeline: rawSelected.timeline.map((e, i) => { const m = TIMELINE_TYPE_META[e.type] || TIMELINE_TYPE_META.note; return { id: e.id || `${e.type}-${i}`, label: e.label, date: e.date, typeLabel: m.label, typeChip: { fontSize: '10px', fontWeight: 700, color: m.color, background: isDark ? 'rgba(255,255,255,0.08)' : m.color + '14', padding: '3px 7px', borderRadius: '6px', whiteSpace: 'nowrap', height: 'fit-content' } }; }),
       clientNotes: savedNotes.filter((n) => n.clientId === rawSelected.id).map((n) => ({ ...n, statusStyle: severityStyle(theme, n.status === 'Signed & Locked' ? 'low' : 'medium'), statusLabel: n.status })),
       noNotes: !savedNotes.some((n) => n.clientId === rawSelected.id),
@@ -290,6 +298,7 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
         })),
         tertiaryLabels: (entry.tertiaryWounds || []).map((w) => WOUND_META[w]?.label).filter(Boolean),
         protectorTypes: entry.protectorTypes || [],
+        onRemind: canWrite ? () => H.onCreateTaskFromAssessment(rawSelected.id, entry.dateLabel || 'this assessment') : undefined,
       })),
       noAssessmentHistory: !(rawSelected.assessmentHistory || []).length,
       betweenSession: {
@@ -477,6 +486,8 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
         ackBtnStyle: rawSafety.acknowledged ? secondaryBtnStyle : primaryBtnStyle,
         onAcknowledge: canWrite ? () => H.onAcknowledgeSafety(rawSelected.id) : undefined,
         onCreatePlan: canWrite ? () => H.onCreateSafetyPlan(rawSelected.id) : undefined,
+        onAddToNote: canWrite ? () => H.draftNoteFor(rawSelected.id) : undefined,
+        onCreateTask: canWrite ? () => H.onCreateTaskFromSafety(rawSelected.id) : undefined,
       },
       messages: allMsgs.map((m, idx) => ({ idx, authorLabel: m.from === 'client' ? rawSelected.name : 'You', text: m.text, date: m.date, readTick: m.from === 'advisor' ? '✓✓' : '', onDelete: () => H.onDeleteMessage(rawSelected.id, idx), bubbleStyle: { alignSelf: m.from === 'advisor' ? 'flex-end' : 'flex-start', maxWidth: '85%', padding: '10px 14px', borderRadius: '14px', background: m.from === 'advisor' ? theme.accent2 : theme.surface2, color: m.from === 'advisor' ? '#fff' : theme.text } })).filter((m) => !((deletedMessageIdx[rawSelected.id] || {})[m.idx])),
       canWrite,
@@ -580,6 +591,7 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
     return {
       id: t.id, title: t.title, client: client ? client.name : '', category: t.category, due: t.due,
       onToggle: () => H.toggleTask(t.id), checkChar: done ? '✓' : '', checkStyle: { width: '20px', height: '20px', borderRadius: '6px', border: '1.5px solid ' + (done ? theme.emerald2 : theme.border), background: done ? theme.emerald2 : 'transparent', color: '#fff', cursor: 'pointer', fontSize: '12px', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 },
+      onArchive: () => H.onArchiveTask(t.id),
       titleStyle: { fontSize: '13.5px', fontWeight: 600, color: done ? theme.muted : theme.text, textDecoration: done ? 'line-through' : 'none' },
       priorityLabel: t.priority, priorityChip: severityStyle(theme, t.priority === 'high' ? 'high' : (t.priority === 'medium' ? 'medium' : 'low')),
       rowStyle: { display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', borderRadius: '14px', background: theme.surface, border: '1px solid ' + theme.border, boxShadow: theme.shadow },
@@ -699,9 +711,9 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
     };
   });
 
-  const settingsTogglesList = Object.keys(TOGGLE_META).map((key) => {
-    const on = settingsToggles[key];
-    return { key, label: TOGGLE_META[key].label, desc: TOGGLE_META[key].desc, onClick: () => H.toggleSetting(key), trackStyle: { width: '40px', height: '22px', borderRadius: '999px', border: 'none', cursor: 'pointer', background: on ? theme.emerald2 : theme.border, position: 'relative', padding: '3px', display: 'flex', justifyContent: on ? 'flex-end' : 'flex-start' }, knobStyle: { width: '16px', height: '16px', borderRadius: '50%', background: '#fff' } };
+  const settingsTogglesList = Object.keys(NOTIFICATION_PREF_META).map((key) => {
+    const on = notificationPrefs[key];
+    return { key, label: NOTIFICATION_PREF_META[key].label, desc: NOTIFICATION_PREF_META[key].desc, onClick: () => H.toggleSetting(key), trackStyle: { width: '40px', height: '22px', borderRadius: '999px', border: 'none', cursor: 'pointer', background: on ? theme.emerald2 : theme.border, position: 'relative', padding: '3px', display: 'flex', justifyContent: on ? 'flex-end' : 'flex-start' }, knobStyle: { width: '16px', height: '16px', borderRadius: '50%', background: '#fff' } };
   });
 
   const accessToggleTrackStyle = (on, disabled) => ({
@@ -800,7 +812,7 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
     goToMessages: () => H.setTab('messages'), goToTasks: () => H.setTab('tasks'),
     woundFilters, clientListFiltered, hasSelectedClient, selectedClient, clientTabs,
     deactivatedClients, hasDeactivatedClients: deactivatedClients.length > 0,
-    isClientTabOverview: activeClientTab === 'overview', isClientTabAssessments: activeClientTab === 'assessments', isClientTabTimeline: activeClientTab === 'timeline', isClientTabNotes: activeClientTab === 'notes',
+    isClientTabOverview: activeClientTab === 'overview', isClientTabSessionPrep: activeClientTab === 'sessionPrep', isClientTabAssessments: activeClientTab === 'assessments', isClientTabTimeline: activeClientTab === 'timeline', isClientTabNotes: activeClientTab === 'notes',
     isClientTabPlan: activeClientTab === 'plan', isClientTabMbc: activeClientTab === 'mbc', isClientTabParts: activeClientTab === 'parts',
     isClientTabPractices: activeClientTab === 'practices', isClientTabSafety: activeClientTab === 'safety', isClientTabMessages: activeClientTab === 'messages',
     primaryBtnStyle, secondaryBtnStyle, selectStyle,
@@ -829,7 +841,7 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
     clientReportRows, noClientReports, clientReportsLoading: !!clientReportsLoading,
     woundDistribution, engagementList, moodTrend, insightBullets, reports, onGenerateReport: H.onGenerateReport,
     engagementRows,
-    settingsToggles: settingsTogglesList,
+    settingsToggles: settingsTogglesList, notificationPrefsSaving: !!notificationPrefsSaving,
     showNewClientForm: S.showNewClientForm, newClientForm: S.newClientForm, newClientResult: S.newClientResult, onToggleNewClientForm: H.toggleNewClientForm,
     onNewClientNameChange: H.onNewClientFieldChange('name'), onNewClientEmailChange: H.onNewClientFieldChange('email'), onNewClientPhoneChange: H.onNewClientFieldChange('phone'), onNewClientSendEmailChange: H.onNewClientFieldChange('sendEmail'), onCreateClient: H.onCreateClient,
     deletingClientId: S.deletingClientId, deletingClientName: deletingClient ? deletingClient.name : '', deleteConfirmText: S.deleteConfirmText, deleteConfirmMatches, notDeleteConfirmMatches: !deleteConfirmMatches, deleteConfirmOpacity: deleteConfirmMatches ? 1 : 0.5,
@@ -1184,7 +1196,8 @@ function ClientsCaseload({ v }) {
           </div>
 
           {v.isClientTabOverview && <ClientOverviewTab v={v} sc={sc} />}
-          {v.isClientTabAssessments && <AssessmentHistoryTab history={sc.assessmentHistory} empty={sc.noAssessmentHistory} />}
+          {v.isClientTabSessionPrep && <ClientSessionPrepTab v={v} sc={sc} />}
+          {v.isClientTabAssessments && <AssessmentHistoryTab history={sc.assessmentHistory} empty={sc.noAssessmentHistory} secondaryBtnStyle={v.secondaryBtnStyle} />}
           {v.isClientTabSnapshot && <SnapshotTab snapshot={sc.snapshot} primaryBtnStyle={v.primaryBtnStyle} secondaryBtnStyle={v.secondaryBtnStyle} />}
           {v.isClientTabChangeSummary && <ChangeSummaryTab changeSummary={sc.changeSummary} primaryBtnStyle={v.primaryBtnStyle} />}
           {v.isClientTabModuleInsights && <ModuleInsightsTab moduleInsights={sc.moduleInsights} primaryBtnStyle={v.primaryBtnStyle} />}
@@ -1387,6 +1400,61 @@ function ClientOverviewTab({ v, sc }) {
   );
 }
 
+// Same submitted-agenda + check-in/module-response data the global Sessions
+// → Session Prep view already renders (SessionsPrepView below), just scoped
+// to this one client's own tab instead of requiring a trip to the global list.
+// Shared by ClientSessionPrepTab and SessionsPrepView (below) — same mapped
+// agenda shape, same card, rendered in two places so a therapist can reach a
+// client's session prep either per-client or from the global list.
+function SessionAgendaCard({ a, secondaryBtnStyle }) {
+  return (
+    <div style={{ padding: '14px', borderRadius: '14px', background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap' }}>
+        <span style={{ fontSize: '12.5px', fontWeight: 600, color: 'var(--text)' }}>Session agenda · {a.dateLabel}</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span style={{ fontSize: '11px', fontWeight: 700, color: a.reviewed ? 'var(--emerald-2)' : 'var(--muted)' }}>{a.statusLabel}</span>
+          {!a.reviewed && <button onClick={a.onMarkReviewed} style={secondaryBtnStyle}>Mark reviewed</button>}
+        </div>
+      </div>
+      {a.safetyConcerns && (
+        <div style={{ marginTop: '10px', padding: '10px 12px', borderRadius: '12px', background: 'var(--risk-high-bg)', border: '1px solid var(--risk-high-border)' }}>
+          <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--risk-high-text)' }}>Safety concerns flagged</div>
+          <div style={{ fontSize: '12.5px', color: 'var(--risk-high-text)', marginTop: '4px', lineHeight: 1.5 }}>{a.safetyConcerns}</div>
+        </div>
+      )}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '10px', fontSize: '12.5px', color: 'var(--text-2)' }}>
+        {a.topics && <div><strong>Topics:</strong> {a.topics}</div>}
+        {a.activeParts.length > 0 && <div><strong>Active parts:</strong> {a.activeParts.join(', ')}</div>}
+        {a.stuckPoints && <div><strong>Stuck points:</strong> {a.stuckPoints}</div>}
+        {a.goalsForSession && <div><strong>Goals for session:</strong> {a.goalsForSession}</div>}
+        {(a.currentStressLevel != null || a.currentMoodLabel) && (
+          <div>
+            {a.currentStressLevel != null && <><strong>Stress:</strong> {a.currentStressLevel}/10 </>}
+            {a.currentMoodLabel && <><strong>Mood:</strong> {a.currentMoodLabel}</>}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function ClientSessionPrepTab({ v, sc }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+      {sc.sessionPrepAgendas.map((a) => (<SessionAgendaCard key={a.id} a={a} secondaryBtnStyle={v.secondaryBtnStyle} />))}
+      {sc.noSessionPrepAgendas && <div style={{ fontSize: '13px', color: 'var(--muted)' }}>No session agendas submitted yet.</div>}
+      {sc.qaAnswers.map((qa, i) => (
+        <div key={i} style={{ padding: '12px 14px', borderRadius: '14px', background: 'var(--surface-2)' }}>
+          <div style={{ fontSize: '12.5px', fontWeight: 600, color: 'var(--text-2)' }}>{qa.question}</div>
+          <div style={{ fontSize: '13px', color: 'var(--text)', marginTop: '4px', lineHeight: 1.5 }}>“{qa.answer}”</div>
+        </div>
+      ))}
+      {sc.noQaAnswers && <div style={{ fontSize: '13px', color: 'var(--muted)' }}>No check-in or module responses recorded yet.</div>}
+      <button className="aw-primary" onClick={sc.onDraftNoteFromPrep} disabled={!sc.canWrite} style={{ ...v.primaryBtnStyle, alignSelf: 'flex-start', opacity: sc.canWrite ? 1 : 0.5, cursor: sc.canWrite ? 'pointer' : 'not-allowed' }}>Draft session note from this</button>
+    </div>
+  );
+}
+
 function PlanCard({ plan, onOpen, secondaryBtnStyle }) {
   return (
     <div style={CARD}>
@@ -1416,7 +1484,7 @@ function PlanCard({ plan, onOpen, secondaryBtnStyle }) {
   );
 }
 
-function AssessmentHistoryTab({ history, empty }) {
+function AssessmentHistoryTab({ history, empty, secondaryBtnStyle }) {
   if (empty) {
     return (
       <div style={CARD}>
@@ -1436,6 +1504,7 @@ function AssessmentHistoryTab({ history, empty }) {
               {i === 0 && <span style={{ marginLeft: '8px', fontSize: '10px', fontWeight: 700, color: 'var(--accent-2)', textTransform: 'uppercase', letterSpacing: '0.03em' }}>Most recent</span>}
             </div>
             {entry.primaryLabel && <span style={{ fontSize: '11.5px', color: 'var(--muted)' }}>Primary: {entry.primaryLabel}{entry.secondaryLabel ? ` · Secondary: ${entry.secondaryLabel}` : ''}</span>}
+            {entry.onRemind && <button onClick={entry.onRemind} style={secondaryBtnStyle}>Remind me to review</button>}
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '14px' }}>
             {entry.subscales.map((s) => (
@@ -2100,7 +2169,11 @@ function ClientSafetyTab({ v, sc }) {
         </div>
         <div style={{ borderTop: '1px solid var(--border)', paddingTop: '12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
           <div style={{ fontSize: '12.5px', color: 'var(--muted)' }}>{s.ackStatusText}</div>
-          <button onClick={s.onAcknowledge} disabled={!sc.canWrite} style={{ ...s.ackBtnStyle, opacity: sc.canWrite ? 1 : 0.5, cursor: sc.canWrite ? 'pointer' : 'not-allowed' }}>{s.ackBtnLabel}</button>
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+            <button onClick={s.onAddToNote} disabled={!sc.canWrite} style={{ ...v.secondaryBtnStyle, opacity: sc.canWrite ? 1 : 0.5, cursor: sc.canWrite ? 'pointer' : 'not-allowed' }}>Add to note</button>
+            <button onClick={s.onCreateTask} disabled={!sc.canWrite} style={{ ...v.secondaryBtnStyle, opacity: sc.canWrite ? 1 : 0.5, cursor: sc.canWrite ? 'pointer' : 'not-allowed' }}>Create task</button>
+            <button onClick={s.onAcknowledge} disabled={!sc.canWrite} style={{ ...s.ackBtnStyle, opacity: sc.canWrite ? 1 : 0.5, cursor: sc.canWrite ? 'pointer' : 'not-allowed' }}>{s.ackBtnLabel}</button>
+          </div>
         </div>
       </div>
     </div>
@@ -2268,6 +2341,7 @@ function TasksView({ v }) {
               <div style={{ fontSize: '11.5px', color: 'var(--muted)', marginTop: '2px' }}>{t.client} · {t.category} · due {t.due}</div>
             </div>
             <span style={t.priorityChip}>{t.priorityLabel}</span>
+            <button onClick={t.onArchive} style={{ background: 'none', border: '1px solid var(--border)', borderRadius: '8px', padding: '5px 10px', color: 'var(--muted)', fontSize: '11.5px', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>Archive</button>
           </div>
         ))}
         {v.noTasks && <div style={{ padding: '20px', textAlign: 'center', color: 'var(--muted)', fontSize: '13px' }}>No tasks match this filter.</div>}
@@ -2319,35 +2393,7 @@ function SessionsPrepView({ v }) {
           </div>
           {p.isExpanded && (
             <div style={{ padding: '0 20px 20px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              {p.agendas.map((a) => (
-                <div key={a.id} style={{ padding: '14px', borderRadius: '14px', background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap' }}>
-                    <span style={{ fontSize: '12.5px', fontWeight: 600, color: 'var(--text)' }}>Session agenda · {a.dateLabel}</span>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span style={{ fontSize: '11px', fontWeight: 700, color: a.reviewed ? 'var(--emerald-2)' : 'var(--muted)' }}>{a.statusLabel}</span>
-                      {!a.reviewed && <button onClick={a.onMarkReviewed} style={v.secondaryBtnStyle}>Mark reviewed</button>}
-                    </div>
-                  </div>
-                  {a.safetyConcerns && (
-                    <div style={{ marginTop: '10px', padding: '10px 12px', borderRadius: '12px', background: 'var(--risk-high-bg)', border: '1px solid var(--risk-high-border)' }}>
-                      <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--risk-high-text)' }}>Safety concerns flagged</div>
-                      <div style={{ fontSize: '12.5px', color: 'var(--risk-high-text)', marginTop: '4px', lineHeight: 1.5 }}>{a.safetyConcerns}</div>
-                    </div>
-                  )}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '10px', fontSize: '12.5px', color: 'var(--text-2)' }}>
-                    {a.topics && <div><strong>Topics:</strong> {a.topics}</div>}
-                    {a.activeParts.length > 0 && <div><strong>Active parts:</strong> {a.activeParts.join(', ')}</div>}
-                    {a.stuckPoints && <div><strong>Stuck points:</strong> {a.stuckPoints}</div>}
-                    {a.goalsForSession && <div><strong>Goals for session:</strong> {a.goalsForSession}</div>}
-                    {(a.currentStressLevel != null || a.currentMoodLabel) && (
-                      <div>
-                        {a.currentStressLevel != null && <><strong>Stress:</strong> {a.currentStressLevel}/10 </>}
-                        {a.currentMoodLabel && <><strong>Mood:</strong> {a.currentMoodLabel}</>}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ))}
+              {p.agendas.map((a) => (<SessionAgendaCard key={a.id} a={a} secondaryBtnStyle={v.secondaryBtnStyle} />))}
               {p.qaAnswers.map((qa, i) => (
                 <div key={i} style={{ padding: '12px 14px', borderRadius: '14px', background: 'var(--surface-2)' }}>
                   <div style={{ fontSize: '12.5px', fontWeight: 600, color: 'var(--text-2)' }}>{qa.question}</div>
@@ -2908,7 +2954,10 @@ function AccessControlView({ v }) {
 function SettingsView({ v }) {
   return (
     <div style={{ maxWidth: '560px', ...CARD, display: 'flex', flexDirection: 'column', gap: '4px' }}>
-      <span style={{ ...FR, fontSize: '16px', marginBottom: '10px' }}>Notifications</span>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+        <span style={{ ...FR, fontSize: '16px' }}>Notifications</span>
+        {v.notificationPrefsSaving && <span style={{ fontSize: '11.5px', color: 'var(--muted)' }}>Saving…</span>}
+      </div>
       {v.settingsToggles.map((s) => (
         <div key={s.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 4px', borderTop: '1px solid var(--border)' }}>
           <div>
