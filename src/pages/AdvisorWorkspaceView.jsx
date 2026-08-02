@@ -1403,38 +1403,45 @@ function ClientOverviewTab({ v, sc }) {
 // Same submitted-agenda + check-in/module-response data the global Sessions
 // → Session Prep view already renders (SessionsPrepView below), just scoped
 // to this one client's own tab instead of requiring a trip to the global list.
+// Shared by ClientSessionPrepTab and SessionsPrepView (below) — same mapped
+// agenda shape, same card, rendered in two places so a therapist can reach a
+// client's session prep either per-client or from the global list.
+function SessionAgendaCard({ a, secondaryBtnStyle }) {
+  return (
+    <div style={{ padding: '14px', borderRadius: '14px', background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap' }}>
+        <span style={{ fontSize: '12.5px', fontWeight: 600, color: 'var(--text)' }}>Session agenda · {a.dateLabel}</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span style={{ fontSize: '11px', fontWeight: 700, color: a.reviewed ? 'var(--emerald-2)' : 'var(--muted)' }}>{a.statusLabel}</span>
+          {!a.reviewed && <button onClick={a.onMarkReviewed} style={secondaryBtnStyle}>Mark reviewed</button>}
+        </div>
+      </div>
+      {a.safetyConcerns && (
+        <div style={{ marginTop: '10px', padding: '10px 12px', borderRadius: '12px', background: 'var(--risk-high-bg)', border: '1px solid var(--risk-high-border)' }}>
+          <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--risk-high-text)' }}>Safety concerns flagged</div>
+          <div style={{ fontSize: '12.5px', color: 'var(--risk-high-text)', marginTop: '4px', lineHeight: 1.5 }}>{a.safetyConcerns}</div>
+        </div>
+      )}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '10px', fontSize: '12.5px', color: 'var(--text-2)' }}>
+        {a.topics && <div><strong>Topics:</strong> {a.topics}</div>}
+        {a.activeParts.length > 0 && <div><strong>Active parts:</strong> {a.activeParts.join(', ')}</div>}
+        {a.stuckPoints && <div><strong>Stuck points:</strong> {a.stuckPoints}</div>}
+        {a.goalsForSession && <div><strong>Goals for session:</strong> {a.goalsForSession}</div>}
+        {(a.currentStressLevel != null || a.currentMoodLabel) && (
+          <div>
+            {a.currentStressLevel != null && <><strong>Stress:</strong> {a.currentStressLevel}/10 </>}
+            {a.currentMoodLabel && <><strong>Mood:</strong> {a.currentMoodLabel}</>}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function ClientSessionPrepTab({ v, sc }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-      {sc.sessionPrepAgendas.map((a) => (
-        <div key={a.id} style={{ padding: '14px', borderRadius: '14px', background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap' }}>
-            <span style={{ fontSize: '12.5px', fontWeight: 600, color: 'var(--text)' }}>Session agenda · {a.dateLabel}</span>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ fontSize: '11px', fontWeight: 700, color: a.reviewed ? 'var(--emerald-2)' : 'var(--muted)' }}>{a.statusLabel}</span>
-              {!a.reviewed && <button onClick={a.onMarkReviewed} style={v.secondaryBtnStyle}>Mark reviewed</button>}
-            </div>
-          </div>
-          {a.safetyConcerns && (
-            <div style={{ marginTop: '10px', padding: '10px 12px', borderRadius: '12px', background: 'var(--risk-high-bg)', border: '1px solid var(--risk-high-border)' }}>
-              <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--risk-high-text)' }}>Safety concerns flagged</div>
-              <div style={{ fontSize: '12.5px', color: 'var(--risk-high-text)', marginTop: '4px', lineHeight: 1.5 }}>{a.safetyConcerns}</div>
-            </div>
-          )}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '10px', fontSize: '12.5px', color: 'var(--text-2)' }}>
-            {a.topics && <div><strong>Topics:</strong> {a.topics}</div>}
-            {a.activeParts.length > 0 && <div><strong>Active parts:</strong> {a.activeParts.join(', ')}</div>}
-            {a.stuckPoints && <div><strong>Stuck points:</strong> {a.stuckPoints}</div>}
-            {a.goalsForSession && <div><strong>Goals for session:</strong> {a.goalsForSession}</div>}
-            {(a.currentStressLevel != null || a.currentMoodLabel) && (
-              <div>
-                {a.currentStressLevel != null && <><strong>Stress:</strong> {a.currentStressLevel}/10 </>}
-                {a.currentMoodLabel && <><strong>Mood:</strong> {a.currentMoodLabel}</>}
-              </div>
-            )}
-          </div>
-        </div>
-      ))}
+      {sc.sessionPrepAgendas.map((a) => (<SessionAgendaCard key={a.id} a={a} secondaryBtnStyle={v.secondaryBtnStyle} />))}
       {sc.noSessionPrepAgendas && <div style={{ fontSize: '13px', color: 'var(--muted)' }}>No session agendas submitted yet.</div>}
       {sc.qaAnswers.map((qa, i) => (
         <div key={i} style={{ padding: '12px 14px', borderRadius: '14px', background: 'var(--surface-2)' }}>
@@ -2386,35 +2393,7 @@ function SessionsPrepView({ v }) {
           </div>
           {p.isExpanded && (
             <div style={{ padding: '0 20px 20px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              {p.agendas.map((a) => (
-                <div key={a.id} style={{ padding: '14px', borderRadius: '14px', background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap' }}>
-                    <span style={{ fontSize: '12.5px', fontWeight: 600, color: 'var(--text)' }}>Session agenda · {a.dateLabel}</span>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span style={{ fontSize: '11px', fontWeight: 700, color: a.reviewed ? 'var(--emerald-2)' : 'var(--muted)' }}>{a.statusLabel}</span>
-                      {!a.reviewed && <button onClick={a.onMarkReviewed} style={v.secondaryBtnStyle}>Mark reviewed</button>}
-                    </div>
-                  </div>
-                  {a.safetyConcerns && (
-                    <div style={{ marginTop: '10px', padding: '10px 12px', borderRadius: '12px', background: 'var(--risk-high-bg)', border: '1px solid var(--risk-high-border)' }}>
-                      <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--risk-high-text)' }}>Safety concerns flagged</div>
-                      <div style={{ fontSize: '12.5px', color: 'var(--risk-high-text)', marginTop: '4px', lineHeight: 1.5 }}>{a.safetyConcerns}</div>
-                    </div>
-                  )}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '10px', fontSize: '12.5px', color: 'var(--text-2)' }}>
-                    {a.topics && <div><strong>Topics:</strong> {a.topics}</div>}
-                    {a.activeParts.length > 0 && <div><strong>Active parts:</strong> {a.activeParts.join(', ')}</div>}
-                    {a.stuckPoints && <div><strong>Stuck points:</strong> {a.stuckPoints}</div>}
-                    {a.goalsForSession && <div><strong>Goals for session:</strong> {a.goalsForSession}</div>}
-                    {(a.currentStressLevel != null || a.currentMoodLabel) && (
-                      <div>
-                        {a.currentStressLevel != null && <><strong>Stress:</strong> {a.currentStressLevel}/10 </>}
-                        {a.currentMoodLabel && <><strong>Mood:</strong> {a.currentMoodLabel}</>}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ))}
+              {p.agendas.map((a) => (<SessionAgendaCard key={a.id} a={a} secondaryBtnStyle={v.secondaryBtnStyle} />))}
               {p.qaAnswers.map((qa, i) => (
                 <div key={i} style={{ padding: '12px 14px', borderRadius: '14px', background: 'var(--surface-2)' }}>
                   <div style={{ fontSize: '12.5px', fontWeight: 600, color: 'var(--text-2)' }}>{qa.question}</div>
