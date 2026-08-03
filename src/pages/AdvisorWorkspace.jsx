@@ -19,6 +19,7 @@ import {
   generateWorkspacePractice, generateWorkspacePracticeBatch, assignWorkspacePractice,
   updateWorkspaceClientAccessRestrictions,
   loadWorkspaceTeamAssignments, reassignWorkspaceClient,
+  createWorkspaceClient, updateWorkspaceClientProfile, renderWorkspaceClientEmail, sendWorkspaceClientEmail, mapClientRow,
 } from '../lib/advisorWorkspaceLoader.js';
 import { DEFAULT_ACCESS_FORM } from '../data/accessControlData.js';
 import { loadAdvisorSessionSnapshot } from '../lib/unifiedGuidance.js';
@@ -90,8 +91,10 @@ export const INITIAL_STATE = {
   teamTherapists: [], teamAssignments: [], teamLoading: false,
   reassignTherapistId: '', reassignClientId: '', reassignClientName: '', reassignToTherapistId: '', reassignSaving: false,
   extraClients: [], deletedIds: {},
-  showNewClientForm: false, newClientForm: { name: '', email: '', phone: '', sendEmail: true }, newClientResult: null,
+  showNewClientForm: false, newClientForm: { name: '', email: '', phone: '', sendEmail: true }, newClientResult: null, newClientCreating: false,
   deletingClientId: null, deleteConfirmText: '',
+  editClientId: '', editClientForm: { name: '', email: '', phone: '' }, editClientSaving: false, editClientError: '',
+  emailClientId: '', emailTemplateId: 'welcome', emailPreview: null, emailLoading: false, emailSending: false, emailSent: false, emailError: '',
   deletedMessageIdx: {},
   practiceGuidance: '', practiceBatchResults: [],
   liveSessions: [
@@ -1244,37 +1247,133 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
 
   const toggleNewClientForm = () => set((s) => ({ showNewClientForm: !s.showNewClientForm, newClientResult: null }));
   const onNewClientFieldChange = (field) => (e) => set((s) => ({ newClientForm: { ...s.newClientForm, [field]: field === 'sendEmail' ? e.target.checked : e.target.value } }));
+  // Same generateUniquePIN + insert + assignClientToTherapist
+  // TherapistDashboard.jsx's handleCreateClient already does — this used to
+  // create a fake, unpersisted local row with an unchecked 4-digit PIN that
+  // vanished on the next reload.
   const onCreateClient = () => {
     const { newClientForm } = S;
     if (!newClientForm.name.trim()) return;
-    const pin = String(Math.floor(1000 + Math.random() * 9000));
-    const id = 'new-' + Date.now();
-    const initial = newClientForm.name.trim().split(/\s+/).map((w) => w[0]).join('').slice(0, 2).toUpperCase();
-    const client = {
-      id, name: newClientForm.name.trim(), initial, email: newClientForm.email.trim(), phone: newClientForm.phone.trim(), pin,
-      status: 'active', supportPriority: 'standard', primaryWound: 'abandonment', secondaryWound: 'shame',
-      progressPct: 0, modulesCompleted: 0, streak: 0, level: 1, lastActiveDays: 0, risk: null,
-      scores: { abandonment: 0, shame: 0, neglect: 0, betrayal: 0, helplessness: 0 },
-      goals: [], pendingReview: null, session: { when: 'No upcoming session scheduled', status: 'none' },
-      recentActivity: [], qaAnswers: [], timeline: [{ type: 'note', label: 'Client account created', date: 'Today' }],
-      safety: { riskLevel: 'none', protective: [], riskFactors: [], safetyPlan: null, contacts: [], acknowledged: true, ackNote: 'New client — no assessment yet.' },
-      mbc: [], parts: [], messages: [],
-    };
-    set((s) => ({
-      extraClients: [...s.extraClients, client],
-      newClientResult: { name: client.name, pin, emailSent: newClientForm.sendEmail },
-      newClientForm: { name: '', email: '', phone: '', sendEmail: true },
-    }));
+    if (isDemo) {
+      const pin = String(Math.floor(1000 + Math.random() * 9000));
+      const id = 'new-' + Date.now();
+      const initial = newClientForm.name.trim().split(/\s+/).map((w) => w[0]).join('').slice(0, 2).toUpperCase();
+      const client = {
+        id, name: newClientForm.name.trim(), initial, email: newClientForm.email.trim(), phone: newClientForm.phone.trim(), pin,
+        status: 'active', supportPriority: 'standard', primaryWound: 'abandonment', secondaryWound: 'shame',
+        progressPct: 0, modulesCompleted: 0, streak: 0, level: 1, lastActiveDays: 0, risk: null,
+        scores: { abandonment: 0, shame: 0, neglect: 0, betrayal: 0, helplessness: 0 },
+        goals: [], pendingReview: null, session: { when: 'No upcoming session scheduled', status: 'none' },
+        recentActivity: [], qaAnswers: [], timeline: [{ type: 'note', label: 'Client account created', date: 'Today' }],
+        safety: { riskLevel: 'none', protective: [], riskFactors: [], safetyPlan: null, contacts: [], acknowledged: true, ackNote: 'New client — no assessment yet.' },
+        mbc: [], parts: [], messages: [],
+      };
+      set((s) => ({
+        extraClients: [...s.extraClients, client],
+        newClientResult: { name: client.name, pin, emailSent: false },
+        newClientForm: { name: '', email: '', phone: '', sendEmail: true },
+      }));
+      return;
+    }
+    set({ newClientCreating: true });
+    createWorkspaceClient(therapistId, { name: newClientForm.name, email: newClientForm.email, phone: newClientForm.phone }).then(({ data, error }) => {
+      if (error || !data) {
+        console.error('Failed to create client:', error);
+        set({ newClientCreating: false, newClientResult: { error: error?.message || 'Failed to create client.' } });
+        return;
+      }
+      const client = mapClientRow(data);
+      const willEmail = newClientForm.sendEmail && !!client.email;
+      set((s) => ({
+        newClientCreating: false,
+        extraClients: [...s.extraClients, client],
+        newClientResult: { name: client.name, pin: client.pin, emailSent: willEmail },
+        newClientForm: { name: '', email: '', phone: '', sendEmail: true },
+      }));
+      if (willEmail) {
+        renderWorkspaceClientEmail('welcome', client).then(({ data: rendered, error: renderError }) => {
+          if (renderError || !rendered) { console.error('Failed to render welcome email:', renderError); return; }
+          sendWorkspaceClientEmail({ toEmail: client.email, subject: rendered.subject, htmlBody: rendered.html })
+            .then(({ error: sendError }) => { if (sendError) console.error('Failed to send welcome email:', sendError); });
+        });
+      }
+    });
+  };
+  const onStartEditClient = (id) => {
+    const client = allClients().find((c) => c.id === id);
+    if (!client) return;
+    set({ editClientId: id, editClientForm: { name: client.name, email: client.email, phone: client.phone }, editClientError: '' });
+  };
+  const onCancelEditClient = () => set({ editClientId: '', editClientError: '' });
+  const onEditClientFieldChange = (field) => (e) => set((s) => ({ editClientForm: { ...s.editClientForm, [field]: e.target.value } }));
+  // Same ifs_clients update TherapistDashboard.jsx's handleEditClientSave
+  // already does — the workspace had no way to correct a client's
+  // name/email/phone at all.
+  const onSaveEditClient = () => {
+    const { editClientId, editClientForm } = S;
+    if (!editClientId || !editClientForm.name.trim() || isDemo) return;
+    set({ editClientSaving: true, editClientError: '' });
+    updateWorkspaceClientProfile(editClientId, editClientForm).then(({ error }) => {
+      if (error) { set({ editClientSaving: false, editClientError: error.message || 'Failed to save changes.' }); return; }
+      set((s) => ({
+        editClientSaving: false, editClientId: '',
+        baseClients: (s.baseClients || []).map((c) => (c.id === editClientId ? { ...c, ...editClientForm } : c)),
+        extraClients: (s.extraClients || []).map((c) => (c.id === editClientId ? { ...c, ...editClientForm } : c)),
+      }));
+    });
+  };
+  // Same email templates + render/send TherapistDashboard.jsx's
+  // openEmailModal/handleSendEmail already use — the workspace surfaced a
+  // client's email as read-only text with no send action.
+  const onOpenEmailClient = (id) => {
+    const client = allClients().find((c) => c.id === id);
+    if (!client) return;
+    if (!client.email) { set({ emailClientId: id, emailError: 'This client does not have an email address. Edit the client to add one.', emailPreview: null }); return; }
+    set({ emailClientId: id, emailTemplateId: 'welcome', emailSent: false, emailError: '', emailLoading: true, emailPreview: null });
+    renderWorkspaceClientEmail('welcome', client).then(({ data, error }) => {
+      if (error) { set({ emailLoading: false, emailError: error.message }); return; }
+      set({ emailLoading: false, emailPreview: data });
+    });
+  };
+  const onCloseEmailClient = () => set({ emailClientId: '', emailPreview: null, emailError: '', emailSent: false });
+  const onEmailTemplateChange = (e) => {
+    const templateId = e.target.value;
+    const client = allClients().find((c) => c.id === S.emailClientId);
+    if (!client) return;
+    set({ emailTemplateId: templateId, emailSent: false, emailError: '', emailLoading: true });
+    renderWorkspaceClientEmail(templateId, client).then(({ data, error }) => {
+      if (error) { set({ emailLoading: false, emailError: error.message }); return; }
+      set({ emailLoading: false, emailPreview: data });
+    });
+  };
+  const onSendClientEmail = () => {
+    const client = allClients().find((c) => c.id === S.emailClientId);
+    if (!client?.email || !S.emailPreview || isDemo) return;
+    set({ emailSending: true, emailError: '' });
+    sendWorkspaceClientEmail({ toEmail: client.email, subject: S.emailPreview.subject, htmlBody: S.emailPreview.html }).then(({ error }) => {
+      if (error) { set({ emailSending: false, emailError: error.message }); return; }
+      set({ emailSending: false, emailSent: true });
+    });
   };
   const onStartDelete = (id) => set({ deletingClientId: id, deleteConfirmText: '' });
   const onCancelDelete = () => set({ deletingClientId: null, deleteConfirmText: '' });
   const onDeleteConfirmChange = (e) => set({ deleteConfirmText: e.target.value });
+  // "Delete" here deliberately does not run TherapistDashboard.jsx's
+  // destructive handleDeleteClient (which hard-deletes across ~25 related
+  // tables). It reuses the same real, reversible deactivateWorkspaceClientAssignment
+  // call onDeactivateClient already uses, but — unlike a normal
+  // deactivation — never adds the client to dischargedClients, so it doesn't
+  // surface a Reactivate affordance; from the Advisor's side it simply
+  // disappears, matching the "delete" intent without being destructive.
   const onConfirmDelete = () => {
     const { deletingClientId } = S;
     const client = allClients().find((c) => c.id === deletingClientId);
     if (!client || S.deleteConfirmText.trim() !== client.name) return;
     const remaining = allClients().filter((c) => c.id !== deletingClientId);
     set((s) => ({ deletedIds: { ...s.deletedIds, [deletingClientId]: true }, deletingClientId: null, deleteConfirmText: '', selectedClientId: remaining[0] ? remaining[0].id : '' }));
+    if (!isDemo && therapistId) {
+      deactivateWorkspaceClientAssignment(therapistId, deletingClientId).catch((error) => console.error('Failed to deactivate client assignment:', error));
+    }
   };
   const onPracticeGuidanceChange = (e) => set({ practiceGuidance: e.target.value });
   const onGeneratePracticeBatch = () => {
@@ -1400,6 +1499,8 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
       onDocClientChange, onDocTypeChange, onDocDateChange, toggleDocSource, onGenerateDoc, onOpenGeneratedDoc, toggleNewClientForm, onNewClientFieldChange, onCreateClient,
       onGenerateSnapshot, onCopySnapshot, onGenerateChangeSummary, onGenerateModuleInsights,
       onStartDelete, onCancelDelete, onDeleteConfirmChange, onConfirmDelete, onPracticeGuidanceChange, onGeneratePracticeBatch, onUseBatchPractice,
+      onStartEditClient, onCancelEditClient, onEditClientFieldChange, onSaveEditClient,
+      onOpenEmailClient, onCloseEmailClient, onEmailTemplateChange, onSendClientEmail,
       onDeleteMessage, applyQuickMessage, toggleLiveSession, endLiveSession, onMarkNotifRead, onMarkAllNotifsRead, onOpenNotifClient,
       onHomeworkAssigned, onHomeworkFeedbackChange, onMarkHomeworkReviewed, onArchiveHomework,
       onAccessControlClientChange, toggleAccessControlFullAccess, toggleAccessControlModule, toggleAccessControlAssessment, toggleAccessControlFeature, onSaveAccessControl,

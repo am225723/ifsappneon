@@ -96,6 +96,23 @@ vi.mock('../lifeIntegration.js', () => ({
   loadSharedLifeIntegrationReflectionsForAdvisor: async () => mockLifeReflectionsResult,
 }));
 
+let mockRenderedEmail = { subject: 'Welcome!', html: '<p>Hi {{first_name}}</p>' };
+let mockRenderEmailError = null;
+vi.mock('../emailTemplates.js', () => ({
+  getRenderedEmail: async () => { if (mockRenderEmailError) throw mockRenderEmailError; return mockRenderedEmail; },
+  getAvailableTemplates: () => [{ id: 'welcome', label: 'Welcome Email' }],
+}));
+
+let mockSendEmailError = null;
+const mockSendEmailCalls = [];
+vi.mock('../onesignalEmail.js', () => ({
+  sendEmail: async (payload) => {
+    mockSendEmailCalls.push(payload);
+    if (mockSendEmailError) throw mockSendEmailError;
+    return { success: true };
+  },
+}));
+
 let mockTasksResult = { data: [], error: null };
 let mockCreateTaskResult = { data: null, error: null };
 let mockToggleTaskResult = { data: null, error: null };
@@ -155,6 +172,7 @@ const {
   loadWorkspacePersonalizedCurriculum,
   loadWorkspaceTasks, createWorkspaceTask, toggleWorkspaceTask, archiveWorkspaceTask,
   loadWorkspaceNotificationPreferences, updateWorkspaceNotificationPreferences,
+  renderWorkspaceClientEmail, sendWorkspaceClientEmail,
 } = await import('../advisorWorkspaceLoader.js');
 
 describe('initialsFrom', () => {
@@ -175,12 +193,13 @@ describe('daysSince', () => {
 
 describe('mapClientRow', () => {
   it('maps a raw client row into the workspace shape with safe defaults', () => {
-    const row = { id: 'x1', name: 'Dana Lee', email: 'dana@example.com', phone: '555', status: 'active', last_active: new Date().toISOString() };
+    const row = { id: 'x1', name: 'Dana Lee', email: 'dana@example.com', phone: '555', pin: '482913', status: 'active', last_active: new Date().toISOString() };
     const c = mapClientRow(row);
     expect(c.id).toBe('x1');
     expect(c.initial).toBe('DL');
     expect(c.status).toBe('active');
     expect(c.risk).toBeNull();
+    expect(c.pin).toBe('482913');
     // Every field the view model reads must exist so buildView never throws.
     expect(Object.keys(c.scores).sort()).toEqual([...WORKSPACE_WOUNDS].sort());
     expect(c.mbc).toEqual([]);
@@ -977,6 +996,40 @@ describe('loadWorkspaceNotificationPreferences / updateWorkspaceNotificationPref
   it('throws when the update fails', async () => {
     mockUpdateNotificationPrefsResult = { data: null, error: { message: 'invalid_preferences' } };
     await expect(updateWorkspaceNotificationPreferences({ bogus: true })).rejects.toThrow('invalid_preferences');
+  });
+});
+
+describe('renderWorkspaceClientEmail / sendWorkspaceClientEmail (mirrors TherapistDashboard.jsx\'s openEmailModal/handleSendEmail)', () => {
+  it('renders a template for a client, substituting their name/pin', async () => {
+    const { data, error } = await renderWorkspaceClientEmail('welcome', { name: 'Maya Chen', pin: '123456' });
+    expect(error).toBeNull();
+    expect(data.subject).toBe('Welcome!');
+  });
+
+  it('returns an error (not a throw) when template rendering fails', async () => {
+    mockRenderEmailError = new Error('Unknown template: bogus');
+    const { data, error } = await renderWorkspaceClientEmail('bogus', { name: 'Maya Chen' });
+    expect(data).toBeNull();
+    expect(error.message).toContain('Unknown template');
+    mockRenderEmailError = null;
+  });
+
+  it('refuses to send without a destination email', async () => {
+    const { error } = await sendWorkspaceClientEmail({ toEmail: '', subject: 'x', htmlBody: '<p>x</p>' });
+    expect(error.message).toContain('does not have an email');
+  });
+
+  it('sends via the real onesignalEmail sendEmail function', async () => {
+    const { error } = await sendWorkspaceClientEmail({ toEmail: 'maya@example.com', subject: 'Welcome', htmlBody: '<p>hi</p>' });
+    expect(error).toBeNull();
+    expect(mockSendEmailCalls[mockSendEmailCalls.length - 1]).toMatchObject({ toEmail: 'maya@example.com', subject: 'Welcome' });
+  });
+
+  it('returns an error (not a throw) when sending fails', async () => {
+    mockSendEmailError = new Error('network down');
+    const { error } = await sendWorkspaceClientEmail({ toEmail: 'maya@example.com', subject: 'x', htmlBody: '<p>x</p>' });
+    expect(error.message).toBe('network down');
+    mockSendEmailError = null;
   });
 });
 
