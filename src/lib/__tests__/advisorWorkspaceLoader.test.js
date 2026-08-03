@@ -238,6 +238,8 @@ describe('mapClientRow', () => {
     expect(c.session.status).toBe('none');
     expect(c._detailLoaded).toBe(false);
     expect(c.accessRestrictions).toBeNull();
+    expect(c.accountStatus).toBe('active');
+    expect(c.joinDate).toBeNull();
   });
 
   it('carries through ifs_clients.access_restrictions when present', () => {
@@ -245,6 +247,20 @@ describe('mapClientRow', () => {
     const row = { id: 'x3', name: 'Restricted Client', last_active: new Date().toISOString(), access_restrictions: restrictions };
     const c = mapClientRow(row);
     expect(c.accessRestrictions).toEqual(restrictions);
+  });
+
+  it('derives accountStatus from the raw ifs_clients.status column and carries through created_at as joinDate', () => {
+    const created = '2026-01-15T00:00:00Z';
+    const active = mapClientRow({ id: 'x4', name: 'Active Client', status: 'active', created_at: created, last_active: new Date().toISOString() });
+    expect(active.accountStatus).toBe('active');
+    expect(active.joinDate).toBe(created);
+
+    const inactive = mapClientRow({ id: 'x5', name: 'Suspended Client', status: 'inactive', last_active: new Date().toISOString() });
+    expect(inactive.accountStatus).toBe('inactive');
+    // Account-level status is explicit even for a recently-active client —
+    // distinct from the derived caseload-health `status`, which would
+    // otherwise read 'active' from recent last_active alone.
+    expect(inactive.status).toBe('inactive');
   });
 
   it('flags extended inactivity as a risk and inactive status', () => {
@@ -766,6 +782,14 @@ describe('mergeCaseloadRefresh', () => {
     expect(merged[0].parts).toHaveLength(1);
     // Base fields (like inactivity-derived status) do get refreshed.
     expect(merged[0].lastActiveDays).toBeGreaterThanOrEqual(19);
+  });
+
+  it('refreshes accountStatus and joinDate from the fresh row rather than keeping stale values', () => {
+    const base = mapClientRow({ id: 'c1', name: 'Maya Chen', status: 'active', created_at: '2026-01-01T00:00:00Z', last_active: new Date().toISOString() });
+    const fresh = [{ id: 'c1', name: 'Maya Chen', status: 'inactive', created_at: '2026-01-01T00:00:00Z', last_active: new Date().toISOString() }].map(mapClientRow);
+    const merged = mergeCaseloadRefresh([base], fresh);
+    expect(merged[0].accountStatus).toBe('inactive');
+    expect(merged[0].joinDate).toBe('2026-01-01T00:00:00Z');
   });
 
   it('reflects a claim (unassigned -> assigned) picked up on the next refresh', () => {
