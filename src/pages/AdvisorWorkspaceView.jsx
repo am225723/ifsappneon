@@ -44,6 +44,7 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
     reassignTherapistId, reassignClientId, reassignClientName, reassignToTherapistId, reassignSaving,
     editClientId, editClientForm, editClientSaving, editClientError,
     emailClientId, emailTemplateId, emailPreview, emailLoading, emailSending, emailSent, emailError,
+    showPinClientId,
   } = S;
 
   const rootStyle = {
@@ -251,6 +252,7 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
     const titleCase = (s) => String(s).replace(/-/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase());
     selectedClient = {
       id: rawSelected.id, name: rawSelected.name, initial: rawSelected.initial, email: rawSelected.email, phone: rawSelected.phone,
+      pin: rawSelected.pin || '', pinRevealed: showPinClientId === rawSelected.id, onToggleShowPin: () => H.onToggleShowPin(rawSelected.id),
       statusLabel: rawSelected.status === 'active' ? 'Active' : 'Inactive', statusChip: severityStyle(theme, rawSelected.status === 'active' ? 'low' : 'medium'),
       unassigned: !!rawSelected.unassigned, onClaim: () => H.onClaimClient(rawSelected.id),
       woundChip: woundChip(rawSelected.primaryWound, isDark, false), woundLabel: WOUND_META[rawSelected.primaryWound].label,
@@ -302,6 +304,41 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
         onRemind: canWrite ? () => H.onCreateTaskFromAssessment(rawSelected.id, entry.dateLabel || 'this assessment') : undefined,
       })),
       noAssessmentHistory: !(rawSelected.assessmentHistory || []).length,
+      partsAssessment: rawSelected.partsAssessment ? {
+        typeCounts: Object.entries(rawSelected.partsAssessment.typeCounts).map(([type, count]) => ({ type, count, style: partChip(type, isDark), label: PART_CAT_META[type].label })),
+        identifiedParts: rawSelected.partsAssessment.identifiedParts.map((p) => ({
+          ...p, typeChip: partChip(p.type, isDark), typeLabel: PART_CAT_META[p.type].label,
+          intensityChip: severityStyle(theme, p.intensity >= 5 ? 'high' : 'medium'),
+        })),
+        noPartsIdentified: rawSelected.partsAssessment.identifiedParts.length === 0,
+      } : null,
+      selfEnergyAssessment: rawSelected.selfEnergyAssessment ? {
+        overallPct: rawSelected.selfEnergyAssessment.overallPct,
+        overallLabel: rawSelected.selfEnergyAssessment.overallPct >= 80 ? 'Strong Self-energy connection — excellent foundation for parts work'
+          : rawSelected.selfEnergyAssessment.overallPct >= 60 ? 'Moderate Self-energy — good base with room for growth'
+          : rawSelected.selfEnergyAssessment.overallPct >= 40 ? 'Developing Self-energy — protectors may still be blending frequently'
+          : 'Low Self-energy access — focus on building Self-connection before deep parts work',
+        qualities: rawSelected.selfEnergyAssessment.qualities.map((q) => ({
+          ...q, barStyle: { width: q.pct + '%', height: '100%', borderRadius: '4px', background: q.pct >= 80 ? theme.emerald2 : q.pct >= 60 ? theme.accent2 : q.pct >= 40 ? theme.riskMedText : theme.riskHighText },
+        })),
+      } : null,
+      attachmentAssessment: rawSelected.attachmentAssessment ? {
+        style: rawSelected.attachmentAssessment.style,
+        styleChip: severityStyle(theme, rawSelected.attachmentAssessment.style?.toLowerCase() === 'secure' ? 'low' : rawSelected.attachmentAssessment.style?.toLowerCase() === 'disorganized' ? 'high' : 'medium'),
+        secondaryStyle: rawSelected.attachmentAssessment.secondaryStyle,
+        scores: rawSelected.attachmentAssessment.scores.map((s) => ({
+          ...s, isPrimary: s.key.toLowerCase() === String(rawSelected.attachmentAssessment.style).toLowerCase(),
+          barStyle: { width: s.pct + '%', height: '100%', borderRadius: '4px', background: s.key.toLowerCase() === String(rawSelected.attachmentAssessment.style).toLowerCase() ? theme.accent2 : theme.muted },
+        })),
+      } : null,
+      customAssessments: (rawSelected.customAssessments || []).map((ca) => ({
+        ...ca,
+        ranked: ca.ranked.map((r) => ({
+          ...r,
+          labelChip: severityStyle(theme, r.label === 'High' ? 'high' : r.label === 'Moderate' ? 'medium' : 'low'),
+          barStyle: { width: r.percentage + '%', height: '100%', borderRadius: '4px', background: r.percentage >= 66 ? theme.riskHighText : r.percentage >= 33 ? theme.riskMedText : theme.emerald2 },
+        })),
+      })),
       betweenSession: {
         funnelRows: funnelSteps.map((f) => ({ ...f, barStyle: { width: Math.round((f.value / funnelMax) * 100) + '%', height: '100%', borderRadius: '4px', background: theme.accent2 } })),
         completionPct: rawBS.homeworkFunnel.completionPct,
@@ -876,7 +913,7 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
     settingsToggles: settingsTogglesList, notificationPrefsSaving: !!notificationPrefsSaving,
     showNewClientForm: S.showNewClientForm, newClientForm: S.newClientForm, newClientResult: S.newClientResult, onToggleNewClientForm: H.toggleNewClientForm,
     onExportCaseloadCsv: H.onExportCaseloadCsv,
-    onNewClientNameChange: H.onNewClientFieldChange('name'), onNewClientEmailChange: H.onNewClientFieldChange('email'), onNewClientPhoneChange: H.onNewClientFieldChange('phone'), onNewClientSendEmailChange: H.onNewClientFieldChange('sendEmail'), onCreateClient: H.onCreateClient,
+    onNewClientNameChange: H.onNewClientFieldChange('name'), onNewClientEmailChange: H.onNewClientFieldChange('email'), onNewClientPhoneChange: H.onNewClientFieldChange('phone'), onNewClientSendEmailChange: H.onNewClientFieldChange('sendEmail'), onNewClientRoleChange: H.onNewClientRoleChange, onCreateClient: H.onCreateClient,
     deletingClientId: S.deletingClientId, deletingClientName: deletingClient ? deletingClient.name : '', deleteConfirmText: S.deleteConfirmText, deleteConfirmMatches, notDeleteConfirmMatches: !deleteConfirmMatches, deleteConfirmOpacity: deleteConfirmMatches ? 1 : 0.5,
     onCancelDelete: H.onCancelDelete, onDeleteConfirmChange: H.onDeleteConfirmChange, onConfirmDelete: H.onConfirmDelete,
     liveSessionRows, noLiveSessions,
@@ -1135,17 +1172,36 @@ function ClientsCaseload({ v }) {
         </div>
         {v.showNewClientForm && (
           <div style={{ ...CARD, borderRadius: '16px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <div style={{ display: 'flex', gap: '6px' }}>
+              <button
+                type="button"
+                onClick={() => v.onNewClientRoleChange('client')}
+                style={{ flex: 1, padding: '8px', borderRadius: '10px', border: '1px solid ' + (v.newClientForm.role !== 'therapist' ? 'var(--accent-2)' : 'var(--border)'), background: v.newClientForm.role !== 'therapist' ? 'var(--surface-2)' : 'transparent', color: 'var(--text)', fontSize: '12px', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}
+              >Client</button>
+              <button
+                type="button"
+                onClick={() => v.onNewClientRoleChange('therapist')}
+                style={{ flex: 1, padding: '8px', borderRadius: '10px', border: '1px solid ' + (v.newClientForm.role === 'therapist' ? 'var(--accent-2)' : 'var(--border)'), background: v.newClientForm.role === 'therapist' ? 'var(--surface-2)' : 'transparent', color: 'var(--text)', fontSize: '12px', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}
+              >Advisor</button>
+            </div>
             <input value={v.newClientForm.name} onChange={v.onNewClientNameChange} placeholder="Full name" style={inp()} />
             <input value={v.newClientForm.email} onChange={v.onNewClientEmailChange} placeholder="Email" style={inp()} />
             <input value={v.newClientForm.phone} onChange={v.onNewClientPhoneChange} placeholder="Phone" style={inp()} />
-            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12.5px', color: 'var(--text-2)', cursor: 'pointer' }}>
-              <input type="checkbox" checked={v.newClientForm.sendEmail} onChange={v.onNewClientSendEmailChange} />Send welcome email with PIN
-            </label>
-            <button className="aw-primary" onClick={v.onCreateClient} disabled={v.newClientCreating || !v.newClientForm.name.trim()} style={v.primaryBtnStyle}>{v.newClientCreating ? 'Creating…' : 'Create client'}</button>
-            {v.newClientResult && (
+            {v.newClientForm.role !== 'therapist' && (
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12.5px', color: 'var(--text-2)', cursor: 'pointer' }}>
+                <input type="checkbox" checked={v.newClientForm.sendEmail} onChange={v.onNewClientSendEmailChange} />Send welcome email with PIN
+              </label>
+            )}
+            <button className="aw-primary" onClick={v.onCreateClient} disabled={v.newClientCreating || !v.newClientForm.name.trim()} style={v.primaryBtnStyle}>{v.newClientCreating ? 'Creating…' : v.newClientForm.role === 'therapist' ? 'Create advisor account' : 'Create client'}</button>
+            {v.newClientResult && !v.newClientResult.error && (
               <div style={{ padding: '10px 12px', borderRadius: '10px', background: 'var(--surface-2)', fontSize: '12px', color: 'var(--text-2)', lineHeight: 1.5 }}>
-                {v.newClientResult.name} created · PIN: <strong>{v.newClientResult.pin}</strong>
+                {v.newClientResult.name} created as {v.newClientResult.role === 'therapist' ? 'an Advisor' : 'a client'} · PIN: <strong>{v.newClientResult.pin}</strong>
                 {v.newClientResult.emailSent && <> · Welcome email sent.</>}
+              </div>
+            )}
+            {v.newClientResult?.error && (
+              <div style={{ padding: '10px 12px', borderRadius: '10px', background: 'var(--risk-high-bg)', fontSize: '12px', color: 'var(--risk-high-text)', lineHeight: 1.5 }}>
+                {v.newClientResult.error}
               </div>
             )}
           </div>
@@ -1222,6 +1278,7 @@ function ClientsCaseload({ v }) {
                 <button onClick={sc.onExportReport} disabled={!sc.onExportReport} title={sc.exportReportLoading ? 'Client detail is still loading — try again in a moment.' : undefined} style={{ ...v.secondaryBtnStyle, opacity: sc.onExportReport ? 1 : 0.5, cursor: sc.onExportReport ? 'pointer' : 'not-allowed' }}>{sc.exportReportLoading ? 'Export report (loading…)' : 'Export report'}</button>
                 <button onClick={() => v.onStartEditClient(sc.id)} disabled={!sc.canWrite} style={{ ...v.secondaryBtnStyle, opacity: sc.canWrite ? 1 : 0.5, cursor: sc.canWrite ? 'pointer' : 'not-allowed' }}>Edit</button>
                 <button onClick={() => v.onOpenEmailClient(sc.id)} disabled={!sc.canWrite} style={{ ...v.secondaryBtnStyle, opacity: sc.canWrite ? 1 : 0.5, cursor: sc.canWrite ? 'pointer' : 'not-allowed' }}>Email</button>
+                <button onClick={sc.onToggleShowPin} title="Show this client's login PIN" style={v.secondaryBtnStyle}>{sc.pinRevealed ? `PIN: ${sc.pin}` : 'Show PIN'}</button>
               </div>
             </div>
             {v.editClientId === sc.id && (
@@ -1283,7 +1340,13 @@ function ClientsCaseload({ v }) {
 
           {v.isClientTabOverview && <ClientOverviewTab v={v} sc={sc} />}
           {v.isClientTabSessionPrep && <ClientSessionPrepTab v={v} sc={sc} />}
-          {v.isClientTabAssessments && <AssessmentHistoryTab history={sc.assessmentHistory} empty={sc.noAssessmentHistory} secondaryBtnStyle={v.secondaryBtnStyle} />}
+          {v.isClientTabAssessments && (
+            <AssessmentHistoryTab
+              history={sc.assessmentHistory} empty={sc.noAssessmentHistory} secondaryBtnStyle={v.secondaryBtnStyle}
+              partsAssessment={sc.partsAssessment} selfEnergyAssessment={sc.selfEnergyAssessment}
+              attachmentAssessment={sc.attachmentAssessment} customAssessments={sc.customAssessments}
+            />
+          )}
           {v.isClientTabSnapshot && <SnapshotTab snapshot={sc.snapshot} primaryBtnStyle={v.primaryBtnStyle} secondaryBtnStyle={v.secondaryBtnStyle} />}
           {v.isClientTabChangeSummary && <ChangeSummaryTab changeSummary={sc.changeSummary} primaryBtnStyle={v.primaryBtnStyle} />}
           {v.isClientTabModuleInsights && <ModuleInsightsTab moduleInsights={sc.moduleInsights} primaryBtnStyle={v.primaryBtnStyle} />}
@@ -1570,17 +1633,15 @@ function PlanCard({ plan, onOpen, secondaryBtnStyle }) {
   );
 }
 
-function AssessmentHistoryTab({ history, empty, secondaryBtnStyle }) {
-  if (empty) {
-    return (
-      <div style={CARD}>
-        <span style={{ ...FR, fontSize: '15px' }}>Assessments</span>
-        <div style={{ marginTop: '12px', fontSize: '13px', color: 'var(--muted)' }}>This client hasn't retaken the Wound Patterns Assessment yet. Retakes appear here as a full history once submitted.</div>
-      </div>
-    );
-  }
+function AssessmentHistoryTab({ history, empty, secondaryBtnStyle, partsAssessment, selfEnergyAssessment, attachmentAssessment, customAssessments }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+      {empty && (
+        <div style={CARD}>
+          <span style={{ ...FR, fontSize: '15px' }}>Wound Patterns Assessment</span>
+          <div style={{ marginTop: '12px', fontSize: '13px', color: 'var(--muted)' }}>This client hasn't retaken the Wound Patterns Assessment yet. Retakes appear here as a full history once submitted.</div>
+        </div>
+      )}
       {history.map((entry, i) => (
         <div key={entry.id} style={CARD}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
@@ -1611,6 +1672,114 @@ function AssessmentHistoryTab({ history, empty, secondaryBtnStyle }) {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '12px', paddingTop: '12px', borderTop: '1px solid var(--border)' }}>
               {entry.tertiaryLabels.length > 0 && <div style={{ fontSize: '12px', color: 'var(--text-2)' }}><strong>Tertiary wounds:</strong> {entry.tertiaryLabels.join(', ')}</div>}
               {entry.protectorTypes.length > 0 && <div style={{ fontSize: '12px', color: 'var(--text-2)' }}><strong>Protector types:</strong> {entry.protectorTypes.join(', ')}</div>}
+            </div>
+          )}
+        </div>
+      ))}
+
+      {partsAssessment && (
+        <div style={CARD}>
+          <span style={{ ...FR, fontSize: '15px' }}>Protective Parts Assessment</span>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', marginTop: '12px' }}>
+            {partsAssessment.typeCounts.map((t) => (
+              <div key={t.type} style={{ textAlign: 'center', padding: '10px', borderRadius: '10px', background: 'var(--surface-2)' }}>
+                <div style={{ fontSize: '20px', fontWeight: 800, color: 'var(--text)' }}>{t.count}</div>
+                <span style={t.style}>{t.label}s</span>
+              </div>
+            ))}
+          </div>
+          {partsAssessment.noPartsIdentified ? (
+            <div style={{ marginTop: '12px', fontSize: '12.5px', color: 'var(--muted)' }}>No strongly active protective parts identified — this may indicate a balanced inner system or low assessment engagement.</div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '12px' }}>
+              {partsAssessment.identifiedParts.map((p, i) => (
+                <div key={i} style={{ padding: '10px 12px', borderRadius: '12px', background: 'var(--surface-2)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text)' }}>{p.name}</span>
+                      <span style={p.typeChip}>{p.typeLabel}</span>
+                    </div>
+                    <span style={p.intensityChip}>{p.intensityLabel} ({p.intensity}/5)</span>
+                  </div>
+                  <div style={{ fontSize: '12px', color: 'var(--text-2)', marginTop: '6px' }}><strong>Role:</strong> {p.role}</div>
+                  <div style={{ fontSize: '12px', color: 'var(--emerald-2)', marginTop: '2px' }}><strong>Needs to step back:</strong> {p.need}</div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {selfEnergyAssessment && (
+        <div style={CARD}>
+          <span style={{ ...FR, fontSize: '15px' }}>Self-Energy Assessment — The 8 C's</span>
+          <div style={{ marginTop: '12px', padding: '14px', borderRadius: '12px', background: 'var(--surface-2)', textAlign: 'center' }}>
+            <div style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.03em', color: 'var(--accent-2)' }}>Overall Self-Energy</div>
+            <div style={{ fontSize: '30px', fontWeight: 800, color: 'var(--text)', marginTop: '4px' }}>{selfEnergyAssessment.overallPct}%</div>
+            <div style={{ fontSize: '11.5px', color: 'var(--muted)', marginTop: '4px' }}>{selfEnergyAssessment.overallLabel}</div>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px,1fr))', gap: '10px', marginTop: '12px' }}>
+            {selfEnergyAssessment.qualities.map((q) => (
+              <div key={q.key} style={{ padding: '10px', borderRadius: '10px', background: 'var(--surface-2)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text)' }}>{q.label}</span>
+                  <span style={{ fontSize: '13px', fontWeight: 800, color: 'var(--text)' }}>{q.pct}%</span>
+                </div>
+                <div style={{ height: '6px', borderRadius: '4px', background: 'var(--surface-3)', marginTop: '6px', overflow: 'hidden' }}><div style={q.barStyle} /></div>
+                <div style={{ fontSize: '10.5px', color: 'var(--muted)', marginTop: '6px', lineHeight: 1.3 }}>{q.description}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {attachmentAssessment && (
+        <div style={CARD}>
+          <span style={{ ...FR, fontSize: '15px' }}>Attachment Style Assessment</span>
+          <div style={{ marginTop: '12px', padding: '14px', borderRadius: '12px', background: 'var(--surface-2)' }}>
+            <div style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.03em', color: 'var(--muted)' }}>Primary Attachment Style</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
+              <span style={{ fontSize: '20px', fontWeight: 800, color: 'var(--text)', textTransform: 'capitalize' }}>{attachmentAssessment.style}</span>
+              <span style={attachmentAssessment.styleChip}>{attachmentAssessment.style}</span>
+            </div>
+            {attachmentAssessment.secondaryStyle && <div style={{ fontSize: '11.5px', color: 'var(--muted)', marginTop: '4px' }}>Secondary: <span style={{ textTransform: 'capitalize', fontWeight: 600 }}>{attachmentAssessment.secondaryStyle}</span></div>}
+          </div>
+          {attachmentAssessment.scores.length > 0 && (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px,1fr))', gap: '10px', marginTop: '12px' }}>
+              {attachmentAssessment.scores.map((s) => (
+                <div key={s.key} style={{ padding: '10px', borderRadius: '10px', background: 'var(--surface-2)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text)', textTransform: 'capitalize' }}>{s.key}</span>
+                    <span style={{ fontSize: '13px', fontWeight: 800, color: 'var(--text)' }}>{s.score}</span>
+                  </div>
+                  <div style={{ height: '6px', borderRadius: '4px', background: 'var(--surface-3)', marginTop: '6px', overflow: 'hidden' }}><div style={s.barStyle} /></div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {customAssessments.length > 0 && customAssessments.map((ca) => (
+        <div key={ca.moduleId} style={CARD}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
+            <span style={{ ...FR, fontSize: '15px' }}>{ca.title}</span>
+            {ca.dateLabel && <span style={{ fontSize: '11.5px', color: 'var(--muted)' }}>{ca.dateLabel}</span>}
+          </div>
+          {ca.ranked.length > 0 && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '14px' }}>
+              {ca.ranked.map((r) => (
+                <div key={r.category}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '12.5px' }}>
+                    <span style={{ color: 'var(--text)', fontWeight: 600, textTransform: 'capitalize' }}>{r.category}</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <span style={r.labelChip}>{r.label}</span>
+                      <span style={{ color: 'var(--muted)' }}>{r.average?.toFixed?.(1)}/{r.maxScale}</span>
+                    </div>
+                  </div>
+                  <div style={{ height: '6px', borderRadius: '4px', background: 'var(--surface-2)', marginTop: '4px', overflow: 'hidden' }}><div style={r.barStyle} /></div>
+                </div>
+              ))}
             </div>
           )}
         </div>
