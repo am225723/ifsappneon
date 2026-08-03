@@ -1287,6 +1287,13 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
     if (!newClientForm.name.trim()) return;
     if (isDemo) {
       const pin = String(Math.floor(1000 + Math.random() * 9000));
+      if (newClientForm.role === 'therapist') {
+        set({
+          newClientResult: { name: newClientForm.name.trim(), pin, role: 'therapist', emailSent: false },
+          newClientForm: { name: '', email: '', phone: '', sendEmail: true, role: 'client' },
+        });
+        return;
+      }
       const id = 'new-' + Date.now();
       const initial = newClientForm.name.trim().split(/\s+/).map((w) => w[0]).join('').slice(0, 2).toUpperCase();
       const client = {

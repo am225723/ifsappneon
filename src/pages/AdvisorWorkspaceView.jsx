@@ -1278,7 +1278,7 @@ function ClientsCaseload({ v }) {
                 <button onClick={sc.onExportReport} disabled={!sc.onExportReport} title={sc.exportReportLoading ? 'Client detail is still loading — try again in a moment.' : undefined} style={{ ...v.secondaryBtnStyle, opacity: sc.onExportReport ? 1 : 0.5, cursor: sc.onExportReport ? 'pointer' : 'not-allowed' }}>{sc.exportReportLoading ? 'Export report (loading…)' : 'Export report'}</button>
                 <button onClick={() => v.onStartEditClient(sc.id)} disabled={!sc.canWrite} style={{ ...v.secondaryBtnStyle, opacity: sc.canWrite ? 1 : 0.5, cursor: sc.canWrite ? 'pointer' : 'not-allowed' }}>Edit</button>
                 <button onClick={() => v.onOpenEmailClient(sc.id)} disabled={!sc.canWrite} style={{ ...v.secondaryBtnStyle, opacity: sc.canWrite ? 1 : 0.5, cursor: sc.canWrite ? 'pointer' : 'not-allowed' }}>Email</button>
-                <button onClick={sc.onToggleShowPin} title="Show this client's login PIN" style={v.secondaryBtnStyle}>{sc.pinRevealed ? `PIN: ${sc.pin}` : 'Show PIN'}</button>
+                <button onClick={sc.onToggleShowPin} disabled={!sc.canWrite} title="Show this client's login PIN" style={{ ...v.secondaryBtnStyle, opacity: sc.canWrite ? 1 : 0.5, cursor: sc.canWrite ? 'pointer' : 'not-allowed' }}>{sc.pinRevealed ? `PIN: ${sc.pin}` : 'Show PIN'}</button>
               </div>
             </div>
             {v.editClientId === sc.id && (
