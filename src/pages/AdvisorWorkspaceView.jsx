@@ -12,6 +12,7 @@ import {
 } from './advisorWorkspaceData.js';
 import { resources as RESOURCE_LIBRARY } from '../data/resourceLibraryData.js';
 import { MODULE_SEQUENCE as ACCESS_MODULE_SEQUENCE, ASSESSMENT_LABELS, FEATURE_LABELS } from '../data/accessControlData.js';
+import { getAvailableTemplates } from '../lib/emailTemplates.js';
 
 // Mirrors partSuggestionEngine.js's type vocabulary ('protector', 'self',
 // legacy-import 'unknown', etc.) down onto the workspace's existing
@@ -39,6 +40,8 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
     accessControlClientId, accessControlFullAccess, accessControlForm, accessControlSaving, accessControlSaved,
     teamTherapists, teamAssignments, teamLoading,
     reassignTherapistId, reassignClientId, reassignClientName, reassignToTherapistId, reassignSaving,
+    editClientId, editClientForm, editClientSaving, editClientError,
+    emailClientId, emailTemplateId, emailPreview, emailLoading, emailSending, emailSent, emailError,
   } = S;
 
   const rootStyle = {
@@ -776,6 +779,8 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
   const hasReassignTarget = !!(reassignTherapistId && reassignClientId);
   const reassignTargetOptions = (teamTherapists || []).filter((t) => t.id !== reassignTherapistId).map((t) => ({ id: t.id, name: t.name || t.email || 'Unnamed Advisor' }));
 
+  const emailTemplateOptions = getAvailableTemplates();
+
   const deletingClient = S.deletingClientId ? ALL_CLIENTS.find((c) => c.id === S.deletingClientId) : null;
   const deleteConfirmMatches = !!(deletingClient && S.deleteConfirmText.trim() === deletingClient.name);
 
@@ -891,6 +896,11 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
     teamRows, noTeamRows, teamLoading: !!teamLoading, onRefreshTeam: H.onRefreshTeam,
     hasReassignTarget, reassignClientName, reassignToTherapistId, reassignTargetOptions, reassignSaving: !!reassignSaving,
     onCancelReassign: H.onCancelReassign, onReassignToTherapistChange: H.onReassignToTherapistChange, onSaveReassignment: H.onSaveReassignment,
+    editClientId, editClientForm, editClientSaving: !!editClientSaving, editClientError: editClientError || '',
+    onStartEditClient: H.onStartEditClient, onCancelEditClient: H.onCancelEditClient, onEditClientFieldChange: H.onEditClientFieldChange, onSaveEditClient: H.onSaveEditClient,
+    emailClientId, emailTemplateId, emailTemplateOptions, emailPreview, emailLoading: !!emailLoading, emailSending: !!emailSending, emailSent: !!emailSent, emailError: emailError || '',
+    onOpenEmailClient: H.onOpenEmailClient, onCloseEmailClient: H.onCloseEmailClient, onEmailTemplateChange: H.onEmailTemplateChange, onSendClientEmail: H.onSendClientEmail,
+    newClientCreating: !!S.newClientCreating,
   };
 }
 
@@ -1133,7 +1143,7 @@ function ClientsCaseload({ v }) {
             <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12.5px', color: 'var(--text-2)', cursor: 'pointer' }}>
               <input type="checkbox" checked={v.newClientForm.sendEmail} onChange={v.onNewClientSendEmailChange} />Send welcome email with PIN
             </label>
-            <button className="aw-primary" onClick={v.onCreateClient} style={v.primaryBtnStyle}>Create client</button>
+            <button className="aw-primary" onClick={v.onCreateClient} disabled={v.newClientCreating || !v.newClientForm.name.trim()} style={v.primaryBtnStyle}>{v.newClientCreating ? 'Creating…' : 'Create client'}</button>
             {v.newClientResult && (
               <div style={{ padding: '10px 12px', borderRadius: '10px', background: 'var(--surface-2)', fontSize: '12px', color: 'var(--text-2)', lineHeight: 1.5 }}>
                 {v.newClientResult.name} created · PIN: <strong>{v.newClientResult.pin}</strong>
@@ -1212,8 +1222,50 @@ function ClientsCaseload({ v }) {
                 <button className="aw-primary" onClick={sc.onDraftNote} disabled={!sc.canWrite} style={{ ...v.primaryBtnStyle, opacity: sc.canWrite ? 1 : 0.5, cursor: sc.canWrite ? 'pointer' : 'not-allowed' }}>Draft session note</button>
                 <button onClick={sc.onOpenPrep} disabled={!sc.canWrite} style={{ ...v.secondaryBtnStyle, opacity: sc.canWrite ? 1 : 0.5, cursor: sc.canWrite ? 'pointer' : 'not-allowed' }}>Session prep</button>
                 <button onClick={sc.onExportReport} disabled={!sc.onExportReport} title={sc.exportReportLoading ? 'Client detail is still loading — try again in a moment.' : undefined} style={{ ...v.secondaryBtnStyle, opacity: sc.onExportReport ? 1 : 0.5, cursor: sc.onExportReport ? 'pointer' : 'not-allowed' }}>{sc.exportReportLoading ? 'Export report (loading…)' : 'Export report'}</button>
+                <button onClick={() => v.onStartEditClient(sc.id)} disabled={!sc.canWrite} style={{ ...v.secondaryBtnStyle, opacity: sc.canWrite ? 1 : 0.5, cursor: sc.canWrite ? 'pointer' : 'not-allowed' }}>Edit</button>
+                <button onClick={() => v.onOpenEmailClient(sc.id)} disabled={!sc.canWrite} style={{ ...v.secondaryBtnStyle, opacity: sc.canWrite ? 1 : 0.5, cursor: sc.canWrite ? 'pointer' : 'not-allowed' }}>Email</button>
               </div>
             </div>
+            {v.editClientId === sc.id && (
+              <div style={{ marginTop: '14px', padding: '14px', borderRadius: '14px', background: 'var(--surface-2)', border: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <span style={{ fontSize: '12.5px', fontWeight: 700, color: 'var(--text)' }}>Edit client</span>
+                <input value={v.editClientForm.name} onChange={v.onEditClientFieldChange('name')} placeholder="Full name" style={inp()} />
+                <input value={v.editClientForm.email} onChange={v.onEditClientFieldChange('email')} placeholder="Email" style={inp()} />
+                <input value={v.editClientForm.phone} onChange={v.onEditClientFieldChange('phone')} placeholder="Phone" style={inp()} />
+                {v.editClientError && <div style={{ fontSize: '12px', color: 'var(--risk-high-text)' }}>{v.editClientError}</div>}
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button onClick={v.onCancelEditClient} style={v.secondaryBtnStyle}>Cancel</button>
+                  <button className="aw-primary" onClick={v.onSaveEditClient} disabled={v.editClientSaving || !v.editClientForm.name.trim()} style={v.primaryBtnStyle}>{v.editClientSaving ? 'Saving…' : 'Save changes'}</button>
+                </div>
+              </div>
+            )}
+            {v.emailClientId === sc.id && (
+              <div style={{ marginTop: '14px', padding: '14px', borderRadius: '14px', background: 'var(--surface-2)', border: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span style={{ fontSize: '12.5px', fontWeight: 700, color: 'var(--text)' }}>Email {sc.name}</span>
+                  <button onClick={v.onCloseEmailClient} style={v.secondaryBtnStyle}>Close</button>
+                </div>
+                {v.emailError && <div style={{ fontSize: '12px', color: 'var(--risk-high-text)' }}>{v.emailError}</div>}
+                {v.emailTemplateOptions.length > 0 && !v.emailError.includes('does not have an email') && (
+                  <>
+                    <select value={v.emailTemplateId} onChange={v.onEmailTemplateChange} style={v.selectStyle}>
+                      {v.emailTemplateOptions.map((t) => (<option key={t.id} value={t.id}>{t.label}</option>))}
+                    </select>
+                    {v.emailLoading && <div style={{ fontSize: '12px', color: 'var(--muted)' }}>Loading preview…</div>}
+                    {v.emailPreview && (
+                      <div style={{ border: '1px solid var(--border)', borderRadius: '10px', overflow: 'hidden' }}>
+                        <iframe srcDoc={v.emailPreview.html} title="Email preview" style={{ width: '100%', height: '260px', border: 'none', background: '#fff' }} sandbox="allow-same-origin" />
+                      </div>
+                    )}
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                      <button className="aw-primary" onClick={v.onSendClientEmail} disabled={!v.emailPreview || v.emailSending || v.isDemo} style={v.primaryBtnStyle}>{v.emailSending ? 'Sending…' : 'Send email'}</button>
+                      {v.emailSent && <span style={{ fontSize: '12px', color: 'var(--emerald-2)', fontWeight: 600 }}>Sent!</span>}
+                      {v.isDemo && <span style={{ fontSize: '12px', color: 'var(--muted)' }}>Sign in to send.</span>}
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
             {sc.unassigned && (
               <div style={{ marginTop: '14px', padding: '12px 14px', borderRadius: '14px', background: 'var(--risk-med-bg)', border: '1px solid var(--risk-med-border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
                 <span style={{ fontSize: '12.5px', color: 'var(--risk-med-text)' }}>This client isn’t assigned to an Advisor yet — clinical detail is limited until claimed.</span>
@@ -1419,15 +1471,15 @@ function ClientOverviewTab({ v, sc }) {
       </div>
       <div style={{ border: '1px solid var(--risk-high-border)', borderRadius: '20px', padding: '20px', background: 'var(--risk-high-bg)' }}>
         <span style={{ fontSize: '13.5px', fontWeight: 700, color: 'var(--risk-high-text)' }}>Danger zone</span>
-        <div style={{ fontSize: '12.5px', color: 'var(--text-2)', marginTop: '4px' }}>Permanently remove this client and all associated records.</div>
-        <button onClick={sc.onStartDelete} disabled={!sc.canWrite} style={{ marginTop: '10px', background: 'var(--risk-high-text)', color: '#fff', border: 'none', padding: '9px 16px', borderRadius: '10px', fontWeight: 600, fontSize: '13px', cursor: sc.canWrite ? 'pointer' : 'not-allowed', fontFamily: 'inherit', opacity: sc.canWrite ? 1 : 0.5 }}>Delete client</button>
+        <div style={{ fontSize: '12.5px', color: 'var(--text-2)', marginTop: '4px' }}>Removes this client from your caseload. This deactivates their assignment to you — no records are deleted.</div>
+        <button onClick={sc.onStartDelete} disabled={!sc.canWrite} style={{ marginTop: '10px', background: 'var(--risk-high-text)', color: '#fff', border: 'none', padding: '9px 16px', borderRadius: '10px', fontWeight: 600, fontSize: '13px', cursor: sc.canWrite ? 'pointer' : 'not-allowed', fontFamily: 'inherit', opacity: sc.canWrite ? 1 : 0.5 }}>Remove client</button>
         {v.deletingClientId && (
           <div style={{ marginTop: '14px', padding: '14px', borderRadius: '14px', background: 'var(--surface)', border: '1px solid var(--border)' }}>
-            <div style={{ fontSize: '12.5px', color: 'var(--text-2)' }}>Type <strong>{v.deletingClientName}</strong> to confirm deletion.</div>
+            <div style={{ fontSize: '12.5px', color: 'var(--text-2)' }}>Type <strong>{v.deletingClientName}</strong> to confirm removal.</div>
             <input value={v.deleteConfirmText} onChange={v.onDeleteConfirmChange} placeholder="Client name" style={{ ...inp(), width: '100%', marginTop: '8px' }} />
             <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
               <button onClick={v.onCancelDelete} style={v.secondaryBtnStyle}>Cancel</button>
-              <button onClick={v.onConfirmDelete} disabled={v.notDeleteConfirmMatches} style={{ background: 'var(--risk-high-text)', color: '#fff', border: 'none', padding: '10px 18px', borderRadius: '12px', fontWeight: 600, fontSize: '13px', cursor: 'pointer', fontFamily: 'inherit', opacity: v.deleteConfirmOpacity }}>Permanently delete</button>
+              <button onClick={v.onConfirmDelete} disabled={v.notDeleteConfirmMatches} style={{ background: 'var(--risk-high-text)', color: '#fff', border: 'none', padding: '10px 18px', borderRadius: '12px', fontWeight: 600, fontSize: '13px', cursor: 'pointer', fontFamily: 'inherit', opacity: v.deleteConfirmOpacity }}>Remove from caseload</button>
             </div>
           </div>
         )}

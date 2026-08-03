@@ -28,6 +28,8 @@ import { generateHomework, generateHomeworkBatch } from './homeworkAI.js';
 import { isMissingWorksheetPersistenceColumn, WORKSHEET_MIGRATION_ADMIN_WARNING } from './worksheetPersistenceFallback';
 import { getClerkToken } from './apiAuth.js';
 import { loadNotificationPreferences, updateNotificationPreferences } from './notificationPreferences.js';
+import { getRenderedEmail } from './emailTemplates.js';
+import { sendEmail } from './onesignalEmail.js';
 
 export const WORKSPACE_WOUNDS = ['abandonment', 'shame', 'neglect', 'betrayal', 'helplessness'];
 
@@ -95,6 +97,7 @@ export function mapClientRow(row) {
     initial: initialsFrom(row.name),
     email: row.email || '',
     phone: row.phone || '',
+    pin: row.pin || '',
     status,
     unassigned,
     accessRestrictions: row.access_restrictions || null,
@@ -764,6 +767,82 @@ export async function reassignWorkspaceClient({ clientId, fromTherapistId, toThe
     .eq('therapist_id', fromTherapistId)
     .eq('client_id', clientId);
   return { error: error || null };
+}
+
+// Same unique-PIN generation and insert TherapistDashboard.jsx's
+// generateUniquePIN/handleCreateClient already do — the workspace's own "+
+// New client" form only ever created a fake, unpersisted local row with an
+// unchecked 4-digit PIN.
+async function generateUniqueClientPin() {
+  const maxAttempts = 20;
+  for (let i = 0; i < maxAttempts; i++) {
+    const pin = String(Math.floor(100000 + Math.random() * 900000));
+    const { data } = await supabase.from('ifs_clients').select('id').eq('pin', pin).limit(1);
+    if (!data || data.length === 0) return pin;
+  }
+  return null;
+}
+
+export async function createWorkspaceClient(therapistId, { name, email, phone }) {
+  const trimmedName = String(name || '').trim();
+  if (!trimmedName) return { data: null, error: { message: 'Name is required' } };
+  const pin = await generateUniqueClientPin();
+  if (!pin) return { data: null, error: { message: 'Could not generate a unique PIN. Please try again.' } };
+  const { data, error } = await supabase
+    .from('ifs_clients')
+    .insert({
+      name: trimmedName, email: String(email || '').trim() || null, phone: String(phone || '').trim() || null,
+      pin, user_role: 'client', status: 'active', created_at: new Date().toISOString(),
+    })
+    .select()
+    .single();
+  if (error) return { data: null, error };
+  if (therapistId) {
+    const { error: assignError } = await assignClientToTherapist(therapistId, data.id, 'active', { clientName: data.name });
+    if (assignError) console.error('Failed to assign new client to therapist:', assignError);
+  }
+  return { data, error: null };
+}
+
+// Same update TherapistDashboard.jsx's handleEditClientSave already does —
+// the workspace had no way to edit a client's name/email/phone at all.
+export async function updateWorkspaceClientProfile(clientId, { name, email, phone }) {
+  const trimmedName = String(name || '').trim();
+  if (!clientId || !trimmedName) return { error: { message: 'Name is required' } };
+  const { error } = await supabase
+    .from('ifs_clients')
+    .update({ name: trimmedName, email: String(email || '').trim() || null, phone: String(phone || '').trim() || null })
+    .eq('id', clientId);
+  return { error: error || null };
+}
+
+// Same email templates + render TherapistDashboard.jsx's openEmailModal /
+// handleEmailTemplateChange already use (src/lib/emailTemplates.js) — the
+// workspace surfaced a client's email as read-only text with no send action.
+export async function renderWorkspaceClientEmail(templateId, client) {
+  try {
+    const nameParts = String(client?.name || '').trim().split(/\s+/);
+    const firstName = nameParts[0] || '';
+    const lastName = nameParts.slice(1).join(' ') || '';
+    const { subject, html } = await getRenderedEmail(templateId, {
+      first_name: firstName, last_name: lastName, pin: client?.pin || '', app_link: 'https://ifs.aleix.help',
+    });
+    return { data: { subject, html }, error: null };
+  } catch (error) {
+    return { data: null, error: { message: error.message || 'Failed to load email template' } };
+  }
+}
+
+// Same sendEmail (onesignalEmail.js -> the deployed send-email edge
+// function) TherapistDashboard.jsx's handleSendEmail already calls.
+export async function sendWorkspaceClientEmail({ toEmail, subject, htmlBody }) {
+  if (!toEmail) return { error: { message: 'This client does not have an email address.' } };
+  try {
+    await sendEmail({ toEmail, subject, htmlBody });
+    return { error: null };
+  } catch (error) {
+    return { error: { message: error.message || 'Failed to send email' } };
+  }
 }
 
 // Merge a freshly-loaded caseload into the previously-loaded one: new clients

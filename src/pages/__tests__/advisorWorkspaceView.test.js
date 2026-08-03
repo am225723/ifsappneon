@@ -1680,6 +1680,77 @@ describe('buildView — Admin Team & Caseloads reassignment (mirrors AdminHub.js
   });
 });
 
+describe('buildView — Edit client (mirrors TherapistDashboard.jsx\'s handleEditClientSave)', () => {
+  it('reflects the edit form state and wires field changes/save/cancel', () => {
+    const calls = {};
+    const view = buildView({
+      S: { ...INITIAL_STATE, editClientId: 'c1', editClientForm: { name: 'Maya Chen', email: 'maya@example.com', phone: '555-0100' }, editClientSaving: false, editClientError: '' },
+      theme: LIGHT, allClients: () => CLIENTS,
+      buildTreatmentPlan: (c) => ({ clientName: c.name, phases: [], milestones: [], currentPhaseLabel: '', currentPhaseDesc: '' }),
+      handlers: new Proxy({
+        isGroupExpanded: () => false,
+        onStartEditClient: (id) => { calls.started = id; },
+        onCancelEditClient: () => { calls.cancelled = true; },
+        onEditClientFieldChange: (field) => (e) => { calls.changed = [field, e.target.value]; },
+        onSaveEditClient: () => { calls.saved = true; },
+      }, { get: (t, p) => t[p] || (() => {}) }),
+      isAdmin: true,
+    });
+    expect(view.editClientId).toBe('c1');
+    expect(view.editClientForm.email).toBe('maya@example.com');
+    view.onStartEditClient('c2');
+    view.onCancelEditClient();
+    view.onEditClientFieldChange('phone')({ target: { value: '555-0199' } });
+    view.onSaveEditClient();
+    expect(calls).toEqual({ started: 'c2', cancelled: true, changed: ['phone', '555-0199'], saved: true });
+  });
+
+  it('surfaces a save error from state', () => {
+    const v = makeView({ editClientId: 'c1', editClientError: 'Failed to save changes.' });
+    expect(v.editClientError).toBe('Failed to save changes.');
+  });
+});
+
+describe('buildView — Email client (mirrors TherapistDashboard.jsx\'s openEmailModal/handleSendEmail)', () => {
+  it('lists the real available templates and reflects preview/loading/sent state', () => {
+    const v = makeView({
+      emailClientId: 'c1', emailTemplateId: 'welcome',
+      emailPreview: { subject: 'Welcome to Intrinsic Therapeutic Solutions', html: '<p>Hi Maya</p>' },
+    });
+    expect(v.emailTemplateOptions.map((t) => t.id)).toContain('welcome');
+    expect(v.emailTemplateOptions.map((t) => t.id)).toContain('pin_reset');
+    expect(v.emailPreview.subject).toBe('Welcome to Intrinsic Therapeutic Solutions');
+    expect(v.emailLoading).toBe(false);
+    expect(v.emailSent).toBe(false);
+  });
+
+  it('wires open/close/template-change/send actions', () => {
+    const calls = {};
+    const view = buildView({
+      S: { ...INITIAL_STATE }, theme: LIGHT, allClients: () => CLIENTS,
+      buildTreatmentPlan: (c) => ({ clientName: c.name, phases: [], milestones: [], currentPhaseLabel: '', currentPhaseDesc: '' }),
+      handlers: new Proxy({
+        isGroupExpanded: () => false,
+        onOpenEmailClient: (id) => { calls.opened = id; },
+        onCloseEmailClient: () => { calls.closed = true; },
+        onEmailTemplateChange: (e) => { calls.template = e.target.value; },
+        onSendClientEmail: () => { calls.sent = true; },
+      }, { get: (t, p) => t[p] || (() => {}) }),
+      isAdmin: true,
+    });
+    view.onOpenEmailClient('c1');
+    view.onCloseEmailClient();
+    view.onEmailTemplateChange({ target: { value: 'pin_reset' } });
+    view.onSendClientEmail();
+    expect(calls).toEqual({ opened: 'c1', closed: true, template: 'pin_reset', sent: true });
+  });
+
+  it('surfaces an error from state, e.g. a client with no email address', () => {
+    const v = makeView({ emailClientId: 'c1', emailError: 'This client does not have an email address. Edit the client to add one.' });
+    expect(v.emailError).toContain('does not have an email address');
+  });
+});
+
 describe('buildView — Caseload Management shows email, level, safety, and a deactivate control', () => {
   it('shows each row\'s email and gamification level, previously only visible after opening the client', () => {
     const v = makeView();
