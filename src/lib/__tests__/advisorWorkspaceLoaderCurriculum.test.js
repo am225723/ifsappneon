@@ -161,6 +161,15 @@ describe('removeWorkspaceCurriculumModule', () => {
     expect(error).toBeTruthy();
     expect(mockUpdateCalls).toHaveLength(0);
   });
+
+  it('surfaces a reorder failure instead of silently reporting success', async () => {
+    mockUpdateResult = { error: { message: 'reorder failed' } };
+    const { error } = await removeWorkspaceCurriculumModule('mod2', ['mod1', 'mod3']);
+    expect(error).toEqual({ message: 'reorder failed' });
+    // Both reorder updates were still attempted (independent, not aborted
+    // partway through) — only the surfaced result changed.
+    expect(mockUpdateCalls).toHaveLength(2);
+  });
 });
 
 describe('loadWorkspaceCurriculumModulesForBuilder', () => {

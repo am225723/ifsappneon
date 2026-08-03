@@ -185,7 +185,11 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
   // newer one if two different notification-preference keys are toggled in
   // quick succession.
   const notificationPrefsGenRef = useRef(0);
-  useEffect(() => () => { genRef.current += 1; docGenRef.current += 1; snapshotGenRef.current += 1; changeSummaryGenRef.current += 1; moduleInsightsGenRef.current += 1; practiceGenRef.current += 1; }, []);
+  // Guards refreshCurriculumBuilderModules (fired from generate/save/add/
+  // remove) against a stale response overwriting a since-selected client's
+  // modules — same capture-and-compare pattern as docGenRef/practiceGenRef.
+  const curriculumGenRef = useRef(0);
+  useEffect(() => () => { genRef.current += 1; docGenRef.current += 1; snapshotGenRef.current += 1; changeSummaryGenRef.current += 1; moduleInsightsGenRef.current += 1; practiceGenRef.current += 1; curriculumGenRef.current += 1; }, []);
   // setState-compatible merge helper (accepts object or updater fn)
   const set = (patch) => setS((prev) => ({ ...prev, ...(typeof patch === 'function' ? patch(prev) : patch) }));
   const allClients = () => (S.baseClients || []).concat(S.extraClients || []).filter((c) => !S.deletedIds[c.id]);
@@ -209,6 +213,8 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
     notificationPrefsLoaded.current = false;
     caseloadReportsLoaded.current = false;
     teamAssignmentsLoaded.current = false;
+    curriculumBuilderInitialized.current = false;
+    curriculumBuilderLoadedFor.current = null;
     (async () => {
       try {
         // Loaded alongside the active caseload (not lazily on Caseload-tab
@@ -226,6 +232,7 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
           baseClients: clients,
           extraClients: [], deletedIds: {}, savedNotes: [],
           tasks: [], notifications: [], liveSessions: [], coTherapyThread: [], riskAlerts: [], dischargedClients: discharged,
+          curriculumBuilderClientId: '', curriculumBuilderModules: [], curriculumBuilderModulesLoading: false,
           selectedClientId: firstId, activeThreadId: firstId, planClientId: firstId,
           newTaskClientId: firstId,
           noteDraft: { ...prev.noteDraft, clientId: firstId },
@@ -458,6 +465,7 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
   // same "default to selected client on first open" pattern as Access
   // Control above.
   const onCurriculumClientChange = (clientId) => {
+    curriculumGenRef.current += 1;
     set({
       curriculumBuilderClientId: clientId, curriculumGenResult: null, editingCurriculumModuleId: '',
       curriculumModuleSaveError: '', showAddCurriculumModule: false, addCurriculumModuleResult: null,
@@ -483,7 +491,12 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
   }, [isDemo, loadPhase, S.curriculumBuilderClientId]);
   const refreshCurriculumBuilderModules = (clientId) => {
     curriculumBuilderLoadedFor.current = null;
+    const gen = curriculumGenRef.current;
     loadWorkspaceCurriculumModulesForBuilder(clientId).then((rows) => {
+      // A client switch (or unmount) since this request started bumps
+      // curriculumGenRef — discard the response instead of clobbering
+      // whatever client is now selected.
+      if (curriculumGenRef.current !== gen) return;
       curriculumBuilderLoadedFor.current = clientId;
       set({ curriculumBuilderModules: rows, curriculumBuilderModulesLoading: false });
     });
@@ -526,8 +539,10 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
   const onSaveCurriculumModuleEdit = () => {
     const { editingCurriculumModuleId, editCurriculumModuleForm, curriculumBuilderClientId } = S;
     if (!editingCurriculumModuleId || isDemo) return;
+    if (!editCurriculumModuleForm.title.trim()) { set({ curriculumModuleSaveError: 'Title is required.' }); return; }
+    const payload = { ...editCurriculumModuleForm, estimatedMinutes: Math.max(5, editCurriculumModuleForm.estimatedMinutes || 30) };
     set({ curriculumModuleSaveError: '' });
-    updateWorkspaceCurriculumModule(editingCurriculumModuleId, editCurriculumModuleForm).then(({ error }) => {
+    updateWorkspaceCurriculumModule(editingCurriculumModuleId, payload).then(({ error }) => {
       if (error) { set({ curriculumModuleSaveError: 'Failed to save changes. Please try again.' }); return; }
       set({ editingCurriculumModuleId: '' });
       refreshCurriculumBuilderModules(curriculumBuilderClientId);

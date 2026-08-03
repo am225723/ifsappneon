@@ -1758,8 +1758,12 @@ describe('buildView — Custom Curriculum builder (mirrors TherapistDashboard.js
     expect(view.hasCurriculumClient).toBe(true);
     expect(view.curriculumClientName).toBe('Maya Chen');
     view.onCurriculumClientChange({ target: { value: 'c2' } });
+    view.onCurriculumPrimaryWoundChange({ target: { value: 'shame' } });
+    view.onCurriculumSecondaryWoundChange({ target: { value: 'neglect' } });
     view.onGenerateCurriculum();
     expect(calls.client).toBe('c2');
+    expect(calls.curriculumBuilderPrimaryWound).toEqual({ target: { value: 'shame' } });
+    expect(calls.curriculumBuilderSecondaryWound).toEqual({ target: { value: 'neglect' } });
     expect(calls.generated).toBe(true);
   });
 

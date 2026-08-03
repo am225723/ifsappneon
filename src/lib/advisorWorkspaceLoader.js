@@ -1974,10 +1974,13 @@ export async function removeWorkspaceCurriculumModule(moduleId, remainingModuleI
   if (!moduleId) return { error: { message: 'Missing module id' } };
   const { error } = await supabase.from('ifs_personalized_curriculum').delete().eq('id', moduleId);
   if (error) return { error };
-  for (let i = 0; i < (remainingModuleIds || []).length; i++) {
-    await supabase.from('ifs_personalized_curriculum').update({ module_order: i + 1, updated_at: new Date().toISOString() }).eq('id', remainingModuleIds[i]);
-  }
-  return { error: null };
+  const results = await Promise.all(
+    (remainingModuleIds || []).map((id, i) =>
+      supabase.from('ifs_personalized_curriculum').update({ module_order: i + 1, updated_at: new Date().toISOString() }).eq('id', id)
+    )
+  );
+  const reorderError = results.find((r) => r.error)?.error;
+  return { error: reorderError || null };
 }
 
 function escapeHtml(value) {

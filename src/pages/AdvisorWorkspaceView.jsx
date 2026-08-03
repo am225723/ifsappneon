@@ -838,7 +838,12 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
     };
   });
   const addCurriculumModuleTemplateRows = (WOUND_LESSON_PLANS[addCurriculumModuleWound] || []).map((template) => {
-    const alreadyAdded = (curriculumBuilderModules || []).some((m) => m.module_title === template.title);
+    // Matches addWorkspaceCurriculumModule's `wound-${template.id}-...`
+    // module_id scheme first (survives a renamed module), falling back to
+    // title for older/manually-added rows without that prefix.
+    const alreadyAdded = (curriculumBuilderModules || []).some(
+      (m) => String(m.module_id || '').startsWith(`wound-${template.id}-`) || m.module_title === template.title,
+    );
     return {
       ...template, alreadyAdded, adding: addingCurriculumModuleId === template.id,
       childName: WOUND_DISPLAY[addCurriculumModuleWound]?.childName || '',
@@ -2956,7 +2961,7 @@ function CurriculumBuilderView({ v }) {
   }
   return (
     <div style={{ maxWidth: '760px', display: 'flex', flexDirection: 'column', gap: '18px' }}>
-      <select value={v.curriculumBuilderClientId} onChange={v.onCurriculumClientChange} style={{ ...v.selectStyle, maxWidth: '260px' }}>
+      <select aria-label="Client" value={v.curriculumBuilderClientId} onChange={v.onCurriculumClientChange} style={{ ...v.selectStyle, maxWidth: '260px' }}>
         {v.curriculumClientOptions.map((o) => (<option key={o.id} value={o.id}>{o.name}</option>))}
       </select>
 
@@ -2970,14 +2975,14 @@ function CurriculumBuilderView({ v }) {
           </div>
           <div style={{ display: 'flex', gap: '12px', marginTop: '14px', flexWrap: 'wrap' }}>
             <div>
-              <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-2)' }}>Primary wound</label>
-              <select value={v.curriculumBuilderPrimaryWound} onChange={v.onCurriculumPrimaryWoundChange} style={{ ...v.selectStyle, display: 'block', marginTop: '4px' }}>
+              <label htmlFor="cb-gen-primary-wound" style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-2)' }}>Primary wound</label>
+              <select id="cb-gen-primary-wound" value={v.curriculumBuilderPrimaryWound} onChange={v.onCurriculumPrimaryWoundChange} style={{ ...v.selectStyle, display: 'block', marginTop: '4px' }}>
                 {v.curriculumWoundOptions.map((w) => (<option key={w.id} value={w.id}>{w.label}</option>))}
               </select>
             </div>
             <div>
-              <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-2)' }}>Secondary wound</label>
-              <select value={v.curriculumBuilderSecondaryWound} onChange={v.onCurriculumSecondaryWoundChange} style={{ ...v.selectStyle, display: 'block', marginTop: '4px' }}>
+              <label htmlFor="cb-gen-secondary-wound" style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-2)' }}>Secondary wound</label>
+              <select id="cb-gen-secondary-wound" value={v.curriculumBuilderSecondaryWound} onChange={v.onCurriculumSecondaryWoundChange} style={{ ...v.selectStyle, display: 'block', marginTop: '4px' }}>
                 {v.curriculumSecondaryWoundOptions.map((w) => (<option key={w.id} value={w.id}>{w.label}</option>))}
               </select>
             </div>
@@ -2995,10 +3000,10 @@ function CurriculumBuilderView({ v }) {
           <details style={CARD}>
             <summary style={{ cursor: 'pointer', fontSize: '13.5px', fontWeight: 600, color: 'var(--text)' }}>Regenerate curriculum with a different wound profile</summary>
             <div style={{ display: 'flex', gap: '12px', marginTop: '12px', flexWrap: 'wrap' }}>
-              <select value={v.curriculumBuilderPrimaryWound} onChange={v.onCurriculumPrimaryWoundChange} style={v.selectStyle}>
+              <select aria-label="Primary wound" value={v.curriculumBuilderPrimaryWound} onChange={v.onCurriculumPrimaryWoundChange} style={v.selectStyle}>
                 {v.curriculumWoundOptions.map((w) => (<option key={w.id} value={w.id}>{w.label}</option>))}
               </select>
-              <select value={v.curriculumBuilderSecondaryWound} onChange={v.onCurriculumSecondaryWoundChange} style={v.selectStyle}>
+              <select aria-label="Secondary wound" value={v.curriculumBuilderSecondaryWound} onChange={v.onCurriculumSecondaryWoundChange} style={v.selectStyle}>
                 {v.curriculumSecondaryWoundOptions.map((w) => (<option key={w.id} value={w.id}>{w.label}</option>))}
               </select>
             </div>
@@ -3015,11 +3020,11 @@ function CurriculumBuilderView({ v }) {
               {mod.isEditing ? (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   <span style={{ ...FR, fontSize: '14px' }}>Edit module {mod.order}</span>
-                  <input value={v.editCurriculumModuleForm.title} onChange={v.onEditCurriculumTitleChange} placeholder="Title" style={inp()} />
-                  <textarea value={v.editCurriculumModuleForm.description} onChange={v.onEditCurriculumDescriptionChange} rows={3} placeholder="Description" style={{ ...inp(), resize: 'vertical', fontFamily: 'inherit' }} />
+                  <input aria-label="Module title" value={v.editCurriculumModuleForm.title} onChange={v.onEditCurriculumTitleChange} placeholder="Title" style={inp()} />
+                  <textarea aria-label="Module description" value={v.editCurriculumModuleForm.description} onChange={v.onEditCurriculumDescriptionChange} rows={3} placeholder="Description" style={{ ...inp(), resize: 'vertical', fontFamily: 'inherit' }} />
                   <div>
-                    <label style={{ fontSize: '12px', color: 'var(--text-2)' }}>Estimated minutes</label>
-                    <input type="number" value={v.editCurriculumModuleForm.estimatedMinutes} onChange={v.onEditCurriculumMinutesChange} style={{ ...inp(), width: '100px', display: 'block', marginTop: '4px' }} />
+                    <label htmlFor="cb-edit-minutes" style={{ fontSize: '12px', color: 'var(--text-2)' }}>Estimated minutes</label>
+                    <input id="cb-edit-minutes" type="number" value={v.editCurriculumModuleForm.estimatedMinutes} onChange={v.onEditCurriculumMinutesChange} style={{ ...inp(), width: '100px', display: 'block', marginTop: '4px' }} />
                   </div>
                   {v.curriculumModuleSaveError && <div style={{ fontSize: '12px', color: 'var(--risk-high-text)' }}>{v.curriculumModuleSaveError}</div>}
                   <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
