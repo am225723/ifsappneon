@@ -74,6 +74,16 @@ describe('loadCaseloadCsvAggregates', () => {
   it('returns an empty map for an empty client list without querying', async () => {
     expect(await loadCaseloadCsvAggregates([])).toEqual({});
   });
+
+  it('isolates a single failing query instead of discarding the other two aggregates', async () => {
+    mockSelectByTable = {
+      ifs_journal_entries: { data: null, error: { message: 'permission denied' } },
+      ifs_mood_entries: { data: [{ client_id: 'c1', mood: 5 }], error: null },
+      ifs_therapy_activity_progress: { data: [{ client_id: 'c1', completed: true }], error: null },
+    };
+    const result = await loadCaseloadCsvAggregates(['c1']);
+    expect(result.c1).toEqual({ journalCount: 0, avgMood: 5, activitiesCompleted: 1, activitiesTotal: 1 });
+  });
 });
 
 describe('logWorkspaceReminder', () => {

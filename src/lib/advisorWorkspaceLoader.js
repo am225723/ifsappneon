@@ -916,11 +916,23 @@ export async function loadCaseloadCsvAggregates(clientIds) {
   const empty = {};
   if (ids.length === 0) return empty;
   try {
-    const [{ data: journalRows }, { data: moodRows }, { data: activityRows }] = await Promise.all([
+    // Promise.allSettled + per-query error checks so a single failing query
+    // (network error, or a query-level Supabase error — which resolves
+    // rather than throws) degrades only its own aggregate instead of
+    // discarding the other two, or the whole caseload's data via the outer catch.
+    const [journalRes, moodRes, activityRes] = await Promise.allSettled([
       supabase.from('ifs_journal_entries').select('client_id').in('client_id', ids),
       supabase.from('ifs_mood_entries').select('client_id, mood').in('client_id', ids),
       supabase.from('ifs_therapy_activity_progress').select('client_id, completed').in('client_id', ids),
     ]);
+    const extract = (settled, label) => {
+      if (settled.status !== 'fulfilled') { console.error(`Failed to load ${label}:`, settled.reason); return []; }
+      if (settled.value.error) { console.error(`Failed to load ${label}:`, settled.value.error); return []; }
+      return settled.value.data || [];
+    };
+    const journalRows = extract(journalRes, 'journal entries');
+    const moodRows = extract(moodRes, 'mood entries');
+    const activityRows = extract(activityRes, 'activity progress');
     const result = {};
     ids.forEach((id) => { result[id] = { journalCount: 0, avgMood: null, activitiesCompleted: 0, activitiesTotal: 0 }; });
     (journalRows || []).forEach((r) => { if (result[r.client_id]) result[r.client_id].journalCount += 1; });

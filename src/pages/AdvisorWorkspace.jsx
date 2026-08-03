@@ -98,7 +98,7 @@ export const INITIAL_STATE = {
   editClientId: '', editClientForm: { name: '', email: '', phone: '' }, editClientSaving: false, editClientError: '',
   showPinClientId: '',
   emailClientId: '', emailTemplateId: 'welcome', emailPreview: null, emailLoading: false, emailSending: false, emailSent: false, emailError: '',
-  reminderClientId: '', reminderForm: { type: 'session', message: '' }, reminderSaved: false,
+  reminderClientId: '', reminderForm: { type: 'session', message: '' }, reminderSaved: false, reminderError: '',
   deletedMessageIdx: {},
   practiceGuidance: '', practiceBatchResults: [],
   liveSessions: [
@@ -1376,11 +1376,16 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
     if (!client) return;
     const nextAccountStatus = client.accountStatus === 'inactive' ? 'active' : 'inactive';
     const nextStatus = nextAccountStatus === 'inactive' ? 'inactive' : (client.lastActiveDays != null && client.lastActiveDays >= 14 ? 'inactive' : 'active');
+    const prevAccountStatus = client.accountStatus;
+    const prevStatus = client.status;
     const patch = (c) => (c.id === clientId ? { ...c, accountStatus: nextAccountStatus, status: nextStatus } : c);
     set((s) => ({ baseClients: (s.baseClients || []).map(patch), extraClients: (s.extraClients || []).map(patch) }));
     if (isDemo) return;
     updateWorkspaceClientStatus(clientId, nextAccountStatus).then(({ error }) => {
-      if (error) console.error('Failed to update account status:', error);
+      if (!error) return;
+      console.error('Failed to update account status:', error);
+      const revert = (c) => (c.id === clientId ? { ...c, accountStatus: prevAccountStatus, status: prevStatus } : c);
+      set((s) => ({ baseClients: (s.baseClients || []).map(revert), extraClients: (s.extraClients || []).map(revert) }));
     });
   };
   const onStartEditClient = (id) => {
@@ -1444,32 +1449,44 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
   const onOpenReminderClient = (id) => {
     const client = allClients().find((c) => c.id === id);
     const message = REMINDER_TEMPLATES.session.replace('{name}', client?.name || '[Client]');
-    set({ reminderClientId: id, reminderForm: { type: 'session', message }, reminderSaved: false });
+    set({ reminderClientId: id, reminderForm: { type: 'session', message }, reminderSaved: false, reminderError: '' });
   };
-  const onCloseReminderClient = () => set({ reminderClientId: '', reminderSaved: false });
+  const onCloseReminderClient = () => set({ reminderClientId: '', reminderSaved: false, reminderError: '' });
   const onReminderTypeChange = (type) => {
     const client = allClients().find((c) => c.id === S.reminderClientId);
     const message = (REMINDER_TEMPLATES[type] || REMINDER_TEMPLATES.session).replace('{name}', client?.name || '[Client]');
-    set({ reminderForm: { type, message }, reminderSaved: false });
+    set({ reminderForm: { type, message }, reminderSaved: false, reminderError: '' });
   };
-  const onReminderMessageChange = (message) => set((s) => ({ reminderForm: { ...s.reminderForm, message }, reminderSaved: false }));
+  const onReminderMessageChange = (message) => set((s) => ({ reminderForm: { ...s.reminderForm, message }, reminderSaved: false, reminderError: '' }));
+  // Resolves true only once the write actually lands, so a denied/failed
+  // clipboard permission doesn't get reported to the Advisor as "copied".
   const copyTextToClipboard = (text) => {
-    if (navigator.clipboard?.writeText) { navigator.clipboard.writeText(text).catch(() => {}); return; }
-    const ta = document.createElement('textarea');
-    ta.value = text;
-    document.body.appendChild(ta);
-    ta.select();
-    document.execCommand('copy');
-    document.body.removeChild(ta);
+    if (navigator.clipboard?.writeText) {
+      return navigator.clipboard.writeText(text).then(() => true).catch(() => false);
+    }
+    try {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      const ok = document.execCommand('copy');
+      document.body.removeChild(ta);
+      return Promise.resolve(ok);
+    } catch {
+      return Promise.resolve(false);
+    }
   };
   const onCopyAndSaveReminder = () => {
     const { reminderClientId, reminderForm } = S;
     if (!reminderClientId || !reminderForm.message.trim()) return;
-    copyTextToClipboard(reminderForm.message);
-    if (isDemo || !therapistId) { set({ reminderSaved: true }); return; }
-    logWorkspaceReminder({ therapistId, clientId: reminderClientId, type: reminderForm.type, message: reminderForm.message }).then(({ error }) => {
-      if (error) { console.error('Failed to log reminder:', error); return; }
-      set({ reminderSaved: true });
+    set({ reminderError: '' });
+    copyTextToClipboard(reminderForm.message).then((copied) => {
+      if (!copied) { set({ reminderError: 'Could not copy to clipboard. Please copy the message manually.' }); return; }
+      if (isDemo || !therapistId) { set({ reminderSaved: true }); return; }
+      logWorkspaceReminder({ therapistId, clientId: reminderClientId, type: reminderForm.type, message: reminderForm.message }).then(({ error }) => {
+        if (error) { console.error('Failed to log reminder:', error); set({ reminderError: 'Copied to clipboard, but the reminder log failed to save.' }); return; }
+        set({ reminderSaved: true });
+      });
     });
   };
   const onStartDelete = (id) => set({ deletingClientId: id, deleteConfirmText: '' });

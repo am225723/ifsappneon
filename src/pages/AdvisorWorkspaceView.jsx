@@ -44,7 +44,7 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
     reassignTherapistId, reassignClientId, reassignClientName, reassignToTherapistId, reassignSaving,
     editClientId, editClientForm, editClientSaving, editClientError,
     emailClientId, emailTemplateId, emailPreview, emailLoading, emailSending, emailSent, emailError,
-    showPinClientId, reminderClientId, reminderForm, reminderSaved,
+    showPinClientId, reminderClientId, reminderForm, reminderSaved, reminderError,
   } = S;
 
   const rootStyle = {
@@ -264,14 +264,15 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
     const activePartsTop = Object.entries(activePartsCounts).sort((a, b) => b[1] - a[1]).slice(0, 8);
     const activePartsMax = activePartsTop[0]?.[1] || 1;
     const titleCase = (s) => String(s).replace(/-/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase());
+    const rawAccountStatus = rawSelected.accountStatus || 'active';
     selectedClient = {
       id: rawSelected.id, name: rawSelected.name, initial: rawSelected.initial, email: rawSelected.email, phone: rawSelected.phone,
       pin: rawSelected.pin || '', pinRevealed: showPinClientId === rawSelected.id, onToggleShowPin: () => H.onToggleShowPin(rawSelected.id),
       statusLabel: rawSelected.status === 'active' ? 'Active' : 'Inactive', statusChip: severityStyle(theme, rawSelected.status === 'active' ? 'low' : 'medium'),
-      accountStatus: rawSelected.accountStatus || 'active',
-      accountStatusLabel: (rawSelected.accountStatus || 'active') === 'active' ? 'Active' : 'Inactive',
-      accountStatusChip: severityStyle(theme, (rawSelected.accountStatus || 'active') === 'active' ? 'low' : 'medium'),
-      accountStatusTrackStyle: accessToggleTrackStyle((rawSelected.accountStatus || 'active') === 'active', false),
+      accountStatus: rawAccountStatus,
+      accountStatusLabel: rawAccountStatus === 'active' ? 'Active' : 'Inactive',
+      accountStatusChip: severityStyle(theme, rawAccountStatus === 'active' ? 'low' : 'medium'),
+      accountStatusTrackStyle: accessToggleTrackStyle(rawAccountStatus === 'active', false),
       accountStatusKnobStyle: accessToggleKnobStyle,
       onToggleAccountStatus: () => H.onToggleAccountStatus(rawSelected.id),
       reminderOpen: reminderClientId === rawSelected.id,
@@ -948,7 +949,7 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
     accessControlModuleRows, accessControlAssessmentRows, accessControlFeatureRows,
     accessControlSaving: !!accessControlSaving, accessControlSaved,
     onSaveAccessControl: H.onSaveAccessControl,
-    reminderForm, reminderSaved: !!reminderSaved,
+    reminderForm, reminderSaved: !!reminderSaved, reminderError: reminderError || '',
     reminderTypeOptions: REMINDER_TYPES.map((t) => ({
       id: t.id, label: t.label, onClick: () => H.onReminderTypeChange(t.id),
       style: { padding: '8px 10px', borderRadius: '10px', border: '1px solid ' + (reminderForm.type === t.id ? theme.emerald2 : theme.border), background: reminderForm.type === t.id ? theme.emerald2 : 'transparent', color: reminderForm.type === t.id ? '#fff' : theme.text2, fontSize: '12px', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' },
@@ -1327,6 +1328,7 @@ function ClientsCaseload({ v }) {
                   {v.reminderTypeOptions.map((t) => (<button key={t.id} onClick={t.onClick} style={t.style}>{t.label}</button>))}
                 </div>
                 <textarea value={v.reminderForm.message} onChange={v.onReminderMessageChange} rows={4} placeholder="Type your reminder message…" style={{ ...inp(), resize: 'vertical', fontFamily: 'inherit' }} />
+                {v.reminderError && <div style={{ fontSize: '12px', color: 'var(--risk-high-text)' }}>{v.reminderError}</div>}
                 {v.reminderSaved && <div style={{ fontSize: '12px', color: 'var(--emerald-2)', fontWeight: 600 }}>Reminder copied to clipboard and saved.</div>}
                 <button className="aw-primary" onClick={v.onCopyAndSaveReminder} disabled={!v.reminderForm.message.trim()} style={{ ...v.primaryBtnStyle, opacity: v.reminderForm.message.trim() ? 1 : 0.5 }}>Copy & save reminder</button>
                 <div style={{ fontSize: '11.5px', color: 'var(--muted)' }}>Copies the message to your clipboard so you can paste it in your preferred messaging app. A log is saved in this client's session notes.</div>
