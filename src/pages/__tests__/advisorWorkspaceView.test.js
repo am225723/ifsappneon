@@ -90,11 +90,12 @@ describe('buildView — selected client detail', () => {
     expect(v.selectedClient.name).toBe('Maya Chen');
     expect(v.selectedClient.modulesLabel).toBe('9/12');
     expect(v.selectedClient.assessmentBars).toHaveLength(5);
+    expect(typeof v.selectedClient.progressPct).toBe('number');
   });
   it('computes MBC change direction as improvement for Maya', () => {
     const phq = v.selectedClient.mbc.find((m) => m.code === 'PHQ-9');
     expect(phq.changeLabel).toBe('-3 pts'); // 6 - 9
-    expect(phq.sparkline).toHaveLength(5);
+    expect(phq.historyPoints).toHaveLength(5);
   });
 });
 
@@ -655,6 +656,26 @@ describe('buildView — Document Creator reflects the real report-generation bac
     const empty = makeView({ clientReports: [] });
     expect(empty.noClientReports).toBe(true);
   });
+
+  it('wires the generated document\'s HTML/PDF export actions and surfaces export state', () => {
+    const calls = {};
+    const view = buildView({
+      S: { ...INITIAL_STATE, generatedDoc: { html: '<html>x</html>', reportId: 'r1', title: 'Clinical Summary Report' }, docExporting: true, docExportError: 'Unable to export PDF.' },
+      theme: LIGHT, allClients: () => CLIENTS,
+      buildTreatmentPlan: (c) => ({ clientName: c.name, phases: [], milestones: [], currentPhaseLabel: '', currentPhaseDesc: '' }),
+      handlers: new Proxy({
+        isGroupExpanded: () => false,
+        onDownloadGeneratedDocHtml: () => { calls.html = true; },
+        onDownloadGeneratedDocPdf: () => { calls.pdf = true; },
+      }, { get: (t, p) => t[p] || (() => {}) }),
+      isAdmin: true,
+    });
+    expect(view.docExporting).toBe(true);
+    expect(view.docExportError).toBe('Unable to export PDF.');
+    view.onDownloadGeneratedDocHtml();
+    view.onDownloadGeneratedDocPdf();
+    expect(calls).toEqual({ html: true, pdf: true });
+  });
 });
 
 describe('buildView — Insights & Reports surfaces real caseload-wide report history (previously an ImportPanel stub)', () => {
@@ -684,6 +705,18 @@ describe('buildView — Insights & Reports surfaces real caseload-wide report hi
     const v = makeView({ caseloadReportsLoading: true });
     expect(v.caseloadReportsLoading).toBe(true);
     expect(v.noCaseloadReports).toBe(false);
+  });
+
+  it('wires the Export CSV action', () => {
+    let exported = false;
+    const view = buildView({
+      S: { ...INITIAL_STATE }, theme: LIGHT, allClients: () => CLIENTS,
+      buildTreatmentPlan: (c) => ({ clientName: c.name, phases: [], milestones: [], currentPhaseLabel: '', currentPhaseDesc: '' }),
+      handlers: new Proxy({ isGroupExpanded: () => false, onExportCaseloadReportsCsv: () => { exported = true; } }, { get: (t, p) => t[p] || (() => {}) }),
+      isAdmin: true,
+    });
+    view.onExportCaseloadReportsCsv();
+    expect(exported).toBe(true);
   });
 });
 
@@ -766,9 +799,9 @@ describe('buildView — Between Sessions reflects real analytics data', () => {
     expect(bs.funnelRows.map((f) => f.value)).toEqual([6, 1, 4, 3]);
     expect(bs.completionPct).toBe(67);
     expect(bs.avgDaysToComplete).toBe(2.5);
-    expect(bs.moodTrendBars).toHaveLength(2);
-    expect(bs.energyTrendBars).toHaveLength(1);
-    expect(bs.journalWeeklyBars).toHaveLength(1);
+    expect(bs.moodTrendPoints).toHaveLength(2);
+    expect(bs.energyTrendPoints).toHaveLength(1);
+    expect(bs.journalWeeklyPoints).toHaveLength(1);
     expect(bs.noMoodEntries).toBe(false);
     expect(bs.moodRows[0].moodLabel).toBe('Okay'); // mood 3
     expect(bs.moodRows[1].moodLabel).toBe('Great'); // mood 5
@@ -780,7 +813,7 @@ describe('buildView — Between Sessions reflects real analytics data', () => {
     const bs = v.selectedClient.betweenSession;
     expect(bs.hasHomeworkData).toBe(false);
     expect(bs.noMoodEntries).toBe(true);
-    expect(bs.moodTrendBars).toEqual([]);
+    expect(bs.moodTrendPoints).toEqual([]);
     expect(bs.noAssignments).toBe(true);
     expect(bs.assignmentRows).toEqual([]);
   });
@@ -838,7 +871,7 @@ describe('buildView — Self-Energy trend reflects real daily check-ins (DailyCh
     const v = makeView({ extraClients: [CLIENT_WITH_ACTIVITY], selectedClientId: 'bs1', selfEnergyTrend: SELF_ENERGY_ROWS });
     const bs = v.selectedClient.betweenSession;
     expect(bs.hasSelfEnergyData).toBe(true);
-    expect(bs.selfEnergyTrendBars).toHaveLength(2);
+    expect(bs.selfEnergyTrendPoints).toHaveLength(2);
     expect(bs.noActiveParts).toBe(false);
     // "the-watcher" appears in both check-ins, "little-maya" in one.
     expect(bs.activePartsRows[0]).toEqual(expect.objectContaining({ name: 'The Watcher', count: 2 }));
@@ -861,7 +894,7 @@ describe('buildView — Self-Energy trend reflects real daily check-ins (DailyCh
 
     const demo = makeView({ selectedClientId: 'c1' });
     expect(demo.selectedClient.betweenSession.noCheckins).toBe(true);
-    expect(demo.selectedClient.betweenSession.selfEnergyTrendBars).toEqual([]);
+    expect(demo.selectedClient.betweenSession.selfEnergyTrendPoints).toEqual([]);
   });
 });
 

@@ -25,6 +25,7 @@ import { DEFAULT_ACCESS_FORM } from '../data/accessControlData.js';
 import { loadAdvisorSessionSnapshot } from '../lib/unifiedGuidance.js';
 import { generateSessionPrepSummary } from '../lib/sessionPrepSummary.js';
 import { pauseLiveActivity, resumeLiveActivity, endLiveSession as endLiveSessionApi } from '../lib/liveSession.js';
+import { downloadHtmlFile, downloadCsvFile, downloadPdfFromHtml, csvFromRows } from '../lib/documentExport.js';
 
 const CASELOAD_REFRESH_MS = 45000;
 
@@ -70,7 +71,7 @@ export const INITIAL_STATE = {
   taskFilter: 'open', newTaskTitle: '', newTaskClientId: 'c1',
   docForm: { clientId: 'c1', type: 'clinical_summary', dateRangeStart: sixMonthsAgoIso(), dateRangeEnd: todayIso() },
   docSources: { ...DOC_SOURCES_DEFAULT },
-  generatedDoc: null, docGenerating: false, docError: '', clientReports: [], clientReportsLoading: false,
+  generatedDoc: null, docGenerating: false, docError: '', docExporting: false, docExportError: '', clientReports: [], clientReportsLoading: false,
   caseloadReports: [], caseloadReportsLoading: false,
   sessionSnapshot: { loading: false, data: null, error: '' },
   changeSummary: { loading: false, data: null, error: '' },
@@ -643,14 +644,7 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
   // Same client-side CSV build TherapistDashboard.jsx's handleExportCSV
   // already does — the workspace's own Caseload view had no export action.
   const onExportCaseloadCsv = () => {
-    const csvContent = buildCaseloadCsv(allClients());
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `clients_export_${new Date().toISOString().split('T')[0]}.csv`;
-    link.click();
-    URL.revokeObjectURL(url);
+    downloadCsvFile(buildCaseloadCsv(allClients()), `clients_export_${new Date().toISOString().split('T')[0]}.csv`);
   };
   const openPlanFor = (clientId) => set({ activeTab: 'clinical-plans', planClientId: clientId });
   // Same invalidatePendingDoc pattern as the Document Creator: bumping the
@@ -917,6 +911,26 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
     window.open(url, '_blank', 'noopener');
     setTimeout(() => URL.revokeObjectURL(url), 60000);
   };
+  const generatedDocFilename = (ext) => {
+    const client = allClients().find((c) => c.id === S.docForm.clientId);
+    const slug = (client?.name || 'client').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+    return `report-${slug}-${new Date().toISOString().slice(0, 10)}.${ext}`;
+  };
+  const onDownloadGeneratedDocHtml = () => {
+    if (!S.generatedDoc?.html) return;
+    downloadHtmlFile(S.generatedDoc.html, generatedDocFilename('html'));
+  };
+  // Real client-side PDF generation (jsPDF + html2canvas via
+  // downloadPdfFromHtml) — every generated document in the app previously
+  // only ever opened in a new tab, relying entirely on the browser's own
+  // Print dialog to produce a PDF.
+  const onDownloadGeneratedDocPdf = () => {
+    if (!S.generatedDoc?.html) return;
+    set({ docExporting: true, docExportError: '' });
+    downloadPdfFromHtml(S.generatedDoc.html, generatedDocFilename('pdf'))
+      .then(() => set({ docExporting: false }))
+      .catch((error) => { console.error('Failed to export PDF:', error); set({ docExporting: false, docExportError: 'Unable to export PDF. Try downloading the HTML version instead.' }); });
+  };
 
   // AI Session Snapshot — a decision-support panel generated on demand from
   // real client records (curriculum, parts, assessments, life-integration,
@@ -1036,6 +1050,21 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
       .then((rows) => set({ caseloadReports: rows, caseloadReportsLoading: false }))
       .catch(() => set({ caseloadReportsLoading: false }));
   }, [isDemo, loadPhase, S.activeTab, therapistId]);
+  // The report rows themselves are metadata only (ifs_generated_reports
+  // deliberately doesn't store the rendered HTML — see loadWorkspaceReports),
+  // so a CSV export of this list is the metadata itself, not a document body.
+  const onExportCaseloadReportsCsv = () => {
+    const headers = ['Title', 'Client', 'Type', 'Sections', 'Generated'];
+    const rows = (S.caseloadReports || []).map((r) => {
+      const client = allClients().find((c) => c.id === r.client_id);
+      return [
+        r.title || r.report_type, client?.name || 'Unknown client', r.report_type,
+        Array.isArray(r.sections_included) ? r.sections_included.join('; ') : '',
+        r.generated_at ? new Date(r.generated_at).toLocaleDateString() : '',
+      ];
+    });
+    downloadCsvFile(csvFromRows(headers, rows), `reports_export_${new Date().toISOString().split('T')[0]}.csv`);
+  };
 
   // Lazily load the Advisor's real clinical tasks (ifs_advisor_tasks) the
   // first time the Tasks tab is opened — previously local-only state that
@@ -1496,7 +1525,8 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
       onClientMessageChange, onSendClientMessage, onMessageSearchChange, setActiveThread, addTaskFromMessage, onAcknowledgeSafety, onCreateSafetyPlan, onCreateTaskFromSafety, onCreateTaskFromAssessment, setPartsClientFilter,
       setTaskFilter, onNewTaskTitleChange, onNewTaskClientChange, onAddTask, toggleTask, onArchiveTask, onDismissEngagement, toggleEngagementExpanded,
       onResourceSearchChange, setResourceType, setResourceWound, setResourceStage,
-      onDocClientChange, onDocTypeChange, onDocDateChange, toggleDocSource, onGenerateDoc, onOpenGeneratedDoc, toggleNewClientForm, onNewClientFieldChange, onCreateClient,
+      onDocClientChange, onDocTypeChange, onDocDateChange, toggleDocSource, onGenerateDoc, onOpenGeneratedDoc, onDownloadGeneratedDocHtml, onDownloadGeneratedDocPdf, toggleNewClientForm, onNewClientFieldChange, onCreateClient,
+      onExportCaseloadReportsCsv,
       onGenerateSnapshot, onCopySnapshot, onGenerateChangeSummary, onGenerateModuleInsights,
       onStartDelete, onCancelDelete, onDeleteConfirmChange, onConfirmDelete, onPracticeGuidanceChange, onGeneratePracticeBatch, onUseBatchPractice,
       onStartEditClient, onCancelEditClient, onEditClientFieldChange, onSaveEditClient,

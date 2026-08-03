@@ -13,6 +13,8 @@ import {
 import { resources as RESOURCE_LIBRARY } from '../data/resourceLibraryData.js';
 import { MODULE_SEQUENCE as ACCESS_MODULE_SEQUENCE, ASSESSMENT_LABELS, FEATURE_LABELS } from '../data/accessControlData.js';
 import { getAvailableTemplates } from '../lib/emailTemplates.js';
+import SimpleLineChart from '../components/analytics/SimpleLineChart.jsx';
+import ProgressRing from '../components/analytics/ProgressRing.jsx';
 
 // Mirrors partSuggestionEngine.js's type vocabulary ('protector', 'self',
 // legacy-import 'unknown', etc.) down onto the workspace's existing
@@ -30,7 +32,7 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
     sessionPrepOpenId, noteDraft, savedNotes, planClientId, practiceForm, generatedPractice, assignedPractices,
     assignedLessons, coTherapyShare, coTherapyMessage, coTherapyThread, reports, notificationPrefs, notificationPrefsSaving, clientMessages,
     clientMessageDraft, activeThreadId, safetyOverrides, engagementDismissed, engagementExpanded, partsClientFilter, tasks, taskFilter, messageSearch,
-    newTaskTitle, newTaskClientId, docForm, docSources, generatedDoc, docGenerating, docError, clientReports, clientReportsLoading, caseloadReports, caseloadReportsLoading, deletedMessageIdx,
+    newTaskTitle, newTaskClientId, docForm, docSources, generatedDoc, docGenerating, docError, docExporting, docExportError, clientReports, clientReportsLoading, caseloadReports, caseloadReportsLoading, deletedMessageIdx,
     sessionSnapshot, changeSummary, moduleInsights, lifeReflections, lifeReflectionsLoading, healingTimeline, riskAlerts,
     curriculumReflections, curriculumReflectionsLoading, homeworkFeedbackDraft, selfEnergyTrend, selfEnergyTrendLoading,
     unburdeningRecord, unburdeningRecordLoading, partSuggestions, partSuggestionsLoading,
@@ -242,11 +244,6 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
       { label: 'Reviewed', value: rawBS.homeworkFunnel.reviewed },
     ];
     const funnelMax = Math.max(...funnelSteps.map((f) => f.value), 1);
-    const moodMax = Math.max(...rawBS.moodTrend.map((w) => w.value || 0), 1);
-    const energyMax = Math.max(...rawBS.energyTrend.map((w) => w.value || 0), 1);
-    const journalMax = Math.max(...rawBS.journalWeekly.map((w) => w.count || 0), 1);
-    const sparkBar = (value, max, color) => ({ flex: 1, height: Math.max(6, Math.round((value / max) * 36)) + 'px', borderRadius: '3px 3px 0 0', background: color });
-    const selfEnergyMax = Math.max(...selfEnergyTrend.map((c) => c.selfEnergy || 0), 1);
     const activePartsCounts = {};
     selfEnergyTrend.forEach((c) => (c.activeParts || []).forEach((p) => { activePartsCounts[p] = (activePartsCounts[p] || 0) + 1; }));
     const activePartsTop = Object.entries(activePartsCounts).sort((a, b) => b[1] - a[1]).slice(0, 8);
@@ -259,7 +256,7 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
       woundChip: woundChip(rawSelected.primaryWound, isDark, false), woundLabel: WOUND_META[rawSelected.primaryWound].label,
       secondaryChip: woundChip(rawSelected.secondaryWound, isDark, true), secondaryLabel: WOUND_META[rawSelected.secondaryWound].label,
       lastActiveText: rawSelected.lastActiveText.toLowerCase(), streak: rawSelected.streak, level: rawSelected.level, modulesLabel: rawSelected.modulesCompleted + '/12',
-      progressBarStyle: { width: rawSelected.progressPct + '%', height: '100%', borderRadius: '6px', background: `linear-gradient(90deg, ${theme.accent2}, ${theme.emerald2})` },
+      progressPct: rawSelected.progressPct,
       progressLabel: rawSelected.progressPct + '% complete · ' + rawSelected.modulesCompleted + ' of 12 modules',
       assessmentBars: Object.keys(WOUND_META).map((k) => ({
         label: WOUND_META[k].label, scoreLabel: rawSelected.scores[k] + '/20',
@@ -282,11 +279,10 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
       plan: buildTreatmentPlan(rawSelected),
       mbc: rawSelected.mbc.map((m) => {
         const change = m.current - m.previous;
-        const max = Math.max(...m.history, 1);
         return {
           ...m, sevChip: severityStyle(theme, m.current > m.baseline ? 'high' : (m.current === m.baseline ? 'medium' : 'low')),
           changeLabel: (change > 0 ? '+' : '') + change + ' pts', changeStyle: { fontSize: '15px', fontWeight: 700, color: change > 0 ? theme.riskHighText : (change < 0 ? theme.emerald2 : theme.muted) },
-          sparkline: m.history.map((v) => ({ style: { flex: 1, height: Math.max(6, Math.round((v / max) * 36)) + 'px', borderRadius: '3px 3px 0 0', background: theme.accent2 + '55' } })),
+          historyPoints: m.history.map((v, i) => ({ label: 'T' + (i + 1), value: v })),
         };
       }),
       assessmentHistory: (rawSelected.assessmentHistory || []).map((entry) => ({
@@ -319,9 +315,9 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
         })),
         noMoodEntries: rawBS.moodEntries.length === 0,
         hasMoodData: rawBS.hasMoodData,
-        moodTrendBars: rawBS.moodTrend.map((w) => ({ week: w.week, style: sparkBar(w.value || 0, moodMax, theme.accent2 + '55') })),
-        energyTrendBars: rawBS.energyTrend.map((w) => ({ week: w.week, style: sparkBar(w.value || 0, energyMax, theme.emerald2 + '55') })),
-        journalWeeklyBars: rawBS.journalWeekly.map((w) => ({ week: w.week, style: sparkBar(w.count || 0, journalMax, '#0d948855') })),
+        moodTrendPoints: rawBS.moodTrend.map((w) => ({ week: w.week, value: w.value || 0 })),
+        energyTrendPoints: rawBS.energyTrend.map((w) => ({ week: w.week, value: w.value || 0 })),
+        journalWeeklyPoints: rawBS.journalWeekly.map((w) => ({ week: w.week, value: w.count || 0 })),
         hasJournalData: rawBS.hasJournalData,
         assignmentRows: (rawBS.assignments || []).map((a) => ({
           id: a.id, title: a.title, status: a.status, statusLabel: a.statusLabel, instructions: a.instructions, advisorFeedback: a.advisorFeedback,
@@ -338,9 +334,9 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
         noFreeformAssignments: !(rawBS.freeformAssignments || []).length,
         selfEnergyTrendLoading: !!selfEnergyTrendLoading,
         hasSelfEnergyData: canWrite && selfEnergyTrend.length > 0,
-        selfEnergyTrendBars: canWrite ? selfEnergyTrend.map((c) => ({
+        selfEnergyTrendPoints: canWrite ? selfEnergyTrend.map((c) => ({
           week: c.date ? new Date(c.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '—',
-          style: sparkBar(c.selfEnergy || 0, selfEnergyMax, '#10b98155'),
+          value: c.selfEnergy || 0,
         })) : [],
         activePartsRows: canWrite ? activePartsTop.map(([name, count]) => ({
           name: titleCase(name), count,
@@ -870,9 +866,11 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
     docForm, docTypeOptions, docSourceRows,
     onDocClientChange: H.onDocClientChange, onDocTypeChange: H.onDocTypeChange, onDocDateChange: H.onDocDateChange,
     onGenerateDoc: H.onGenerateDoc, onOpenGeneratedDoc: H.onOpenGeneratedDoc,
+    onDownloadGeneratedDocHtml: H.onDownloadGeneratedDocHtml, onDownloadGeneratedDocPdf: H.onDownloadGeneratedDocPdf,
+    docExporting: !!docExporting, docExportError: docExportError || '',
     hasGeneratedDoc: !!generatedDoc, generatedDoc, docGenerating: !!docGenerating, docError,
     clientReportRows, noClientReports, clientReportsLoading: !!clientReportsLoading,
-    caseloadReportRows, noCaseloadReports, caseloadReportsLoading: !!caseloadReportsLoading,
+    caseloadReportRows, noCaseloadReports, caseloadReportsLoading: !!caseloadReportsLoading, onExportCaseloadReportsCsv: H.onExportCaseloadReportsCsv,
     woundDistribution, engagementList, moodTrend, insightBullets, reports, onGenerateReport: H.onGenerateReport,
     engagementRows,
     settingsToggles: settingsTogglesList, notificationPrefsSaving: !!notificationPrefsSaving,
@@ -1440,9 +1438,9 @@ function ClientOverviewTab({ v, sc }) {
         </div>
         <div style={{ ...CARD, borderRadius: '20px', padding: '20px' }}>
           <span style={{ ...FR, fontSize: '15px' }}>Curriculum progress</span>
-          <div style={{ marginTop: '16px' }}>
-            <div style={{ height: '10px', borderRadius: '6px', background: 'var(--border)', overflow: 'hidden' }}><div style={sc.progressBarStyle} /></div>
-            <div style={{ fontSize: '12.5px', color: 'var(--muted)', marginTop: '6px' }}>{sc.progressLabel}</div>
+          <div style={{ marginTop: '16px', display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+            <ProgressRing value={sc.progressPct} label="Complete" size={96} strokeWidth={9} color="#059669" />
+            <div style={{ fontSize: '12.5px', color: 'var(--muted)' }}>{sc.progressLabel}</div>
           </div>
           <div style={{ marginTop: '16px', paddingTop: '14px', borderTop: '1px solid var(--border)' }}>
             <span style={{ fontSize: '12.5px', color: 'var(--muted)' }}>Growth goals</span>
@@ -1793,15 +1791,18 @@ function ModuleInsightsTab({ moduleInsights, primaryBtnStyle }) {
   );
 }
 
-function TrendChart({ title, bars, unit, noDataLabel }) {
+// Same SimpleLineChart /analytics (LongitudinalAnalytics.jsx) already uses,
+// swapped in for what used to be a plain CSS bar-height sparkline — same
+// underlying trend data, just a richer line chart with axes and points.
+function TrendChart({ title, points, color, min, max, noDataLabel }) {
   return (
     <div style={{ border: '1px solid var(--border)', borderRadius: '14px', padding: '14px 16px' }}>
       <div style={{ fontSize: '12.5px', fontWeight: 700, color: 'var(--text)' }}>{title}</div>
-      {bars.length === 0 ? (
+      {points.length === 0 ? (
         <p style={{ margin: '10px 0 0', fontSize: '12px', color: 'var(--muted)' }}>{noDataLabel}</p>
       ) : (
-        <div style={{ display: 'flex', alignItems: 'flex-end', gap: '4px', height: '36px', marginTop: '12px' }}>
-          {bars.map((b) => (<div key={b.week} title={b.week + (unit ? ` · ${unit}` : '')} style={b.style} />))}
+        <div style={{ marginTop: '12px' }}>
+          <SimpleLineChart data={points} labelKey="week" valueKey="value" color={color} min={min} max={max} title={title} />
         </div>
       )}
     </div>
@@ -1835,11 +1836,11 @@ function BetweenSessionTab({ bs, clientId, isDemo, unassigned, feedbackDraft, on
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px,1fr))', gap: '14px' }}>
-        <TrendChart title="Weekly mood (1–5)" bars={bs.moodTrendBars} noDataLabel="No mood check-ins recorded yet." />
-        <TrendChart title="Weekly energy (1–10)" bars={bs.energyTrendBars} noDataLabel="No energy check-ins recorded yet." />
-        <TrendChart title="Weekly journal entries" bars={bs.journalWeeklyBars} noDataLabel="No journal entries recorded yet." />
+        <TrendChart title="Weekly mood (1–5)" points={bs.moodTrendPoints} color="#d97706" min={1} max={5} noDataLabel="No mood check-ins recorded yet." />
+        <TrendChart title="Weekly energy (1–10)" points={bs.energyTrendPoints} color="#059669" min={1} max={10} noDataLabel="No energy check-ins recorded yet." />
+        <TrendChart title="Weekly journal entries" points={bs.journalWeeklyPoints} color="#0d9488" min={0} noDataLabel="No journal entries recorded yet." />
         <TrendChart
-          title="Self-Energy (1–10)" bars={bs.selfEnergyTrendBars}
+          title="Self-Energy (1–10)" points={bs.selfEnergyTrendPoints} color="#10b981" min={1} max={10}
           noDataLabel={bs.selfEnergyTrendLoading ? 'Loading Self-Energy check-ins…' : 'No Self-Energy check-ins recorded yet.'}
         />
       </div>
@@ -2185,8 +2186,8 @@ function MbcCards({ mbc }) {
             <div><span style={{ fontSize: '11px', color: 'var(--muted)' }}>Current</span><div style={{ fontSize: '17px', fontWeight: 700, color: 'var(--text)' }}>{m.current}</div></div>
             <div><span style={{ fontSize: '11px', color: 'var(--muted)' }}>Change</span><div style={m.changeStyle}>{m.changeLabel}</div></div>
           </div>
-          <div style={{ display: 'flex', alignItems: 'flex-end', gap: '4px', height: '36px', marginTop: '14px' }}>
-            {m.sparkline.map((s, i) => (<div key={i} style={s.style} />))}
+          <div style={{ marginTop: '14px' }}>
+            <SimpleLineChart data={m.historyPoints} labelKey="label" valueKey="value" color="#7c3aed" title={m.name + ' score history'} />
           </div>
         </div>
       ))}
@@ -2822,7 +2823,10 @@ function CaseloadReportsView({ v }) {
           <span style={{ ...FR, fontSize: '16px' }}>Recent reports across your caseload</span>
           <div style={{ fontSize: '12px', color: 'var(--muted)', marginTop: '4px' }}>Generated from the Document Creator, most recent first.</div>
         </div>
-        <Link to="/reports" style={{ fontSize: '12px', fontWeight: 700, padding: '9px 14px', borderRadius: '10px', border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text-2)', textDecoration: 'none' }}>Open Report Generator →</Link>
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+          <button onClick={v.onExportCaseloadReportsCsv} disabled={v.noCaseloadReports} style={{ ...v.secondaryBtnStyle, opacity: v.noCaseloadReports ? 0.5 : 1, cursor: v.noCaseloadReports ? 'not-allowed' : 'pointer' }}>Export CSV</button>
+          <Link to="/reports" style={{ fontSize: '12px', fontWeight: 700, padding: '9px 14px', borderRadius: '10px', border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text-2)', textDecoration: 'none' }}>Open Report Generator →</Link>
+        </div>
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
         {v.caseloadReportsLoading && <div style={{ padding: '20px', textAlign: 'center', color: 'var(--muted)', fontSize: '13px' }}>Loading…</div>}
@@ -2898,10 +2902,13 @@ function DocsView({ v }) {
               <iframe title="Generated document preview" srcDoc={v.generatedDoc.html} sandbox="" style={{ width: '100%', height: '100%', border: 'none', background: '#fff' }} />
             </div>
             <div style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '8px' }}>Generated from real client records — already saved to this client's document history. Advisor review is required before sharing or printing.</div>
-            <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
+            <div style={{ display: 'flex', gap: '8px', marginTop: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
               <button className="aw-primary" onClick={v.onOpenGeneratedDoc} style={v.primaryBtnStyle}>Open / Print</button>
+              <button onClick={v.onDownloadGeneratedDocPdf} disabled={v.docExporting} style={v.secondaryBtnStyle}>{v.docExporting ? 'Exporting PDF…' : 'Download PDF'}</button>
+              <button onClick={v.onDownloadGeneratedDocHtml} style={v.secondaryBtnStyle}>Download HTML</button>
               <button onClick={v.onGenerateDoc} disabled={v.docGenerating} style={v.secondaryBtnStyle}>Regenerate</button>
             </div>
+            {v.docExportError && <div style={{ fontSize: '12px', color: 'var(--risk-high-text)', marginTop: '8px' }}>{v.docExportError}</div>}
           </>
         ) : (
           <div style={{ padding: '24px', textAlign: 'center', color: 'var(--muted)', fontSize: '13px' }}>Select sources and generate a document to preview it here.</div>
