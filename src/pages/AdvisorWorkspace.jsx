@@ -21,6 +21,8 @@ import {
   loadWorkspaceTeamAssignments, reassignWorkspaceClient,
   createWorkspaceClient, updateWorkspaceClientProfile, renderWorkspaceClientEmail, sendWorkspaceClientEmail, mapClientRow,
   logWorkspaceReminder,
+  WORKSPACE_WOUNDS, loadWorkspaceCurriculumModulesForBuilder, generateWorkspacePersonalizedCurriculum,
+  updateWorkspaceCurriculumModule, addWorkspaceCurriculumModule, removeWorkspaceCurriculumModule,
 } from '../lib/advisorWorkspaceLoader.js';
 import { DEFAULT_ACCESS_FORM } from '../data/accessControlData.js';
 import { loadAdvisorSessionSnapshot } from '../lib/unifiedGuidance.js';
@@ -81,6 +83,11 @@ export const INITIAL_STATE = {
   healingTimeline: { loading: false, data: null, error: '' },
   curriculumReflections: [], curriculumReflectionsLoading: false,
   personalizedCurriculum: [], personalizedCurriculumLoading: false,
+  curriculumBuilderClientId: '', curriculumBuilderModules: [], curriculumBuilderModulesLoading: false,
+  curriculumBuilderPrimaryWound: 'abandonment', curriculumBuilderSecondaryWound: 'shame',
+  curriculumGenerating: false, curriculumGenResult: null,
+  editingCurriculumModuleId: '', editCurriculumModuleForm: { title: '', description: '', estimatedMinutes: 30 }, curriculumModuleSaveError: '',
+  showAddCurriculumModule: false, addCurriculumModuleWound: 'abandonment', addingCurriculumModuleId: '', addCurriculumModuleResult: null,
   selfEnergyTrend: [], selfEnergyTrendLoading: false,
   unburdeningRecord: null, unburdeningRecordLoading: false,
   partSuggestions: null, partSuggestionsLoading: false,
@@ -138,6 +145,8 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
   const liveSessionsLoaded = useRef(false);
   const tasksLoaded = useRef(false);
   const accessControlInitialized = useRef(false);
+  const curriculumBuilderInitialized = useRef(false);
+  const curriculumBuilderLoadedFor = useRef(null);
   const notificationPrefsLoaded = useRef(false);
   const caseloadReportsLoaded = useRef(false);
   const teamAssignmentsLoaded = useRef(false);
@@ -176,7 +185,11 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
   // newer one if two different notification-preference keys are toggled in
   // quick succession.
   const notificationPrefsGenRef = useRef(0);
-  useEffect(() => () => { genRef.current += 1; docGenRef.current += 1; snapshotGenRef.current += 1; changeSummaryGenRef.current += 1; moduleInsightsGenRef.current += 1; practiceGenRef.current += 1; }, []);
+  // Guards refreshCurriculumBuilderModules (fired from generate/save/add/
+  // remove) against a stale response overwriting a since-selected client's
+  // modules — same capture-and-compare pattern as docGenRef/practiceGenRef.
+  const curriculumGenRef = useRef(0);
+  useEffect(() => () => { genRef.current += 1; docGenRef.current += 1; snapshotGenRef.current += 1; changeSummaryGenRef.current += 1; moduleInsightsGenRef.current += 1; practiceGenRef.current += 1; curriculumGenRef.current += 1; }, []);
   // setState-compatible merge helper (accepts object or updater fn)
   const set = (patch) => setS((prev) => ({ ...prev, ...(typeof patch === 'function' ? patch(prev) : patch) }));
   const allClients = () => (S.baseClients || []).concat(S.extraClients || []).filter((c) => !S.deletedIds[c.id]);
@@ -200,6 +213,8 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
     notificationPrefsLoaded.current = false;
     caseloadReportsLoaded.current = false;
     teamAssignmentsLoaded.current = false;
+    curriculumBuilderInitialized.current = false;
+    curriculumBuilderLoadedFor.current = null;
     (async () => {
       try {
         // Loaded alongside the active caseload (not lazily on Caseload-tab
@@ -217,6 +232,7 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
           baseClients: clients,
           extraClients: [], deletedIds: {}, savedNotes: [],
           tasks: [], notifications: [], liveSessions: [], coTherapyThread: [], riskAlerts: [], dischargedClients: discharged,
+          curriculumBuilderClientId: '', curriculumBuilderModules: [], curriculumBuilderModulesLoading: false,
           selectedClientId: firstId, activeThreadId: firstId, planClientId: firstId,
           newTaskClientId: firstId,
           noteDraft: { ...prev.noteDraft, clientId: firstId },
@@ -443,6 +459,118 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
     const clientId = (assigned.some((c) => c.id === S.selectedClientId) ? S.selectedClientId : assigned[0]?.id) || '';
     if (clientId) onAccessControlClientChange(clientId);
   }, [loadPhase, S.activeTab]);
+
+  // Custom Curriculum builder (mirrors TherapistDashboard.jsx's Lesson
+  // Editor: generate, edit, add wound-specific modules, remove modules) —
+  // same "default to selected client on first open" pattern as Access
+  // Control above.
+  const onCurriculumClientChange = (clientId) => {
+    curriculumGenRef.current += 1;
+    set({
+      curriculumBuilderClientId: clientId, curriculumGenResult: null, editingCurriculumModuleId: '',
+      curriculumModuleSaveError: '', showAddCurriculumModule: false, addCurriculumModuleResult: null,
+    });
+  };
+  useEffect(() => {
+    if (loadPhase !== 'ready' || S.activeTab !== 'clinical-curriculum-builder' || curriculumBuilderInitialized.current) return;
+    curriculumBuilderInitialized.current = true;
+    const assigned = allClients().filter((c) => !c.unassigned);
+    const clientId = (assigned.some((c) => c.id === S.selectedClientId) ? S.selectedClientId : assigned[0]?.id) || '';
+    if (clientId) onCurriculumClientChange(clientId);
+  }, [loadPhase, S.activeTab]);
+  useEffect(() => {
+    if (isDemo || loadPhase !== 'ready' || !S.curriculumBuilderClientId) return;
+    if (curriculumBuilderLoadedFor.current === S.curriculumBuilderClientId) return;
+    curriculumBuilderLoadedFor.current = S.curriculumBuilderClientId;
+    set({ curriculumBuilderModulesLoading: true });
+    let isCanceled = false;
+    loadWorkspaceCurriculumModulesForBuilder(S.curriculumBuilderClientId).then((rows) => {
+      if (!isCanceled) set({ curriculumBuilderModules: rows, curriculumBuilderModulesLoading: false });
+    });
+    return () => { isCanceled = true; };
+  }, [isDemo, loadPhase, S.curriculumBuilderClientId]);
+  const refreshCurriculumBuilderModules = (clientId) => {
+    curriculumBuilderLoadedFor.current = null;
+    const gen = curriculumGenRef.current;
+    loadWorkspaceCurriculumModulesForBuilder(clientId).then((rows) => {
+      // A client switch (or unmount) since this request started bumps
+      // curriculumGenRef — discard the response instead of clobbering
+      // whatever client is now selected.
+      if (curriculumGenRef.current !== gen) return;
+      curriculumBuilderLoadedFor.current = clientId;
+      set({ curriculumBuilderModules: rows, curriculumBuilderModulesLoading: false });
+    });
+  };
+  const onCurriculumWoundFieldChange = (field) => (e) => {
+    const value = e.target.value;
+    set((s) => {
+      const next = { ...s, [field]: value, curriculumGenResult: null };
+      if (field === 'curriculumBuilderPrimaryWound' && value === s.curriculumBuilderSecondaryWound) {
+        next.curriculumBuilderSecondaryWound = WORKSPACE_WOUNDS.find((w) => w !== value) || s.curriculumBuilderSecondaryWound;
+      }
+      return next;
+    });
+  };
+  const onGenerateCurriculum = () => {
+    const { curriculumBuilderClientId, curriculumBuilderPrimaryWound, curriculumBuilderSecondaryWound } = S;
+    if (!curriculumBuilderClientId || S.curriculumGenerating) return;
+    if (isDemo) {
+      set({ curriculumGenResult: { error: 'Sign in to generate a curriculum.' } });
+      return;
+    }
+    set({ curriculumGenerating: true, curriculumGenResult: null });
+    generateWorkspacePersonalizedCurriculum(curriculumBuilderClientId, curriculumBuilderPrimaryWound, curriculumBuilderSecondaryWound).then(({ error }) => {
+      if (error) { set({ curriculumGenerating: false, curriculumGenResult: { error: error.message } }); return; }
+      const client = allClients().find((c) => c.id === curriculumBuilderClientId);
+      set({ curriculumGenerating: false, curriculumGenResult: { success: `Personalized curriculum generated for ${client?.name || 'client'} (${curriculumBuilderPrimaryWound} primary).` } });
+      refreshCurriculumBuilderModules(curriculumBuilderClientId);
+    });
+  };
+  const onStartEditCurriculumModule = (mod) => set({
+    editingCurriculumModuleId: mod.id,
+    editCurriculumModuleForm: { title: mod.module_title || '', description: mod.module_description || '', estimatedMinutes: mod.estimated_minutes || 30 },
+    curriculumModuleSaveError: '',
+  });
+  const onCancelEditCurriculumModule = () => set({ editingCurriculumModuleId: '', curriculumModuleSaveError: '' });
+  const onEditCurriculumModuleFieldChange = (field) => (e) => {
+    const value = field === 'estimatedMinutes' ? (parseInt(e.target.value, 10) || 0) : e.target.value;
+    set((s) => ({ editCurriculumModuleForm: { ...s.editCurriculumModuleForm, [field]: value } }));
+  };
+  const onSaveCurriculumModuleEdit = () => {
+    const { editingCurriculumModuleId, editCurriculumModuleForm, curriculumBuilderClientId } = S;
+    if (!editingCurriculumModuleId || isDemo) return;
+    if (!editCurriculumModuleForm.title.trim()) { set({ curriculumModuleSaveError: 'Title is required.' }); return; }
+    const payload = { ...editCurriculumModuleForm, estimatedMinutes: Math.max(5, editCurriculumModuleForm.estimatedMinutes || 30) };
+    set({ curriculumModuleSaveError: '' });
+    updateWorkspaceCurriculumModule(editingCurriculumModuleId, payload).then(({ error }) => {
+      if (error) { set({ curriculumModuleSaveError: 'Failed to save changes. Please try again.' }); return; }
+      set({ editingCurriculumModuleId: '' });
+      refreshCurriculumBuilderModules(curriculumBuilderClientId);
+    });
+  };
+  const toggleAddCurriculumModule = () => set((s) => ({ showAddCurriculumModule: !s.showAddCurriculumModule, addCurriculumModuleResult: null }));
+  const onAddCurriculumModuleWoundChange = (wound) => set({ addCurriculumModuleWound: wound, addCurriculumModuleResult: null });
+  const onAddCurriculumModule = (template) => {
+    const { curriculumBuilderClientId, addCurriculumModuleWound, addingCurriculumModuleId, curriculumBuilderModules } = S;
+    if (!curriculumBuilderClientId || addingCurriculumModuleId || isDemo) return;
+    set({ addingCurriculumModuleId: template.id, addCurriculumModuleResult: null });
+    const nextOrder = (curriculumBuilderModules || []).length + 1;
+    addWorkspaceCurriculumModule(curriculumBuilderClientId, addCurriculumModuleWound, template, nextOrder).then(({ error }) => {
+      if (error) { set({ addingCurriculumModuleId: '', addCurriculumModuleResult: { error: 'Failed to add module: ' + error.message } }); return; }
+      set({ addingCurriculumModuleId: '', addCurriculumModuleResult: { success: `"${template.title}" added as Module ${nextOrder}` } });
+      refreshCurriculumBuilderModules(curriculumBuilderClientId);
+    });
+  };
+  const onRemoveCurriculumModule = (mod) => {
+    const { curriculumBuilderClientId, curriculumBuilderModules } = S;
+    if (!curriculumBuilderClientId || isDemo) return;
+    if (!window.confirm(`Remove "${mod.module_title}" from this client's curriculum?`)) return;
+    const remainingIds = (curriculumBuilderModules || []).filter((m) => m.id !== mod.id).map((m) => m.id);
+    removeWorkspaceCurriculumModule(mod.id, remainingIds).then(({ error }) => {
+      if (error) { console.error('Failed to remove module:', error); return; }
+      refreshCurriculumBuilderModules(curriculumBuilderClientId);
+    });
+  };
 
   // Same real data AdminHub.jsx's loadData already queries (staff-role
   // ifs_clients rows + active ifs_therapist_clients assignments) — the
@@ -1640,6 +1768,9 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
       onDeleteMessage, applyQuickMessage, toggleLiveSession, endLiveSession, onMarkNotifRead, onMarkAllNotifsRead, onOpenNotifClient,
       onHomeworkAssigned, onHomeworkFeedbackChange, onMarkHomeworkReviewed, onArchiveHomework,
       onAccessControlClientChange, toggleAccessControlFullAccess, toggleAccessControlModule, toggleAccessControlAssessment, toggleAccessControlFeature, onSaveAccessControl,
+      onCurriculumClientChange, onCurriculumWoundFieldChange, onGenerateCurriculum,
+      onStartEditCurriculumModule, onCancelEditCurriculumModule, onEditCurriculumModuleFieldChange, onSaveCurriculumModuleEdit,
+      toggleAddCurriculumModule, onAddCurriculumModuleWoundChange, onAddCurriculumModule, onRemoveCurriculumModule,
       onSelectReassignTarget, onCancelReassign, onReassignToTherapistChange, onSaveReassignment, onRefreshTeam: refreshTeamAssignments,
     },
   });

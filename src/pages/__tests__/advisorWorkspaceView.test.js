@@ -1729,6 +1729,111 @@ describe('buildView — per-client Send Reminder tool (mirrors TherapistDashboar
   });
 });
 
+describe('buildView — Custom Curriculum builder (mirrors TherapistDashboard.jsx\'s Lesson Editor)', () => {
+  it('lists assigned clients as options and shows no client selected by default', () => {
+    const v = makeView();
+    expect(v.curriculumClientOptions.map((c) => c.id)).toContain('c1');
+    expect(v.hasCurriculumClient).toBe(false);
+  });
+
+  it('excludes the chosen primary wound from the secondary wound options', () => {
+    const v = makeView({ curriculumBuilderPrimaryWound: 'shame', curriculumBuilderSecondaryWound: 'neglect' });
+    expect(v.curriculumSecondaryWoundOptions.map((w) => w.id)).not.toContain('shame');
+    expect(v.curriculumWoundOptions).toHaveLength(5);
+  });
+
+  it('wires the client picker, wound selects, and generate handler', () => {
+    const calls = {};
+    const view = buildView({
+      S: { ...INITIAL_STATE, curriculumBuilderClientId: 'c1' }, theme: LIGHT, allClients: () => CLIENTS,
+      buildTreatmentPlan: (c) => ({ clientName: c.name, phases: [], milestones: [], currentPhaseLabel: '', currentPhaseDesc: '' }),
+      handlers: new Proxy({
+        isGroupExpanded: () => false,
+        onCurriculumClientChange: (id) => { calls.client = id; },
+        onCurriculumWoundFieldChange: (field) => (val) => { calls[field] = val; },
+        onGenerateCurriculum: () => { calls.generated = true; },
+      }, { get: (t, p) => t[p] || (() => {}) }),
+      isAdmin: true,
+    });
+    expect(view.hasCurriculumClient).toBe(true);
+    expect(view.curriculumClientName).toBe('Maya Chen');
+    view.onCurriculumClientChange({ target: { value: 'c2' } });
+    view.onCurriculumPrimaryWoundChange({ target: { value: 'shame' } });
+    view.onCurriculumSecondaryWoundChange({ target: { value: 'neglect' } });
+    view.onGenerateCurriculum();
+    expect(calls.client).toBe('c2');
+    expect(calls.curriculumBuilderPrimaryWound).toEqual({ target: { value: 'shame' } });
+    expect(calls.curriculumBuilderSecondaryWound).toEqual({ target: { value: 'neglect' } });
+    expect(calls.generated).toBe(true);
+  });
+
+  it('maps loaded module rows including personalization detail, and reports no modules when the list is empty', () => {
+    const empty = makeView({ curriculumBuilderClientId: 'c1', curriculumBuilderModules: [] });
+    expect(empty.hasCurriculumModules).toBe(false);
+
+    const modules = [
+      { id: 'm1', module_order: 1, module_title: 'Understanding Your Lonely Child', module_description: 'desc', primary_wound_focus: 'abandonment', estimated_minutes: 75, difficulty_level: 'beginner', customized_content: { goals: 'g', topics: ['t1'], activities: ['a1'], watchFor: ['w1'] } },
+    ];
+    const v = makeView({ curriculumBuilderClientId: 'c1', curriculumBuilderModules: modules });
+    expect(v.hasCurriculumModules).toBe(true);
+    expect(v.curriculumModuleRows).toHaveLength(1);
+    const row = v.curriculumModuleRows[0];
+    expect(row.title).toBe('Understanding Your Lonely Child');
+    expect(row.woundLabel).toBe('Abandonment');
+    expect(row.goals).toBe('g');
+    expect(row.topics).toEqual(['t1']);
+    expect(row.isEditing).toBe(false);
+  });
+
+  it('wires per-module edit, save, cancel, and remove handlers', () => {
+    const calls = {};
+    const mod = { id: 'm1', module_order: 1, module_title: 'Title', module_description: 'Desc', estimated_minutes: 30 };
+    const view = buildView({
+      S: { ...INITIAL_STATE, curriculumBuilderClientId: 'c1', curriculumBuilderModules: [mod], editingCurriculumModuleId: 'm1', editCurriculumModuleForm: { title: 'Title', description: 'Desc', estimatedMinutes: 30 } },
+      theme: LIGHT, allClients: () => CLIENTS,
+      buildTreatmentPlan: (c) => ({ clientName: c.name, phases: [], milestones: [], currentPhaseLabel: '', currentPhaseDesc: '' }),
+      handlers: new Proxy({
+        isGroupExpanded: () => false,
+        onStartEditCurriculumModule: (m) => { calls.startEdit = m.id; },
+        onCancelEditCurriculumModule: () => { calls.cancelled = true; },
+        onSaveCurriculumModuleEdit: () => { calls.saved = true; },
+        onRemoveCurriculumModule: (m) => { calls.removed = m.id; },
+      }, { get: (t, p) => t[p] || (() => {}) }),
+      isAdmin: true,
+    });
+    const row = view.curriculumModuleRows[0];
+    expect(row.isEditing).toBe(true);
+    row.onStartEdit();
+    row.onCancelEdit();
+    row.onRemove();
+    view.onSaveCurriculumModuleEdit();
+    expect(calls.startEdit).toBe('m1');
+    expect(calls.cancelled).toBe(true);
+    expect(calls.removed).toBe('m1');
+    expect(calls.saved).toBe(true);
+  });
+
+  it('offers wound-specific templates to add, flags already-added modules, and wires the add handler', () => {
+    const calls = [];
+    const view = buildView({
+      S: { ...INITIAL_STATE, curriculumBuilderClientId: 'c1', addCurriculumModuleWound: 'abandonment', curriculumBuilderModules: [{ id: 'm1', module_title: 'Understanding Your Lonely Child' }] },
+      theme: LIGHT, allClients: () => CLIENTS,
+      buildTreatmentPlan: (c) => ({ clientName: c.name, phases: [], milestones: [], currentPhaseLabel: '', currentPhaseDesc: '' }),
+      handlers: new Proxy({
+        isGroupExpanded: () => false,
+        onAddCurriculumModule: (t) => calls.push(t.id),
+      }, { get: (t, p) => t[p] || (() => {}) }),
+      isAdmin: true,
+    });
+    expect(view.addCurriculumModuleTemplateRows.length).toBeGreaterThan(0);
+    const already = view.addCurriculumModuleTemplateRows.find((t) => t.title === 'Understanding Your Lonely Child');
+    expect(already.alreadyAdded).toBe(true);
+    const other = view.addCurriculumModuleTemplateRows.find((t) => !t.alreadyAdded);
+    other.onAdd();
+    expect(calls).toEqual([other.id]);
+  });
+});
+
 describe('buildView — Clinical Tasks archive action (api/tasks.js archive, previously never called)', () => {
   it('wires each task row\'s Archive action through to onArchiveTask', () => {
     let archivedId = null;
