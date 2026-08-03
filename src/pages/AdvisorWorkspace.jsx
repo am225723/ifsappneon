@@ -92,9 +92,10 @@ export const INITIAL_STATE = {
   teamTherapists: [], teamAssignments: [], teamLoading: false,
   reassignTherapistId: '', reassignClientId: '', reassignClientName: '', reassignToTherapistId: '', reassignSaving: false,
   extraClients: [], deletedIds: {},
-  showNewClientForm: false, newClientForm: { name: '', email: '', phone: '', sendEmail: true }, newClientResult: null, newClientCreating: false,
+  showNewClientForm: false, newClientForm: { name: '', email: '', phone: '', sendEmail: true, role: 'client' }, newClientResult: null, newClientCreating: false,
   deletingClientId: null, deleteConfirmText: '',
   editClientId: '', editClientForm: { name: '', email: '', phone: '' }, editClientSaving: false, editClientError: '',
+  showPinClientId: '',
   emailClientId: '', emailTemplateId: 'welcome', emailPreview: null, emailLoading: false, emailSending: false, emailSent: false, emailError: '',
   deletedMessageIdx: {},
   practiceGuidance: '', practiceBatchResults: [],
@@ -1276,6 +1277,7 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
 
   const toggleNewClientForm = () => set((s) => ({ showNewClientForm: !s.showNewClientForm, newClientResult: null }));
   const onNewClientFieldChange = (field) => (e) => set((s) => ({ newClientForm: { ...s.newClientForm, [field]: field === 'sendEmail' ? e.target.checked : e.target.value } }));
+  const onNewClientRoleChange = (role) => set((s) => ({ newClientForm: { ...s.newClientForm, role } }));
   // Same generateUniquePIN + insert + assignClientToTherapist
   // TherapistDashboard.jsx's handleCreateClient already does — this used to
   // create a fake, unpersisted local row with an unchecked 4-digit PIN that
@@ -1285,6 +1287,13 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
     if (!newClientForm.name.trim()) return;
     if (isDemo) {
       const pin = String(Math.floor(1000 + Math.random() * 9000));
+      if (newClientForm.role === 'therapist') {
+        set({
+          newClientResult: { name: newClientForm.name.trim(), pin, role: 'therapist', emailSent: false },
+          newClientForm: { name: '', email: '', phone: '', sendEmail: true, role: 'client' },
+        });
+        return;
+      }
       const id = 'new-' + Date.now();
       const initial = newClientForm.name.trim().split(/\s+/).map((w) => w[0]).join('').slice(0, 2).toUpperCase();
       const client = {
@@ -1299,16 +1308,27 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
       };
       set((s) => ({
         extraClients: [...s.extraClients, client],
-        newClientResult: { name: client.name, pin, emailSent: false },
-        newClientForm: { name: '', email: '', phone: '', sendEmail: true },
+        newClientResult: { name: client.name, pin, role: 'client', emailSent: false },
+        newClientForm: { name: '', email: '', phone: '', sendEmail: true, role: 'client' },
       }));
       return;
     }
     set({ newClientCreating: true });
-    createWorkspaceClient(therapistId, { name: newClientForm.name, email: newClientForm.email, phone: newClientForm.phone }).then(({ data, error }) => {
+    createWorkspaceClient(therapistId, { name: newClientForm.name, email: newClientForm.email, phone: newClientForm.phone, role: newClientForm.role }).then(({ data, error }) => {
       if (error || !data) {
         console.error('Failed to create client:', error);
         set({ newClientCreating: false, newClientResult: { error: error?.message || 'Failed to create client.' } });
+        return;
+      }
+      // A new Advisor/staff account isn't a caseload client — it's never
+      // added to extraClients (the local client list) and never sent the
+      // client-facing welcome email template.
+      if (data.user_role === 'therapist') {
+        set({
+          newClientCreating: false,
+          newClientResult: { name: data.name, pin: data.pin, role: 'therapist', emailSent: false },
+          newClientForm: { name: '', email: '', phone: '', sendEmail: true, role: 'client' },
+        });
         return;
       }
       const client = mapClientRow(data);
@@ -1316,8 +1336,8 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
       set((s) => ({
         newClientCreating: false,
         extraClients: [...s.extraClients, client],
-        newClientResult: { name: client.name, pin: client.pin, emailSent: willEmail },
-        newClientForm: { name: '', email: '', phone: '', sendEmail: true },
+        newClientResult: { name: client.name, pin: client.pin, role: 'client', emailSent: willEmail },
+        newClientForm: { name: '', email: '', phone: '', sendEmail: true, role: 'client' },
       }));
       if (willEmail) {
         renderWorkspaceClientEmail('welcome', client).then(({ data: rendered, error: renderError }) => {
@@ -1328,6 +1348,7 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
       }
     });
   };
+  const onToggleShowPin = (clientId) => set((s) => ({ showPinClientId: s.showPinClientId === clientId ? '' : clientId }));
   const onStartEditClient = (id) => {
     const client = allClients().find((c) => c.id === id);
     if (!client) return;
@@ -1525,7 +1546,7 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
       onClientMessageChange, onSendClientMessage, onMessageSearchChange, setActiveThread, addTaskFromMessage, onAcknowledgeSafety, onCreateSafetyPlan, onCreateTaskFromSafety, onCreateTaskFromAssessment, setPartsClientFilter,
       setTaskFilter, onNewTaskTitleChange, onNewTaskClientChange, onAddTask, toggleTask, onArchiveTask, onDismissEngagement, toggleEngagementExpanded,
       onResourceSearchChange, setResourceType, setResourceWound, setResourceStage,
-      onDocClientChange, onDocTypeChange, onDocDateChange, toggleDocSource, onGenerateDoc, onOpenGeneratedDoc, onDownloadGeneratedDocHtml, onDownloadGeneratedDocPdf, toggleNewClientForm, onNewClientFieldChange, onCreateClient,
+      onDocClientChange, onDocTypeChange, onDocDateChange, toggleDocSource, onGenerateDoc, onOpenGeneratedDoc, onDownloadGeneratedDocHtml, onDownloadGeneratedDocPdf, toggleNewClientForm, onNewClientFieldChange, onNewClientRoleChange, onCreateClient, onToggleShowPin,
       onExportCaseloadReportsCsv,
       onGenerateSnapshot, onCopySnapshot, onGenerateChangeSummary, onGenerateModuleInsights,
       onStartDelete, onCancelDelete, onDeleteConfirmChange, onConfirmDelete, onPracticeGuidanceChange, onGeneratePracticeBatch, onUseBatchPractice,

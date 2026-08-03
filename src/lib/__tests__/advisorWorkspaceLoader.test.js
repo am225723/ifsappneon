@@ -16,14 +16,37 @@ let mockInteractiveOrRows = { data: [], error: null };
 let mockLiveSessionRows = { data: [], error: null };
 let mockCoTherapyProgressRows = { data: [], error: null };
 let mockPersonalizedCurriculumRows = { data: [], error: null };
+// createWorkspaceClient's generateUniqueClientPin uniqueness check
+// (.select('id').eq('pin', pin).limit(1)) — empty by default so the first
+// generated pin is always accepted.
+let mockPinCheckResult = { data: [], error: null };
+let mockInsertClientResult = { data: null, error: null };
+const mockInsertClientCalls = [];
+let mockUpdateClientResult = { error: null };
+const mockUpdateClientCalls = [];
 vi.mock('../supabase', () => ({
   supabase: {
     from: (table) => ({
+      insert: (payload) => {
+        if (table === 'ifs_clients') mockInsertClientCalls.push(payload);
+        return { select: () => ({ single: () => (table === 'ifs_clients' ? mockInsertClientResult : { data: null, error: null }) }) };
+      },
+      update: (payload) => ({
+        eq: () => {
+          if (table === 'ifs_clients') mockUpdateClientCalls.push(payload);
+          return table === 'ifs_clients' ? mockUpdateClientResult : { error: null };
+        },
+      }),
       select: () => ({
         eq: () => ({
           // loadWorkspacePartSuggestions's existingParts query (ifs_parts)
           // is awaited directly off a single .eq(), with no further chaining.
           ...(table === 'ifs_parts' ? mockExistingPartsResult : { data: [], error: null }),
+          // createWorkspaceClient's generateUniqueClientPin check
+          // (.select('id').eq('pin', pin).limit(1)) is awaited directly off
+          // a single .eq() — same shape as the ifs_parts case above, keyed
+          // on table instead.
+          limit: () => (table === 'ifs_clients' ? mockPinCheckResult : { data: [], error: null }),
           order: () => ({
             // loadWorkspaceCoTherapyProgress's and
             // loadWorkspacePersonalizedCurriculum's real queries are both
@@ -69,6 +92,12 @@ vi.mock('../supabase', () => ({
   },
 }));
 vi.mock('../apiAuth.js', () => ({ getClerkToken: async () => null }));
+
+let mockAssignClientResult = { data: { id: 'assign-1' }, error: null };
+const mockAssignClientCalls = [];
+vi.mock('../therapistAssignments.js', () => ({
+  assignClientToTherapist: async (therapistId, clientId, status, names) => { mockAssignClientCalls.push({ therapistId, clientId, status, names }); return mockAssignClientResult; },
+}));
 
 let mockPartRelationshipsResult = { data: [], error: null };
 const mockLoadPartRelationships = vi.fn(async () => mockPartRelationshipsResult);
@@ -173,6 +202,7 @@ const {
   loadWorkspaceTasks, createWorkspaceTask, toggleWorkspaceTask, archiveWorkspaceTask,
   loadWorkspaceNotificationPreferences, updateWorkspaceNotificationPreferences,
   renderWorkspaceClientEmail, sendWorkspaceClientEmail,
+  createWorkspaceClient, updateWorkspaceClientProfile,
 } = await import('../advisorWorkspaceLoader.js');
 
 describe('initialsFrom', () => {
@@ -608,6 +638,59 @@ describe('deriveWorkspaceDetail', () => {
     const { client } = deriveWorkspaceDetail(base, { analytics: null, notes: [], plans: [], messages: [] });
     expect(client.timeline).toEqual([]);
   });
+
+  it('is null for partsAssessment/selfEnergyAssessment/attachmentAssessment and [] for customAssessments with no matching rows', () => {
+    const { client } = deriveWorkspaceDetail(base, { analytics: null, notes: [], plans: [], messages: [] });
+    expect(client.partsAssessment).toBeNull();
+    expect(client.selfEnergyAssessment).toBeNull();
+    expect(client.attachmentAssessment).toBeNull();
+    expect(client.customAssessments).toEqual([]);
+  });
+
+  it('scores the Protective Parts Assessment from raw trigger-question answers, only surfacing parts at/above threshold', () => {
+    const assessmentModules = [
+      { module_id: 'assessment_parts', data: { answers: { 3: 5, 1: 2, 10: 3 } } }, // Inner Critic (q3>=4), Self-Destructive Part (q10>=3, lower threshold)
+    ];
+    const { client } = deriveWorkspaceDetail(base, { analytics: null, notes: [], plans: [], messages: [], assessmentModules });
+    expect(client.partsAssessment.typeCounts).toEqual({ manager: 1, firefighter: 1, exile: 0 });
+    const names = client.partsAssessment.identifiedParts.map((p) => p.name);
+    expect(names).toContain('The Inner Critic');
+    expect(names).toContain('The Self-Destructive Part');
+    expect(names).not.toContain('The Planner'); // q1=2 is below its threshold of 4
+    // Sorted by intensity descending: Inner Critic (5) before Self-Destructive Part (3)
+    expect(client.partsAssessment.identifiedParts[0].name).toBe('The Inner Critic');
+    expect(client.partsAssessment.identifiedParts[0].intensityLabel).toBe('Very Active');
+  });
+
+  it('computes an overall Self-Energy percentage as the average of the 8 C qualities', () => {
+    const assessmentModules = [
+      { module_id: 'assessment_self-energy', data: { scores: { calmness: 4, curiosity: 2 } } },
+    ];
+    const { client } = deriveWorkspaceDetail(base, { analytics: null, notes: [], plans: [], messages: [], assessmentModules });
+    expect(client.selfEnergyAssessment.qualities).toHaveLength(2);
+    // calmness 4/5=80%, curiosity 2/5=40% -> overall (80+40)/2 = 60%
+    expect(client.selfEnergyAssessment.overallPct).toBe(60);
+  });
+
+  it('surfaces primary/secondary attachment style with per-style subscale scores', () => {
+    const assessmentModules = [
+      { module_id: 'assessment_attachment', data: { primaryStyle: 'anxious', secondaryStyle: 'secure', scores: { anxious: 20, secure: 10 } } },
+    ];
+    const { client } = deriveWorkspaceDetail(base, { analytics: null, notes: [], plans: [], messages: [], assessmentModules });
+    expect(client.attachmentAssessment.style).toBe('anxious');
+    expect(client.attachmentAssessment.secondaryStyle).toBe('secure');
+    expect(client.attachmentAssessment.scores.find((s) => s.key === 'anxious').pct).toBe(80); // 20/25
+  });
+
+  it('maps custom assessment response rows into titled, ranked-category results', () => {
+    const customAssessmentRows = [
+      { module_id: 'custom_assessment_response_1', updated_at: '2026-06-01T00:00:00Z', data: { assessmentTitle: 'Boundary Check', ranked: [['boundaries', { average: 4, maxScale: 5, label: 'High' }]] } },
+    ];
+    const { client } = deriveWorkspaceDetail(base, { analytics: null, notes: [], plans: [], messages: [], customAssessmentRows });
+    expect(client.customAssessments).toHaveLength(1);
+    expect(client.customAssessments[0].title).toBe('Boundary Check');
+    expect(client.customAssessments[0].ranked[0]).toMatchObject({ category: 'boundaries', label: 'High', percentage: 80 });
+  });
 });
 
 describe('loadWorkspaceClientDetail — part relationships assignment gate', () => {
@@ -1030,6 +1113,72 @@ describe('renderWorkspaceClientEmail / sendWorkspaceClientEmail (mirrors Therapi
     const { error } = await sendWorkspaceClientEmail({ toEmail: 'maya@example.com', subject: 'x', htmlBody: '<p>x</p>' });
     expect(error.message).toBe('network down');
     mockSendEmailError = null;
+  });
+});
+
+describe('createWorkspaceClient (mirrors TherapistDashboard.jsx\'s handleCreateClient, including its role picker)', () => {
+  beforeEach(() => {
+    mockPinCheckResult = { data: [], error: null };
+    mockInsertClientResult = { data: { id: 'c-new', name: 'New Client', pin: '482913', user_role: 'client' }, error: null };
+    mockInsertClientCalls.length = 0;
+    mockAssignClientCalls.length = 0;
+    mockAssignClientResult = { data: { id: 'assign-1' }, error: null };
+  });
+
+  it('defaults to a client account and assigns it to the creating therapist', async () => {
+    const { data, error } = await createWorkspaceClient('t1', { name: 'New Client', email: 'n@example.com', phone: '' });
+    expect(error).toBeNull();
+    expect(mockInsertClientCalls[0]).toMatchObject({ name: 'New Client', user_role: 'client' });
+    expect(mockAssignClientCalls).toHaveLength(1);
+    expect(mockAssignClientCalls[0]).toMatchObject({ therapistId: 't1', clientId: 'c-new' });
+    expect(data.id).toBe('c-new');
+  });
+
+  it('creates a therapist/Advisor account when role is "therapist", and never assigns it to a caseload', async () => {
+    mockInsertClientResult = { data: { id: 'c-advisor', name: 'New Advisor', pin: '113355', user_role: 'therapist' }, error: null };
+    const { data, error } = await createWorkspaceClient('t1', { name: 'New Advisor', role: 'therapist' });
+    expect(error).toBeNull();
+    expect(mockInsertClientCalls[0]).toMatchObject({ user_role: 'therapist' });
+    expect(mockAssignClientCalls).toHaveLength(0);
+    expect(data.user_role).toBe('therapist');
+  });
+
+  it('treats any role value other than "therapist" as a client (defensive default)', async () => {
+    await createWorkspaceClient('t1', { name: 'New Client', role: 'bogus-role' });
+    expect(mockInsertClientCalls[0]).toMatchObject({ user_role: 'client' });
+  });
+
+  it('rejects an empty name without hitting the database', async () => {
+    const { data, error } = await createWorkspaceClient('t1', { name: '   ' });
+    expect(data).toBeNull();
+    expect(error.message).toContain('Name is required');
+    expect(mockInsertClientCalls).toHaveLength(0);
+  });
+
+  it('surfaces the insert error instead of throwing', async () => {
+    mockInsertClientResult = { data: null, error: { message: 'duplicate key' } };
+    const { data, error } = await createWorkspaceClient('t1', { name: 'New Client' });
+    expect(data).toBeNull();
+    expect(error.message).toBe('duplicate key');
+  });
+});
+
+describe('updateWorkspaceClientProfile', () => {
+  beforeEach(() => {
+    mockUpdateClientResult = { error: null };
+    mockUpdateClientCalls.length = 0;
+  });
+
+  it('updates name/email/phone for an existing client', async () => {
+    const { error } = await updateWorkspaceClientProfile('c1', { name: 'Renamed', email: 'renamed@example.com', phone: '555-0100' });
+    expect(error).toBeNull();
+    expect(mockUpdateClientCalls[0]).toMatchObject({ name: 'Renamed', email: 'renamed@example.com', phone: '555-0100' });
+  });
+
+  it('rejects an empty name without hitting the database', async () => {
+    const { error } = await updateWorkspaceClientProfile('c1', { name: '  ' });
+    expect(error.message).toContain('Name is required');
+    expect(mockUpdateClientCalls).toHaveLength(0);
   });
 });
 

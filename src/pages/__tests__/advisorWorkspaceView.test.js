@@ -768,6 +768,123 @@ describe('buildView — Assessments tab reflects the real wound-pattern assessme
   });
 });
 
+describe('buildView — Protective Parts / Self-Energy / Attachment assessments (mirrors TherapistDashboard.jsx\'s Insights tab)', () => {
+  it('is null for a client with no real assessment rows loaded', () => {
+    const v = makeView({ selectedClientId: 'c1' });
+    expect(v.selectedClient.partsAssessment).toBeNull();
+    expect(v.selectedClient.selfEnergyAssessment).toBeNull();
+    expect(v.selectedClient.attachmentAssessment).toBeNull();
+    expect(v.selectedClient.customAssessments).toEqual([]);
+  });
+
+  it('carries through the loader\'s Protective Parts scoring with per-type chip styling', () => {
+    const client = {
+      ...UNASSIGNED_CLIENT, id: 'pa1', name: 'Parts Test', unassigned: false,
+      partsAssessment: {
+        typeCounts: { manager: 1, firefighter: 0, exile: 0 },
+        identifiedParts: [{ type: 'manager', name: 'The Inner Critic', role: 'Drives perfectionism', need: 'Needs reassurance', intensity: 5, intensityLabel: 'Very Active' }],
+      },
+    };
+    const v = makeView({ extraClients: [client], selectedClientId: 'pa1' });
+    const pa = v.selectedClient.partsAssessment;
+    expect(pa.noPartsIdentified).toBe(false);
+    expect(pa.typeCounts.find((t) => t.type === 'manager').count).toBe(1);
+    expect(pa.identifiedParts[0].typeLabel).toBe('Manager');
+    expect(pa.identifiedParts[0].name).toBe('The Inner Critic');
+  });
+
+  it('computes an interpretive label from the Self-Energy overall percentage', () => {
+    const client = {
+      ...UNASSIGNED_CLIENT, id: 'se1', name: 'Self-Energy Test', unassigned: false,
+      selfEnergyAssessment: { overallPct: 85, qualities: [{ key: 'calmness', label: 'Calmness', pct: 85, description: 'Stays centered' }] },
+    };
+    const v = makeView({ extraClients: [client], selectedClientId: 'se1' });
+    const se = v.selectedClient.selfEnergyAssessment;
+    expect(se.overallPct).toBe(85);
+    expect(se.overallLabel).toContain('Strong Self-energy');
+    expect(se.qualities[0].barStyle.width).toBe('85%');
+  });
+
+  it('flags the primary attachment style as the highlighted subscale bar', () => {
+    const client = {
+      ...UNASSIGNED_CLIENT, id: 'at1', name: 'Attachment Test', unassigned: false,
+      attachmentAssessment: { style: 'anxious', secondaryStyle: null, scores: [{ key: 'anxious', score: 20, pct: 80 }, { key: 'secure', score: 5, pct: 20 }] },
+    };
+    const v = makeView({ extraClients: [client], selectedClientId: 'at1' });
+    const aa = v.selectedClient.attachmentAssessment;
+    expect(aa.style).toBe('anxious');
+    expect(aa.scores.find((s) => s.key === 'anxious').isPrimary).toBe(true);
+    expect(aa.scores.find((s) => s.key === 'secure').isPrimary).toBe(false);
+  });
+
+  it('renders advisor-built custom assessment results with severity-styled category labels', () => {
+    const client = {
+      ...UNASSIGNED_CLIENT, id: 'ca1', name: 'Custom Test', unassigned: false,
+      customAssessments: [{ moduleId: 'custom_assessment_response_1', title: 'Boundary Check', dateLabel: 'Jul 1, 2026', ranked: [{ category: 'boundaries', label: 'High', average: 4, maxScale: 5, percentage: 80 }] }],
+    };
+    const v = makeView({ extraClients: [client], selectedClientId: 'ca1' });
+    const ca = v.selectedClient.customAssessments[0];
+    expect(ca.title).toBe('Boundary Check');
+    expect(ca.ranked[0].barStyle.width).toBe('80%');
+  });
+});
+
+describe('buildView — client PIN lookup (mirrors TherapistDashboard.jsx\'s "Show PIN" toggle)', () => {
+  it('keeps the PIN hidden until toggled, and calls through onToggleShowPin', () => {
+    const calls = [];
+    const client = { ...UNASSIGNED_CLIENT, id: 'pin1', name: 'PIN Test', unassigned: false, pin: '482913' };
+    const view = buildView({
+      S: { ...INITIAL_STATE, showPinClientId: '', extraClients: [client], selectedClientId: 'pin1' },
+      theme: LIGHT, allClients: () => CLIENTS.concat([client]),
+      buildTreatmentPlan: (c) => ({ clientName: c.name, phases: [], milestones: [], currentPhaseLabel: '', currentPhaseDesc: '' }),
+      handlers: new Proxy({
+        isGroupExpanded: () => false,
+        onToggleShowPin: (id) => { calls.push(id); },
+      }, { get: (t, p) => t[p] || (() => {}) }),
+      isAdmin: true,
+    });
+    expect(view.selectedClient.pin).toBe('482913');
+    expect(view.selectedClient.pinRevealed).toBe(false);
+    view.selectedClient.onToggleShowPin();
+    expect(calls).toEqual(['pin1']);
+  });
+
+  it('reflects showPinClientId back as pinRevealed for the matching client only', () => {
+    const client = { ...UNASSIGNED_CLIENT, id: 'pin2', name: 'PIN Test 2', unassigned: false, pin: '113355' };
+    const v = makeView({ extraClients: [client], selectedClientId: 'pin2', showPinClientId: 'pin2' });
+    expect(v.selectedClient.pinRevealed).toBe(true);
+    const vOther = makeView({ extraClients: [client], selectedClientId: 'pin2', showPinClientId: 'some-other-client' });
+    expect(vOther.selectedClient.pinRevealed).toBe(false);
+  });
+});
+
+describe('buildView — New client form supports the Advisor/staff role picker (mirrors TherapistDashboard.jsx\'s handleCreateClient role selector)', () => {
+  it('defaults to a client role and reflects role/result state', () => {
+    const v = makeView({ newClientForm: { ...INITIAL_STATE.newClientForm, role: 'client' } });
+    expect(v.newClientForm.role).toBe('client');
+  });
+
+  it('wires the role-change handler', () => {
+    const calls = [];
+    const view = buildView({
+      S: { ...INITIAL_STATE }, theme: LIGHT, allClients: () => CLIENTS,
+      buildTreatmentPlan: (c) => ({ clientName: c.name, phases: [], milestones: [], currentPhaseLabel: '', currentPhaseDesc: '' }),
+      handlers: new Proxy({
+        isGroupExpanded: () => false,
+        onNewClientRoleChange: (role) => { calls.push(role); },
+      }, { get: (t, p) => t[p] || (() => {}) }),
+      isAdmin: true,
+    });
+    view.onNewClientRoleChange('therapist');
+    expect(calls).toEqual(['therapist']);
+  });
+
+  it('surfaces the created account\'s role and PIN in the result panel', () => {
+    const v = makeView({ newClientResult: { name: 'New Advisor', pin: '998877', role: 'therapist', emailSent: false } });
+    expect(v.newClientResult).toMatchObject({ name: 'New Advisor', pin: '998877', role: 'therapist' });
+  });
+});
+
 describe('buildView — Between Sessions reflects real analytics data', () => {
   const CLIENT_WITH_ACTIVITY = {
     ...UNASSIGNED_CLIENT, id: 'bs1', name: 'Activity Test', unassigned: false,

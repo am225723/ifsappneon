@@ -200,6 +200,108 @@ function mapAssessmentHistory(assessmentTrajectory, extrasById) {
   });
 }
 
+// Same protective-parts scoring TherapistDashboard.jsx's Insights tab has
+// always done client-side from the raw assessment_parts answers (trigger
+// question -> threshold), never previously ported into the workspace, which
+// had no query for this module_id at all.
+const PARTS_ASSESSMENT_DEFINITIONS = {
+  manager: [
+    { name: 'The Inner Critic', trigger: [3], threshold: 4, role: 'Drives perfectionism through self-criticism', need: 'Needs to know you are already worthy without being perfect' },
+    { name: 'The Planner', trigger: [1], threshold: 4, role: 'Prevents surprises through hyper-organization', need: 'Needs to trust that you can handle uncertainty safely' },
+    { name: 'The Perfectionist', trigger: [7], threshold: 4, role: 'Prevents exposure of perceived flaws', need: 'Needs to learn that imperfection does not mean rejection' },
+    { name: 'The People Pleaser', trigger: [9], threshold: 4, role: 'Keeps relationships safe through attunement and careful connection', need: 'Needs to know your true self is lovable without performing' },
+    { name: 'The Controller', trigger: [5], threshold: 4, role: 'Manages situations to prevent vulnerability', need: 'Needs to feel safe enough to release control and trust the process' },
+    { name: 'The Worrier', trigger: [14], threshold: 4, role: 'Anticipates danger through hypervigilance', need: 'Needs reassurance that you are safe in the present moment' },
+  ],
+  firefighter: [
+    { name: 'The Distractor', trigger: [2], threshold: 4, role: 'Prevents feeling overwhelming pain', need: 'Needs permission to feel emotions safely without being overwhelmed' },
+    { name: 'The Numbing Part', trigger: [6], threshold: 4, role: 'Creates emotional distance from pain', need: 'Needs to know that feeling pain will not destroy you' },
+    { name: 'The Impulse Part', trigger: [4], threshold: 4, role: 'Releases emotional pressure through action', need: 'Needs healthier outlets and the ability to pause before acting' },
+    { name: 'The Shutdown Part', trigger: [8], threshold: 4, role: 'Protects from emotional overwhelm through withdrawal', need: 'Needs a sense of safety to slowly reconnect with feelings' },
+    { name: 'The Self-Destructive Part', trigger: [10], threshold: 3, role: 'Redirects unbearable emotional pain', need: 'Needs compassion, not punishment — pain turned inward needs to be witnessed' },
+  ],
+  exile: [
+    { name: 'The Scared Child', trigger: [11], threshold: 4, role: 'Holds the original feelings of being small and helpless', need: 'Needs safety, comfort, and reassurance from Self' },
+    { name: 'The Lonely Child', trigger: [12], threshold: 4, role: 'Holds unmet needs for belonging and attachment', need: 'Needs to feel seen, held, and never alone again' },
+    { name: 'The Grieving Child', trigger: [13], threshold: 4, role: 'Holds unprocessed loss and sorrow', need: 'Needs to be witnessed, validated, and allowed to mourn' },
+    { name: 'The Shamed Child', trigger: [15], threshold: 4, role: 'Holds beliefs of being fundamentally flawed or broken', need: 'Needs to be told "you are enough" and "nothing is wrong with you"' },
+  ],
+};
+
+function mapPartsAssessment(data) {
+  if (!data) return null;
+  const rawAnswers = data.answers || {};
+  const identifiedParts = [];
+  Object.entries(PARTS_ASSESSMENT_DEFINITIONS).forEach(([type, defs]) => {
+    defs.forEach((def) => {
+      const intensity = Math.max(...def.trigger.map((qId) => rawAnswers[qId] || rawAnswers[String(qId)] || 0));
+      if (intensity >= def.threshold) {
+        identifiedParts.push({ type, name: def.name, role: def.role, need: def.need, intensity, intensityLabel: intensity >= 5 ? 'Very Active' : 'Active' });
+      }
+    });
+  });
+  identifiedParts.sort((a, b) => b.intensity - a.intensity);
+  const typeCounts = { manager: 0, firefighter: 0, exile: 0 };
+  identifiedParts.forEach((p) => { typeCounts[p.type] += 1; });
+  return { identifiedParts, typeCounts };
+}
+
+const SELF_ENERGY_DESCRIPTIONS = {
+  calmness: 'Ability to remain centered and peaceful even under stress',
+  curiosity: 'Genuine interest in understanding inner experiences without judgment',
+  compassion: 'Warmth and kindness toward yourself and your parts in pain',
+  confidence: 'Trust in your ability to handle whatever arises',
+  courage: 'Willingness to face fears and take steps toward healing',
+  clarity: 'Seeing situations clearly without parts clouding perception',
+  creativity: 'Capacity to think flexibly and find new solutions',
+  connectedness: 'Feeling of connection to others and something larger',
+};
+
+function mapSelfEnergyAssessment(data) {
+  if (!data) return null;
+  const scores = data.scores || data.qualities || {};
+  const qualities = Object.entries(scores).map(([key, val]) => {
+    const avg = typeof val === 'number' ? val : (val?.average || val?.score || 0);
+    const pct = Math.round((avg / 5) * 100);
+    return { key, label: key.charAt(0).toUpperCase() + key.slice(1), pct, description: SELF_ENERGY_DESCRIPTIONS[key] || '' };
+  }).sort((a, b) => b.pct - a.pct);
+  if (qualities.length === 0) return null;
+  const overallPct = Math.round(qualities.reduce((s, q) => s + q.pct, 0) / qualities.length);
+  return { qualities, overallPct };
+}
+
+function mapAttachmentAssessment(data) {
+  if (!data) return null;
+  const style = data.primaryStyle || data.style || 'Unknown';
+  const secondaryStyle = data.secondaryStyle || null;
+  const rawScores = data.scores || {};
+  const scores = Object.entries(rawScores).map(([key, val]) => {
+    const score = typeof val === 'number' ? val : (val?.total || val?.score || 0);
+    return { key, score, pct: Math.min(100, Math.round((score / 25) * 100)) };
+  });
+  return { style, secondaryStyle, scores };
+}
+
+// Advisor-built custom assessments (Assessments.jsx's "custom assessment"
+// authoring flow) — ranked category scores already computed client-side and
+// stored as-is on the response row, same shape TherapistDashboard.jsx reads.
+function mapCustomAssessments(rows) {
+  if (!Array.isArray(rows)) return [];
+  return rows.map((row) => {
+    const data = row.data || {};
+    return {
+      moduleId: row.module_id,
+      title: data.assessmentTitle || 'Custom Assessment',
+      dateLabel: relativeDateLabel(data.completedAt || data.updatedAt || row.updated_at),
+      ranked: (Array.isArray(data.ranked) ? data.ranked : []).map(([category, catData]) => {
+        const maxScale = catData?.maxScale || 5;
+        const percentage = catData?.percentage != null ? catData.percentage : Math.round(((catData?.average || 0) / maxScale) * 100);
+        return { category, label: catData?.label || 'N/A', average: catData?.average, maxScale, percentage: Math.min(percentage, 100) };
+      }),
+    };
+  });
+}
+
 function mapMbcMeasures(assessmentTrajectory, primaryWound, secondaryWound) {
   if (!Array.isArray(assessmentTrajectory) || assessmentTrajectory.length === 0) return [];
   const latest = assessmentTrajectory[assessmentTrajectory.length - 1];
@@ -504,7 +606,7 @@ function mapMessages(rows, clientName) {
 
 // Merge a base client with its loaded detail records. Returns the enriched
 // client plus the note entries that should be appended to `savedNotes`.
-export function deriveWorkspaceDetail(base, { analytics, notes, plans, messages, moduleAnswers, progress, gamification, assignedHomework, freeformHomework, agendas, partRelationships, allParts, assessmentExtras }) {
+export function deriveWorkspaceDetail(base, { analytics, notes, plans, messages, moduleAnswers, progress, gamification, assignedHomework, freeformHomework, agendas, partRelationships, allParts, assessmentExtras, assessmentModules, customAssessmentRows }) {
   const enriched = { ...base, _detailLoaded: true };
   // Set unconditionally (not gated behind a truthiness check) so a pass with
   // no real answers explicitly clears any prior enrichment's qaAnswers
@@ -515,6 +617,15 @@ export function deriveWorkspaceDetail(base, { analytics, notes, plans, messages,
   enriched.level = gam.level;
   enriched.agendas = mapSessionAgendas(agendas);
   enriched.partRelationships = mapPartRelationships(partRelationships, allParts);
+  // Set unconditionally so a re-derive that finds nothing (e.g. an
+  // unassigned client) explicitly clears a prior enrichment's values.
+  const partsEntry = (assessmentModules || []).find((d) => d.module_id === 'assessment_parts');
+  const selfEnergyEntry = (assessmentModules || []).find((d) => d.module_id === 'assessment_self-energy');
+  const attachmentEntry = (assessmentModules || []).find((d) => d.module_id === 'assessment_attachment');
+  enriched.partsAssessment = mapPartsAssessment(partsEntry?.data);
+  enriched.selfEnergyAssessment = mapSelfEnergyAssessment(selfEnergyEntry?.data);
+  enriched.attachmentAssessment = mapAttachmentAssessment(attachmentEntry?.data);
+  enriched.customAssessments = mapCustomAssessments(customAssessmentRows);
 
   if (analytics) {
     const assessment = mapAssessment(analytics.assessmentTrajectory);
@@ -672,6 +783,43 @@ async function loadClientAssessmentExtras(clientId) {
   }
 }
 
+// Same ifs_interactive_data module_ids TherapistDashboard.jsx's
+// loadClientInsights already queries for the Protective Parts / Self-Energy
+// / Attachment Style assessments — never wired into the workspace, which had
+// no consumer of these three module_ids at all. Raw rows only; mapped by
+// deriveWorkspaceDetail (mirrors the assessmentExtras/tertiary-wounds
+// pattern above).
+async function loadClientAssessmentModules(clientId) {
+  try {
+    const { data, error } = await supabase
+      .from('ifs_interactive_data')
+      .select('module_id, data')
+      .eq('client_id', clientId)
+      .in('module_id', ['assessment_parts', 'assessment_self-energy', 'assessment_attachment']);
+    if (error) return [];
+    return data || [];
+  } catch {
+    return [];
+  }
+}
+
+// Advisor-built custom assessment responses (Assessments.jsx's custom
+// assessment flow) — same module_id LIKE-query TherapistDashboard.jsx
+// already runs, never previously queried in the workspace.
+async function loadClientCustomAssessmentRows(clientId) {
+  try {
+    const { data, error } = await supabase
+      .from('ifs_interactive_data')
+      .select('module_id, data, updated_at')
+      .eq('client_id', clientId)
+      .like('module_id', 'custom_assessment_response_%');
+    if (error) return [];
+    return data || [];
+  } catch {
+    return [];
+  }
+}
+
 const CASELOAD_COLUMNS = 'id, name, pin, email, phone, status, last_active, created_at, user_role, access_restrictions, assignment_status';
 
 export async function loadWorkspaceCaseload(therapistId) {
@@ -783,21 +931,27 @@ async function generateUniqueClientPin() {
   return null;
 }
 
-export async function createWorkspaceClient(therapistId, { name, email, phone }) {
+// role mirrors TherapistDashboard.jsx's handleCreateClient role picker
+// ('client' vs 'therapist') — the workspace previously hardcoded 'client',
+// making it impossible to provision a new Advisor/staff login from here.
+// A new 'therapist' account isn't a caseload client, so it's never assigned
+// to the creating therapist.
+export async function createWorkspaceClient(therapistId, { name, email, phone, role }) {
   const trimmedName = String(name || '').trim();
   if (!trimmedName) return { data: null, error: { message: 'Name is required' } };
+  const userRole = role === 'therapist' ? 'therapist' : 'client';
   const pin = await generateUniqueClientPin();
   if (!pin) return { data: null, error: { message: 'Could not generate a unique PIN. Please try again.' } };
   const { data, error } = await supabase
     .from('ifs_clients')
     .insert({
       name: trimmedName, email: String(email || '').trim() || null, phone: String(phone || '').trim() || null,
-      pin, user_role: 'client', status: 'active', created_at: new Date().toISOString(),
+      pin, user_role: userRole, status: 'active', created_at: new Date().toISOString(),
     })
     .select()
     .single();
   if (error) return { data: null, error };
-  if (therapistId) {
+  if (therapistId && data.user_role === 'client') {
     const { error: assignError } = await assignClientToTherapist(therapistId, data.id, 'active', { clientName: data.name });
     if (assignError) console.error('Failed to assign new client to therapist:', assignError);
   }
@@ -864,7 +1018,7 @@ export function mergeCaseloadRefresh(prevBaseClients, freshRows) {
 }
 
 export async function loadWorkspaceClientDetail(base, therapistId) {
-  const [analyticsRes, notesRes, plansRes, messages, moduleAnswers, progress, gamification, assignedHomeworkRes, freeformHomework, agendasRes, partRelationshipsRes, allParts, assessmentExtras] = await Promise.all([
+  const [analyticsRes, notesRes, plansRes, messages, moduleAnswers, progress, gamification, assignedHomeworkRes, freeformHomework, agendasRes, partRelationshipsRes, allParts, assessmentExtras, assessmentModules, customAssessmentRows] = await Promise.all([
     loadClientAnalytics({ clientId: base.id, range: 'ALL' }).catch(() => ({ data: null })),
     loadTherapistNotesForClient(base.id).catch(() => ({ data: [] })),
     loadActiveTreatmentPlansForClient(base.id).catch(() => ({ data: [] })),
@@ -883,6 +1037,8 @@ export async function loadWorkspaceClientDetail(base, therapistId) {
     base.unassigned ? Promise.resolve({ data: [] }) : loadPartRelationships({ clientId: base.id }).catch(() => ({ data: [] })),
     loadClientAllParts(base.id),
     loadClientAssessmentExtras(base.id),
+    base.unassigned ? Promise.resolve([]) : loadClientAssessmentModules(base.id),
+    base.unassigned ? Promise.resolve([]) : loadClientCustomAssessmentRows(base.id),
   ]);
   return deriveWorkspaceDetail(base, {
     analytics: analyticsRes?.data || null,
@@ -898,6 +1054,8 @@ export async function loadWorkspaceClientDetail(base, therapistId) {
     partRelationships: partRelationshipsRes?.data || [],
     allParts,
     assessmentExtras,
+    assessmentModules,
+    customAssessmentRows,
   });
 }
 
