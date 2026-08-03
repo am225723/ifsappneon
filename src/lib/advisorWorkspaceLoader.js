@@ -91,6 +91,12 @@ export function mapClientRow(row) {
   const hasAssignmentStatus = Object.prototype.hasOwnProperty.call(row, 'assignment_status');
   const unassigned = hasAssignmentStatus ? row.assignment_status == null : false;
 
+  // Account-level active/inactive (ifs_clients.status as the Advisor
+  // explicitly set it), distinct from the derived `status` above which also
+  // folds in inactivity-by-time — the Access & Features tab's account
+  // switch reads/writes this raw value only.
+  const accountStatus = String(row.status || 'active').toLowerCase() === 'inactive' ? 'inactive' : 'active';
+
   return {
     id: row.id,
     name: row.name || 'Unnamed client',
@@ -99,6 +105,8 @@ export function mapClientRow(row) {
     phone: row.phone || '',
     pin: row.pin || '',
     status,
+    accountStatus,
+    joinDate: row.created_at || null,
     unassigned,
     accessRestrictions: row.access_restrictions || null,
     supportPriority: 'standard',
@@ -889,6 +897,67 @@ export async function updateWorkspaceClientAccessRestrictions(clientId, value) {
   return { error: error || null };
 }
 
+// Account-level active/inactive switch (ifs_clients.status) — distinct from
+// deactivateWorkspaceClientAssignment/reactivateWorkspaceClientAssignment
+// above, which only discharge/restore *this Advisor's* caseload assignment.
+// This suspends the account itself, same column TherapistDashboard.jsx's
+// client rows already read for their own status chip.
+export async function updateWorkspaceClientStatus(clientId, status) {
+  if (!clientId) return { error: { message: 'Missing client id' } };
+  const { error } = await supabase.from('ifs_clients').update({ status }).eq('id', clientId);
+  return { error: error || null };
+}
+
+// Same journal/mood/activity aggregates TherapistDashboard.jsx's
+// handleExportReports already computes per client, bulk-loaded here so the
+// workspace's own caseload CSV export can carry the same column parity.
+export async function loadCaseloadCsvAggregates(clientIds) {
+  const ids = (clientIds || []).filter(Boolean);
+  const empty = {};
+  if (ids.length === 0) return empty;
+  try {
+    // Promise.allSettled + per-query error checks so a single failing query
+    // (network error, or a query-level Supabase error — which resolves
+    // rather than throws) degrades only its own aggregate instead of
+    // discarding the other two, or the whole caseload's data via the outer catch.
+    const [journalRes, moodRes, activityRes] = await Promise.allSettled([
+      supabase.from('ifs_journal_entries').select('client_id').in('client_id', ids),
+      supabase.from('ifs_mood_entries').select('client_id, mood').in('client_id', ids),
+      supabase.from('ifs_therapy_activity_progress').select('client_id, completed').in('client_id', ids),
+    ]);
+    const extract = (settled, label) => {
+      if (settled.status !== 'fulfilled') { console.error(`Failed to load ${label}:`, settled.reason); return []; }
+      if (settled.value.error) { console.error(`Failed to load ${label}:`, settled.value.error); return []; }
+      return settled.value.data || [];
+    };
+    const journalRows = extract(journalRes, 'journal entries');
+    const moodRows = extract(moodRes, 'mood entries');
+    const activityRows = extract(activityRes, 'activity progress');
+    const result = {};
+    ids.forEach((id) => { result[id] = { journalCount: 0, avgMood: null, activitiesCompleted: 0, activitiesTotal: 0 }; });
+    (journalRows || []).forEach((r) => { if (result[r.client_id]) result[r.client_id].journalCount += 1; });
+    const moodSums = {};
+    (moodRows || []).forEach((r) => {
+      if (!result[r.client_id]) return;
+      const bucket = moodSums[r.client_id] || (moodSums[r.client_id] = { sum: 0, count: 0 });
+      bucket.sum += r.mood || 0;
+      bucket.count += 1;
+    });
+    Object.keys(moodSums).forEach((id) => {
+      const { sum, count } = moodSums[id];
+      if (result[id] && count > 0) result[id].avgMood = Math.round((sum / count) * 10) / 10;
+    });
+    (activityRows || []).forEach((r) => {
+      if (!result[r.client_id]) return;
+      result[r.client_id].activitiesTotal += 1;
+      if (r.completed) result[r.client_id].activitiesCompleted += 1;
+    });
+    return result;
+  } catch {
+    return empty;
+  }
+}
+
 // Same two real, working queries AdminHub.jsx's loadData already runs
 // (ifs_clients filtered to staff roles, and active ifs_therapist_clients
 // assignments) — the workspace's own Admin > Team & Caseloads tab was a
@@ -1012,7 +1081,8 @@ export function mergeCaseloadRefresh(prevBaseClients, freshRows) {
     return {
       ...prev,
       name: fresh.name, initial: fresh.initial, email: fresh.email, phone: fresh.phone,
-      status: fresh.status, lastActiveDays: fresh.lastActiveDays, risk: fresh.risk, unassigned: fresh.unassigned,
+      status: fresh.status, accountStatus: fresh.accountStatus, joinDate: fresh.joinDate,
+      lastActiveDays: fresh.lastActiveDays, risk: fresh.risk, unassigned: fresh.unassigned,
     };
   });
 }
@@ -1104,6 +1174,18 @@ export async function persistTherapistNote({ therapistId, clientId, content, sta
     return { error: { message: 'Missing note details' } };
   }
   return createTherapistNote({ therapistId, clientId, noteType: 'session_note', content, status });
+}
+
+// Same ifs_therapist_notes log TherapistDashboard.jsx's handleSendReminder
+// already writes (there, a raw insert with note_type: 'reminder'; here,
+// routed through createTherapistNote's normalizer, which folds unknown
+// types to 'general', so the type is kept in the content prefix instead).
+export async function logWorkspaceReminder({ therapistId, clientId, type, message }) {
+  if (!therapistId || !clientId || !String(message || '').trim()) {
+    return { error: { message: 'Missing reminder details' } };
+  }
+  const content = `[REMINDER - ${String(type || 'general').toUpperCase()}] ${message.trim()}`;
+  return createTherapistNote({ therapistId, clientId, noteType: 'general', content, status: 'final' });
 }
 
 export async function sendWorkspaceMessage(therapistId, clientId, text) {

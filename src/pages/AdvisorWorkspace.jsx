@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { buildView, WorkspaceShell, EmptyCaseload, WorkspaceStatus } from './AdvisorWorkspaceView.jsx';
 import {
   WOUND_META, LIGHT, DARK, CLIENTS, TEMPLATE_OPTIONS, PRACTICE_TYPE_META, PLAN_PHASES,
-  DOC_SOURCES_DEFAULT, NAV_CONFIG, DEFAULT_NOTIFICATION_PREFS, buildCaseloadCsv,
+  DOC_SOURCES_DEFAULT, NAV_CONFIG, DEFAULT_NOTIFICATION_PREFS, buildCaseloadCsv, REMINDER_TEMPLATES,
 } from './advisorWorkspaceData.js';
 import {
   loadWorkspaceCaseload, loadWorkspaceCaseloadWithStatus, loadWorkspaceClientDetail, sendWorkspaceMessage, deleteWorkspaceMessage, persistTherapistNote,
@@ -17,9 +17,10 @@ import {
   loadWorkspaceNotificationPreferences, updateWorkspaceNotificationPreferences,
   deactivateWorkspaceClientAssignment, reactivateWorkspaceClientAssignment, loadWorkspaceDischargedClients,
   generateWorkspacePractice, generateWorkspacePracticeBatch, assignWorkspacePractice,
-  updateWorkspaceClientAccessRestrictions,
+  updateWorkspaceClientAccessRestrictions, updateWorkspaceClientStatus, loadCaseloadCsvAggregates,
   loadWorkspaceTeamAssignments, reassignWorkspaceClient,
   createWorkspaceClient, updateWorkspaceClientProfile, renderWorkspaceClientEmail, sendWorkspaceClientEmail, mapClientRow,
+  logWorkspaceReminder,
 } from '../lib/advisorWorkspaceLoader.js';
 import { DEFAULT_ACCESS_FORM } from '../data/accessControlData.js';
 import { loadAdvisorSessionSnapshot } from '../lib/unifiedGuidance.js';
@@ -50,7 +51,7 @@ export const INITIAL_STATE = {
   baseClients: CLIENTS,
   activeTab: 'overview', isDark: false, expandedGroups: {}, viewMode: 'command',
   selectedClientId: 'c1', activeClientTab: 'overview',
-  search: '', filterWound: 'all', reviewedIds: {}, sessionPrepOpenId: null,
+  search: '', filterWound: 'all', filterSupport: 'all', filterStatus: 'all', reviewedIds: {}, sessionPrepOpenId: null,
   noteDraft: { clientId: 'c1', template: 'none', text: '' }, savedNotes: [],
   homeworkFeedbackDraft: {},
   planClientId: 'c1', practiceForm: { clientId: 'c1', wound: 'abandonment', type: 'journal' },
@@ -97,6 +98,7 @@ export const INITIAL_STATE = {
   editClientId: '', editClientForm: { name: '', email: '', phone: '' }, editClientSaving: false, editClientError: '',
   showPinClientId: '',
   emailClientId: '', emailTemplateId: 'welcome', emailPreview: null, emailLoading: false, emailSending: false, emailSent: false, emailError: '',
+  reminderClientId: '', reminderForm: { type: 'session', message: '' }, reminderSaved: false, reminderError: '',
   deletedMessageIdx: {},
   practiceGuidance: '', practiceBatchResults: [],
   liveSessions: [
@@ -519,9 +521,17 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
       coTherapyProgress: [], coTherapyProgressLoading: false,
     });
   };
-  const setClientTab = (id) => set({ activeClientTab: id });
+  // Opening the Access & Features tab re-syncs the access-control form to
+  // whichever client is currently selected — same onAccessControlClientChange
+  // the standalone Admin > Access page's client picker already calls.
+  const setClientTab = (id) => {
+    if (id === 'access' && S.selectedClientId) onAccessControlClientChange(S.selectedClientId);
+    set({ activeClientTab: id });
+  };
   const onSearch = (e) => set({ search: e.target.value });
   const setFilterWound = (w) => set({ filterWound: w });
+  const setFilterSupport = (s) => set({ filterSupport: s });
+  const setFilterStatus = (s) => set({ filterStatus: s });
   const markReviewed = (id) => set((s) => ({ reviewedIds: { ...s.reviewedIds, [id]: true } }));
   const toggleSessionPrep = (id) => set((s) => ({ sessionPrepOpenId: s.sessionPrepOpenId === id ? null : id }));
   // Persists a real ifs_session_agendas review (previously "Mark reviewed"
@@ -642,10 +652,19 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
     reportWindow.document.write(html);
     reportWindow.document.close();
   };
-  // Same client-side CSV build TherapistDashboard.jsx's handleExportCSV
-  // already does — the workspace's own Caseload view had no export action.
+  // Same richer column set TherapistDashboard.jsx's handleExportReports
+  // already builds (journal counts, avg mood, activity completion, support
+  // level, join date) — the workspace's own Caseload export previously
+  // matched only the thinner handleExportCSV column set.
   const onExportCaseloadCsv = () => {
-    downloadCsvFile(buildCaseloadCsv(allClients()), `clients_export_${new Date().toISOString().split('T')[0]}.csv`);
+    const clients = allClients();
+    if (isDemo) {
+      downloadCsvFile(buildCaseloadCsv(clients), `clients_export_${new Date().toISOString().split('T')[0]}.csv`);
+      return;
+    }
+    loadCaseloadCsvAggregates(clients.map((c) => c.id)).then((aggregates) => {
+      downloadCsvFile(buildCaseloadCsv(clients, aggregates), `clients_export_${new Date().toISOString().split('T')[0]}.csv`);
+    });
   };
   const openPlanFor = (clientId) => set({ activeTab: 'clinical-plans', planClientId: clientId });
   // Same invalidatePendingDoc pattern as the Document Creator: bumping the
@@ -1349,6 +1368,26 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
     });
   };
   const onToggleShowPin = (clientId) => set((s) => ({ showPinClientId: s.showPinClientId === clientId ? '' : clientId }));
+  // Account-level active/inactive switch (ifs_clients.status) — distinct
+  // from onDeactivateClient/onReactivateClient below, which only discharge
+  // or restore this Advisor's own caseload assignment to the client.
+  const onToggleAccountStatus = (clientId) => {
+    const client = allClients().find((c) => c.id === clientId);
+    if (!client) return;
+    const nextAccountStatus = client.accountStatus === 'inactive' ? 'active' : 'inactive';
+    const nextStatus = nextAccountStatus === 'inactive' ? 'inactive' : (client.lastActiveDays != null && client.lastActiveDays >= 14 ? 'inactive' : 'active');
+    const prevAccountStatus = client.accountStatus;
+    const prevStatus = client.status;
+    const patch = (c) => (c.id === clientId ? { ...c, accountStatus: nextAccountStatus, status: nextStatus } : c);
+    set((s) => ({ baseClients: (s.baseClients || []).map(patch), extraClients: (s.extraClients || []).map(patch) }));
+    if (isDemo) return;
+    updateWorkspaceClientStatus(clientId, nextAccountStatus).then(({ error }) => {
+      if (!error) return;
+      console.error('Failed to update account status:', error);
+      const revert = (c) => (c.id === clientId ? { ...c, accountStatus: prevAccountStatus, status: prevStatus } : c);
+      set((s) => ({ baseClients: (s.baseClients || []).map(revert), extraClients: (s.extraClients || []).map(revert) }));
+    });
+  };
   const onStartEditClient = (id) => {
     const client = allClients().find((c) => c.id === id);
     if (!client) return;
@@ -1403,6 +1442,51 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
     sendWorkspaceClientEmail({ toEmail: client.email, subject: S.emailPreview.subject, htmlBody: S.emailPreview.html }).then(({ error }) => {
       if (error) { set({ emailSending: false, emailError: error.message }); return; }
       set({ emailSending: false, emailSent: true });
+    });
+  };
+  // Same four reminder types/templates and copy-to-clipboard flow
+  // TherapistDashboard.jsx's Send Reminder tool already offers.
+  const onOpenReminderClient = (id) => {
+    const client = allClients().find((c) => c.id === id);
+    const message = REMINDER_TEMPLATES.session.replace('{name}', client?.name || '[Client]');
+    set({ reminderClientId: id, reminderForm: { type: 'session', message }, reminderSaved: false, reminderError: '' });
+  };
+  const onCloseReminderClient = () => set({ reminderClientId: '', reminderSaved: false, reminderError: '' });
+  const onReminderTypeChange = (type) => {
+    const client = allClients().find((c) => c.id === S.reminderClientId);
+    const message = (REMINDER_TEMPLATES[type] || REMINDER_TEMPLATES.session).replace('{name}', client?.name || '[Client]');
+    set({ reminderForm: { type, message }, reminderSaved: false, reminderError: '' });
+  };
+  const onReminderMessageChange = (message) => set((s) => ({ reminderForm: { ...s.reminderForm, message }, reminderSaved: false, reminderError: '' }));
+  // Resolves true only once the write actually lands, so a denied/failed
+  // clipboard permission doesn't get reported to the Advisor as "copied".
+  const copyTextToClipboard = (text) => {
+    if (navigator.clipboard?.writeText) {
+      return navigator.clipboard.writeText(text).then(() => true).catch(() => false);
+    }
+    try {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      const ok = document.execCommand('copy');
+      document.body.removeChild(ta);
+      return Promise.resolve(ok);
+    } catch {
+      return Promise.resolve(false);
+    }
+  };
+  const onCopyAndSaveReminder = () => {
+    const { reminderClientId, reminderForm } = S;
+    if (!reminderClientId || !reminderForm.message.trim()) return;
+    set({ reminderError: '' });
+    copyTextToClipboard(reminderForm.message).then((copied) => {
+      if (!copied) { set({ reminderError: 'Could not copy to clipboard. Please copy the message manually.' }); return; }
+      if (isDemo || !therapistId) { set({ reminderSaved: true }); return; }
+      logWorkspaceReminder({ therapistId, clientId: reminderClientId, type: reminderForm.type, message: reminderForm.message }).then(({ error }) => {
+        if (error) { console.error('Failed to log reminder:', error); set({ reminderError: 'Copied to clipboard, but the reminder log failed to save.' }); return; }
+        set({ reminderSaved: true });
+      });
     });
   };
   const onStartDelete = (id) => set({ deletingClientId: id, deleteConfirmText: '' });
@@ -1538,7 +1622,7 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
   const view = buildView({
     S, theme, allClients, buildTreatmentPlan, isAdmin, isDemo,
     handlers: {
-      setTab, setViewMode, toggleTheme, selectClient, setClientTab, onSearch, setFilterWound, markReviewed, toggleSessionPrep, onClaimClient, onMarkAgendaReviewed,
+      setTab, setViewMode, toggleTheme, selectClient, setClientTab, onSearch, setFilterWound, setFilterSupport, setFilterStatus, markReviewed, toggleSessionPrep, onClaimClient, onMarkAgendaReviewed,
       onDeactivateClient, onReactivateClient,
       onNoteClientChange, onNoteTemplateChange, onNoteTextChange, onSaveNote, onSignNote, onAiNoteSaved, toggleSetting, draftNoteFor, openPrepFor, openPlanFor, openPracticeFor, onExportReport, onExportCaseloadCsv,
       onPlanClientChange, onPracticeClientChange, onPracticeWoundChange, onPracticeTypeChange, onGeneratePractice, onPracticeDraftChange, onRejectPractice, onAssignPractice, toggleAssignLesson,
@@ -1552,6 +1636,7 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
       onStartDelete, onCancelDelete, onDeleteConfirmChange, onConfirmDelete, onPracticeGuidanceChange, onGeneratePracticeBatch, onUseBatchPractice,
       onStartEditClient, onCancelEditClient, onEditClientFieldChange, onSaveEditClient,
       onOpenEmailClient, onCloseEmailClient, onEmailTemplateChange, onSendClientEmail,
+      onToggleAccountStatus, onOpenReminderClient, onCloseReminderClient, onReminderTypeChange, onReminderMessageChange, onCopyAndSaveReminder,
       onDeleteMessage, applyQuickMessage, toggleLiveSession, endLiveSession, onMarkNotifRead, onMarkAllNotifsRead, onOpenNotifClient,
       onHomeworkAssigned, onHomeworkFeedbackChange, onMarkHomeworkReviewed, onArchiveHomework,
       onAccessControlClientChange, toggleAccessControlFullAccess, toggleAccessControlModule, toggleAccessControlAssessment, toggleAccessControlFeature, onSaveAccessControl,

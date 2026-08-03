@@ -68,26 +68,62 @@ export function daysAgoText(n) {
   if (n === 1) return 'Yesterday';
   return n + ' days ago';
 }
-// Same column set and quoting TherapistDashboard.jsx's handleExportCSV
-// already builds (minus pin/joinDate, which aren't mapped onto the workspace
-// client shape) — the Advisor Workspace's own Caseload view had no export
-// action at all.
-export function buildCaseloadCsv(clients) {
-  const headers = ['Name', 'Email', 'Status', 'Primary Wound', 'Secondary Wound', 'Progress %', 'Modules Completed', 'Last Active'];
-  const rows = (clients || []).map((c) => [
-    c.name,
-    c.email,
-    c.status,
-    WOUND_META[c.primaryWound]?.label || c.primaryWound,
-    WOUND_META[c.secondaryWound]?.label || c.secondaryWound,
-    c.progressPct,
-    c.modulesCompleted,
-    daysAgoText(c.lastActiveDays),
-  ]);
+// Same low/medium/high bucketing TherapistDashboard.jsx's
+// calculateSupportLevel already derives from days-since-last-active.
+export function supportLevelFromDays(days) {
+  if (days == null) return 'high';
+  if (days > 14) return 'high';
+  if (days > 7) return 'medium';
+  return 'low';
+}
+export const SUPPORT_LEVEL_LABEL = { low: 'Low Support', medium: 'Medium Support', high: 'High Priority' };
+
+// Same column set and quoting TherapistDashboard.jsx's richer
+// handleExportReports CSV builds (journal counts, avg mood, activity
+// completion, support level, join date), plus this workspace's own
+// pin-free columns — the Advisor Workspace's own Caseload view previously
+// only exported the thinner handleExportCSV column set.
+export function buildCaseloadCsv(clients, aggregatesById) {
+  const headers = [
+    'Name', 'Email', 'Status', 'Support Level', 'Primary Wound', 'Secondary Wound', 'Progress %', 'Modules Completed',
+    'Journal Entries', 'Avg Mood', 'Activities Completed', 'Join Date', 'Last Active',
+  ];
+  const rows = (clients || []).map((c) => {
+    const agg = (aggregatesById && aggregatesById[c.id]) || null;
+    return [
+      c.name,
+      c.email,
+      c.status,
+      SUPPORT_LEVEL_LABEL[supportLevelFromDays(c.lastActiveDays)],
+      WOUND_META[c.primaryWound]?.label || c.primaryWound,
+      WOUND_META[c.secondaryWound]?.label || c.secondaryWound,
+      c.progressPct,
+      c.modulesCompleted,
+      agg ? agg.journalCount : 'N/A',
+      agg && agg.avgMood != null ? agg.avgMood : 'N/A',
+      agg ? `${agg.activitiesCompleted}/${agg.activitiesTotal}` : 'N/A',
+      c.joinDate ? new Date(c.joinDate).toLocaleDateString() : 'N/A',
+      daysAgoText(c.lastActiveDays),
+    ];
+  });
   return [headers, ...rows]
     .map((row) => row.map((cell) => `"${String(cell ?? '').replace(/"/g, '""')}"`).join(','))
     .join('\n');
 }
+
+// Same four reminder types and message copy TherapistDashboard.jsx's Send
+// Reminder tool already uses — re-implemented here for the workspace's own
+// per-client action row (which previously had no reminder tool at all).
+export const REMINDER_TYPES = [
+  { id: 'session', label: 'Session' }, { id: 'activity', label: 'Activity' },
+  { id: 'checkin', label: 'Check-in' }, { id: 'assessment', label: 'Assessment' },
+];
+export const REMINDER_TEMPLATES = {
+  session: 'Hi {name}, this is a friendly reminder about your upcoming IFS session. Please review your journal entries and any assigned IFS practices from last session before we meet.',
+  activity: 'Hi {name}, you have some pending activities in your IFS healing program. Taking a few minutes to complete them will help reinforce what you\'ve learned.',
+  checkin: 'Hi {name}, just checking in on you. How are you doing with your IFS practice? Remember, even a brief moment of Self-energy connection counts.',
+  assessment: 'Hi {name}, it\'s been a while since your last assessment. Retaking the IFS Wound Assessment can help us track your healing progress together.',
+};
 export function severityStyle(theme, level) {
   const map = {
     high: { bg: theme.riskHighBg, text: theme.riskHighText, border: theme.riskHighBorder },
@@ -352,7 +388,7 @@ export const CLIENT_TABS = [
   { id: 'plan', label: 'Treatment Plan' }, { id: 'mbc', label: 'MBC' }, { id: 'parts', label: 'Parts' },
   { id: 'practices', label: 'Practices' }, { id: 'safety', label: 'Safety' }, { id: 'messages', label: 'Messages' },
   { id: 'lifeReflections', label: 'Life Reflections' }, { id: 'healingJourney', label: 'Healing Journey' },
-  { id: 'curriculumReflections', label: 'Curriculum Reflections' },
+  { id: 'curriculumReflections', label: 'Curriculum Reflections' }, { id: 'access', label: 'Access & Features' },
 ];
 export const RISK_TYPE_TITLE = {
   concerning_language: 'Concerning language detected', mood: 'Low mood reported', inactivity: 'Extended inactivity',

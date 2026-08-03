@@ -1510,6 +1510,51 @@ describe('buildView — Messages search filters threads by name and by message c
   });
 });
 
+describe('buildView — Caseload Support Level and Status filters (mirrors TherapistDashboard.jsx\'s filterSupport/filterStatus)', () => {
+  it('defaults to showing every support level and status', () => {
+    const v = makeView();
+    expect(v.filterSupport).toBe('all');
+    expect(v.filterStatus).toBe('all');
+    expect(v.supportFilterOptions.map((o) => o.id)).toEqual(['all', 'low', 'medium', 'high']);
+    expect(v.statusFilterOptions.map((o) => o.id)).toEqual(['all', 'active', 'inactive']);
+  });
+
+  it('filters the caseload list down to clients matching the selected support level', () => {
+    // c1/c2 are recently active (lastActiveDays 0/1 → low support); c3 has
+    // gone 9 days without activity (medium support).
+    const v = makeView({ filterSupport: 'medium' });
+    const ids = v.clientListFiltered.map((c) => c.id);
+    expect(ids).toContain('c3');
+    expect(ids).not.toContain('c1');
+    expect(ids).not.toContain('c2');
+  });
+
+  it('filters the caseload list down to clients matching the selected status', () => {
+    const v = makeView({ filterStatus: 'inactive' });
+    const ids = v.clientListFiltered.map((c) => c.id);
+    expect(ids).toContain('c3');
+    expect(ids).not.toContain('c1');
+  });
+
+  it('wires the filter dropdowns to their handlers', () => {
+    const calls = {};
+    const view = buildView({
+      S: { ...INITIAL_STATE }, theme: LIGHT, allClients: () => CLIENTS,
+      buildTreatmentPlan: (c) => ({ clientName: c.name, phases: [], milestones: [], currentPhaseLabel: '', currentPhaseDesc: '' }),
+      handlers: new Proxy({
+        isGroupExpanded: () => false,
+        setFilterSupport: (v2) => { calls.support = v2; },
+        setFilterStatus: (v2) => { calls.status = v2; },
+      }, { get: (t, p) => t[p] || (() => {}) }),
+      isAdmin: true,
+    });
+    view.onFilterSupportChange({ target: { value: 'high' } });
+    view.onFilterStatusChange({ target: { value: 'active' } });
+    expect(calls.support).toBe('high');
+    expect(calls.status).toBe('active');
+  });
+});
+
 describe('buildView — Access Control edits ifs_clients.access_restrictions (mirrors TherapistDashboard.jsx)', () => {
   it('lists assigned clients as options and shows no client selected by default', () => {
     const v = makeView();
@@ -1590,6 +1635,97 @@ describe('buildView — Access Control edits ifs_clients.access_restrictions (mi
     expect(saving.accessControlSaving).toBe(true);
     const saved = makeView({ accessControlClientId: 'c1', accessControlSaved: 'Saved' });
     expect(saved.accessControlSaved).toBe('Saved');
+  });
+});
+
+describe('buildView — Access & Features client tab (feature gating + account status, embedded on the client profile)', () => {
+  it('adds an Access & Features entry to the client tab strip', () => {
+    const v = makeView();
+    const tab = v.clientTabs.find((t) => t.id === 'access');
+    expect(tab).toBeDefined();
+    expect(tab.label).toBe('Access & Features');
+  });
+
+  it('flags isClientTabAccess when the access tab is active', () => {
+    const v = makeView({ activeClientTab: 'access' });
+    expect(v.isClientTabAccess).toBe(true);
+    expect(makeView({ activeClientTab: 'overview' }).isClientTabAccess).toBe(false);
+  });
+
+  it('reflects the selected client\'s account status and wires the toggle', () => {
+    const calls = [];
+    const view = buildView({
+      S: { ...INITIAL_STATE, selectedClientId: 'c1' }, theme: LIGHT, allClients: () => CLIENTS,
+      buildTreatmentPlan: (c) => ({ clientName: c.name, phases: [], milestones: [], currentPhaseLabel: '', currentPhaseDesc: '' }),
+      handlers: new Proxy({ isGroupExpanded: () => false, onToggleAccountStatus: (id) => calls.push(id) }, { get: (t, p) => t[p] || (() => {}) }),
+      isAdmin: true,
+    });
+    expect(view.selectedClient.accountStatus).toBe('active');
+    expect(view.selectedClient.accountStatusLabel).toBe('Active');
+    view.selectedClient.onToggleAccountStatus();
+    expect(calls).toEqual(['c1']);
+  });
+
+  it('shows an inactive account status when accountStatus is inactive, independent of caseload-health status', () => {
+    const client = { ...UNASSIGNED_CLIENT, id: 'acct1', name: 'Suspended', unassigned: false, status: 'active', accountStatus: 'inactive' };
+    const v = makeView({ extraClients: [client], selectedClientId: 'acct1' });
+    expect(v.selectedClient.accountStatusLabel).toBe('Inactive');
+    expect(v.selectedClient.statusLabel).toBe('Active');
+  });
+
+  it('gates the tab behind a claim prompt for an unassigned client', () => {
+    const v = makeView({ extraClients: [UNASSIGNED_CLIENT], selectedClientId: 'new1' });
+    expect(v.selectedClient.unassigned).toBe(true);
+    expect(typeof v.selectedClient.onClaim).toBe('function');
+  });
+});
+
+describe('buildView — per-client Send Reminder tool (mirrors TherapistDashboard.jsx\'s Send Reminder, with copy-to-clipboard)', () => {
+  it('opens and closes the reminder panel for the selected client', () => {
+    const calls = [];
+    const view = buildView({
+      S: { ...INITIAL_STATE, selectedClientId: 'c1' }, theme: LIGHT, allClients: () => CLIENTS,
+      buildTreatmentPlan: (c) => ({ clientName: c.name, phases: [], milestones: [], currentPhaseLabel: '', currentPhaseDesc: '' }),
+      handlers: new Proxy({
+        isGroupExpanded: () => false,
+        onOpenReminderClient: (id) => calls.push(['open', id]),
+        onCloseReminderClient: () => calls.push(['close']),
+      }, { get: (t, p) => t[p] || (() => {}) }),
+      isAdmin: true,
+    });
+    expect(view.selectedClient.reminderOpen).toBe(false);
+    view.selectedClient.onOpenReminder();
+    view.selectedClient.onCloseReminder();
+    expect(calls).toEqual([['open', 'c1'], ['close']]);
+  });
+
+  it('reflects reminderClientId back as reminderOpen for the matching client only', () => {
+    const v = makeView({ selectedClientId: 'c1', reminderClientId: 'c1' });
+    expect(v.selectedClient.reminderOpen).toBe(true);
+    const vOther = makeView({ selectedClientId: 'c1', reminderClientId: 'c2' });
+    expect(vOther.selectedClient.reminderOpen).toBe(false);
+  });
+
+  it('offers the four reminder types and wires type selection, message edits, and copy/save', () => {
+    const calls = {};
+    const view = buildView({
+      S: { ...INITIAL_STATE, reminderForm: { type: 'session', message: 'Hi there' } }, theme: LIGHT, allClients: () => CLIENTS,
+      buildTreatmentPlan: (c) => ({ clientName: c.name, phases: [], milestones: [], currentPhaseLabel: '', currentPhaseDesc: '' }),
+      handlers: new Proxy({
+        isGroupExpanded: () => false,
+        onReminderTypeChange: (type) => { calls.type = type; },
+        onReminderMessageChange: (msg) => { calls.message = msg; },
+        onCopyAndSaveReminder: () => { calls.copied = true; },
+      }, { get: (t, p) => t[p] || (() => {}) }),
+      isAdmin: true,
+    });
+    expect(view.reminderTypeOptions.map((t) => t.id)).toEqual(['session', 'activity', 'checkin', 'assessment']);
+    view.reminderTypeOptions.find((t) => t.id === 'checkin').onClick();
+    view.onReminderMessageChange({ target: { value: 'Updated message' } });
+    view.onCopyAndSaveReminder();
+    expect(calls.type).toBe('checkin');
+    expect(calls.message).toBe('Updated message');
+    expect(calls.copied).toBe(true);
   });
 });
 
@@ -1739,21 +1875,25 @@ describe('buildView — Assessments tab can set a review reminder (reuses create
   });
 });
 
-describe('buildCaseloadCsv — Caseload CSV export (mirrors TherapistDashboard.jsx\'s handleExportCSV)', () => {
+describe('buildCaseloadCsv — Caseload CSV export (mirrors TherapistDashboard.jsx\'s handleExportReports)', () => {
   it('builds a header row plus one quoted row per client', () => {
     const csv = buildCaseloadCsv([
-      { name: 'Maya Chen', email: 'maya@example.com', status: 'active', primaryWound: 'abandonment', secondaryWound: 'shame', progressPct: 42, modulesCompleted: 5, lastActiveDays: 0 },
-    ]);
+      { id: 'c1', name: 'Maya Chen', email: 'maya@example.com', status: 'active', primaryWound: 'abandonment', secondaryWound: 'shame', progressPct: 42, modulesCompleted: 5, lastActiveDays: 0, joinDate: '2026-01-01T00:00:00Z' },
+    ], { c1: { journalCount: 3, avgMood: 4.2, activitiesCompleted: 2, activitiesTotal: 5 } });
     const lines = csv.split('\n');
-    expect(lines[0]).toBe('"Name","Email","Status","Primary Wound","Secondary Wound","Progress %","Modules Completed","Last Active"');
+    expect(lines[0]).toBe('"Name","Email","Status","Support Level","Primary Wound","Secondary Wound","Progress %","Modules Completed","Journal Entries","Avg Mood","Activities Completed","Join Date","Last Active"');
     expect(lines[1]).toContain('"Maya Chen"');
     expect(lines[1]).toContain('"maya@example.com"');
     expect(lines[1]).toContain('"Today"');
+    expect(lines[1]).toContain('"3"');
+    expect(lines[1]).toContain('"4.2"');
+    expect(lines[1]).toContain('"2/5"');
   });
 
-  it('escapes embedded quotes and handles an empty caseload', () => {
-    const csv = buildCaseloadCsv([{ name: 'Say "Hi"', email: '', status: 'active', primaryWound: 'abandonment', secondaryWound: 'shame', progressPct: 0, modulesCompleted: 0, lastActiveDays: null }]);
+  it('escapes embedded quotes, falls back to N/A without aggregates, and handles an empty caseload', () => {
+    const csv = buildCaseloadCsv([{ id: 'c2', name: 'Say "Hi"', email: '', status: 'active', primaryWound: 'abandonment', secondaryWound: 'shame', progressPct: 0, modulesCompleted: 0, lastActiveDays: null, joinDate: null }]);
     expect(csv).toContain('"Say ""Hi"""');
+    expect(csv).toContain('"N/A"');
     expect(buildCaseloadCsv([]).split('\n')).toHaveLength(1);
   });
 

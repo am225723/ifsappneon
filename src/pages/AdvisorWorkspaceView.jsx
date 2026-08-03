@@ -8,7 +8,7 @@ import {
   DOC_TYPES, DOC_SOURCES, NAV_CONFIG, CLIENT_TABS, TIMELINE_TYPE_META, TAB_TITLES, NOTIFICATION_PREF_META,
   QUICK_MESSAGES, engagementStatusFor, MOOD_LABELS, RISK_TYPE_TITLE,
   UNBURDENING_MOOD_LABELS, UNBURDENING_TOTAL_STEPS, UNBURDENING_STEP_TITLES,
-  RESOURCE_TYPES, HEALING_STAGES,
+  RESOURCE_TYPES, HEALING_STAGES, supportLevelFromDays, SUPPORT_LEVEL_LABEL, REMINDER_TYPES,
 } from './advisorWorkspaceData.js';
 import { resources as RESOURCE_LIBRARY } from '../data/resourceLibraryData.js';
 import { MODULE_SEQUENCE as ACCESS_MODULE_SEQUENCE, ASSESSMENT_LABELS, FEATURE_LABELS } from '../data/accessControlData.js';
@@ -28,7 +28,7 @@ const SUGGESTION_TYPE_TO_CATEGORY = {
 // Computes every derived value the UI needs (mirrors the design's renderVals()).
 export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: H, isAdmin = false, isDemo = false }) {
   const {
-    activeTab, isDark, viewMode, selectedClientId, activeClientTab, search, filterWound, reviewedIds,
+    activeTab, isDark, viewMode, selectedClientId, activeClientTab, search, filterWound, filterSupport, filterStatus, reviewedIds,
     sessionPrepOpenId, noteDraft, savedNotes, planClientId, practiceForm, generatedPractice, assignedPractices,
     assignedLessons, coTherapyShare, coTherapyMessage, coTherapyThread, reports, notificationPrefs, notificationPrefsSaving, clientMessages,
     clientMessageDraft, activeThreadId, safetyOverrides, engagementDismissed, engagementExpanded, partsClientFilter, tasks, taskFilter, messageSearch,
@@ -44,7 +44,7 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
     reassignTherapistId, reassignClientId, reassignClientName, reassignToTherapistId, reassignSaving,
     editClientId, editClientForm, editClientSaving, editClientError,
     emailClientId, emailTemplateId, emailPreview, emailLoading, emailSending, emailSent, emailError,
-    showPinClientId,
+    showPinClientId, reminderClientId, reminderForm, reminderSaved, reminderError,
   } = S;
 
   const rootStyle = {
@@ -186,8 +186,12 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
     id: f.id, label: f.label, onClick: () => H.setFilterWound(f.id),
     style: { padding: '6px 12px', borderRadius: '999px', border: '1px solid ' + (filterWound === f.id ? theme.accent2 : theme.border), background: filterWound === f.id ? theme.accent2 : 'transparent', color: filterWound === f.id ? '#fff' : theme.text2, fontSize: '12px', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' },
   }));
+  const supportFilterOptions = [{ id: 'all', label: 'All Support Levels' }, { id: 'low', label: 'Low Support' }, { id: 'medium', label: 'Medium Support' }, { id: 'high', label: 'High Priority' }];
+  const statusFilterOptions = [{ id: 'all', label: 'All Status' }, { id: 'active', label: 'Active' }, { id: 'inactive', label: 'Inactive' }];
   const clientListFiltered = enrichedClients
     .filter((c) => filterWound === 'all' || c.primaryWound === filterWound)
+    .filter((c) => filterSupport === 'all' || supportLevelFromDays(c.lastActiveDays) === filterSupport)
+    .filter((c) => filterStatus === 'all' || c.status === filterStatus)
     .filter((c) => c.name.toLowerCase().includes(search.toLowerCase()))
     .map((c) => {
       const selected = c.id === selectedClientId;
@@ -221,6 +225,16 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
     style: { padding: '9px 14px', border: 'none', borderBottom: '2px solid ' + (activeClientTab === t.id ? theme.accent2 : 'transparent'), background: 'transparent', color: activeClientTab === t.id ? theme.text : theme.muted, fontWeight: activeClientTab === t.id ? 700 : 500, fontSize: '12.5px', cursor: 'pointer', fontFamily: 'inherit' },
   }));
 
+  // Hoisted above selectedClient so its account-status toggle (below) can
+  // use the same track/knob style builder the Access & Features tab's
+  // module/assessment/feature toggles use further down.
+  const accessToggleTrackStyle = (on, disabled) => ({
+    width: '40px', height: '22px', borderRadius: '999px', border: 'none', cursor: disabled ? 'default' : 'pointer',
+    background: on ? theme.emerald2 : theme.border, position: 'relative', padding: '3px',
+    display: 'flex', justifyContent: on ? 'flex-end' : 'flex-start', opacity: disabled ? 0.5 : 1,
+  });
+  const accessToggleKnobStyle = { width: '16px', height: '16px', borderRadius: '50%', background: '#fff' };
+
   let selectedClient = null;
   if (rawSelected) {
     // Write-oriented actions (notes, session prep, treatment plans, practice
@@ -250,10 +264,20 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
     const activePartsTop = Object.entries(activePartsCounts).sort((a, b) => b[1] - a[1]).slice(0, 8);
     const activePartsMax = activePartsTop[0]?.[1] || 1;
     const titleCase = (s) => String(s).replace(/-/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase());
+    const rawAccountStatus = rawSelected.accountStatus || 'active';
     selectedClient = {
       id: rawSelected.id, name: rawSelected.name, initial: rawSelected.initial, email: rawSelected.email, phone: rawSelected.phone,
       pin: rawSelected.pin || '', pinRevealed: showPinClientId === rawSelected.id, onToggleShowPin: () => H.onToggleShowPin(rawSelected.id),
       statusLabel: rawSelected.status === 'active' ? 'Active' : 'Inactive', statusChip: severityStyle(theme, rawSelected.status === 'active' ? 'low' : 'medium'),
+      accountStatus: rawAccountStatus,
+      accountStatusLabel: rawAccountStatus === 'active' ? 'Active' : 'Inactive',
+      accountStatusChip: severityStyle(theme, rawAccountStatus === 'active' ? 'low' : 'medium'),
+      accountStatusTrackStyle: accessToggleTrackStyle(rawAccountStatus === 'active', false),
+      accountStatusKnobStyle: accessToggleKnobStyle,
+      onToggleAccountStatus: () => H.onToggleAccountStatus(rawSelected.id),
+      reminderOpen: reminderClientId === rawSelected.id,
+      onOpenReminder: () => H.onOpenReminderClient(rawSelected.id),
+      onCloseReminder: () => H.onCloseReminderClient(),
       unassigned: !!rawSelected.unassigned, onClaim: () => H.onClaimClient(rawSelected.id),
       woundChip: woundChip(rawSelected.primaryWound, isDark, false), woundLabel: WOUND_META[rawSelected.primaryWound].label,
       secondaryChip: woundChip(rawSelected.secondaryWound, isDark, true), secondaryLabel: WOUND_META[rawSelected.secondaryWound].label,
@@ -762,12 +786,6 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
     return { key, label: NOTIFICATION_PREF_META[key].label, desc: NOTIFICATION_PREF_META[key].desc, onClick: () => H.toggleSetting(key), trackStyle: { width: '40px', height: '22px', borderRadius: '999px', border: 'none', cursor: 'pointer', background: on ? theme.emerald2 : theme.border, position: 'relative', padding: '3px', display: 'flex', justifyContent: on ? 'flex-end' : 'flex-start' }, knobStyle: { width: '16px', height: '16px', borderRadius: '50%', background: '#fff' } };
   });
 
-  const accessToggleTrackStyle = (on, disabled) => ({
-    width: '40px', height: '22px', borderRadius: '999px', border: 'none', cursor: disabled ? 'default' : 'pointer',
-    background: on ? theme.emerald2 : theme.border, position: 'relative', padding: '3px',
-    display: 'flex', justifyContent: on ? 'flex-end' : 'flex-start', opacity: disabled ? 0.5 : 1,
-  });
-  const accessToggleKnobStyle = { width: '16px', height: '16px', borderRadius: '50%', background: '#fff' };
   const accessControlClientOptions = assignedClients.map((c) => ({ id: c.id, name: c.name }));
   const accessControlClient = ALL_CLIENTS.find((c) => c.id === accessControlClientId) || null;
   const accessControlEffectiveForm = accessControlForm || { modules: [], assessments: [], features: {} };
@@ -866,6 +884,7 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
     isClientTabModuleInsights: activeClientTab === 'moduleInsights',
     isClientTabBetweenSession: activeClientTab === 'betweenSession', isClientTabLifeReflections: activeClientTab === 'lifeReflections',
     isClientTabHealingJourney: activeClientTab === 'healingJourney', isClientTabCurriculumReflections: activeClientTab === 'curriculumReflections',
+    isClientTabAccess: activeClientTab === 'access',
     isClinicalNotes: activeTab === 'clinical-notes', isClinicalPlans: activeTab === 'clinical-plans', isClinicalMbc: activeTab === 'clinical-mbc', isClinicalParts: activeTab === 'clinical-parts',
     isClinicalPractice: activeTab === 'clinical-practice', isClinicalPracticeInteractive: activeTab === 'clinical-practice-interactive',
     isClinicalLessons: activeTab === 'clinical-lessons', isClinicalCurriculumBuilder: activeTab === 'clinical-curriculum-builder', isClinicalDocs: activeTab === 'clinical-docs',
@@ -877,6 +896,8 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
     todaysSessions, caseloadSnapshot, goToReview: () => H.setTab('review'), goToClients: () => H.setTab('clients-caseload'),
     goToMessages: () => H.setTab('messages'), goToTasks: () => H.setTab('tasks'),
     woundFilters, clientListFiltered, hasSelectedClient, selectedClient, clientTabs,
+    supportFilterOptions, filterSupport, onFilterSupportChange: (e) => H.setFilterSupport(e.target.value),
+    statusFilterOptions, filterStatus, onFilterStatusChange: (e) => H.setFilterStatus(e.target.value),
     deactivatedClients, hasDeactivatedClients: deactivatedClients.length > 0,
     isClientTabOverview: activeClientTab === 'overview', isClientTabSessionPrep: activeClientTab === 'sessionPrep', isClientTabAssessments: activeClientTab === 'assessments', isClientTabTimeline: activeClientTab === 'timeline', isClientTabNotes: activeClientTab === 'notes',
     isClientTabPlan: activeClientTab === 'plan', isClientTabMbc: activeClientTab === 'mbc', isClientTabParts: activeClientTab === 'parts',
@@ -928,6 +949,13 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
     accessControlModuleRows, accessControlAssessmentRows, accessControlFeatureRows,
     accessControlSaving: !!accessControlSaving, accessControlSaved,
     onSaveAccessControl: H.onSaveAccessControl,
+    reminderForm, reminderSaved: !!reminderSaved, reminderError: reminderError || '',
+    reminderTypeOptions: REMINDER_TYPES.map((t) => ({
+      id: t.id, label: t.label, onClick: () => H.onReminderTypeChange(t.id),
+      style: { padding: '8px 10px', borderRadius: '10px', border: '1px solid ' + (reminderForm.type === t.id ? theme.emerald2 : theme.border), background: reminderForm.type === t.id ? theme.emerald2 : 'transparent', color: reminderForm.type === t.id ? '#fff' : theme.text2, fontSize: '12px', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' },
+    })),
+    onReminderMessageChange: (e) => H.onReminderMessageChange(e.target.value),
+    onCopyAndSaveReminder: H.onCopyAndSaveReminder,
     teamRows, noTeamRows, teamLoading: !!teamLoading, onRefreshTeam: H.onRefreshTeam,
     hasReassignTarget, reassignClientName, reassignToTherapistId, reassignTargetOptions, reassignSaving: !!reassignSaving,
     onCancelReassign: H.onCancelReassign, onReassignToTherapistChange: H.onReassignToTherapistChange, onSaveReassignment: H.onSaveReassignment,
@@ -1209,6 +1237,14 @@ function ClientsCaseload({ v }) {
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
           {v.woundFilters.map((f) => (<button key={f.id} onClick={f.onClick} style={f.style}>{f.label}</button>))}
         </div>
+        <div style={{ display: 'flex', gap: '6px' }}>
+          <select value={v.filterSupport} onChange={v.onFilterSupportChange} style={{ ...v.selectStyle, flex: 1 }}>
+            {v.supportFilterOptions.map((o) => (<option key={o.id} value={o.id}>{o.label}</option>))}
+          </select>
+          <select value={v.filterStatus} onChange={v.onFilterStatusChange} style={{ ...v.selectStyle, flex: 1 }}>
+            {v.statusFilterOptions.map((o) => (<option key={o.id} value={o.id}>{o.label}</option>))}
+          </select>
+        </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
           {v.clientListFiltered.map((c) => (
             <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -1278,9 +1314,26 @@ function ClientsCaseload({ v }) {
                 <button onClick={sc.onExportReport} disabled={!sc.onExportReport} title={sc.exportReportLoading ? 'Client detail is still loading — try again in a moment.' : undefined} style={{ ...v.secondaryBtnStyle, opacity: sc.onExportReport ? 1 : 0.5, cursor: sc.onExportReport ? 'pointer' : 'not-allowed' }}>{sc.exportReportLoading ? 'Export report (loading…)' : 'Export report'}</button>
                 <button onClick={() => v.onStartEditClient(sc.id)} disabled={!sc.canWrite} style={{ ...v.secondaryBtnStyle, opacity: sc.canWrite ? 1 : 0.5, cursor: sc.canWrite ? 'pointer' : 'not-allowed' }}>Edit</button>
                 <button onClick={() => v.onOpenEmailClient(sc.id)} disabled={!sc.canWrite} style={{ ...v.secondaryBtnStyle, opacity: sc.canWrite ? 1 : 0.5, cursor: sc.canWrite ? 'pointer' : 'not-allowed' }}>Email</button>
+                <button onClick={sc.onOpenReminder} disabled={!sc.canWrite} style={{ ...v.secondaryBtnStyle, opacity: sc.canWrite ? 1 : 0.5, cursor: sc.canWrite ? 'pointer' : 'not-allowed' }}>Remind</button>
                 <button onClick={sc.onToggleShowPin} disabled={!sc.canWrite} title="Show this client's login PIN" style={{ ...v.secondaryBtnStyle, opacity: sc.canWrite ? 1 : 0.5, cursor: sc.canWrite ? 'pointer' : 'not-allowed' }}>{sc.pinRevealed ? `PIN: ${sc.pin}` : 'Show PIN'}</button>
               </div>
             </div>
+            {sc.reminderOpen && (
+              <div style={{ marginTop: '14px', padding: '14px', borderRadius: '14px', background: 'var(--surface-2)', border: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span style={{ fontSize: '12.5px', fontWeight: 700, color: 'var(--text)' }}>Send reminder to {sc.name}</span>
+                  <button onClick={sc.onCloseReminder} style={v.secondaryBtnStyle}>Close</button>
+                </div>
+                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                  {v.reminderTypeOptions.map((t) => (<button key={t.id} onClick={t.onClick} style={t.style}>{t.label}</button>))}
+                </div>
+                <textarea value={v.reminderForm.message} onChange={v.onReminderMessageChange} rows={4} placeholder="Type your reminder message…" style={{ ...inp(), resize: 'vertical', fontFamily: 'inherit' }} />
+                {v.reminderError && <div style={{ fontSize: '12px', color: 'var(--risk-high-text)' }}>{v.reminderError}</div>}
+                {v.reminderSaved && <div style={{ fontSize: '12px', color: 'var(--emerald-2)', fontWeight: 600 }}>Reminder copied to clipboard and saved.</div>}
+                <button className="aw-primary" onClick={v.onCopyAndSaveReminder} disabled={!v.reminderForm.message.trim()} style={{ ...v.primaryBtnStyle, opacity: v.reminderForm.message.trim() ? 1 : 0.5 }}>Copy & save reminder</button>
+                <div style={{ fontSize: '11.5px', color: 'var(--muted)' }}>Copies the message to your clipboard so you can paste it in your preferred messaging app. A log is saved in this client's session notes.</div>
+              </div>
+            )}
             {v.editClientId === sc.id && (
               <div style={{ marginTop: '14px', padding: '14px', borderRadius: '14px', background: 'var(--surface-2)', border: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 <span style={{ fontSize: '12.5px', fontWeight: 700, color: 'var(--text)' }}>Edit client</span>
@@ -1361,6 +1414,7 @@ function ClientsCaseload({ v }) {
           {v.isClientTabLifeReflections && <LifeReflectionsTab lr={sc.lifeReflections} onClaim={sc.onClaim} />}
           {v.isClientTabHealingJourney && <HealingJourneyTab ht={sc.healingTimeline} ub={sc.unburdening} ct={sc.coTherapyProgress} onClaim={sc.onClaim} />}
           {v.isClientTabCurriculumReflections && <CurriculumReflectionsTab cr={sc.curriculumReflections} pc={sc.personalizedCurriculum} onClaim={sc.onClaim} />}
+          {v.isClientTabAccess && <ClientAccessFeaturesTab v={v} sc={sc} />}
           {v.isClientTabTimeline && (
             <div style={CARD}>
               <span style={{ ...FR, fontSize: '15px' }}>Unified timeline</span>
@@ -3187,6 +3241,54 @@ function EngagementView({ v }) {
   );
 }
 
+// Shared by the standalone Admin > Access page (client picked from a
+// dropdown) and the per-client Access & Features tab (client implicit —
+// see ClientAccessFeaturesTab) so both write the same
+// ifs_clients.access_restrictions shape through the same handlers.
+function AccessControlBody({ v, clientName }) {
+  return (
+    <>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 4px', borderTop: '1px solid var(--border)' }}>
+        <div>
+          <div style={{ fontSize: '13.5px', fontWeight: 600, color: 'var(--text)' }}>Full access</div>
+          <div style={{ fontSize: '12px', color: 'var(--muted)', marginTop: '2px' }}>When on, {clientName} can reach every module, assessment, and feature.</div>
+        </div>
+        <button onClick={v.onToggleAccessControlFullAccess} style={v.accessControlFullAccessTrackStyle}><div style={v.accessControlFullAccessKnobStyle} /></button>
+      </div>
+
+      <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.04em', marginTop: '14px', paddingTop: '10px', borderTop: '1px solid var(--border)' }}>Modules</div>
+      {v.accessControlModuleRows.map((m) => (
+        <div key={m.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 4px' }}>
+          <div style={{ fontSize: '13px', color: 'var(--text)' }}>{m.label}</div>
+          <button onClick={m.onClick} disabled={m.disabled} style={m.trackStyle}><div style={m.knobStyle} /></button>
+        </div>
+      ))}
+
+      <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.04em', marginTop: '14px', paddingTop: '10px', borderTop: '1px solid var(--border)' }}>Assessments</div>
+      {v.accessControlAssessmentRows.map((a) => (
+        <div key={a.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 4px' }}>
+          <div style={{ fontSize: '13px', color: 'var(--text)' }}>{a.label}</div>
+          <button onClick={a.onClick} disabled={a.disabled} style={a.trackStyle}><div style={a.knobStyle} /></button>
+        </div>
+      ))}
+
+      <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.04em', marginTop: '14px', paddingTop: '10px', borderTop: '1px solid var(--border)' }}>Features</div>
+      {v.accessControlFeatureRows.map((f) => (
+        <div key={f.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 4px' }}>
+          <div style={{ fontSize: '13px', color: 'var(--text)' }}>{f.label}</div>
+          <button onClick={f.onClick} disabled={f.disabled} style={f.trackStyle}><div style={f.knobStyle} /></button>
+        </div>
+      ))}
+
+      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '18px', paddingTop: '14px', borderTop: '1px solid var(--border)' }}>
+        <button onClick={v.onSaveAccessControl} disabled={v.accessControlSaving || v.isDemo} style={v.primaryBtnStyle}>{v.accessControlSaving ? 'Saving…' : 'Save access'}</button>
+        {v.accessControlSaved && <span style={{ fontSize: '12.5px', color: 'var(--emerald-2)', fontWeight: 600 }}>{v.accessControlSaved}</span>}
+        {v.isDemo && <span style={{ fontSize: '12px', color: 'var(--muted)' }}>Sign in to save changes.</span>}
+      </div>
+    </>
+  );
+}
+
 function AccessControlView({ v }) {
   return (
     <div style={{ maxWidth: '640px', ...CARD, display: 'flex', flexDirection: 'column', gap: '4px' }}>
@@ -3200,47 +3302,46 @@ function AccessControlView({ v }) {
           {v.accessControlClientOptions.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
       </div>
-      {v.hasAccessControlClient && (
-        <>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 4px', borderTop: '1px solid var(--border)' }}>
-            <div>
-              <div style={{ fontSize: '13.5px', fontWeight: 600, color: 'var(--text)' }}>Full access</div>
-              <div style={{ fontSize: '12px', color: 'var(--muted)', marginTop: '2px' }}>When on, {v.accessControlClientName} can reach every module, assessment, and feature.</div>
+      {v.hasAccessControlClient && <AccessControlBody v={v} clientName={v.accessControlClientName} />}
+    </div>
+  );
+}
+
+// New — feature-gating + account-status tab embedded directly on a client's
+// profile (previously only reachable from the separate Admin > Access page
+// via a client-picker dropdown). Reuses the exact same
+// ifs_clients.access_restrictions read/write path as AccessControlView;
+// H.setClientTab keeps accessControlClientId synced to the open client.
+function ClientAccessFeaturesTab({ v, sc }) {
+  if (sc.unassigned) {
+    return (
+      <div style={CARD}>
+        <span style={{ fontSize: '12.5px', color: 'var(--risk-med-text)' }}>Add this client to your caseload to manage their account status and feature access.</span>
+        {sc.onClaim && <button type="button" onClick={sc.onClaim} style={{ marginTop: '10px', fontSize: '11px', fontWeight: 700, padding: '8px 10px', borderRadius: '10px', border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text-2)', cursor: 'pointer', fontFamily: 'inherit' }}>Add to my caseload</button>}
+      </div>
+    );
+  }
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+      <div style={CARD}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div>
+            <div style={{ fontSize: '13.5px', fontWeight: 600, color: 'var(--text)' }}>Account status</div>
+            <div style={{ fontSize: '12px', color: 'var(--muted)', marginTop: '2px' }}>
+              Deactivating suspends {sc.name}'s account entirely — distinct from removing them from your caseload.
             </div>
-            <button onClick={v.onToggleAccessControlFullAccess} style={v.accessControlFullAccessTrackStyle}><div style={v.accessControlFullAccessKnobStyle} /></button>
           </div>
-
-          <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.04em', marginTop: '14px', paddingTop: '10px', borderTop: '1px solid var(--border)' }}>Modules</div>
-          {v.accessControlModuleRows.map((m) => (
-            <div key={m.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 4px' }}>
-              <div style={{ fontSize: '13px', color: 'var(--text)' }}>{m.label}</div>
-              <button onClick={m.onClick} disabled={m.disabled} style={m.trackStyle}><div style={m.knobStyle} /></button>
-            </div>
-          ))}
-
-          <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.04em', marginTop: '14px', paddingTop: '10px', borderTop: '1px solid var(--border)' }}>Assessments</div>
-          {v.accessControlAssessmentRows.map((a) => (
-            <div key={a.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 4px' }}>
-              <div style={{ fontSize: '13px', color: 'var(--text)' }}>{a.label}</div>
-              <button onClick={a.onClick} disabled={a.disabled} style={a.trackStyle}><div style={a.knobStyle} /></button>
-            </div>
-          ))}
-
-          <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.04em', marginTop: '14px', paddingTop: '10px', borderTop: '1px solid var(--border)' }}>Features</div>
-          {v.accessControlFeatureRows.map((f) => (
-            <div key={f.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 4px' }}>
-              <div style={{ fontSize: '13px', color: 'var(--text)' }}>{f.label}</div>
-              <button onClick={f.onClick} disabled={f.disabled} style={f.trackStyle}><div style={f.knobStyle} /></button>
-            </div>
-          ))}
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '18px', paddingTop: '14px', borderTop: '1px solid var(--border)' }}>
-            <button onClick={v.onSaveAccessControl} disabled={v.accessControlSaving || v.isDemo} style={v.primaryBtnStyle}>{v.accessControlSaving ? 'Saving…' : 'Save access'}</button>
-            {v.accessControlSaved && <span style={{ fontSize: '12.5px', color: 'var(--emerald-2)', fontWeight: 600 }}>{v.accessControlSaved}</span>}
-            {v.isDemo && <span style={{ fontSize: '12px', color: 'var(--muted)' }}>Sign in to save changes.</span>}
-          </div>
-        </>
-      )}
+          <button onClick={sc.onToggleAccountStatus} style={sc.accountStatusTrackStyle}><div style={sc.accountStatusKnobStyle} /></button>
+        </div>
+        <span style={{ ...sc.accountStatusChip, marginTop: '10px', display: 'inline-block' }}>{sc.accountStatusLabel}</span>
+      </div>
+      <div style={{ maxWidth: '640px', ...CARD, display: 'flex', flexDirection: 'column', gap: '4px' }}>
+        <span style={{ ...FR, fontSize: '16px' }}>Feature access</span>
+        <div style={{ fontSize: '12.5px', color: 'var(--muted)', marginBottom: '4px' }}>
+          Lock or unlock which modules, assessments, and features {sc.name} can reach in their own portal.
+        </div>
+        {v.hasAccessControlClient && v.accessControlClientId === sc.id && <AccessControlBody v={v} clientName={sc.name} />}
+      </div>
     </div>
   );
 }
