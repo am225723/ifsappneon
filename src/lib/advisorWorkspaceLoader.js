@@ -23,7 +23,8 @@ import { loadCurriculumReflections } from './curriculumReflections.js';
 import { summarizeInteractiveResponses } from './interactiveWorksheetSummary.js';
 import { buildPartSuggestions } from './partSuggestionEngine.js';
 import { loadPartSuggestionState, applySuggestionState } from './partSuggestionState.js';
-import { supabase } from './supabase';
+import { supabase, supabaseHelpers } from './supabase';
+import { aiCurriculumPersonalizer } from './aiCurriculumPersonalizer.js';
 import { generateHomework, generateHomeworkBatch } from './homeworkAI.js';
 import { isMissingWorksheetPersistenceColumn, WORKSHEET_MIGRATION_ADMIN_WARNING } from './worksheetPersistenceFallback';
 import { getClerkToken } from './apiAuth.js';
@@ -1870,6 +1871,113 @@ export async function loadWorkspacePersonalizedCurriculum(clientId, isAssigned) 
   } catch {
     return [];
   }
+}
+
+// Full rows (including customized_content) for the Custom Curriculum
+// builder tab below — unlike loadWorkspacePersonalizedCurriculum above
+// (a read-only summary deliberately trimmed for the Curriculum Reflections
+// tab), the builder is the actual write surface and needs the same
+// goals/topics/activities/watchFor detail TherapistDashboard.jsx's Lesson
+// Editor module cards already show.
+export async function loadWorkspaceCurriculumModulesForBuilder(clientId) {
+  if (!clientId) return [];
+  try {
+    const { data, error } = await supabase
+      .from('ifs_personalized_curriculum')
+      .select('id, module_id, module_order, module_title, module_description, customized_content, primary_wound_focus, estimated_minutes, difficulty_level, updated_at')
+      .eq('client_id', clientId)
+      .order('module_order', { ascending: true });
+    if (error) return [];
+    return data || [];
+  } catch {
+    return [];
+  }
+}
+
+// Same aiCurriculumPersonalizer -> supabaseHelpers.savePersonalizedCurriculum
+// flow TherapistDashboard.jsx's handleGenerateCurriculum already runs — the
+// Custom Curriculum nav tab in the workspace was a dead-end link-out to an
+// unrelated page (/assessment-builder builds *assessments*, not curricula),
+// with no way to actually generate or edit a client's curriculum.
+export async function generateWorkspacePersonalizedCurriculum(clientId, primaryWound, secondaryWound) {
+  if (!clientId) return { error: { message: 'Missing client id' } };
+  try {
+    const scoreForWound = (w) => (w === primaryWound ? 20 : w === secondaryWound ? 12 : 2);
+    const scores = WORKSPACE_WOUNDS.map((w) => ({ id: w, score: scoreForWound(w) }));
+    const curriculum = aiCurriculumPersonalizer.analyzeAndPersonalize(scores);
+    if (!curriculum || !curriculum.personalizedModules?.length) {
+      return { error: { message: 'Could not generate curriculum. Please try different wound types.' } };
+    }
+    await supabaseHelpers.savePersonalizedCurriculum(clientId, curriculum);
+    // Always insert a fresh assessment record so the client's curriculum
+    // page picks up the latest wound type (most recent assessment_date wins).
+    const { error: assessError } = await supabase.from('ifs_assessment_results').insert({
+      client_id: clientId,
+      primary_wound: primaryWound,
+      secondary_wound: secondaryWound,
+      abandonment_score: scoreForWound('abandonment'),
+      shame_score: scoreForWound('shame'),
+      neglect_score: scoreForWound('neglect'),
+      betrayal_score: scoreForWound('betrayal'),
+      helplessness_score: scoreForWound('helplessness'),
+      tertiary_wounds: WORKSPACE_WOUNDS.filter((w) => w !== primaryWound && w !== secondaryWound),
+      assessment_date: new Date().toISOString(),
+      assessment_version: '1.0',
+    });
+    if (assessError) console.warn('Assessment record write failed (non-critical):', assessError.message);
+    return { error: null };
+  } catch (e) {
+    return { error: { message: e?.message || 'Failed to generate curriculum.' } };
+  }
+}
+
+// Same ifs_personalized_curriculum update TherapistDashboard.jsx's
+// handleSaveModuleEdit already runs.
+export async function updateWorkspaceCurriculumModule(moduleId, { title, description, estimatedMinutes }) {
+  if (!moduleId) return { error: { message: 'Missing module id' } };
+  const { error } = await supabase
+    .from('ifs_personalized_curriculum')
+    .update({ module_title: title, module_description: description, estimated_minutes: estimatedMinutes, updated_at: new Date().toISOString() })
+    .eq('id', moduleId);
+  return { error: error || null };
+}
+
+// Same wound-specific template insert TherapistDashboard.jsx's
+// handleAddWoundModule already runs — templates come from the same shared
+// src/lib/woundLessonPlans.js data both dashboards read from.
+export async function addWorkspaceCurriculumModule(clientId, wound, template, nextOrder) {
+  if (!clientId || !template) return { error: { message: 'Missing client or template' } };
+  const truncate = (val, max) => (val && val.length > max ? val.substring(0, max) : val);
+  const moduleId = `wound-${template.id}-${Date.now()}`;
+  const { error } = await supabase.from('ifs_personalized_curriculum').insert({
+    client_id: clientId,
+    module_id: moduleId,
+    module_order: nextOrder,
+    module_title: template.title,
+    module_description: template.description,
+    customized_content: {
+      goals: template.goals, topics: template.topics, activities: template.activities,
+      watchFor: template.watchFor, homework: template.homework || '', woundFocus: wound,
+    },
+    primary_wound_focus: truncate(wound, 50),
+    estimated_minutes: template.estimatedMinutes || 60,
+    difficulty_level: template.difficulty || 'beginner',
+    updated_at: new Date().toISOString(),
+  });
+  return { error: error || null };
+}
+
+// Same delete + sequential reorder TherapistDashboard.jsx's
+// handleRemoveModule already runs. remainingModuleIds is the ordered list of
+// module ids that should keep 1-based module_order after the removal.
+export async function removeWorkspaceCurriculumModule(moduleId, remainingModuleIds) {
+  if (!moduleId) return { error: { message: 'Missing module id' } };
+  const { error } = await supabase.from('ifs_personalized_curriculum').delete().eq('id', moduleId);
+  if (error) return { error };
+  for (let i = 0; i < (remainingModuleIds || []).length; i++) {
+    await supabase.from('ifs_personalized_curriculum').update({ module_order: i + 1, updated_at: new Date().toISOString() }).eq('id', remainingModuleIds[i]);
+  }
+  return { error: null };
 }
 
 function escapeHtml(value) {

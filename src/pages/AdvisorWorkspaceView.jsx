@@ -12,6 +12,7 @@ import {
 } from './advisorWorkspaceData.js';
 import { resources as RESOURCE_LIBRARY } from '../data/resourceLibraryData.js';
 import { MODULE_SEQUENCE as ACCESS_MODULE_SEQUENCE, ASSESSMENT_LABELS, FEATURE_LABELS } from '../data/accessControlData.js';
+import { WOUND_LESSON_PLANS, WOUND_DISPLAY } from '../lib/woundLessonPlans.js';
 import { getAvailableTemplates } from '../lib/emailTemplates.js';
 import SimpleLineChart from '../components/analytics/SimpleLineChart.jsx';
 import ProgressRing from '../components/analytics/ProgressRing.jsx';
@@ -45,6 +46,10 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
     editClientId, editClientForm, editClientSaving, editClientError,
     emailClientId, emailTemplateId, emailPreview, emailLoading, emailSending, emailSent, emailError,
     showPinClientId, reminderClientId, reminderForm, reminderSaved, reminderError,
+    curriculumBuilderClientId, curriculumBuilderModules, curriculumBuilderModulesLoading,
+    curriculumBuilderPrimaryWound, curriculumBuilderSecondaryWound, curriculumGenerating, curriculumGenResult,
+    editingCurriculumModuleId, editCurriculumModuleForm, curriculumModuleSaveError,
+    showAddCurriculumModule, addCurriculumModuleWound, addingCurriculumModuleId, addCurriculumModuleResult,
   } = S;
 
   const rootStyle = {
@@ -812,6 +817,39 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
   });
   const accessControlFullAccessTrackStyle = accessToggleTrackStyle(accessControlFullAccess, false);
 
+  // Custom Curriculum builder (mirrors TherapistDashboard.jsx's Lesson
+  // Editor: generate/edit/add/remove modules), same client-picker pattern
+  // as Access Control above.
+  const curriculumWoundOptions = Object.keys(WOUND_META).map((w) => ({ id: w, label: WOUND_META[w].label }));
+  const curriculumClient = ALL_CLIENTS.find((c) => c.id === curriculumBuilderClientId) || null;
+  const hasCurriculumClient = !!curriculumClient;
+  const curriculumModuleRows = (curriculumBuilderModules || []).map((mod, index) => {
+    const content = mod.customized_content || {};
+    return {
+      id: mod.id, order: mod.module_order || index + 1, title: mod.module_title, description: mod.module_description,
+      woundLabel: mod.primary_wound_focus ? (WOUND_META[mod.primary_wound_focus]?.label || mod.primary_wound_focus) : '',
+      woundChip: mod.primary_wound_focus ? woundChip(mod.primary_wound_focus, isDark, true) : null,
+      difficultyLabel: mod.difficulty_level || '', estimatedMinutes: mod.estimated_minutes || 30,
+      personalization: content.specificChanges || content.woundFocus || '',
+      goals: content.goals || '', topics: content.topics || [], activities: content.activities || [], watchFor: content.watchFor || [],
+      isEditing: editingCurriculumModuleId === mod.id,
+      onStartEdit: () => H.onStartEditCurriculumModule(mod), onCancelEdit: H.onCancelEditCurriculumModule,
+      onRemove: () => H.onRemoveCurriculumModule(mod),
+    };
+  });
+  const addCurriculumModuleTemplateRows = (WOUND_LESSON_PLANS[addCurriculumModuleWound] || []).map((template) => {
+    const alreadyAdded = (curriculumBuilderModules || []).some((m) => m.module_title === template.title);
+    return {
+      ...template, alreadyAdded, adding: addingCurriculumModuleId === template.id,
+      childName: WOUND_DISPLAY[addCurriculumModuleWound]?.childName || '',
+      onAdd: () => H.onAddCurriculumModule(template),
+    };
+  });
+  const curriculumBuilderWoundPickerRows = curriculumWoundOptions.map((w) => ({
+    id: w.id, label: w.label, childName: WOUND_DISPLAY[w.id]?.childName || '',
+    active: addCurriculumModuleWound === w.id, onClick: () => H.onAddCurriculumModuleWoundChange(w.id),
+  }));
+
   // Same ifs_clients (staff roles) + active ifs_therapist_clients rows
   // AdminHub.jsx's loadData already queries — grouped by therapist here into
   // an expandable caseload list with a Reassign action per client.
@@ -949,6 +987,23 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
     accessControlModuleRows, accessControlAssessmentRows, accessControlFeatureRows,
     accessControlSaving: !!accessControlSaving, accessControlSaved,
     onSaveAccessControl: H.onSaveAccessControl,
+    curriculumClientOptions: accessControlClientOptions, curriculumBuilderClientId, hasCurriculumClient,
+    curriculumClientName: curriculumClient ? curriculumClient.name : '',
+    onCurriculumClientChange: (e) => H.onCurriculumClientChange(e.target.value),
+    curriculumWoundOptions, curriculumBuilderPrimaryWound, curriculumBuilderSecondaryWound,
+    curriculumSecondaryWoundOptions: curriculumWoundOptions.filter((w) => w.id !== curriculumBuilderPrimaryWound),
+    onCurriculumPrimaryWoundChange: H.onCurriculumWoundFieldChange('curriculumBuilderPrimaryWound'),
+    onCurriculumSecondaryWoundChange: H.onCurriculumWoundFieldChange('curriculumBuilderSecondaryWound'),
+    curriculumGenerating: !!curriculumGenerating, curriculumGenResult, onGenerateCurriculum: H.onGenerateCurriculum,
+    curriculumModuleRows, hasCurriculumModules: curriculumModuleRows.length > 0,
+    curriculumBuilderModulesLoading: !!curriculumBuilderModulesLoading,
+    editingCurriculumModuleId, editCurriculumModuleForm, curriculumModuleSaveError,
+    onEditCurriculumTitleChange: H.onEditCurriculumModuleFieldChange('title'),
+    onEditCurriculumDescriptionChange: H.onEditCurriculumModuleFieldChange('description'),
+    onEditCurriculumMinutesChange: H.onEditCurriculumModuleFieldChange('estimatedMinutes'),
+    onSaveCurriculumModuleEdit: H.onSaveCurriculumModuleEdit,
+    showAddCurriculumModule, onToggleAddCurriculumModule: H.toggleAddCurriculumModule,
+    addCurriculumModuleResult, curriculumBuilderWoundPickerRows, addCurriculumModuleTemplateRows,
     reminderForm, reminderSaved: !!reminderSaved, reminderError: reminderError || '',
     reminderTypeOptions: REMINDER_TYPES.map((t) => ({
       id: t.id, label: t.label, onClick: () => H.onReminderTypeChange(t.id),
@@ -1082,7 +1137,7 @@ function CommandCenter({ v }) {
       {v.isClientsEngagement && <EngagementView v={v} />}
       {v.isSettings && <SettingsView v={v} />}
       {v.isClinicalPracticeInteractive && <ImportPanel title="Interactive Practice Builder" desc="Build guided, multi-step interactive modules — more than static prompts — and assign them to clients." to="/curriculum" linkLabel="Open Curriculum" />}
-      {v.isClinicalCurriculumBuilder && <ImportPanel title="Custom Curriculum" desc="Design and assign an individualized curriculum path per client from the module library." to="/assessment-builder" linkLabel="Open Builder" />}
+      {v.isClinicalCurriculumBuilder && <CurriculumBuilderView v={v} />}
       {v.isInsightsReports && <CaseloadReportsView v={v} />}
       {v.isAdminAccess && <AccessControlView v={v} />}
       {v.isAdminTeam && <AdminTeamView v={v} />}
@@ -2891,6 +2946,158 @@ function PlansView({ v }) {
   );
 }
 
+// Mirrors TherapistDashboard.jsx's Lesson Editor: generate a personalized
+// curriculum, edit a module in place, add a wound-specific module from the
+// shared template library, or remove one — the workspace's own Custom
+// Curriculum nav tab previously had none of this, just a link-out stub.
+function CurriculumBuilderView({ v }) {
+  if (!v.hasCurriculumClient) {
+    return <div style={{ padding: '32px', textAlign: 'center', color: 'var(--muted)', fontSize: '14px' }}>Add a client to your caseload to build a personalized curriculum.</div>;
+  }
+  return (
+    <div style={{ maxWidth: '760px', display: 'flex', flexDirection: 'column', gap: '18px' }}>
+      <select value={v.curriculumBuilderClientId} onChange={v.onCurriculumClientChange} style={{ ...v.selectStyle, maxWidth: '260px' }}>
+        {v.curriculumClientOptions.map((o) => (<option key={o.id} value={o.id}>{o.name}</option>))}
+      </select>
+
+      {v.curriculumBuilderModulesLoading && <div style={{ fontSize: '13px', color: 'var(--muted)' }}>Loading curriculum…</div>}
+
+      {!v.curriculumBuilderModulesLoading && !v.hasCurriculumModules && (
+        <div style={CARD}>
+          <span style={{ ...FR, fontSize: '16px' }}>Generate a personalized curriculum for {v.curriculumClientName}</span>
+          <div style={{ fontSize: '12.5px', color: 'var(--muted)', marginTop: '6px' }}>
+            This creates a full 6-module personalized curriculum and saves an advisor-assigned wound profile. The client can still complete the formal assessment later to refine it.
+          </div>
+          <div style={{ display: 'flex', gap: '12px', marginTop: '14px', flexWrap: 'wrap' }}>
+            <div>
+              <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-2)' }}>Primary wound</label>
+              <select value={v.curriculumBuilderPrimaryWound} onChange={v.onCurriculumPrimaryWoundChange} style={{ ...v.selectStyle, display: 'block', marginTop: '4px' }}>
+                {v.curriculumWoundOptions.map((w) => (<option key={w.id} value={w.id}>{w.label}</option>))}
+              </select>
+            </div>
+            <div>
+              <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-2)' }}>Secondary wound</label>
+              <select value={v.curriculumBuilderSecondaryWound} onChange={v.onCurriculumSecondaryWoundChange} style={{ ...v.selectStyle, display: 'block', marginTop: '4px' }}>
+                {v.curriculumSecondaryWoundOptions.map((w) => (<option key={w.id} value={w.id}>{w.label}</option>))}
+              </select>
+            </div>
+          </div>
+          {v.curriculumGenResult?.error && <div style={{ marginTop: '10px', fontSize: '12.5px', color: 'var(--risk-high-text)' }}>{v.curriculumGenResult.error}</div>}
+          {v.curriculumGenResult?.success && <div style={{ marginTop: '10px', fontSize: '12.5px', color: 'var(--emerald-2)' }}>✓ {v.curriculumGenResult.success}</div>}
+          <button className="aw-primary" onClick={v.onGenerateCurriculum} disabled={v.curriculumGenerating} style={{ ...v.primaryBtnStyle, marginTop: '14px' }}>
+            {v.curriculumGenerating ? 'Generating…' : 'Generate personalized curriculum'}
+          </button>
+        </div>
+      )}
+
+      {!v.curriculumBuilderModulesLoading && v.hasCurriculumModules && (
+        <>
+          <details style={CARD}>
+            <summary style={{ cursor: 'pointer', fontSize: '13.5px', fontWeight: 600, color: 'var(--text)' }}>Regenerate curriculum with a different wound profile</summary>
+            <div style={{ display: 'flex', gap: '12px', marginTop: '12px', flexWrap: 'wrap' }}>
+              <select value={v.curriculumBuilderPrimaryWound} onChange={v.onCurriculumPrimaryWoundChange} style={v.selectStyle}>
+                {v.curriculumWoundOptions.map((w) => (<option key={w.id} value={w.id}>{w.label}</option>))}
+              </select>
+              <select value={v.curriculumBuilderSecondaryWound} onChange={v.onCurriculumSecondaryWoundChange} style={v.selectStyle}>
+                {v.curriculumSecondaryWoundOptions.map((w) => (<option key={w.id} value={w.id}>{w.label}</option>))}
+              </select>
+            </div>
+            {v.curriculumGenResult?.error && <div style={{ marginTop: '10px', fontSize: '12.5px', color: 'var(--risk-high-text)' }}>{v.curriculumGenResult.error}</div>}
+            {v.curriculumGenResult?.success && <div style={{ marginTop: '10px', fontSize: '12.5px', color: 'var(--emerald-2)' }}>✓ {v.curriculumGenResult.success}</div>}
+            <button onClick={v.onGenerateCurriculum} disabled={v.curriculumGenerating} style={{ ...v.secondaryBtnStyle, marginTop: '12px' }}>
+              {v.curriculumGenerating ? 'Regenerating…' : 'Regenerate'}
+            </button>
+            <div style={{ fontSize: '11.5px', color: 'var(--muted)', marginTop: '8px' }}>This replaces the existing curriculum with a new personalized version.</div>
+          </details>
+
+          {v.curriculumModuleRows.map((mod) => (
+            <div key={mod.id} style={CARD}>
+              {mod.isEditing ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <span style={{ ...FR, fontSize: '14px' }}>Edit module {mod.order}</span>
+                  <input value={v.editCurriculumModuleForm.title} onChange={v.onEditCurriculumTitleChange} placeholder="Title" style={inp()} />
+                  <textarea value={v.editCurriculumModuleForm.description} onChange={v.onEditCurriculumDescriptionChange} rows={3} placeholder="Description" style={{ ...inp(), resize: 'vertical', fontFamily: 'inherit' }} />
+                  <div>
+                    <label style={{ fontSize: '12px', color: 'var(--text-2)' }}>Estimated minutes</label>
+                    <input type="number" value={v.editCurriculumModuleForm.estimatedMinutes} onChange={v.onEditCurriculumMinutesChange} style={{ ...inp(), width: '100px', display: 'block', marginTop: '4px' }} />
+                  </div>
+                  {v.curriculumModuleSaveError && <div style={{ fontSize: '12px', color: 'var(--risk-high-text)' }}>{v.curriculumModuleSaveError}</div>}
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                    <button className="aw-primary" onClick={v.onSaveCurriculumModuleEdit} disabled={v.isDemo} style={{ ...v.primaryBtnStyle, opacity: v.isDemo ? 0.5 : 1 }}>Save changes</button>
+                    <button onClick={mod.onCancelEdit} style={v.secondaryBtnStyle}>Cancel</button>
+                    {v.isDemo && <span style={{ fontSize: '12px', color: 'var(--muted)' }}>Sign in to save changes.</span>}
+                  </div>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px' }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--muted)' }}>Module {mod.order}</span>
+                      {mod.woundChip && <span style={mod.woundChip}>{mod.woundLabel}</span>}
+                      {mod.difficultyLabel && <span style={{ fontSize: '10.5px', color: 'var(--muted)', textTransform: 'capitalize' }}>{mod.difficultyLabel}</span>}
+                      <span style={{ fontSize: '11px', color: 'var(--muted)' }}>{mod.estimatedMinutes} min</span>
+                    </div>
+                    <div style={{ ...FR, fontSize: '14.5px', marginTop: '4px' }}>{mod.title}</div>
+                    <div style={{ fontSize: '12.5px', color: 'var(--text-2)', marginTop: '4px', lineHeight: 1.5 }}>{mod.description}</div>
+                    {mod.personalization && (
+                      <div style={{ marginTop: '8px', padding: '8px 10px', borderRadius: '10px', background: 'var(--surface-2)', fontSize: '12px', color: 'var(--text-2)' }}>
+                        <span style={{ fontWeight: 700, color: 'var(--muted)', fontSize: '10.5px', textTransform: 'uppercase' }}>Personalization</span>
+                        <div style={{ marginTop: '2px' }}>{mod.personalization}</div>
+                      </div>
+                    )}
+                  </div>
+                  <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
+                    <button onClick={mod.onStartEdit} title="Edit module" style={{ ...v.secondaryBtnStyle, padding: '8px 10px' }}>Edit</button>
+                    <button onClick={mod.onRemove} disabled={v.isDemo} title="Remove module" style={{ ...v.secondaryBtnStyle, padding: '8px 10px', opacity: v.isDemo ? 0.5 : 1, cursor: v.isDemo ? 'not-allowed' : 'pointer' }}>Remove</button>
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+
+          <div style={CARD}>
+            {!v.showAddCurriculumModule ? (
+              <button onClick={v.onToggleAddCurriculumModule} style={{ ...v.secondaryBtnStyle, width: '100%' }}>+ Add wound-specific lesson plan</button>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span style={{ ...FR, fontSize: '14px' }}>Add wound-specific lesson plan</span>
+                  <button onClick={v.onToggleAddCurriculumModule} style={v.secondaryBtnStyle}>Close</button>
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                  {v.curriculumBuilderWoundPickerRows.map((w) => (
+                    <button key={w.id} onClick={w.onClick} style={{ padding: '6px 12px', borderRadius: '999px', border: '1px solid ' + (w.active ? 'var(--accent-2)' : 'var(--border)'), background: w.active ? 'var(--accent-2)' : 'transparent', color: w.active ? '#fff' : 'var(--text-2)', fontSize: '12px', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+                      {w.label} ({w.childName})
+                    </button>
+                  ))}
+                </div>
+                {v.addCurriculumModuleResult?.success && <div style={{ fontSize: '12.5px', color: 'var(--emerald-2)' }}>{v.addCurriculumModuleResult.success}</div>}
+                {v.addCurriculumModuleResult?.error && <div style={{ fontSize: '12.5px', color: 'var(--risk-high-text)' }}>{v.addCurriculumModuleResult.error}</div>}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '420px', overflowY: 'auto' }}>
+                  {v.addCurriculumModuleTemplateRows.map((t) => (
+                    <div key={t.id} style={{ border: '1px solid var(--border)', borderRadius: '12px', padding: '12px' }}>
+                      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '10px' }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text)' }}>{t.title}</div>
+                          <div style={{ fontSize: '12px', color: 'var(--text-2)', marginTop: '3px', lineHeight: 1.5 }}>{t.description}</div>
+                          <div style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '4px' }}>{t.childName} · {t.difficulty} · {t.estimatedMinutes} min</div>
+                        </div>
+                        <button onClick={t.onAdd} disabled={t.adding || t.alreadyAdded || v.isDemo} style={{ ...v.secondaryBtnStyle, flexShrink: 0, opacity: (t.adding || t.alreadyAdded || v.isDemo) ? 0.5 : 1, cursor: (t.adding || t.alreadyAdded || v.isDemo) ? 'not-allowed' : 'pointer' }}>
+                          {t.alreadyAdded ? 'Added' : t.adding ? 'Adding…' : 'Add'}
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 function MbcView({ v }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -3402,20 +3609,32 @@ function AdminTeamView({ v }) {
 
 function SettingsView({ v }) {
   return (
-    <div style={{ maxWidth: '560px', ...CARD, display: 'flex', flexDirection: 'column', gap: '4px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
-        <span style={{ ...FR, fontSize: '16px' }}>Notifications</span>
-        {v.notificationPrefsSaving && <span style={{ fontSize: '11.5px', color: 'var(--muted)' }}>Saving…</span>}
-      </div>
-      {v.settingsToggles.map((s) => (
-        <div key={s.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 4px', borderTop: '1px solid var(--border)' }}>
-          <div>
-            <div style={{ fontSize: '13.5px', fontWeight: 600, color: 'var(--text)' }}>{s.label}</div>
-            <div style={{ fontSize: '12px', color: 'var(--muted)', marginTop: '2px' }}>{s.desc}</div>
-          </div>
-          <button onClick={s.onClick} style={s.trackStyle}><div style={s.knobStyle} /></button>
+    <div style={{ maxWidth: '560px', display: 'flex', flexDirection: 'column', gap: '18px' }}>
+      <div style={{ ...CARD, display: 'flex', flexDirection: 'column', gap: '4px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+          <span style={{ ...FR, fontSize: '16px' }}>Notifications</span>
+          {v.notificationPrefsSaving && <span style={{ fontSize: '11.5px', color: 'var(--muted)' }}>Saving…</span>}
         </div>
-      ))}
+        {v.settingsToggles.map((s) => (
+          <div key={s.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 4px', borderTop: '1px solid var(--border)' }}>
+            <div>
+              <div style={{ fontSize: '13.5px', fontWeight: 600, color: 'var(--text)' }}>{s.label}</div>
+              <div style={{ fontSize: '12px', color: 'var(--muted)', marginTop: '2px' }}>{s.desc}</div>
+            </div>
+            <button onClick={s.onClick} style={s.trackStyle}><div style={s.knobStyle} /></button>
+          </div>
+        ))}
+      </div>
+      <div style={{ ...CARD, display: 'flex', flexDirection: 'column', gap: '4px' }}>
+        <span style={{ ...FR, fontSize: '16px', marginBottom: '10px' }}>Admin tools</span>
+        <Link to="/admin/meditation-media" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 4px', borderTop: '1px solid var(--border)', textDecoration: 'none' }}>
+          <div>
+            <div style={{ fontSize: '13.5px', fontWeight: 600, color: 'var(--text)' }}>Meditation Media Library</div>
+            <div style={{ fontSize: '12px', color: 'var(--muted)', marginTop: '2px' }}>Upload and manage meditation audio and cover images.</div>
+          </div>
+          <span style={{ fontSize: '11px', fontWeight: 700, padding: '8px 10px', borderRadius: '10px', border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text-2)' }}>Open</span>
+        </Link>
+      </div>
     </div>
   );
 }
