@@ -185,7 +185,7 @@ export default function MoodAnalytics() {
     }
 
     const role = currentClient?.user_role;
-    if (role === 'therapist') {
+    if (role === 'therapist' || role === 'advisor') {
       setIsAdvisor(true);
       loadAdvisorClients();
     } else {
