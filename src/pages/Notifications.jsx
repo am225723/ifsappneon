@@ -42,11 +42,11 @@ function formatDate(value) {
 function safeLinkFor(notification, role) {
   const type = notification.notification_type || '';
   if (type.startsWith('homework_')) return role === 'client' ? '/homework' : '/advisor-homework';
-  if (type.startsWith('session_agenda_')) return role === 'client' ? '/pre-session-checkin' : '/therapist-dashboard';
+  if (type.startsWith('session_agenda_')) return role === 'client' ? '/pre-session-checkin' : '/advisor-workspace';
   if (type.startsWith('treatment_goal_')) return role === 'client' ? '/home' : '/treatment-plans';
   if (type.startsWith('live_session_')) return role === 'client' ? '/live-session' : '/live-co-therapy';
   if (type === 'report_generated') return role === 'client' ? null : '/reports';
-  if (type === 'therapist_note_created') return role === 'client' ? null : '/therapist-dashboard';
+  if (type === 'therapist_note_created') return role === 'client' ? null : '/advisor-workspace';
   return null;
 }
 

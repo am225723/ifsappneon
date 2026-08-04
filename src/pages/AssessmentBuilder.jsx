@@ -179,7 +179,7 @@ export default function AssessmentBuilder() {
           <BarChart3 size={48} className={`mx-auto mb-4 ${theme.isDark ? 'text-slate-500' : 'text-amber-400'}`} />
           <h2 className={`text-xl font-bold mb-2 ${theme.isDark ? 'text-slate-200' : 'text-gray-800'}`}>Advisor Login Required</h2>
           <p className={`text-sm mb-6 ${theme.isDark ? 'text-slate-400' : 'text-gray-500'}`}>Please log in as an Advisor to create assessments.</p>
-          <Link to="/therapist-dashboard" className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl font-medium hover:from-amber-600 hover:to-orange-600 transition-all">
+          <Link to="/advisor-workspace" className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl font-medium hover:from-amber-600 hover:to-orange-600 transition-all">
             <ArrowLeft size={16} />
             Back to Dashboard
           </Link>
@@ -210,7 +210,7 @@ export default function AssessmentBuilder() {
       <div className={`sticky top-0 z-20 backdrop-blur-xl border-b ${theme.isDark ? 'bg-slate-900/80 border-slate-700' : 'bg-white/80 border-amber-100'}`}>
         <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Link to="/therapist-dashboard" className={`p-2 rounded-xl ${theme.isDark ? 'hover:bg-slate-700 text-slate-300' : 'hover:bg-amber-100 text-gray-600'}`}>
+            <Link to="/advisor-workspace" className={`p-2 rounded-xl ${theme.isDark ? 'hover:bg-slate-700 text-slate-300' : 'hover:bg-amber-100 text-gray-600'}`}>
               <ArrowLeft size={20} />
             </Link>
             <div>

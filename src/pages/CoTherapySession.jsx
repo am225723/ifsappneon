@@ -383,14 +383,14 @@ export default function CoTherapySession() {
   if (!selectedClientId) {
     return (
       <div className="max-w-4xl mx-auto px-4 py-8">
-        <button onClick={() => navigate('/therapist-dashboard')} className={`flex items-center gap-2 ${textSecondary} hover:${textPrimary} mb-6 transition-colors`}>
+        <button onClick={() => navigate('/advisor-workspace')} className={`flex items-center gap-2 ${textSecondary} hover:${textPrimary} mb-6 transition-colors`}>
           <ArrowLeft className="w-4 h-4" /> Back to Dashboard
         </button>
         <div className={`${cardBg} rounded-xl border ${cardBorder} p-12 text-center`}>
           <Heart className={`w-12 h-12 mx-auto mb-4 ${textMuted}`} />
           <h2 className={`text-xl font-semibold ${textPrimary} mb-2`}>No Client Selected</h2>
           <p className={`${textSecondary} mb-4`}>Please select an assigned client from the Advisor Workspace to begin a live guided practice.</p>
-          <button onClick={() => navigate('/therapist-dashboard')} className="px-5 py-2.5 bg-amber-600 text-white rounded-lg font-medium hover:bg-amber-700 transition-colors">
+          <button onClick={() => navigate('/advisor-workspace')} className="px-5 py-2.5 bg-amber-600 text-white rounded-lg font-medium hover:bg-amber-700 transition-colors">
             Go to Advisor Workspace
           </button>
         </div>
@@ -643,7 +643,7 @@ export default function CoTherapySession() {
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-6">
-      <button onClick={() => navigate('/therapist-dashboard')} className={`flex items-center gap-2 ${textSecondary} hover:${textPrimary} mb-6 transition-colors`}>
+      <button onClick={() => navigate('/advisor-workspace')} className={`flex items-center gap-2 ${textSecondary} hover:${textPrimary} mb-6 transition-colors`}>
         <ArrowLeft className="w-4 h-4" /> Back to Dashboard
       </button>
 

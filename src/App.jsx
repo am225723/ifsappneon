@@ -27,7 +27,6 @@ import PartsStudio from './pages/PartsStudio';
 import MicroLearning from './pages/MicroLearning';
 import Affirmations from './pages/Affirmations';
 import TherapyIntegration from './pages/TherapyIntegration';
-import TherapistDashboard from './pages/TherapistDashboard';
 import AdvisorWorkspace from './pages/AdvisorWorkspace';
 import TreatmentPlans from './pages/TreatmentPlans';
 import CoTherapySession from './pages/CoTherapySession';
@@ -280,7 +279,7 @@ function UnauthorizedRedirect({ currentClient, message = 'This area is not avail
   );
 }
 
-function BottomNav({ messagePath = '/inbox', advisorWorkspacePath = '/therapist-dashboard', isTherapistRole = false, isAdminOrSupervisor = false }) {
+function BottomNav({ messagePath = '/inbox', advisorWorkspacePath = '/advisor-workspace', isTherapistRole = false, isAdminOrSupervisor = false }) {
   const location = useLocation();
   const navItems = isTherapistRole ? [
     { path: '/', icon: HomeIcon, label: 'Home' },
@@ -516,7 +515,7 @@ function AppContent({ authChecked, clerkLoaded, clerkSignedIn, isAuthenticated, 
   const isAdminOrSupervisor = currentClient?.user_role === 'admin' || currentClient?.user_role === 'supervisor';
   const isTherapistRole = isTherapist || isAdminOrSupervisor;
   const messagePath = isTherapistRole ? '/messages' : '/inbox';
-  const advisorWorkspacePath = isAdminOrSupervisor ? '/admin-hub' : '/therapist-dashboard';
+  const advisorWorkspacePath = isAdminOrSupervisor ? '/admin-hub' : '/advisor-workspace';
   const homeElement = <Home clientId={currentClient?.id} client={currentClient} />;
   const myIFSWorkElement = <MyIFSWork currentClient={currentClient} />;
   const selfWorkspaceAccess = isClient || isTherapistRole;
@@ -681,9 +680,11 @@ function AppContent({ authChecked, clerkLoaded, clerkSignedIn, isAuthenticated, 
                 <Route path="/micro-learning" element={<MicroLearning />} />
                 <Route path="/affirmations" element={<Affirmations />} />
                 <Route path="/therapy" element={<TherapyIntegration />} />
-                <Route path="/admin" element={<Navigate to={isAdminOrSupervisor ? '/admin-hub' : '/therapist-dashboard'} replace />} />
-                <Route path="/therapist" element={<Navigate to="/therapist-dashboard" replace />} />
-                <Route path="/therapist-dashboard" element={therapistOnly(<TherapistDashboard />)} />
+                <Route path="/admin" element={<Navigate to={isAdminOrSupervisor ? '/admin-hub' : '/advisor-workspace'} replace />} />
+                <Route path="/therapist" element={<Navigate to="/advisor-workspace" replace />} />
+                {/* Legacy Therapist Dashboard route — Advisor Workspace (below) has replaced it as the primary
+                    destination everywhere in the app; this alias only exists for old bookmarks/links. */}
+                <Route path="/therapist-dashboard" element={<Navigate to="/advisor-workspace" replace />} />
                 <Route path="/advisor-workspace" element={therapistOnly(<AdvisorWorkspace isAdmin={isAdminOrSupervisor} currentClient={currentClient} />)} />
                 <Route path="/treatment-plans" element={therapistOnly(<TreatmentPlans />)} />
                 <Route path="/admin-hub" element={isAdminOrSupervisor ? <AdminHub /> : <UnauthorizedRedirect currentClient={currentClient} message="Admin or supervisor access is required for this page." />} />
