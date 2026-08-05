@@ -2806,7 +2806,7 @@ const LearningModuleEnhanced = ({ module, onComplete, onBack, userProgress = {},
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
         <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-          <div className="p-8">
+          <div className="p-4 sm:p-8">
             <div className="text-center mb-6">
               <div className="w-24 h-24 bg-gradient-to-r from-amber-600 to-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Award className="w-12 h-12 text-white" />

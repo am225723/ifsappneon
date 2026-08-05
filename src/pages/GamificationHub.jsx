@@ -232,7 +232,7 @@ export default function GamificationHub() {
 
         <div className="mt-4">
           <p className={`text-xs font-semibold mb-2 ${isDark ? 'text-slate-300' : 'text-gray-600'}`}>How to Earn XP:</p>
-          <div className="grid grid-cols-2 gap-1">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-1">
             {XP_ACTIONS.map((item, i) => (
               <div key={i} className={`flex items-center justify-between text-xs px-2 py-1 rounded ${isDark ? 'bg-slate-800/50' : 'bg-white/60'}`}>
                 <span className={isDark ? 'text-slate-300' : 'text-gray-600'}>{item.action}</span>

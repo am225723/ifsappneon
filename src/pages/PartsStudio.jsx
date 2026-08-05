@@ -281,10 +281,10 @@ export default function PartsStudio() {
 
       {showAddModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className={`${theme.cardBg} rounded-2xl shadow-xl max-w-md w-full p-6 ${theme.isDark ? 'text-white' : ''}`}>
+          <div className={`${theme.cardBg} rounded-2xl shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto p-4 sm:p-6 ${theme.isDark ? 'text-white' : ''}`}>
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-xl font-semibold">Add New Part</h3>
-              <button onClick={() => setShowAddModal(false)} className="p-2 hover:bg-gray-100 rounded-lg">
+              <button onClick={() => setShowAddModal(false)} aria-label="Close" className={`p-2.5 rounded-full hover:bg-gray-100 ${theme.isDark ? 'hover:bg-white/10' : ''}`}>
                 <X className="w-5 h-5" />
               </button>
             </div>

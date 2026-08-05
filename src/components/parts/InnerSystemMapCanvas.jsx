@@ -25,7 +25,7 @@ export default function InnerSystemMapCanvas({ parts = [], relationships = [], s
       onPointerMove={(event) => onPointerMove?.(event, svgRef.current)}
       onPointerUp={(event) => onPointerUp?.(event, svgRef.current)}
       onPointerLeave={(event) => onPointerUp?.(event, svgRef.current)}
-      className="w-full h-[480px] rounded-2xl bg-gradient-to-br from-brand-stone-50 to-brand-emerald-50 dark:from-slate-900 dark:to-slate-800 touch-none"
+      className="w-full aspect-square max-h-[480px] rounded-2xl bg-gradient-to-br from-brand-stone-50 to-brand-emerald-50 dark:from-slate-900 dark:to-slate-800 touch-none"
       role="img"
       aria-label={label}
     >

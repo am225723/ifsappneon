@@ -605,7 +605,7 @@ const Home = ({ clientId, client, mode = 'home', selfProfile = null, selfProfile
 
   if (loading) {
     return (
-      <div className="mx-auto max-w-6xl px-6 py-12 lg:py-20">
+      <div className="mx-auto max-w-6xl px-4 sm:px-6 py-12 lg:py-20">
         <div className="soft-card p-8 text-center">
           <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-b-2 border-t-2 border-brand-gold-600" />
           <p className="text-sm text-brand-stone-600 dark:text-slate-400">Loading your IFS path…</p>
@@ -616,7 +616,7 @@ const Home = ({ clientId, client, mode = 'home', selfProfile = null, selfProfile
 
   if (shouldShowWorkspaceChoice) {
     return (
-      <div className="mx-auto max-w-5xl px-6 py-12 lg:py-20">
+      <div className="mx-auto max-w-5xl px-4 sm:px-6 py-12 lg:py-20">
         <section className="rounded-[2rem] border border-brand-gold-100 bg-gradient-to-br from-white via-brand-sanctuary to-brand-gold-50/60 p-6 shadow-premium dark:border-brand-gold-900/40 dark:from-brand-cardDark dark:via-brand-midnight dark:to-brand-gold-950/20 md:p-8">
           <p className="text-xs font-bold uppercase tracking-[0.28em] text-brand-gold-700 dark:text-brand-gold-500">Home</p>
           <h1 className="mt-3 text-4xl font-serif font-normal text-brand-stone-900 dark:text-slate-100">Choose your IFS workspace</h1>
@@ -641,7 +641,7 @@ const Home = ({ clientId, client, mode = 'home', selfProfile = null, selfProfile
   }
 
   return (
-    <div className="mx-auto max-w-6xl px-6 py-12 lg:py-20">
+    <div className="mx-auto max-w-6xl px-4 sm:px-6 py-12 lg:py-20">
       {activeLiveSession && (
         <section className="mb-8">
           <div className="soft-card border border-brand-emerald-100 bg-brand-emerald-50/80 p-5 dark:border-brand-emerald-900/40 dark:bg-brand-emerald-950/20">
