@@ -9,8 +9,8 @@ No medication features were added. No SQL is required for the preferred static m
 ## Media file roles
 
 - **MP3**: the UploadThing-hosted guided-practice audio file used by the player.
-- **TXT**: the written transcript stored under `public/docs` and rendered by the transcript panel.
-- **SRT**: phrase-level captions stored under `public/docs/captions` and referenced by `captionsPath` in the canonical media map.
+- **TXT**: the written transcript stored under `public/meditations/transcripts` and rendered by the transcript panel.
+- **SRT**: phrase-level captions stored under `public/meditations/captions` and referenced by `captionsPath` in the canonical media map.
 - **AAF**: production/session source assets are not used by the frontend player; they are not required for app playback.
 
 ## SRT location and mapping
@@ -18,15 +18,15 @@ No medication features were added. No SQL is required for the preferred static m
 SRT files should live in:
 
 ```text
-public/docs/captions
+public/meditations/captions
 ```
 
 Every canonical guided practice now has a `captionsPath`, for example:
 
 ```text
-/docs/captions/01_Meeting_Your_Self.srt
-/docs/captions/02_Cultivating_Self_Qualities.srt
-/docs/captions/27_Mini_Body_Scan.srt
+/meditations/captions/01_Meeting_Your_Self.srt
+/meditations/captions/02_Cultivating_Self_Qualities.srt
+/meditations/captions/27_Mini_Body_Scan.srt
 ```
 
 If an SRT file is not present yet, playback and transcript rendering continue. The caption area displays:
@@ -93,7 +93,7 @@ When `prefers-reduced-motion: reduce` is active, word transitions avoid smooth s
 
 - The implementation does not use `dangerouslySetInnerHTML`.
 - The implementation does not use `eval` or `new Function`.
-- UploadThing remains the place for audio/images; SRT captions are static files under `public/docs/captions`.
+- UploadThing remains the place for audio/images; SRT captions are static files under `public/meditations/captions`.
 - No frontend UploadThing, OpenRouter, OpenAI, or Perplexity secrets were added.
 - Authorization was not loosened.
 
@@ -105,4 +105,4 @@ No SQL is required. Static `captionsPath` values in the canonical media map are 
 
 - Current highlighting is approximate and phrase-level because SRT does not usually provide word-level timestamps.
 - Word-perfect karaoke highlighting requires future word-level timing JSON.
-- The media manager can show configured caption paths and expected SRT filenames, but static SRT file existence is ultimately determined by whether the file has been published under `public/docs/captions`.
+- The media manager can show configured caption paths and expected SRT filenames, but static SRT file existence is ultimately determined by whether the file has been published under `public/meditations/captions`.
