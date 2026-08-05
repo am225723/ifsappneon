@@ -1748,7 +1748,7 @@ function AdvisorWorkspace({ isAdmin = false, currentClient = null }) {
   }
 
   const view = buildView({
-    S, theme, allClients, buildTreatmentPlan, isAdmin, isDemo,
+    S, theme, allClients, buildTreatmentPlan, isAdmin, isDemo, currentTherapistName: currentClient?.name,
     handlers: {
       setTab, setViewMode, toggleTheme, selectClient, setClientTab, onSearch, setFilterWound, setFilterSupport, setFilterStatus, markReviewed, toggleSessionPrep, onClaimClient, onMarkAgendaReviewed,
       onDeactivateClient, onReactivateClient,

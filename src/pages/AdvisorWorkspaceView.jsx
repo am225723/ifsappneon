@@ -27,7 +27,7 @@ const SUGGESTION_TYPE_TO_CATEGORY = {
 };
 
 // Computes every derived value the UI needs (mirrors the design's renderVals()).
-export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: H, isAdmin = false, isDemo = false }) {
+export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: H, isAdmin = false, isDemo = false, currentTherapistName = '' }) {
   const {
     activeTab, isDark, viewMode, selectedClientId, activeClientTab, search, filterWound, filterSupport, filterStatus, reviewedIds,
     sessionPrepOpenId, noteDraft, savedNotes, planClientId, practiceForm, generatedPractice, assignedPractices,
@@ -916,9 +916,15 @@ export function buildView({ S, theme, allClients, buildTreatmentPlan, handlers: 
   const practiceBatchRows = S.practiceBatchResults.map((item) => ({ ...item, onUse: () => H.onUseBatchPractice(item) }));
   const quickMessages = QUICK_MESSAGES.map((text) => ({ text, onClick: () => H.applyQuickMessage(text) }));
 
+  const advisorDisplayName = currentTherapistName?.trim() || 'Advisor';
+  const advisorInitials = currentTherapistName?.trim()
+    ? currentTherapistName.trim().split(/\s+/).map((w) => w[0]).join('').slice(0, 2).toUpperCase()
+    : 'A';
+  const advisorRoleLabel = isAdmin ? 'Admin' : 'Advisor';
+
   return {
     rootStyle, navRows, topbarTitle, topbarSubtitle, search, onSearch: H.onSearch, toggleTheme: H.toggleTheme, themeToggleStyle, themeKnobStyle,
-    modeToggle, isDark,
+    modeToggle, isDark, advisorDisplayName, advisorInitials, advisorRoleLabel,
     isOverview: activeTab === 'overview', isClientsCaseload: activeTab === 'clients-caseload', isClientsAnalytics: activeTab === 'clients-analytics' || activeTab === 'insights-overview', isClientsEngagement: activeTab === 'clients-engagement',
     isSafety: activeTab === 'safety', isReview: activeTab === 'review', isSessionsPrep: activeTab === 'sessions-prep', isSessionsCotherapy: activeTab === 'sessions-cotherapy',
     isSessionsLive: activeTab === 'sessions-live',
@@ -1086,10 +1092,10 @@ export function WorkspaceShell({ view: v }) {
           <div style={{ fontSize: '12px', color: 'var(--muted)', padding: '8px 10px', lineHeight: 1.5 }}>Your personal parts-work practice — separate from your caseload.</div>
         )}
         <div style={{ marginTop: 'auto', padding: '12px', borderRadius: '16px', background: 'var(--surface-2)', display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'var(--accent)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '13px', flexShrink: 0 }}>DR</div>
+          <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'var(--accent)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '13px', flexShrink: 0 }}>{v.advisorInitials}</div>
           <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-            <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Dr. Rivera</span>
-            <span style={{ fontSize: '11px', color: 'var(--muted)' }}>Advisor</span>
+            <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{v.advisorDisplayName}</span>
+            <span style={{ fontSize: '11px', color: 'var(--muted)' }}>{v.advisorRoleLabel}</span>
           </div>
         </div>
       </aside>
