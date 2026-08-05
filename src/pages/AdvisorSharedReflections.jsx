@@ -81,7 +81,7 @@ export default function AdvisorSharedReflections() {
   return (
     <main className="min-h-screen bg-brand-sanctuary px-4 py-8 dark:bg-brand-midnight sm:px-6 lg:px-8">
       <div className="mx-auto max-w-7xl">
-        <Link to="/therapist-dashboard" className="mb-6 inline-flex items-center gap-2 text-sm font-semibold text-brand-stone-600 transition hover:text-brand-gold-700 dark:text-slate-400 dark:hover:text-brand-gold-500">
+        <Link to="/advisor-workspace" className="mb-6 inline-flex items-center gap-2 text-sm font-semibold text-brand-stone-600 transition hover:text-brand-gold-700 dark:text-slate-400 dark:hover:text-brand-gold-500">
           <ArrowLeft className="h-4 w-4" /> Back to Advisor Workspace
         </Link>
 

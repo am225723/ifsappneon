@@ -185,7 +185,7 @@ export default function MoodAnalytics() {
     }
 
     const role = currentClient?.user_role;
-    if (role === 'therapist') {
+    if (role === 'therapist' || role === 'advisor') {
       setIsAdvisor(true);
       loadAdvisorClients();
     } else {
@@ -276,7 +276,7 @@ export default function MoodAnalytics() {
     <div className={`min-h-screen pb-32 ${bg}`}>
       <div className={`sticky top-0 z-20 backdrop-blur-xl border-b ${isDark ? 'bg-slate-900/80 border-slate-700' : 'bg-white/80 border-amber-100'}`}>
         <div className="max-w-4xl mx-auto px-4 py-4 flex items-center gap-3">
-          <Link to={isAdvisor ? '/therapist-dashboard' : '/home'} className={`p-2 rounded-xl ${isDark ? 'hover:bg-slate-700 text-slate-300' : 'hover:bg-amber-100 text-gray-600'}`}>
+          <Link to={isAdvisor ? '/advisor-workspace' : '/home'} className={`p-2 rounded-xl ${isDark ? 'hover:bg-slate-700 text-slate-300' : 'hover:bg-amber-100 text-gray-600'}`}>
             <ArrowLeft size={20} />
           </Link>
           <div className="flex-1">

@@ -17,7 +17,7 @@ export default function NotFound({ canAccessAdvisor = false, canAccessAdmin = fa
           <Link to="/my-ifs" className="btn-sanctuary-primary"><Sparkles className="h-4 w-4" /> My IFS Work</Link>
           <Link to="/" className="btn-sanctuary-secondary"><Home className="h-4 w-4" /> Home</Link>
           <Link to="/tools" className="btn-sanctuary-secondary"><Wrench className="h-4 w-4" /> Tools</Link>
-          {canAccessAdvisor && <Link to="/therapist-dashboard" className="btn-sanctuary-secondary"><ClipboardList className="h-4 w-4" /> Advisor Dashboard</Link>}
+          {canAccessAdvisor && <Link to="/advisor-workspace" className="btn-sanctuary-secondary"><ClipboardList className="h-4 w-4" /> Advisor Dashboard</Link>}
           {canAccessAdmin && <Link to="/admin-hub" className="btn-sanctuary-secondary"><ShieldCheck className="h-4 w-4" /> Admin Hub</Link>}
         </div>
       </section>

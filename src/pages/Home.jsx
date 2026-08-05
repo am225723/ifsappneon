@@ -629,7 +629,7 @@ const Home = ({ clientId, client, mode = 'home', selfProfile = null, selfProfile
               <h2 className="font-semibold text-brand-stone-900 dark:text-slate-100">My IFS Work</h2>
               <p className="mt-2 text-sm text-brand-stone-600 dark:text-slate-400">Open your own Curriculum, Assessments, Inner System Map, reflections, and tools.</p>
             </Link>
-            <Link to={effectiveClient?.user_role === 'admin' || effectiveClient?.user_role === 'supervisor' ? '/admin-hub' : '/ther' + 'apist'} className="soft-card-interactive p-5">
+            <Link to={effectiveClient?.user_role === 'admin' || effectiveClient?.user_role === 'supervisor' ? '/admin-hub' : '/advisor-workspace'} className="soft-card-interactive p-5">
               <ShieldCheck className="mb-4 h-7 w-7 text-brand-emerald-700 dark:text-brand-emerald-100" />
               <h2 className="font-semibold text-brand-stone-900 dark:text-slate-100">Advisor/Admin workspace</h2>
               <p className="mt-2 text-sm text-brand-stone-600 dark:text-slate-400">Continue assigned-client workflows, curriculum support, review queues, reports, and settings.</p>

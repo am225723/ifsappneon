@@ -94,8 +94,8 @@ export default function LongitudinalAnalytics() {
       <div className="mx-auto max-w-7xl space-y-6">
         <div className="flex flex-col gap-4 rounded-3xl border border-brand-stone-200/80 bg-white/85 p-6 shadow-sm dark:border-slate-700 dark:bg-slate-900/75 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <Link to="/therapist-dashboard" className="mb-3 inline-flex items-center gap-2 text-sm font-medium text-brand-stone-600 hover:text-brand-gold-700 dark:text-slate-400 dark:hover:text-brand-gold-400">
-              <ArrowLeft className="h-4 w-4" /> Therapist dashboard
+            <Link to="/advisor-workspace" className="mb-3 inline-flex items-center gap-2 text-sm font-medium text-brand-stone-600 hover:text-brand-gold-700 dark:text-slate-400 dark:hover:text-brand-gold-400">
+              <ArrowLeft className="h-4 w-4" /> Advisor Workspace
             </Link>
             <h1 className="flex items-center gap-3 text-3xl font-serif font-bold text-brand-stone-900 dark:text-white">
               <BarChart3 className="h-8 w-8 text-brand-gold-600" /> Longitudinal Analytics

@@ -94,7 +94,7 @@ export default function AdvisorInnerSystemMap() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-amber-50 via-stone-50 to-emerald-50 p-4 dark:from-slate-950 dark:via-slate-900 dark:to-emerald-950 lg:p-8">
       <div className="mx-auto max-w-7xl space-y-5">
-        <Link to="/therapist-dashboard" className="inline-flex items-center gap-2 text-sm font-medium text-brand-stone-600 hover:text-brand-emerald-700 dark:text-slate-300"><ArrowLeft className="h-4 w-4" /> Back to Advisor Dashboard</Link>
+        <Link to="/advisor-workspace" className="inline-flex items-center gap-2 text-sm font-medium text-brand-stone-600 hover:text-brand-emerald-700 dark:text-slate-300"><ArrowLeft className="h-4 w-4" /> Back to Advisor Dashboard</Link>
         <section className="rounded-3xl border border-brand-emerald-100 bg-white/85 p-6 shadow-sm dark:border-slate-700 dark:bg-slate-950/80">
           <p className="text-xs font-bold uppercase tracking-[0.22em] text-brand-emerald-700 dark:text-brand-emerald-100">Client Inner System Map</p>
           <h1 className="mt-2 text-3xl font-serif text-brand-stone-900 dark:text-slate-100">{client?.name || 'Client'} Inner System Map</h1>
