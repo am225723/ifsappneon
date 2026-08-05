@@ -1,6 +1,8 @@
 # Exercise Recording Scripts
 
-These are the narration scripts for the 10 guided exercises across four categories. None have been recorded yet.
+These are the narration scripts for the 10 guided exercises across four categories.
+
+4 of 10 have been recorded: Meeting Your Self, Cultivating Self Qualities, Meeting Your Inner Child, and Reparenting Meditation. The remaining 6 (Inner Child Play, Unblending Practice, Parts Council Meditation, Working with Firefighters, Box Breathing, 4-7-8 Breathing) still need to be recorded.
 
 After recording, place each MP3 file in `public/audio/exercises/` using the suggested filename.
 
@@ -277,7 +279,7 @@ After recording, place each MP3 file in `public/audio/exercises/` using the sugg
 ---
 
 ## 5. Inner Child Play
-**Duration:** 12 minutes | **Difficulty:** Beginner | **Filename:** `inner-child-play.mp3`
+**Duration:** 12 minutes | **Difficulty:** Beginner | **Filename:** `child-play.mp3`
 
 > Today is about something different — something lighter. Today, we play.
 >

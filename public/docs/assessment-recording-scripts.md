@@ -1,13 +1,13 @@
 # Assessment Recording Scripts
 
-These are narration scripts for audio introductions to each assessment. Currently, only the **Attachment Style Assessment** has a recorded intro (`attachment-assessment-intro.mp3`).
+These are narration scripts for audio introductions to each assessment. All 4 intros have been recorded: IFS Wound Assessment, Identify Your Protective Parts, Self-Energy Assessment, and Attachment Style Assessment.
 
 After recording, place each MP3 file in `public/audio/assessments/` using the suggested filename.
 
 ---
 
 ## 1. IFS Wound Assessment
-**Filename:** `wound-assessment-intro.mp3`
+**Filename:** `wound-assessment-intro.mp3` *(already recorded)*
 
 > Welcome to the IFS Wound Assessment. This assessment will help you discover which inner child wounds may be affecting your life today.
 >
@@ -26,7 +26,7 @@ After recording, place each MP3 file in `public/audio/assessments/` using the su
 ---
 
 ## 2. Identify Your Protective Parts
-**Filename:** `parts-assessment-intro.mp3`
+**Filename:** `parts-assessment-intro.mp3` *(already recorded)*
 
 > Welcome to the Protective Parts Assessment. This assessment helps you identify which protective parts are most active in your inner system.
 >
@@ -43,7 +43,7 @@ After recording, place each MP3 file in `public/audio/assessments/` using the su
 ---
 
 ## 3. Self-Energy Assessment
-**Filename:** `self-energy-assessment-intro.mp3`
+**Filename:** `self-energy-assessment-intro.mp3` *(already recorded)*
 
 > Welcome to the Self-Energy Assessment. This assessment evaluates your current connection to the eight qualities of Self — what we call the 8 C's in Internal Family Systems.
 >

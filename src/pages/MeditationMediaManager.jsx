@@ -284,7 +284,7 @@ export default function MeditationMediaManager() {
         <p className="text-xs font-semibold uppercase tracking-[0.3em] text-brand-gold-700 dark:text-brand-gold-500">Advisor/Admin Tools</p>
         <h1 className="mt-3 font-serif text-3xl font-semibold text-brand-stone-900 dark:text-slate-100 md:text-4xl">Meditation Media Library</h1>
         <p className="mt-3 max-w-3xl text-brand-stone-600 dark:text-slate-300">
-          Map UploadThing audio URLs and optional cover images for all 27 meditation, curriculum, and micro-learning practices. Captions use .srt files stored in public/docs/captions. The app highlights words approximately from phrase-level timings.
+          Map UploadThing audio URLs and optional cover images for all 27 meditation, curriculum, and micro-learning practices. Captions use .srt files stored in public/meditations/captions. The app highlights words approximately from phrase-level timings.
         </p>
       </header>
 
@@ -319,7 +319,7 @@ export default function MeditationMediaManager() {
                 <p>Transcript path: <span className="font-semibold">{selectedMediaMap.transcriptPath}</span></p>
                 <p>Captions path: <span className="font-semibold">{selectedMediaMap.captionsPath}</span></p>
                 <p>Expected SRT filename: <span className="font-semibold">{selectedMediaMap.captionsPath?.split('/').pop()}</span></p>
-                <p className="mt-2 font-semibold text-amber-800 dark:text-amber-200">Caption status: Transcript exists when the TXT file is present · Captions path configured · Captions file missing until the matching SRT is placed in public/docs/captions.</p>
+                <p className="mt-2 font-semibold text-amber-800 dark:text-amber-200">Caption status: Transcript exists when the TXT file is present · Captions path configured · the matching SRT should be published under public/meditations/captions.</p>
               </div>
             )}
 
@@ -417,7 +417,7 @@ export default function MeditationMediaManager() {
             {selectedMediaMap && <span className="rounded-full bg-brand-stone-100 px-3 py-1 dark:bg-slate-800">{selectedMediaMap.mp3Filename}</span>}
             {selectedMediaMap && <span className="rounded-full bg-brand-stone-100 px-3 py-1 dark:bg-slate-800">{selectedMediaMap.transcriptPath}</span>}
             {selectedMediaMap && <span className="rounded-full bg-brand-stone-100 px-3 py-1 dark:bg-slate-800">{selectedMediaMap.captionsPath}</span>}
-            {selectedMediaMap && <span className="rounded-full bg-amber-50 px-3 py-1 text-amber-800 dark:bg-amber-950/30 dark:text-amber-200">Captions file missing until SRT is published</span>}
+            {selectedMediaMap && <span className="rounded-full bg-amber-50 px-3 py-1 text-amber-800 dark:bg-amber-950/30 dark:text-amber-200">Captions expected at path above</span>}
             {form.audio_url && <span className="rounded-full bg-emerald-50 px-3 py-1 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300">Audio attached</span>}
           </div>
         </aside>
@@ -495,9 +495,9 @@ export default function MeditationMediaManager() {
                 <div className="mt-4 flex flex-wrap gap-2 text-xs font-semibold">
                   <span className={`rounded-full px-3 py-1 ${record.audio_url ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300' : 'bg-amber-50 text-amber-800 dark:bg-amber-950/30 dark:text-amber-200'}`}>{record.audio_url ? 'audioUrl mapped' : 'audioUrl missing'}</span>
                   <span className={`rounded-full px-3 py-1 ${record.uploadthing_audio_key ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300' : 'bg-amber-50 text-amber-800 dark:bg-amber-950/30 dark:text-amber-200'}`}>{record.uploadthing_audio_key ? 'UploadThing key saved' : 'UploadThing key missing'}</span>
-                  <span className="rounded-full bg-brand-stone-100 px-3 py-1 text-brand-stone-700 dark:bg-slate-800 dark:text-slate-200">Transcript exists when TXT is in public/docs</span>
+                  <span className="rounded-full bg-brand-stone-100 px-3 py-1 text-brand-stone-700 dark:bg-slate-800 dark:text-slate-200">Transcript exists when TXT is in public/meditations/transcripts</span>
                   <span className="rounded-full bg-brand-stone-100 px-3 py-1 text-brand-stone-700 dark:bg-slate-800 dark:text-slate-200">Captions path configured</span>
-                  <span className="rounded-full bg-amber-50 px-3 py-1 text-amber-800 dark:bg-amber-950/30 dark:text-amber-200">Captions file missing until SRT is published</span>
+                  <span className="rounded-full bg-amber-50 px-3 py-1 text-amber-800 dark:bg-amber-950/30 dark:text-amber-200">Captions expected in public/meditations/captions</span>
                 </div>
                 <div className="mt-4 flex flex-wrap gap-2">
                   <button type="button" onClick={() => editRecord(record)} className="rounded-2xl border border-brand-stone-200 px-3 py-2 text-xs font-semibold text-brand-stone-700 dark:border-slate-700 dark:text-slate-200">Edit</button>

@@ -39,8 +39,7 @@ import {
   ChevronDown,
   ChevronUp,
   AlertCircle,
-  Lock,
-  Volume2
+  Lock
 } from 'lucide-react';
 import { useData } from '../contexts/DataContext';
 import { progressTracker } from '../lib/supabasePersonalization';
@@ -160,15 +159,6 @@ const VoiceRecorder = ({ onRecordingComplete, label }) => {
   );
 };
 
-const CURRICULUM_AUDIO_MAP = {
-  'activity-cultivate-self': '/audio/curriculum/cultivating-self-energy.mp3',
-  'activity-self-leadership-mastery': '/audio/curriculum/self-leadership-mastery.mp3',
-  'activity-inner-child-visualization': '/audio/curriculum/safe-place-visualization.mp3',
-  'activity-reparenting-dialogue': '/audio/curriculum/reparenting-practice.mp3',
-  'activity-body-connection': '/audio/curriculum/body-inner-child-connection.mp3',
-  'activity-somatic-practice': '/audio/curriculum/somatic-healing-practice.mp3',
-};
-
 const LearningModuleEnhanced = ({ module, onComplete, onBack, userProgress = {}, woundContext = null }) => {
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [completedSteps, setCompletedSteps] = useState([]);
@@ -185,17 +175,10 @@ const LearningModuleEnhanced = ({ module, onComplete, onBack, userProgress = {},
   const hasLoadedProgressRef = useRef(false);
   const [showIncompleteWarning, setShowIncompleteWarning] = useState(false);
   const [incompleteItems, setIncompleteItems] = useState([]);
-  const [currAudioPlaying, setCurrAudioPlaying] = useState(false);
-  const [currAudioReady, setCurrAudioReady] = useState(false);
-  const [currAudioError, setCurrAudioError] = useState(false);
-  const [currAudioProgress, setCurrAudioProgress] = useState(0);
-  const [currAudioDuration, setCurrAudioDuration] = useState(0);
   const [moduleReflection, setModuleReflection] = useState({ insight: '', partNoticed: '', selfEnergyQuality: '', nextPractice: '' });
   const [reflectionStatus, setReflectionStatus] = useState('idle');
   const [reflectionMessage, setReflectionMessage] = useState('');
-  const currAudioRef = useRef(null);
-  const currAudioHandlersRef = useRef(null);
-  
+
   const { 
     userId, 
     saveModuleProgress, 
@@ -328,37 +311,6 @@ const LearningModuleEnhanced = ({ module, onComplete, onBack, userProgress = {},
       console.error('Error saving progress:', error);
     }
   };
-
-  const destroyCurrAudio = useCallback(() => {
-    if (currAudioRef.current) {
-      currAudioRef.current.pause();
-      if (currAudioHandlersRef.current) {
-        const h = currAudioHandlersRef.current;
-        currAudioRef.current.removeEventListener('loadedmetadata', h.onMeta);
-        currAudioRef.current.removeEventListener('canplaythrough', h.onReady);
-        currAudioRef.current.removeEventListener('timeupdate', h.onTime);
-        currAudioRef.current.removeEventListener('ended', h.onEnd);
-        currAudioRef.current.removeEventListener('error', h.onError);
-      }
-      currAudioRef.current.src = '';
-      currAudioRef.current.load();
-      currAudioRef.current = null;
-      currAudioHandlersRef.current = null;
-    }
-    setCurrAudioPlaying(false);
-    setCurrAudioReady(false);
-    setCurrAudioError(false);
-    setCurrAudioProgress(0);
-    setCurrAudioDuration(0);
-  }, []);
-
-  useEffect(() => {
-    return destroyCurrAudio;
-  }, [destroyCurrAudio]);
-
-  useEffect(() => {
-    destroyCurrAudio();
-  }, [currentStepIndex, destroyCurrAudio]);
 
   // Auto-save progress
   useEffect(() => {
@@ -1329,61 +1281,6 @@ const LearningModuleEnhanced = ({ module, onComplete, onBack, userProgress = {},
     );
   };
 
-  const currAudioSrc = currentStep?.data?.id ? CURRICULUM_AUDIO_MAP[currentStep.data.id] : null;
-
-  const initCurrAudio = (autoPlay = false) => {
-    if (currAudioRef.current || !currAudioSrc) return;
-    const audio = new Audio(currAudioSrc);
-    audio.preload = 'auto';
-    const handlers = {
-      onMeta: () => { setCurrAudioDuration(audio.duration); },
-      onReady: () => {
-        setCurrAudioReady(true);
-        if (autoPlay) {
-          audio.play().then(() => setCurrAudioPlaying(true)).catch(() => {});
-        }
-      },
-      onTime: () => { setCurrAudioProgress(audio.currentTime); },
-      onEnd: () => { setCurrAudioPlaying(false); setCurrAudioProgress(0); },
-      onError: () => { setCurrAudioReady(false); setCurrAudioError(true); },
-    };
-    audio.addEventListener('loadedmetadata', handlers.onMeta);
-    audio.addEventListener('canplaythrough', handlers.onReady);
-    audio.addEventListener('timeupdate', handlers.onTime);
-    audio.addEventListener('ended', handlers.onEnd);
-    audio.addEventListener('error', handlers.onError);
-    currAudioRef.current = audio;
-    currAudioHandlersRef.current = handlers;
-  };
-
-  const toggleCurrAudio = () => {
-    if (!currAudioRef.current) {
-      initCurrAudio(true);
-      return;
-    }
-    if (currAudioPlaying) {
-      currAudioRef.current.pause();
-      setCurrAudioPlaying(false);
-    } else {
-      currAudioRef.current.play().then(() => setCurrAudioPlaying(true)).catch(() => {});
-    }
-  };
-
-  const seekCurrAudio = (e) => {
-    if (!currAudioRef.current || !currAudioDuration) return;
-    const rect = e.currentTarget.getBoundingClientRect();
-    const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-    currAudioRef.current.currentTime = pct * currAudioDuration;
-    setCurrAudioProgress(currAudioRef.current.currentTime);
-  };
-
-  const formatAudioTime = (s) => {
-    if (!s || !isFinite(s)) return '0:00';
-    const m = Math.floor(s / 60);
-    const sec = Math.floor(s % 60);
-    return `${m}:${sec.toString().padStart(2, '0')}`;
-  };
-
   const renderGuidedMeditation = () => {
     const currentActivityData = currentStep?.data;
     const meditationSteps = currentActivityData?.guidedSteps || [];
@@ -1424,38 +1321,6 @@ const LearningModuleEnhanced = ({ module, onComplete, onBack, userProgress = {},
     return (
       <div className="bg-gradient-to-r from-amber-100 to-emerald-100 rounded-xl p-6 border border-amber-200">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Guided Meditation</h3>
-
-        {currAudioSrc && !currAudioError && (
-          <div className="bg-white/80 rounded-lg p-4 mb-4 border border-amber-200">
-            <div className="flex items-center gap-3 mb-2">
-              <button
-                onClick={toggleCurrAudio}
-                className="w-10 h-10 rounded-full bg-amber-600 text-white flex items-center justify-center hover:bg-amber-700 transition-colors flex-shrink-0"
-              >
-                {currAudioPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5 ml-0.5" />}
-              </button>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-1">
-                  <Volume2 className="w-4 h-4 text-amber-700 flex-shrink-0" />
-                  <span className="text-sm font-medium text-amber-800 truncate">Recorded Audio Guidance</span>
-                </div>
-                <div
-                  className="w-full h-2 bg-gray-200 rounded-full cursor-pointer group"
-                  onClick={seekCurrAudio}
-                >
-                  <div
-                    className="h-2 bg-gradient-to-r from-amber-500 to-emerald-500 rounded-full transition-all duration-200"
-                    style={{ width: currAudioDuration ? `${(currAudioProgress / currAudioDuration) * 100}%` : '0%' }}
-                  />
-                </div>
-              </div>
-              <span className="text-xs text-gray-500 flex-shrink-0 tabular-nums">
-                {formatAudioTime(currAudioProgress)} / {formatAudioTime(currAudioDuration)}
-              </span>
-            </div>
-            <p className="text-xs text-gray-500 italic">Play the recorded meditation or follow the text steps below.</p>
-          </div>
-        )}
 
         {hasSteps ? (
           <div>
