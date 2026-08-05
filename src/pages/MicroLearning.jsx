@@ -301,7 +301,7 @@ export default function MicroLearning() {
 
       {activeExercise && (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
-          <div className={`${theme.cardBg} rounded-3xl shadow-2xl max-w-2xl max-h-[90vh] overflow-y-auto w-full p-8 ${theme.isDark ? 'text-white' : ''}`}>
+          <div className={`${theme.cardBg} rounded-3xl shadow-2xl max-w-2xl max-h-[90vh] overflow-y-auto w-full p-4 sm:p-8 ${theme.isDark ? 'text-white' : ''}`}>
             <div className="text-center mb-8">
               <h2 className="text-2xl font-bold mb-2">{activeExercise.title}</h2>
               <p className={`text-sm ${theme.isDark ? 'text-slate-400' : 'text-gray-500'}`}>

@@ -693,12 +693,13 @@ const Journal = () => {
 
           {showPrompts && (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-              <div className={`${modalBg} rounded-3xl max-w-4xl w-full max-h-[80vh] overflow-y-auto p-8`}>
+              <div className={`${modalBg} rounded-3xl max-w-4xl w-full max-h-[80vh] overflow-y-auto p-4 sm:p-8`}>
                 <div className="flex items-center justify-between mb-6">
                   <h3 className={`text-2xl font-bold ${textPrimary}`}>Journal Prompts</h3>
                   <button
                     onClick={() => setShowPrompts(false)}
-                    className={`${textTertiary} hover:${textSecondary}`}
+                    aria-label="Close"
+                    className={`${textTertiary} hover:${textSecondary} rounded-full p-2.5 text-2xl leading-none hover:bg-black/5 dark:hover:bg-white/10`}
                   >
                     ×
                   </button>
@@ -736,12 +737,13 @@ const Journal = () => {
 
           {showPartSelector && (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-              <div className={`${modalBg} rounded-3xl max-w-lg w-full max-h-[80vh] overflow-y-auto p-8`}>
+              <div className={`${modalBg} rounded-3xl max-w-lg w-full max-h-[80vh] overflow-y-auto p-4 sm:p-8`}>
                 <div className="flex items-center justify-between mb-6">
                   <h3 className={`text-2xl font-bold ${textPrimary}`}>Select a Part</h3>
                   <button
                     onClick={() => setShowPartSelector(false)}
-                    className={`${textTertiary} hover:${textSecondary} text-2xl`}
+                    aria-label="Close"
+                    className={`${textTertiary} hover:${textSecondary} rounded-full p-2.5 text-2xl leading-none hover:bg-black/5 dark:hover:bg-white/10`}
                   >
                     ×
                   </button>

@@ -284,7 +284,7 @@ export default function DailyCheckin() {
                   <p className={`text-sm ${textMuted}`}>Take a moment to notice your general state right now.</p>
                 </div>
               </div>
-              <div className="grid grid-cols-5 gap-2">
+              <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
                 {MOOD_OPTIONS.map(opt => {
                   const Icon = opt.icon;
                   const sel = mood === opt.value;

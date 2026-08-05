@@ -328,7 +328,7 @@ export default function WeeklyReflection() {
         </div>
       ) : (
         <div className="space-y-5">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className={cardClass}>
               <div className="flex items-center gap-2 mb-3">
                 <Heart className="w-4 h-4 text-rose-500" />
@@ -379,7 +379,7 @@ export default function WeeklyReflection() {
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className={cardClass}>
               <div className="flex items-center gap-2 mb-3">
                 <BookOpen className="w-4 h-4 text-amber-500" />
