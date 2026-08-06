@@ -13,8 +13,8 @@ export const exerciseAssessmentAudioMap = [
     title: 'Meeting Your Self',
     mp3Filename: 'meeting-self.mp3',
     localAudioUrl: '/audio/exercises/meeting-self.mp3',
-    audioUrl: null,
-    uploadThingFileKey: null
+    audioUrl: 'https://0yrs6ceohq.ufs.sh/f/TQXmWDkNFrzPFNrjYl04BnsbQW0Izj5A9KXSHTMPpU2gNVoJ',
+    uploadThingFileKey: 'TQXmWDkNFrzPFNrjYl04BnsbQW0Izj5A9KXSHTMPpU2gNVoJ'
   },
   {
     id: 'self-qualities',
@@ -22,8 +22,8 @@ export const exerciseAssessmentAudioMap = [
     title: 'Cultivating Self Qualities',
     mp3Filename: 'self-qualities.mp3',
     localAudioUrl: '/audio/exercises/self-qualities.mp3',
-    audioUrl: null,
-    uploadThingFileKey: null
+    audioUrl: 'https://0yrs6ceohq.ufs.sh/f/TQXmWDkNFrzPjigFr65u0dwVr7fUC1JNqmxTBOMpeGQ9DiLn',
+    uploadThingFileKey: 'TQXmWDkNFrzPjigFr65u0dwVr7fUC1JNqmxTBOMpeGQ9DiLn'
   },
   {
     id: 'meeting-inner-child',
@@ -31,8 +31,8 @@ export const exerciseAssessmentAudioMap = [
     title: 'Meeting Your Inner Child',
     mp3Filename: 'meeting-inner-child.mp3',
     localAudioUrl: '/audio/exercises/meeting-inner-child.mp3',
-    audioUrl: null,
-    uploadThingFileKey: null
+    audioUrl: 'https://0yrs6ceohq.ufs.sh/f/TQXmWDkNFrzPT19dfgkNFrzP05cYyIRobDaHlmfeAGCXpdK1',
+    uploadThingFileKey: 'TQXmWDkNFrzPT19dfgkNFrzP05cYyIRobDaHlmfeAGCXpdK1'
   },
   {
     id: 'reparenting',
@@ -40,8 +40,8 @@ export const exerciseAssessmentAudioMap = [
     title: 'Reparenting Meditation',
     mp3Filename: 'reparenting.mp3',
     localAudioUrl: '/audio/exercises/reparenting.mp3',
-    audioUrl: null,
-    uploadThingFileKey: null
+    audioUrl: 'https://0yrs6ceohq.ufs.sh/f/TQXmWDkNFrzPW3DzwsoPR4oig2prsFVNS6WjtubOl8U9xdIG',
+    uploadThingFileKey: 'TQXmWDkNFrzPW3DzwsoPR4oig2prsFVNS6WjtubOl8U9xdIG'
   },
   {
     id: 'inner-safe-place',
@@ -49,8 +49,8 @@ export const exerciseAssessmentAudioMap = [
     title: 'Inner Safe Place',
     mp3Filename: 'inner-safe-place.mp3',
     localAudioUrl: '/audio/exercises/inner-safe-place.mp3',
-    audioUrl: null,
-    uploadThingFileKey: null
+    audioUrl: 'https://0yrs6ceohq.ufs.sh/f/TQXmWDkNFrzPE2GHV5h4ZdQis8pG9zIjwMvFL7xWk6CHEUJg',
+    uploadThingFileKey: 'TQXmWDkNFrzPE2GHV5h4ZdQis8pG9zIjwMvFL7xWk6CHEUJg'
   },
   {
     id: 'wounds',
@@ -58,8 +58,8 @@ export const exerciseAssessmentAudioMap = [
     title: 'Wound Patterns Assessment Intro',
     mp3Filename: 'wound-assessment-intro.mp3',
     localAudioUrl: '/audio/assessments/wound-assessment-intro.mp3',
-    audioUrl: null,
-    uploadThingFileKey: null
+    audioUrl: 'https://0yrs6ceohq.ufs.sh/f/TQXmWDkNFrzPce1U68QwrzMC4j5USyFJRIA16m72xLsiOufd',
+    uploadThingFileKey: 'TQXmWDkNFrzPce1U68QwrzMC4j5USyFJRIA16m72xLsiOufd'
   },
   {
     id: 'parts',
@@ -67,8 +67,8 @@ export const exerciseAssessmentAudioMap = [
     title: 'Parts System Assessment Intro',
     mp3Filename: 'parts-assessment-intro.mp3',
     localAudioUrl: '/audio/assessments/parts-assessment-intro.mp3',
-    audioUrl: null,
-    uploadThingFileKey: null
+    audioUrl: 'https://0yrs6ceohq.ufs.sh/f/TQXmWDkNFrzP693Wg8M7WjvhcLCy3ok4K5mN9MRiYfBgASXI',
+    uploadThingFileKey: 'TQXmWDkNFrzP693Wg8M7WjvhcLCy3ok4K5mN9MRiYfBgASXI'
   },
   {
     id: 'self-energy',
@@ -76,8 +76,8 @@ export const exerciseAssessmentAudioMap = [
     title: 'Self-Energy Assessment Intro',
     mp3Filename: 'self-energy-assessment-intro.mp3',
     localAudioUrl: '/audio/assessments/self-energy-assessment-intro.mp3',
-    audioUrl: null,
-    uploadThingFileKey: null
+    audioUrl: 'https://0yrs6ceohq.ufs.sh/f/TQXmWDkNFrzPzFWTAGCKeuNj4DvSoy9h2tRkxraw3X0WnMfs',
+    uploadThingFileKey: 'TQXmWDkNFrzPzFWTAGCKeuNj4DvSoy9h2tRkxraw3X0WnMfs'
   },
   {
     id: 'attachment',
@@ -85,8 +85,8 @@ export const exerciseAssessmentAudioMap = [
     title: 'Attachment Pattern Assessment Intro',
     mp3Filename: 'attachment-assessment-intro.mp3',
     localAudioUrl: '/audio/assessments/attachment-assessment-intro.mp3',
-    audioUrl: null,
-    uploadThingFileKey: null
+    audioUrl: 'https://0yrs6ceohq.ufs.sh/f/TQXmWDkNFrzPfuB7xMVz54V0hyU8pZlrDePq3gji9HMa2GEv',
+    uploadThingFileKey: 'TQXmWDkNFrzPfuB7xMVz54V0hyU8pZlrDePq3gji9HMa2GEv'
   }
 ];
 
