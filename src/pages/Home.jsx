@@ -173,6 +173,81 @@ const PaletteSelector = ({ paletteKey, setPaletteKey }) => {
 
 const HOME_FEED_EXCLUDED_TYPES = ['report_generated'];
 
+const Pulse = ({ className = '' }) => <div className={`animate-pulse rounded-xl bg-brand-stone-100 dark:bg-slate-800 ${className}`} />;
+
+const HomeSkeleton = ({ palette }) => (
+  <div className="mx-auto max-w-6xl px-4 sm:px-6 py-12 lg:py-20">
+    <section className="mb-12 overflow-hidden rounded-[2.25rem] border p-7 shadow-premium md:p-10" style={{ background: `linear-gradient(135deg, ${palette.surface}, ${palette.background})`, borderColor: palette.border }}>
+      <div className="flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between">
+        <div className="max-w-3xl flex-1">
+          <Pulse className="h-3 w-40" />
+          <Pulse className="mt-4 h-10 w-72 sm:h-12 sm:w-96" />
+          <Pulse className="mt-4 h-4 w-full max-w-xl" />
+          <Pulse className="mt-2 h-4 w-3/4 max-w-md" />
+          <div className="mt-6 flex flex-wrap gap-3">
+            <Pulse className="h-11 w-44 rounded-full" />
+            <Pulse className="h-11 w-48 rounded-full" />
+          </div>
+          <div className="mt-5 flex flex-wrap gap-2">
+            <Pulse className="h-6 w-40 rounded-full" />
+            <Pulse className="h-6 w-56 rounded-full" />
+          </div>
+        </div>
+        <div className="flex flex-col items-start gap-4 lg:items-end">
+          <Pulse className="h-9 w-56 rounded-full" />
+          <div className="hidden h-44 w-44 rounded-full lg:block">
+            <Pulse className="h-full w-full rounded-full" />
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section className="mb-10 grid gap-6 lg:grid-cols-[1.35fr_0.85fr]">
+      <div className="rounded-[2rem] border bg-white/85 p-6 shadow-premium dark:bg-slate-900/60" style={{ borderColor: palette.border }}>
+        <Pulse className="h-3 w-48" />
+        <Pulse className="mt-3 h-8 w-3/4" />
+        <Pulse className="mt-3 h-4 w-full" />
+        <Pulse className="mt-2 h-4 w-2/3" />
+        <Pulse className="mt-6 h-3 w-full rounded-full" />
+        <div className="mt-6 flex flex-wrap gap-3">
+          <Pulse className="h-10 w-36 rounded-full" />
+          <Pulse className="h-10 w-32 rounded-full" />
+        </div>
+      </div>
+      <div className="rounded-[2rem] border bg-white/75 p-6 dark:bg-slate-900/50" style={{ borderColor: palette.border }}>
+        <Pulse className="h-3 w-32" />
+        <Pulse className="mt-3 h-6 w-40" />
+        <Pulse className="mt-4 h-4 w-full" />
+        <Pulse className="mt-2 h-4 w-5/6" />
+      </div>
+    </section>
+
+    <section className="mb-10 grid gap-6 lg:grid-cols-3">
+      {[0, 1, 2].map((index) => (
+        <div key={index} className="rounded-[2rem] border bg-white/75 p-6 dark:bg-slate-900/50" style={{ borderColor: palette.border }}>
+          <Pulse className="h-3 w-32" />
+          <Pulse className="mt-3 h-6 w-3/4" />
+          <Pulse className="mt-3 h-4 w-full" />
+          <Pulse className="mt-2 h-4 w-2/3" />
+        </div>
+      ))}
+    </section>
+
+    <section className="mb-14 rounded-[2rem] border bg-white/65 p-6 dark:bg-slate-900/45" style={{ borderColor: palette.border }}>
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div className="flex-1">
+          <Pulse className="h-3 w-36" />
+          <Pulse className="mt-3 h-6 w-2/3" />
+        </div>
+        <Pulse className="h-10 w-44 rounded-full" />
+      </div>
+      <div className="mt-5 flex flex-wrap gap-2">
+        {[0, 1, 2, 3].map((index) => <Pulse key={index} className="h-9 w-32 rounded-full" />)}
+      </div>
+    </section>
+  </div>
+);
+
 const Home = ({ clientId, client, mode = 'home', selfProfile = null, selfProfileResult = null }) => {
   const navigate = useNavigate();
   const [savedAssessment, setSavedAssessment] = useState(null);
@@ -604,14 +679,7 @@ const Home = ({ clientId, client, mode = 'home', selfProfile = null, selfProfile
   };
 
   if (loading) {
-    return (
-      <div className="mx-auto max-w-6xl px-4 sm:px-6 py-12 lg:py-20">
-        <div className="soft-card p-8 text-center">
-          <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-b-2 border-t-2 border-brand-gold-600" />
-          <p className="text-sm text-brand-stone-600 dark:text-slate-400">Loading your IFS path…</p>
-        </div>
-      </div>
-    );
+    return <HomeSkeleton palette={palette} />;
   }
 
   if (shouldShowWorkspaceChoice) {
