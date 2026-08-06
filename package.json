@@ -15,7 +15,8 @@
     "cap:build": "vite build && npx cap sync",
     "cap:open:ios": "npx cap open ios",
     "cap:open:android": "npx cap open android",
-    "qa:seed-admin": "node scripts/seed-qa-admin.mjs"
+    "qa:seed-admin": "node scripts/seed-qa-admin.mjs",
+    "migrate:exercise-assessment-audio": "node scripts/migrate-exercise-assessment-audio-to-uploadthing.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^8.2.0",
