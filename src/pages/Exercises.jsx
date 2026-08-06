@@ -19,6 +19,7 @@ import {
   Eye,
   Hand
 } from 'lucide-react';
+import { getExerciseAssessmentAudioUrl } from '../lib/exerciseAssessmentAudioMap';
 
 const Exercises = () => {
   const [selectedExercise, setSelectedExercise] = useState(null);
@@ -74,7 +75,7 @@ Notice how your body feels right now. Is there more space? More ease? Even the s
 In the days ahead, remember this feeling. You can return to this place anytime — not by forcing anything, but simply by asking your parts for a little space and noticing what's already there.
 
 Take three deep breaths. With each exhale, anchor this experience in your body. When you're ready, gently open your eyes. Carry this connection with your Self into whatever comes next. You are not your parts. You have parts. And your Self is here, leading with wisdom and love.`,
-          audioUrl: '/audio/exercises/meeting-self.mp3',
+          audioUrl: getExerciseAssessmentAudioUrl('meeting-self'),
           benefits: ['Deeper Self-awareness', 'Increased clarity', 'Emotional balance']
         },
         {
@@ -111,7 +112,7 @@ Now hold all eight qualities together. Calmness, curiosity, compassion, confiden
 Choose one quality that you want to lead with today. Just one. Let it settle into your body. Imagine it as a warm light radiating from your center.
 
 Take three deep breaths, carrying this quality with you. When you're ready, open your eyes. Remember — these qualities are not things you need to create. They are already part of you. Your work is simply to clear the path so they can shine through.`,
-          audioUrl: '/audio/exercises/self-qualities.mp3',
+          audioUrl: getExerciseAssessmentAudioUrl('self-qualities'),
           benefits: ['Self-leadership', 'Emotional regulation', 'Inner wisdom']
         }
       ]
@@ -155,7 +156,7 @@ Let your inner child know they can stay in this safe space anytime. It belongs t
 Take three deep breaths. Feel the connection between your adult self and your inner child. This bond can grow stronger each time you visit.
 
 Slowly open your eyes. Carry the warmth of this meeting with you. Your inner child is part of you, and they deserve your attention and love.`,
-          audioUrl: '/audio/exercises/meeting-inner-child.mp3',
+          audioUrl: getExerciseAssessmentAudioUrl('meeting-inner-child'),
           benefits: ['Inner connection', 'Emotional healing', 'Self-compassion']
         },
         {
@@ -186,7 +187,7 @@ Make a commitment to this practice. Reparenting is not a one-time event — it's
 Ask your inner child: "Is there anything else you need before I go?" Listen for the answer. Give them one final hug. Tell them: "I love you. I will keep coming back. You are my responsibility now, and I take that seriously."
 
 Take three deep breaths. Feel the warmth and the weight of this experience. You have done important work today. Slowly open your eyes. Carry this loving presence into your day. You are both the parent and the child, and both of you deserve love.`,
-          audioUrl: '/audio/exercises/reparenting.mp3',
+          audioUrl: getExerciseAssessmentAudioUrl('reparenting'),
           benefits: ['Healing neglect wounds', 'Self-nurturing', 'Emotional security']
         },
         {

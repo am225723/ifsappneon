@@ -13,6 +13,7 @@ import { supabase, supabaseHelpers } from '../lib/supabase';
 import { clientAuth } from '../lib/supabasePersonalization';
 import { aiCurriculumPersonalizer } from '../lib/aiCurriculumPersonalizer';
 import { canAccessAssessment } from '../lib/accessControl';
+import { getExerciseAssessmentAudioUrl } from '../lib/exerciseAssessmentAudioMap';
 
 const protectivePartsDefinitions = {
   manager: [
@@ -193,10 +194,10 @@ const assessmentDefinitions = [
 ];
 
 const ASSESSMENT_AUDIO = {
-  wounds: '/audio/assessments/wound-assessment-intro.mp3',
-  parts: '/audio/assessments/parts-assessment-intro.mp3',
-  'self-energy': '/audio/assessments/self-energy-assessment-intro.mp3',
-  attachment: '/audio/assessments/attachment-assessment-intro.mp3',
+  wounds: getExerciseAssessmentAudioUrl('wounds'),
+  parts: getExerciseAssessmentAudioUrl('parts'),
+  'self-energy': getExerciseAssessmentAudioUrl('self-energy'),
+  attachment: getExerciseAssessmentAudioUrl('attachment'),
 };
 
 function AudioIntroPlayer({ src, isDark }) {
