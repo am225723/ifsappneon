@@ -18,6 +18,9 @@ import {
   markAssignedHomeworkStarted,
   syncAssignedHomeworkCompletion
 } from '../lib/assignedHomework';
+import PageHero, { heroChipClass } from '../components/PageHero';
+
+const CLIENT_HOMEWORK_HERO_IMAGE = '/images/dashboard/advisor-assigned-practice.jpg';
 
 const categories = [
   { value: 'general', label: 'General', color: 'bg-gray-100 text-gray-700' },
@@ -216,17 +219,17 @@ const ClientHomework = () => {
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-6">
-      <div className="flex items-center gap-3 mb-6">
-        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center">
-          <ClipboardList className="w-5 h-5 text-white" />
-        </div>
-        <div>
-          <h1 className={`text-xl font-bold ${textPrimary}`}>Assigned IFS Practice</h1>
-          <p className={`text-sm ${textMuted}`}>
+      <PageHero
+        image={CLIENT_HOMEWORK_HERO_IMAGE}
+        eyebrow="Advisor-Guided Practice"
+        title="Assigned IFS Practice"
+        subtitle="Practices and reflections your Advisor has assigned, alongside your own homework."
+        chips={(
+          <span className={heroChipClass}>
             {activeCount > 0 ? `${activeCount} assignment${activeCount > 1 ? 's' : ''} to complete` : 'All caught up!'}
-          </p>
-        </div>
-      </div>
+          </span>
+        )}
+      />
 
       {assignedModules.length > 0 && (
         <div className={`mb-6 rounded-2xl border p-4 ${isDark ? 'border-blue-800/40 bg-blue-950/30' : 'border-blue-200 bg-blue-50'}`}>

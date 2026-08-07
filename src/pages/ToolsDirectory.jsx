@@ -25,6 +25,9 @@ import {
 } from 'lucide-react';
 import { canAccessFeature } from '../lib/accessControl';
 import { clientAuth } from '../lib/supabasePersonalization';
+import PageHero from '../components/PageHero';
+
+const TOOLS_DIRECTORY_HERO_IMAGE = '/images/dashboard/tools-meditation.jpg';
 
 const selfWorkRoles = ['client', 'therapist', 'advisor', 'admin', 'supervisor'];
 const clientRoles = selfWorkRoles;
@@ -192,11 +195,12 @@ export default function ToolsDirectory({ currentClient }) {
 
   return (
     <main className="mx-auto max-w-6xl px-6 py-10 lg:py-14">
-      <header className="mb-8 rounded-[2rem] border border-brand-gold-100 bg-gradient-to-br from-white via-brand-sanctuary to-brand-gold-50/60 p-6 shadow-sm dark:border-brand-gold-900/40 dark:from-brand-cardDark dark:via-brand-midnight dark:to-brand-gold-950/20 md:p-8">
-        <p className="text-xs font-semibold uppercase tracking-[0.3em] text-brand-gold-700 dark:text-brand-gold-500">Tools</p>
-        <h1 className="mt-3 text-3xl font-serif font-semibold text-brand-stone-900 dark:text-slate-100 md:text-4xl">Tools & Practices</h1>
-        <p className="mt-3 max-w-3xl text-brand-stone-600 dark:text-slate-300">Find the IFS tools, reflections, assessments, and support areas available to your account. Start with the Curriculum / IFS Path; these practices are here to support it.</p>
-      </header>
+      <PageHero
+        image={TOOLS_DIRECTORY_HERO_IMAGE}
+        eyebrow="Tools"
+        title="Tools & Practices"
+        subtitle="Find the IFS tools, reflections, assessments, and support areas available to your account. Start with the Curriculum / IFS Path; these practices are here to support it."
+      />
 
       <div className="space-y-8">
         {visibleSections.map((section) => (

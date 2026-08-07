@@ -6,8 +6,10 @@ import { useLocation } from 'react-router-dom';
 import { useTheme } from '../contexts/ThemeContext';
 import { supabase } from '../lib/supabase';
 import { clientAuth } from '../lib/supabasePersonalization';
+import PageHero from '../components/PageHero';
 
 const MESSAGE_BOUNDARY = 'Messages are checked during business hours and are not monitored for emergencies. If you are in immediate danger or experiencing a crisis, call 911 or your local crisis line.';
+const INBOX_HERO_IMAGE = '/images/dashboard/advisor-messages.jpg';
 
 const ClientInbox = () => {
   const { theme } = useTheme();
@@ -192,17 +194,13 @@ const ClientInbox = () => {
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-6">
-      <div className="flex items-center gap-3 mb-4">
-        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
-          <MessageSquare className="w-5 h-5 text-white" />
-        </div>
-        <div>
-          <h1 className={`text-xl font-bold ${textPrimary}`}>Messages</h1>
-          <p className={`text-sm ${textMuted}`}>
-            {unreadCount > 0 ? `${unreadCount} unread message${unreadCount > 1 ? 's' : ''}` : 'Chat with your advisor'}
-          </p>
-        </div>
-      </div>
+      <PageHero
+        image={INBOX_HERO_IMAGE}
+        eyebrow="Messages"
+        title="Messages"
+        subtitle={unreadCount > 0 ? `${unreadCount} unread message${unreadCount > 1 ? 's' : ''}` : 'Chat with your advisor'}
+        className="mb-6"
+      />
 
       <div className="mb-4 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-700 dark:bg-amber-900/20 dark:text-amber-100">
         <AlertTriangle className="mr-2 inline h-4 w-4" />{MESSAGE_BOUNDARY}

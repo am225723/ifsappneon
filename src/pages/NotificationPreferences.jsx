@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Bell, CheckCircle, Clock, RotateCcw, Save, ShieldCheck } from 'lucide-react';
 import { loadNotificationPreferences, updateNotificationPreferences } from '../lib/notificationPreferences';
+import PageHero from '../components/PageHero';
+
+const NOTIFICATION_PREFERENCES_HERO_IMAGE = '/images/dashboard/hero-sunrise.jpg';
 
 const DEFAULTS = {
   in_app_enabled: true,
@@ -152,11 +155,13 @@ export default function NotificationPreferences({ currentClient }) {
 
   return (
     <main className="max-w-4xl mx-auto px-6 py-10">
-      <div className="mb-8">
-        <p className="text-xs font-bold uppercase tracking-[0.25em] text-brand-emerald-700 dark:text-brand-emerald-100 mb-2">Activity Center</p>
-        <h1 className="text-3xl font-serif font-semibold text-brand-stone-900 dark:text-slate-100">Notification Preferences</h1>
-        <p className="text-sm text-brand-stone-600 dark:text-slate-400 mt-2">Choose which in-app updates appear and when routine notifications should pause.</p>
-      </div>
+      <PageHero
+        image={NOTIFICATION_PREFERENCES_HERO_IMAGE}
+        eyebrow="Activity Center"
+        title="Notification Preferences"
+        subtitle="Choose which in-app updates appear and when routine notifications should pause."
+        className="mb-6"
+      />
 
       {error && (
         <div className="mb-6 rounded-2xl border border-red-200 bg-red-50 text-red-700 px-4 py-3 text-sm dark:bg-red-950/30 dark:border-red-900 dark:text-red-200">

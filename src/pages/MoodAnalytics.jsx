@@ -9,6 +9,9 @@ import { useTheme } from '../contexts/ThemeContext';
 import { supabase } from '../lib/supabase';
 import { clientAuth } from '../lib/supabasePersonalization';
 import { loadAssignedClients } from '../lib/therapistAssignments';
+import PageHero, { heroSecondaryButtonClass } from '../components/PageHero';
+
+const MOOD_ANALYTICS_HERO_IMAGE = '/images/dashboard/daily-mood.jpg';
 
 const MOOD_LABELS = { 1: 'Struggling', 2: 'Low', 3: 'Okay', 4: 'Good', 5: 'Great' };
 const MOOD_COLORS = { 1: '#6366F1', 2: '#6B7280', 3: '#3B82F6', 4: '#22C55E', 5: '#EAB308' };
@@ -274,42 +277,43 @@ export default function MoodAnalytics() {
 
   return (
     <div className={`min-h-screen pb-32 ${bg}`}>
-      <div className={`sticky top-0 z-20 backdrop-blur-xl border-b ${isDark ? 'bg-slate-900/80 border-slate-700' : 'bg-white/80 border-amber-100'}`}>
-        <div className="max-w-4xl mx-auto px-4 py-4 flex items-center gap-3">
-          <Link to={isAdvisor ? '/advisor-workspace' : '/home'} className={`p-2 rounded-xl ${isDark ? 'hover:bg-slate-700 text-slate-300' : 'hover:bg-amber-100 text-gray-600'}`}>
-            <ArrowLeft size={20} />
-          </Link>
-          <div className="flex-1">
-            <h1 className={`text-xl font-bold ${textPrimary}`}>
-              {isAdvisor ? `${clientName}'s Analytics` : 'Mood & Parts Analytics'}
-            </h1>
-            <p className={`text-xs ${textMuted}`}>Trends, patterns, and parts activity</p>
-          </div>
-          <div className="flex items-center gap-2">
-            {isAdvisor && clients.length > 0 && (
-              <div className="relative">
-                <select
-                  value={selectedClient || ''}
-                  onChange={e => setSelectedClient(e.target.value)}
-                  className={`text-sm pl-3 pr-8 py-1.5 rounded-xl border appearance-none cursor-pointer ${isDark ? 'bg-slate-700 border-slate-600 text-slate-200' : 'bg-white border-amber-200 text-gray-700'}`}
-                >
-                  {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                </select>
-                <ChevronDown size={14} className={`absolute right-2.5 top-2.5 pointer-events-none ${textMuted}`} />
-              </div>
-            )}
-            <select value={range} onChange={e => setRange(e.target.value)}
-              className={`text-sm pl-3 pr-8 py-1.5 rounded-xl border appearance-none cursor-pointer ${isDark ? 'bg-slate-700 border-slate-600 text-slate-200' : 'bg-white border-amber-200 text-gray-700'}`}>
-              <option value="7">7 days</option>
-              <option value="14">14 days</option>
-              <option value="30">30 days</option>
-              <option value="90">90 days</option>
-            </select>
-          </div>
+      <div className="max-w-4xl mx-auto px-4 pt-6">
+        <PageHero
+          image={MOOD_ANALYTICS_HERO_IMAGE}
+          eyebrow="Analytics"
+          title={isAdvisor ? `${clientName}'s Analytics` : 'Mood & Parts Analytics'}
+          subtitle="Trends, patterns, and parts activity"
+          side={(
+            <Link to={isAdvisor ? '/advisor-workspace' : '/home'} className={heroSecondaryButtonClass}>
+              <ArrowLeft size={16} /> Back
+            </Link>
+          )}
+          className="mb-6"
+        />
+        <div className="flex items-center justify-end gap-2 mb-6">
+          {isAdvisor && clients.length > 0 && (
+            <div className="relative">
+              <select
+                value={selectedClient || ''}
+                onChange={e => setSelectedClient(e.target.value)}
+                className={`text-sm pl-3 pr-8 py-1.5 rounded-xl border appearance-none cursor-pointer ${isDark ? 'bg-slate-700 border-slate-600 text-slate-200' : 'bg-white border-amber-200 text-gray-700'}`}
+              >
+                {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+              <ChevronDown size={14} className={`absolute right-2.5 top-2.5 pointer-events-none ${textMuted}`} />
+            </div>
+          )}
+          <select value={range} onChange={e => setRange(e.target.value)}
+            className={`text-sm pl-3 pr-8 py-1.5 rounded-xl border appearance-none cursor-pointer ${isDark ? 'bg-slate-700 border-slate-600 text-slate-200' : 'bg-white border-amber-200 text-gray-700'}`}>
+            <option value="7">7 days</option>
+            <option value="14">14 days</option>
+            <option value="30">30 days</option>
+            <option value="90">90 days</option>
+          </select>
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto px-4 py-6 space-y-6">
+      <div className="max-w-4xl mx-auto px-4 pb-6 space-y-6">
 
         {loading ? (
           <div className="flex items-center justify-center py-20">

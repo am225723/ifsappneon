@@ -14,6 +14,9 @@ import { clientAuth } from '../lib/supabasePersonalization';
 import { aiCurriculumPersonalizer } from '../lib/aiCurriculumPersonalizer';
 import { canAccessAssessment } from '../lib/accessControl';
 import { getExerciseAssessmentAudioUrl } from '../lib/exerciseAssessmentAudioMap';
+import PageHero, { heroSecondaryButtonClass } from '../components/PageHero';
+
+const ASSESSMENTS_HERO_IMAGE = '/images/dashboard/deep-wound-assessment.jpg';
 
 const protectivePartsDefinitions = {
   manager: [
@@ -1151,25 +1154,18 @@ export default function Assessments() {
   return (
     <div className={`min-h-screen ${theme.isDark ? 'text-slate-100' : ''}`}>
       <div className="max-w-6xl mx-auto px-6 py-12 lg:py-20">
-        <Link
-          to="/"
-          className={`inline-flex items-center gap-2 mb-6 ${theme.isDark ? 'text-slate-300 hover:text-white' : 'text-gray-600 hover:text-gray-900'}`}
-        >
-          <ArrowLeft className="w-5 h-5" />
-          Back to Home
-        </Link>
-
-        <div className="text-center mb-10">
-          <div className="w-16 h-16 bg-gradient-to-br from-brand-gold-500 to-brand-emerald-600 rounded-2xl flex items-center justify-center mx-auto mb-5 shadow-lg shadow-brand-gold-500/20">
-            <CheckCircle className="w-10 h-10 text-white" />
-          </div>
-          <h1 className="text-4xl lg:text-6xl font-serif font-normal mb-4 text-brand-stone-900 dark:text-slate-100">
-            Interactive Assessments
-          </h1>
-          <p className="text-lg max-w-2xl mx-auto text-brand-stone-600 dark:text-slate-400">
-            Your assessments help personalize how the curriculum supports your parts work. Use them as reflective snapshots, not labels or diagnoses.
-          </p>
-        </div>
+        <PageHero
+          image={ASSESSMENTS_HERO_IMAGE}
+          eyebrow="Assessments"
+          title="Interactive Assessments"
+          subtitle="Your assessments help personalize how the curriculum supports your parts work. Use them as reflective snapshots, not labels or diagnoses."
+          actions={(
+            <Link to="/" className={heroSecondaryButtonClass}>
+              <ArrowLeft className="h-4 w-4" />
+              Back to Home
+            </Link>
+          )}
+        />
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
           {assessmentDefinitions.map(assessment => {

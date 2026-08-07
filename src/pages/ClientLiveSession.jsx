@@ -7,8 +7,10 @@ import {
   getLiveSessionState,
   heartbeatLiveSession
 } from '../lib/liveSession';
+import PageHero from '../components/PageHero';
 
 const SAFETY_COPY = 'This live practice is used during Advisor-guided care. It is not monitored for emergencies. If you are in immediate danger or may harm yourself or someone else, call 911 or your local crisis line now.';
+const LIVE_SESSION_HERO_IMAGE = '/images/dashboard/hero-sunrise.jpg';
 
 export default function ClientLiveSession() {
   const [session, setSession] = useState(null);
@@ -73,18 +75,13 @@ export default function ClientLiveSession() {
 
   return (
     <div className="max-w-5xl mx-auto px-6 py-10 space-y-6">
-      <div className="soft-card p-6 border border-brand-emerald-100 dark:border-slate-700">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-[0.24em] text-brand-emerald-700 dark:text-brand-emerald-100">Live Advisor-Guided Practice</p>
-            <h1 className="text-3xl font-serif text-brand-stone-900 dark:text-slate-100 mt-2">Advisor-guided live practice</h1>
-            <p className="text-sm text-brand-stone-600 dark:text-slate-400 mt-2 max-w-3xl">
-              Your Advisor has started a guided practice. You can follow along at your own pace, and you can leave this live practice at any time.
-            </p>
-          </div>
-          <HeartPulse className="w-12 h-12 text-brand-emerald-700 dark:text-brand-emerald-100" />
-        </div>
-      </div>
+      <PageHero
+        image={LIVE_SESSION_HERO_IMAGE}
+        eyebrow="Live Advisor-Guided Practice"
+        title="Advisor-guided live practice"
+        subtitle="Your Advisor has started a guided practice. You can follow along at your own pace, and you can leave this live practice at any time."
+        side={<HeartPulse className="w-12 h-12 text-white" />}
+      />
 
       <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 flex gap-3">
         <AlertTriangle className="w-5 h-5 shrink-0 mt-0.5" />

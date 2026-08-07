@@ -4,6 +4,9 @@ import { ArrowRight, CalendarDays, Heart, ShieldCheck, Sparkles } from 'lucide-r
 import { loadLifeIntegrationReflections } from '../lib/lifeIntegration';
 import { normalizeLifeReflection } from '../lib/lifeIntegrationDisplay';
 import { practiceCards } from '../components/life/practiceConfig';
+import PageHero, { heroChipClass } from '../components/PageHero';
+
+const LIFE_INTEGRATION_HERO_IMAGE = '/images/dashboard/daily-notice-part.jpg';
 
 function ReflectionCard({ reflection }) {
   const normalized = normalizeLifeReflection(reflection);
@@ -47,19 +50,18 @@ export default function LifeIntegration() {
   return (
     <main className="min-h-screen bg-brand-sanctuary px-4 py-8 dark:bg-brand-midnight sm:px-6 lg:px-8">
       <div className="mx-auto max-w-6xl">
-        <section className="relative overflow-hidden rounded-[2rem] border border-brand-gold-100 bg-gradient-to-br from-white via-brand-gold-50/70 to-brand-emerald-50 p-8 shadow-2xl shadow-brand-gold-500/10 dark:border-slate-800 dark:from-brand-cardDark dark:via-brand-gold-950/20 dark:to-brand-emerald-950/20 lg:p-12">
-          <div className="absolute -right-16 -top-16 h-48 w-48 rounded-full bg-brand-gold-100/70 blur-3xl dark:bg-brand-gold-900/20" />
-          <div className="relative max-w-3xl">
-            <p className="mb-4 text-xs font-bold uppercase tracking-[0.28em] text-brand-emerald-700 dark:text-brand-emerald-100">Life Integration Toolkit</p>
-            <h1 className="text-5xl font-serif font-normal text-brand-stone-900 dark:text-slate-100">IFS in Daily Life</h1>
-            <p className="mt-4 text-lg leading-relaxed text-brand-stone-600 dark:text-slate-400">Practice noticing parts, unblending, and returning to Self-energy in real moments.</p>
-            <p className="mt-3 text-base leading-relaxed text-brand-stone-600 dark:text-slate-400">Use these short practices when something comes up in daily life. They are here to support your IFS Path, not replace it.</p>
-            <div className="mt-6 flex flex-wrap gap-3 text-sm text-brand-stone-600 dark:text-slate-400">
-              <span className="rounded-full bg-white/80 px-4 py-2 shadow-sm dark:bg-slate-900/60">There is no right way to do this.</span>
-              <span className="rounded-full bg-white/80 px-4 py-2 shadow-sm dark:bg-slate-900/60">Go gently. You can stop at any time.</span>
-            </div>
-          </div>
-        </section>
+        <PageHero
+          image={LIFE_INTEGRATION_HERO_IMAGE}
+          eyebrow="Life Integration Toolkit"
+          title="IFS in Daily Life"
+          subtitle="Practice noticing parts, unblending, and returning to Self-energy in real moments. Use these short practices when something comes up in daily life. They are here to support your IFS Path, not replace it."
+          chips={(
+            <>
+              <span className={heroChipClass}>There is no right way to do this.</span>
+              <span className={heroChipClass}>Go gently. You can stop at any time.</span>
+            </>
+          )}
+        />
 
         <section className="mt-10">
           <div className="mb-6 flex items-end justify-between gap-4">

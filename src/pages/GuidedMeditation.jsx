@@ -25,8 +25,10 @@ import {
 import { loadActiveMeditationMedia, mergeMeditationMediaWithLibrary } from '../lib/meditationMedia';
 import TranscriptPanel from '../components/TranscriptPanel';
 import AudioPracticePlayer from '../components/AudioPracticePlayer';
+import PageHero, { heroChipClass } from '../components/PageHero';
 
 const AUDIO_FALLBACK_COPY = 'Audio is not available for this practice yet. You can still complete the guided practice below.';
+const MEDITATION_HERO_IMAGE = '/images/dashboard/tools-meditation.jpg';
 
 function secondsToTime(seconds = 0) {
   const minutes = Math.floor(seconds / 60);
@@ -292,13 +294,18 @@ function PracticeLibrary({ completedIds, library }) {
 
   return (
     <main className="mx-auto max-w-6xl px-6 py-10 lg:py-14">
-      <header className="rounded-[2rem] border border-brand-gold-100 bg-gradient-to-br from-white via-brand-sanctuary to-brand-gold-50/70 p-6 shadow-sm dark:border-brand-gold-900/40 dark:from-brand-cardDark dark:via-brand-midnight dark:to-brand-gold-950/20 md:p-8">
-        <p className="text-xs font-bold uppercase tracking-[0.3em] text-brand-gold-700 dark:text-brand-gold-500">Guided Practice Library</p>
-        <h1 className="mt-3 font-serif text-3xl font-semibold text-brand-stone-900 dark:text-slate-100 md:text-4xl">Guided Meditation & Practice Library</h1>
-        <p className="mt-3 max-w-3xl text-brand-stone-600 dark:text-slate-300">
-          Choose a quick practice, meditation, breathing exercise, or reflective IFS practice. Audio is optional; every card includes a safe in-app guided fallback.
-        </p>
-      </header>
+      <PageHero
+        image={MEDITATION_HERO_IMAGE}
+        eyebrow="Guided Practice Library"
+        title="Guided Meditation & Practice Library"
+        subtitle="Choose a quick practice, meditation, breathing exercise, or reflective IFS practice. Audio is optional; every card includes a safe in-app guided fallback."
+        chips={(
+          <>
+            <span className={heroChipClass}>{library.length} practice{library.length === 1 ? '' : 's'} available</span>
+            <span className={heroChipClass}>{quickPracticeCards.length} quick practice{quickPracticeCards.length === 1 ? '' : 's'}</span>
+          </>
+        )}
+      />
 
       <section className="mt-8" aria-labelledby="quick-practices-heading">
         <div className="mb-4 flex items-center gap-3">

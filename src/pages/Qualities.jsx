@@ -1,6 +1,9 @@
 import { useState } from 'react';
 import { eightCs, fivePs } from '../data/ifsData';
 import { Sparkles, Star } from 'lucide-react';
+import PageHero from '../components/PageHero';
+
+const QUALITIES_HERO_IMAGE = '/images/dashboard/tools-affirmations.jpg';
 
 const Qualities = () => {
   const [activeTab, setActiveTab] = useState('8cs');
@@ -9,20 +12,12 @@ const Qualities = () => {
     <div className="min-h-screen py-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
-        <div className="text-center mb-12">
-          <div className="flex justify-center mb-6">
-            <div className="w-20 h-20 bg-gradient-to-br from-yellow-500 to-orange-500 rounded-full flex items-center justify-center shadow-xl">
-              <Sparkles className="w-12 h-12 text-white" />
-            </div>
-          </div>
-          <h1 className="text-5xl font-bold mb-4 bg-gradient-to-r from-yellow-600 to-orange-600 bg-clip-text text-transparent">
-            Qualities of Self
-          </h1>
-          <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-            The 8 C's and 5 P's embody essential qualities for a healthy mental state and resilience. 
-            They act as indicators to measure how much the Self guides responses and navigates challenges.
-          </p>
-        </div>
+        <PageHero
+          image={QUALITIES_HERO_IMAGE}
+          eyebrow="Self Energy"
+          title="Qualities of Self"
+          subtitle={"The 8 C's and 5 P's embody essential qualities for a healthy mental state and resilience. They act as indicators to measure how much the Self guides responses and navigates challenges."}
+        />
 
         {/* Tab Navigation */}
         <div className="flex justify-center mb-12">

@@ -1,6 +1,9 @@
 import { useState } from 'react';
 import { commonWounds } from '../data/ifsData';
-import { Heart, ChevronDown, ChevronUp } from 'lucide-react';
+import { ChevronDown, ChevronUp } from 'lucide-react';
+import PageHero from '../components/PageHero';
+
+const WOUNDS_HERO_IMAGE = '/images/dashboard/deep-wound-assessment.jpg';
 
 const Wounds = () => {
   const [expandedWound, setExpandedWound] = useState(null);
@@ -19,20 +22,12 @@ const Wounds = () => {
     <div className="min-h-screen">
       <div className="max-w-6xl mx-auto px-6 py-12 lg:py-20">
         {/* Header */}
-        <div className="text-center mb-16">
-          <div className="flex justify-center mb-6">
-            <div className="w-16 h-16 bg-gradient-to-br from-brand-gold-500 to-brand-emerald-600 rounded-2xl flex items-center justify-center shadow-lg shadow-brand-gold-500/20">
-              <Heart className="w-8 h-8 text-white" fill="white" />
-            </div>
-          </div>
-          <h1 className="text-4xl lg:text-6xl font-serif font-normal mb-5 text-brand-stone-900 dark:text-slate-100">
-            10 Common Wounds of the Inner Child
-          </h1>
-          <p className="text-lg text-brand-stone-600 dark:text-slate-400 max-w-3xl mx-auto leading-relaxed">
-            The "wounds" of the inner child refer to unresolved emotional pain, unmet needs, or traumatic experiences 
-            from childhood that continue to affect us. Below are 10 common inner child wounds and their manifestations.
-          </p>
-        </div>
+        <PageHero
+          image={WOUNDS_HERO_IMAGE}
+          eyebrow="Inner Child"
+          title="10 Common Wounds of the Inner Child"
+          subtitle={'The "wounds" of the inner child refer to unresolved emotional pain, unmet needs, or traumatic experiences from childhood that continue to affect us. Below are 10 common inner child wounds and their manifestations.'}
+        />
 
         {/* Introduction Card */}
         <div className="soft-card mb-12 bg-brand-stone-100/80 dark:bg-brand-cardDark/60">

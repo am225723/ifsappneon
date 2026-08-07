@@ -9,6 +9,9 @@ import {
 import { useTheme } from '../contexts/ThemeContext';
 import { supabase, supabaseHelpers } from '../lib/supabase';
 import { clientAuth } from '../lib/supabasePersonalization';
+import PageHero, { heroSecondaryButtonClass, heroChipClass } from '../components/PageHero';
+
+const DAILY_CHECKIN_HERO_IMAGE = '/images/dashboard/daily-mood.jpg';
 
 const DEFAULT_PARTS = [
   { id: 'inner-critic', name: 'Inner Critic', type: 'manager', emoji: '⚖️' },
@@ -230,23 +233,25 @@ export default function DailyCheckin() {
 
   return (
     <div className={`min-h-screen pb-32 ${bg}`}>
-      <div className={`sticky top-0 z-20 backdrop-blur-xl border-b ${isDark ? 'bg-slate-900/80 border-slate-700' : 'bg-white/80 border-amber-100'}`}>
-        <div className="max-w-2xl mx-auto px-4 py-4 flex items-center gap-3">
-          <Link to="/home" className={`p-2 rounded-xl ${isDark ? 'hover:bg-slate-700 text-slate-300' : 'hover:bg-amber-100 text-gray-600'}`}>
-            <ArrowLeft size={20} />
-          </Link>
-          <div className="flex-1">
-            <h1 className={`text-xl font-bold ${textPrimary}`}>Daily Check-In</h1>
-            <p className={`text-xs ${textMuted}`}>{new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</p>
-          </div>
-          {alreadyCheckedIn && (
-            <span className="flex items-center gap-1 text-xs font-semibold text-emerald-600 bg-emerald-100 dark:bg-emerald-900/40 dark:text-emerald-300 px-3 py-1 rounded-full">
-              <CheckCircle size={12} /> Done today
+      <div className="max-w-2xl mx-auto px-4 pt-6">
+        <PageHero
+          image={DAILY_CHECKIN_HERO_IMAGE}
+          eyebrow="Daily Check-In"
+          title="Daily Check-In"
+          subtitle={new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+          actions={(
+            <Link to="/home" className={heroSecondaryButtonClass}>
+              <ArrowLeft className="h-4 w-4" /> Back
+            </Link>
+          )}
+          chips={alreadyCheckedIn && (
+            <span className={heroChipClass}>
+              <CheckCircle size={12} className="mr-1 inline" /> Done today
             </span>
           )}
-        </div>
+        />
         {step < 4 && (
-          <div className="max-w-2xl mx-auto px-4 pb-3">
+          <div className="-mt-6 mb-6">
             <div className="flex gap-2">
               {[1,2,3].map(s => (
                 <div key={s} className={`flex-1 h-1 rounded-full transition-all duration-500 ${s <= step ? 'bg-amber-500' : isDark ? 'bg-slate-700' : 'bg-amber-100'}`} />

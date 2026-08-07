@@ -16,6 +16,9 @@ import { WOUND_MODULE_PRIORITIES, LEVEL_ORDER } from '../lib/woundModulePrioriti
 import { canAccessModule } from '../lib/accessControl';
 import { buildSharedCurriculumSummary, getModuleActionLabel, getModuleSupportLinks } from '../lib/curriculumExperience';
 import { countCurriculumReflectionsByModule, loadCurriculumReflections } from '../lib/curriculumReflections';
+import PageHero, { heroPrimaryButtonClass } from './PageHero';
+
+const CURRICULUM_HERO_IMAGE = '/images/dashboard/continue-path.jpg';
 
 const CurriculumSystem = ({ onModuleSelect, userProgress = {}, clientId }) => {
   const [completedModules, setCompletedModules] = useState([]);
@@ -226,41 +229,32 @@ const CurriculumSystem = ({ onModuleSelect, userProgress = {}, clientId }) => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-amber-50 via-emerald-50 to-blue-50">
-      {/* Header */}
-      <div className="bg-white shadow-sm border-b border-gray-100">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex items-center justify-between flex-wrap gap-4">
-            <div>
-              <h1 className="text-3xl font-bold bg-gradient-to-r from-amber-600 to-emerald-600 bg-clip-text text-transparent">
-                Your IFS Curriculum
-              </h1>
-              <p className="text-gray-600 mt-1 text-sm max-w-3xl">
-                {woundConfig ? (
-                  <span className="flex items-center gap-1.5">
-                    <Sparkles className="w-4 h-4 text-amber-600" />
-                    Personalized for your <strong>{woundConfig.childName}</strong>
-                    {secondaryWoundConfig && <> &amp; <strong>{secondaryWoundConfig.childName}</strong></>}
-                  </span>
-                ) : (
-                  'Follow your IFS Path step by step, then use reflections, parts work, and daily-life practices to support what you are learning.'
-                )}
-              </p>
-            </div>
-            {nextModule && (
-              <Link
-                to={`/curriculum/module/${nextModule.id}`}
-                onClick={() => handleModuleSelect(nextModule)}
-                className="bg-gradient-to-r from-amber-600 to-emerald-600 text-white px-6 py-3 rounded-lg font-semibold hover:from-amber-700 hover:to-emerald-700 transition-all flex items-center space-x-2 shadow-lg"
-              >
-                <Play className="w-5 h-5" />
-                <span>Continue Module</span>
-              </Link>
-            )}
-          </div>
-        </div>
-      </div>
-
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+        <PageHero
+          image={CURRICULUM_HERO_IMAGE}
+          eyebrow="IFS Path"
+          title="Your IFS Curriculum"
+          subtitle={woundConfig ? (
+            <span className="flex items-center gap-1.5">
+              <Sparkles className="w-4 h-4 text-amber-200" />
+              Personalized for your <strong>{woundConfig.childName}</strong>
+              {secondaryWoundConfig && <> &amp; <strong>{secondaryWoundConfig.childName}</strong></>}
+            </span>
+          ) : (
+            'Follow your IFS Path step by step, then use reflections, parts work, and daily-life practices to support what you are learning.'
+          )}
+          actions={nextModule && (
+            <Link
+              to={`/curriculum/module/${nextModule.id}`}
+              onClick={() => handleModuleSelect(nextModule)}
+              className={heroPrimaryButtonClass}
+            >
+              <Play className="w-5 h-5" />
+              <span>Continue Module</span>
+            </Link>
+          )}
+        />
+
         <section className="rounded-3xl border border-amber-100 bg-white/90 p-5 shadow-sm sm:p-6 lg:p-8">
           <div className="grid gap-6 lg:grid-cols-[1.35fr_0.65fr] lg:items-center">
             <div>

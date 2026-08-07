@@ -7,6 +7,9 @@ import {
 import { useTheme } from '../contexts/ThemeContext';
 import { supabase, supabaseHelpers } from '../lib/supabase';
 import { clientAuth } from '../lib/supabasePersonalization';
+import PageHero, { heroSecondaryButtonClass } from '../components/PageHero';
+
+const PARTS_CARDS_HERO_IMAGE = '/images/dashboard/deep-parts-dialogue.jpg';
 
 const DEFAULT_PARTS = [
   { id: 'inner-critic', name: 'Inner Critic', type: 'manager', emoji: '⚖️', role: 'Keeps you in line to avoid criticism' },
@@ -268,21 +271,21 @@ const PartsCards = () => {
   return (
     <div className={`min-h-screen p-4 pb-24 ${theme.isDark ? 'bg-slate-900' : 'bg-gray-50'}`}>
       <div className="max-w-lg mx-auto">
-        <div className="flex items-center justify-between mb-6">
-          <Link to="/" className={`p-2 rounded-lg ${theme.isDark ? 'hover:bg-slate-800 text-slate-400' : 'hover:bg-gray-100 text-gray-600'}`}>
-            <ArrowLeft className="w-5 h-5" />
-          </Link>
-          <h1 className={`text-xl font-bold ${theme.isDark ? 'text-white' : 'text-gray-900'}`}>
-            Parts Check-In Cards
-          </h1>
-          <button
-            onClick={() => setShowPast(!showPast)}
-            className={`p-2 rounded-lg ${theme.isDark ? 'hover:bg-slate-800 text-slate-400' : 'hover:bg-gray-100 text-gray-600'}`}
-            title="Past reflections"
-          >
-            <BookOpen className="w-5 h-5" />
-          </button>
-        </div>
+        <PageHero
+          image={PARTS_CARDS_HERO_IMAGE}
+          eyebrow="Daily Practice"
+          title="Parts Check-In Cards"
+          actions={(
+            <>
+              <Link to="/" className={heroSecondaryButtonClass}>
+                <ArrowLeft className="h-4 w-4" /> Back
+              </Link>
+              <button onClick={() => setShowPast(!showPast)} className={heroSecondaryButtonClass}>
+                <BookOpen className="h-4 w-4" /> {showPast ? 'New Card' : 'Past Reflections'}
+              </button>
+            </>
+          )}
+        />
 
         {!showPast ? (
           <>

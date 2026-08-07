@@ -3,6 +3,9 @@ import { Link } from 'react-router-dom';
 import { ArrowLeft, Palette, Sparkles, Zap, Moon, Sun, Check, Play, DatabaseBackup, Link2, Map, ClipboardList } from 'lucide-react';
 import { useTheme, themePresets } from '../contexts/ThemeContext';
 import NotificationSettings from '../components/NotificationSettings';
+import PageHero from '../components/PageHero';
+
+const SETTINGS_HERO_IMAGE = '/images/dashboard/hero-sunrise.jpg';
 
 export default function Settings() {
   const { 
@@ -32,14 +35,13 @@ export default function Settings() {
           Back to Home
         </Link>
 
-        <div className="mb-8">
-          <h1 className={`text-3xl font-bold ${theme.isDark ? 'text-white' : 'text-gray-900'} mb-2`}>
-            Personalize Your Experience
-          </h1>
-          <p className={theme.isDark ? 'text-slate-300' : 'text-gray-600'}>
-            Customize colors and animations to create a space that feels safe and supportive for your healing journey.
-          </p>
-        </div>
+        <PageHero
+          image={SETTINGS_HERO_IMAGE}
+          eyebrow="Settings"
+          title="Personalize Your Experience"
+          subtitle="Customize colors and animations to create a space that feels safe and supportive for your healing journey."
+          className="mb-6"
+        />
 
         <div className={`${theme.cardBg} backdrop-blur-sm rounded-2xl shadow-lg border ${theme.isDark ? 'border-slate-700' : 'border-gray-100'} p-6 mb-8 ${getAnimationClass('transition')}`}>
           <div className="flex items-center gap-3 mb-6">

@@ -2,6 +2,9 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Archive, Bell, Check, CheckCheck, Clock, ExternalLink, Inbox, SlidersHorizontal } from 'lucide-react';
 import { archiveNotification, loadNotifications, markAllNotificationsRead, markNotificationRead } from '../lib/notifications';
+import PageHero from '../components/PageHero';
+
+const NOTIFICATIONS_HERO_IMAGE = '/images/dashboard/hero-sunrise.jpg';
 
 const FILTERS = [
   { id: 'unread', label: 'Unread' },
@@ -107,22 +110,23 @@ export default function Notifications({ currentClient }) {
 
   return (
     <main className="max-w-4xl mx-auto px-6 py-10">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
-        <div>
-          <p className="text-xs font-bold uppercase tracking-[0.25em] text-brand-emerald-700 dark:text-brand-emerald-100 mb-2">Activity Center</p>
-          <h1 className="text-3xl font-serif font-semibold text-brand-stone-900 dark:text-slate-100">Notifications</h1>
-          <p className="text-sm text-brand-stone-600 dark:text-slate-400 mt-2">Secure in-app updates for your care activity.</p>
-        </div>
-        <div className="flex flex-col sm:flex-row gap-2">
-          <Link to="/notification-preferences" className="px-4 py-2.5 rounded-2xl font-semibold border border-brand-stone-200 dark:border-slate-700 text-brand-stone-700 dark:text-slate-200 bg-white/70 dark:bg-slate-900/60 hover:border-brand-gold-300 inline-flex items-center justify-center gap-2">
-            <SlidersHorizontal className="w-4 h-4" />
-            Notification Preferences
-          </Link>
-          <button onClick={handleMarkAllRead} disabled={!unreadCount} className="btn-sanctuary-primary disabled:opacity-50 disabled:cursor-not-allowed">
-            <CheckCheck className="w-4 h-4" />
-            Mark all read
-          </button>
-        </div>
+      <PageHero
+        image={NOTIFICATIONS_HERO_IMAGE}
+        eyebrow="Activity Center"
+        title="Notifications"
+        subtitle="Secure in-app updates for your care activity."
+        className="mb-6"
+      />
+
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-2 mb-8">
+        <Link to="/notification-preferences" className="px-4 py-2.5 rounded-2xl font-semibold border border-brand-stone-200 dark:border-slate-700 text-brand-stone-700 dark:text-slate-200 bg-white/70 dark:bg-slate-900/60 hover:border-brand-gold-300 inline-flex items-center justify-center gap-2">
+          <SlidersHorizontal className="w-4 h-4" />
+          Notification Preferences
+        </Link>
+        <button onClick={handleMarkAllRead} disabled={!unreadCount} className="btn-sanctuary-primary disabled:opacity-50 disabled:cursor-not-allowed">
+          <CheckCheck className="w-4 h-4" />
+          Mark all read
+        </button>
       </div>
 
       <div className="flex gap-2 mb-6 overflow-x-auto">
