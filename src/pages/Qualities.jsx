@@ -26,6 +26,7 @@ const QualityTile = ({ quality, tone, expanded, onToggle }) => (
   <div>
     <PhotoTile
       onClick={onToggle}
+      aria-expanded={expanded}
       image={QUALITY_IMAGES[quality.title] || QUALITIES_HERO_IMAGE}
       title={quality.title}
       detail={quality.description}
