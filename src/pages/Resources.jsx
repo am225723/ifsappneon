@@ -5,10 +5,17 @@ import PhotoTile from '../components/PhotoTile';
 
 const RESOURCES_HERO_IMAGE = '/images/dashboard/tools-resource-library.jpg';
 
-const RESOURCE_TYPE_IMAGES = {
-  book: '/images/resources/book.jpg',
-  video: '/images/resources/video.jpg',
-  audio: '/images/resources/audio.jpg'
+const RESOURCE_IMAGES = {
+  1: '/images/resources/no-bad-parts.jpg',
+  2: '/images/resources/ifs-therapy-textbook.jpg',
+  3: '/images/resources/self-therapy.jpg',
+  4: '/images/resources/greater-than-sum.jpg',
+  5: '/images/resources/intro-to-ifs.jpg',
+  6: '/images/resources/guided-meditations.jpg',
+  7: '/images/resources/body-keeps-score.jpg',
+  8: '/images/resources/complex-ptsd.jpg',
+  9: '/images/resources/ifs-online-courses.jpg',
+  10: '/images/resources/ifs-podcast.jpg'
 };
 
 const Resources = () => {
@@ -193,7 +200,7 @@ const Resources = () => {
                 <PhotoTile
                   key={resource.id}
                   href={resource.link}
-                  image={RESOURCE_TYPE_IMAGES[resource.type] || RESOURCES_HERO_IMAGE}
+                  image={RESOURCE_IMAGES[resource.id] || RESOURCES_HERO_IMAGE}
                   icon={Icon}
                   title={resource.title}
                   detail={`${resource.author} — ${resource.description}`}
