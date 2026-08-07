@@ -8,7 +8,7 @@ const TONE_GRADIENTS = {
   advisor: 'bg-gradient-to-br from-[#3b82f6] to-[#6366f1]'
 };
 
-const PhotoTile = ({ to, href, onClick, image, icon, title, detail, tone = 'daily', wide = false, full = false, className = '', children }) => {
+const PhotoTile = ({ to, href, onClick, image, icon, title, detail, tone = 'daily', wide = false, full = false, className = '', children, ...buttonProps }) => {
   const badge = icon && (
     <span
       className={`z-10 flex shrink-0 items-center justify-center rounded-2xl border border-white/55 shadow-lg ${TONE_GRADIENTS[tone] || TONE_GRADIENTS.daily} ${
@@ -68,7 +68,7 @@ const PhotoTile = ({ to, href, onClick, image, icon, title, detail, tone = 'dail
   }
 
   return (
-    <button type="button" onClick={onClick} className={sharedClassName}>
+    <button type="button" onClick={onClick} className={sharedClassName} {...buttonProps}>
       {content}
     </button>
   );

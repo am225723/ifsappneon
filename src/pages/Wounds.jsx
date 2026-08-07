@@ -63,6 +63,7 @@ const Wounds = () => {
                 tone="deep"
                 wide
                 full
+                aria-expanded={expandedWound === wound.id}
               >
                 <span className="ml-2 shrink-0 rounded-full bg-white/15 p-2 backdrop-blur">
                   {expandedWound === wound.id ? (
