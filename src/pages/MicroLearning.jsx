@@ -10,8 +10,18 @@ import AudioPracticePlayer from '../components/AudioPracticePlayer';
 import { guidedPracticeMediaByPracticeId } from '../lib/guidedPracticeMediaMap';
 import { loadActiveMeditationMedia, mergeMeditationMediaWithLibrary } from '../lib/meditationMedia';
 import PageHero from '../components/PageHero';
+import PhotoTile from '../components/PhotoTile';
 
 const MICRO_LEARNING_HERO_IMAGE = '/images/dashboard/daily-return-to-self.jpg';
+
+const MICRO_EXERCISE_IMAGES = {
+  'breath-anchor': '/images/microlearning/breath-anchor.jpg',
+  'self-compassion-pause': '/images/microlearning/self-compassion-pause.jpg',
+  'quick-parts-check-in': '/images/microlearning/quick-parts-check-in.jpg',
+  'morning-intention': '/images/microlearning/morning-intention.jpg',
+  'evening-release': '/images/microlearning/evening-release.jpg',
+  'mini-body-scan': '/images/microlearning/mini-body-scan.jpg'
+};
 
 const baseMicroExercises = [
   {
@@ -257,42 +267,26 @@ export default function MicroLearning() {
             <h3 className={`text-lg font-semibold ${theme.isDark ? 'text-white' : 'text-gray-900'} mb-4 capitalize`}>
               {category}
             </h3>
-            <div className="grid md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-4">
               {exercises.filter(e => e.category === category).map(exercise => {
                 const Icon = exercise.icon;
                 const isCompleted = completedToday.includes(exercise.id);
-                
+
                 return (
-                  <button
+                  <PhotoTile
                     key={exercise.id}
                     onClick={() => startExercise(exercise)}
-                    className={`${theme.cardBg} backdrop-blur-sm rounded-xl shadow-sm border ${theme.isDark ? 'border-slate-700' : 'border-gray-100'} p-4 text-left ${getAnimationClass('transition')} ${getAnimationClass('hover')}`}
+                    image={MICRO_EXERCISE_IMAGES[exercise.id] || MICRO_LEARNING_HERO_IMAGE}
+                    icon={Icon}
+                    title={exercise.title}
+                    detail={exercise.description}
+                    tone="daily"
                   >
-                    <div className="flex items-start gap-4">
-                      <div 
-                        className={`p-3 rounded-xl ${isCompleted ? 'text-white' : ''}`}
-                        style={{ backgroundColor: isCompleted ? theme.accentColor : (theme.isDark ? '#334155' : '#F3F4F6') }}
-                      >
-                        <Icon className={`w-6 h-6 ${isCompleted ? '' : theme.isDark ? 'text-slate-300' : 'text-gray-600'}`} />
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <h4 className={`font-medium ${theme.isDark ? 'text-white' : 'text-gray-900'}`}>{exercise.title}</h4>
-                          {isCompleted && <Check className="w-4 h-4 text-green-500" />}
-                        </div>
-                        <p className={`text-sm ${theme.isDark ? 'text-slate-400' : 'text-gray-500'} mb-2`}>
-                          {exercise.description}
-                        </p>
-                        <div className="flex items-center gap-2 text-xs">
-                          <Clock className="w-3 h-3" />
-                          <span className={theme.isDark ? 'text-slate-400' : 'text-gray-500'}>{exercise.duration}</span>
-                          <span className={theme.isDark ? 'text-slate-500' : 'text-gray-400'}>{exercise.mp3Filename}</span>
-                          {exercise.audioUrl && <span className="inline-flex items-center gap-1 text-emerald-600"><Headphones className="h-3 w-3" /> Audio</span>}
-                        </div>
-                      </div>
-                      <ChevronRight className={`w-5 h-5 ${theme.isDark ? 'text-slate-500' : 'text-gray-400'}`} />
-                    </div>
-                  </button>
+                    <span className="absolute right-3.5 top-3.5 z-10 flex items-center gap-1 rounded-full bg-white/15 px-2.5 py-1 text-[11px] font-semibold text-white backdrop-blur">
+                      {isCompleted ? <Check className="h-3 w-3" /> : <Clock className="h-3 w-3" />}
+                      {exercise.duration}
+                    </span>
+                  </PhotoTile>
                 );
               })}
             </div>
