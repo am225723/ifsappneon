@@ -1,4 +1,3 @@
-import { Link } from 'react-router-dom';
 import {
   BarChart3,
   Bell,
@@ -26,8 +25,75 @@ import {
 import { canAccessFeature } from '../lib/accessControl';
 import { clientAuth } from '../lib/supabasePersonalization';
 import PageHero from '../components/PageHero';
+import PhotoTile from '../components/PhotoTile';
 
 const TOOLS_DIRECTORY_HERO_IMAGE = '/images/dashboard/tools-meditation.jpg';
+
+const TOOL_IMAGES = {
+  '/curriculum': '/images/tools/curriculum.jpg',
+  '/assessments': '/images/tools/assessments.jpg',
+  '/my-ifs': '/images/tools/my-ifs.jpg',
+  '/profile': '/images/tools/profile.jpg',
+  '/progress-timeline': '/images/tools/progress-timeline.jpg',
+  '/daily-checkin': '/images/tools/daily-checkin.jpg',
+  '/life-integration': '/images/tools/life-integration.jpg',
+  '/life-integration/notice-part': '/images/tools/notice-part.jpg',
+  '/life-integration/return-to-self': '/images/tools/return-to-self.jpg',
+  '/life-integration/trigger-reflection': '/images/tools/trigger-reflection.jpg',
+  '/life-integration/repair-after-conflict': '/images/tools/repair-after-conflict.jpg',
+  '/life-integration/protector-check-in': '/images/tools/protector-check-in.jpg',
+  '/life-integration/needs-boundaries': '/images/tools/needs-boundaries.jpg',
+  '/meditation': '/images/tools/meditation-library.jpg',
+  '/qualities': '/images/tools/self-energy-practice.jpg',
+  '/affirmations': '/images/tools/affirmations.jpg',
+  '/micro-learning': '/images/tools/micro-learning-hub.jpg',
+  '/mood-tracker': '/images/tools/mood-tracker.jpg',
+  '/parts-relationships': '/images/tools/parts-relationships.jpg',
+  '/parts-dialogue': '/images/tools/parts-dialogue.jpg',
+  '/parts-cards': '/images/tools/parts-cards.jpg',
+  '/parts-studio': '/images/tools/parts-studio.jpg',
+  '/unburdening': '/images/tools/unburdening.jpg',
+  '/journal': '/images/tools/journal.jpg',
+  '/letters': '/images/tools/letters.jpg',
+  '/weekly-reflection': '/images/tools/weekly-reflection.jpg',
+  '/healing-tracker': '/images/tools/healing-tracker.jpg',
+  '/milestones': '/images/tools/milestones.jpg',
+  '/assigned-practices': '/images/tools/assigned-practices.jpg',
+  '/pre-session-checkin': '/images/tools/pre-session-checkin.jpg',
+  '/inbox': '/images/tools/inbox.jpg',
+  '/live-session': '/images/tools/live-session.jpg',
+  '/notifications': '/images/tools/notifications.jpg',
+  '/healing-timeline': '/images/tools/healing-timeline.jpg',
+  '/mood-analytics': '/images/tools/mood-analytics.jpg',
+  '/gamification': '/images/tools/gamification.jpg',
+  '/resource-library': '/images/tools/resource-library-hub.jpg',
+  '/resources': '/images/tools/resources-hub.jpg',
+  '/cheat-sheet': '/images/tools/cheat-sheet.jpg',
+  '/advisor-workspace': '/images/tools/advisor-workspace.jpg',
+  '/admin-hub': '/images/tools/admin-hub.jpg',
+  '/caseload': '/images/tools/caseload.jpg',
+  '/assessment-builder': '/images/tools/assessment-builder.jpg',
+  '/advisor-homework': '/images/tools/advisor-homework.jpg',
+  '/admin/meditation-media': '/images/tools/meditation-media-library.jpg',
+  '/treatment-plans': '/images/tools/treatment-plans.jpg',
+  '/advisor/shared-reflections': '/images/tools/shared-reflections.jpg',
+  '/messages': '/images/tools/messages.jpg',
+  '/reports': '/images/tools/reports.jpg',
+  '/analytics': '/images/tools/analytics.jpg',
+  '/longitudinal-analytics': '/images/tools/longitudinal-analytics.jpg',
+  '/live-co-therapy': '/images/tools/live-co-therapy.jpg',
+};
+
+const SECTION_TONES = {
+  'Core IFS Path': 'daily',
+  'Daily Practice': 'daily',
+  'Parts Work': 'deep',
+  'Reflection & Journaling': 'deep',
+  'Advisor Support': 'advisor',
+  'Progress & Analytics': 'tools',
+  'Advanced / Optional Tools': 'tools',
+  'Admin / Advisor Tools': 'advisor',
+};
 
 const selfWorkRoles = ['client', 'therapist', 'advisor', 'admin', 'supervisor'];
 const clientRoles = selfWorkRoles;
@@ -150,36 +216,27 @@ function isAllowedForRole(item, role) {
   return item.roles.includes(role);
 }
 
-function ToolCard({ item }) {
+function ToolCard({ item, tone }) {
   const Icon = item.icon;
   const available = !item.feature || canAccessFeature(item.feature);
-  const content = (
-    <>
-      <div className={`mb-4 flex h-11 w-11 items-center justify-center rounded-2xl ${available ? 'bg-brand-gold-50 text-brand-gold-700 dark:bg-brand-gold-950/30 dark:text-brand-gold-500' : 'bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500'}`}>
-        {available ? <Icon className="h-5 w-5" /> : <Lock className="h-5 w-5" />}
-      </div>
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <h3 className={`font-semibold ${available ? 'text-brand-stone-900 dark:text-slate-100' : 'text-brand-stone-500 dark:text-slate-500'}`}>{item.label}</h3>
-          {item.description && <p className="mt-1 text-xs leading-relaxed text-brand-stone-500 dark:text-slate-500">{item.description}</p>}
-          {item.feature && !available && <p className="mt-1 text-xs text-brand-stone-500 dark:text-slate-500">Available when this practice is included with your account.</p>}
-        </div>
-      </div>
-    </>
-  );
-
-  if (!available) {
-    return (
-      <div className="rounded-3xl border border-dashed border-slate-200 bg-white/60 p-5 dark:border-slate-700 dark:bg-slate-900/40" aria-disabled="true">
-        {content}
-      </div>
-    );
-  }
+  const image = TOOL_IMAGES[item.to] || TOOLS_DIRECTORY_HERO_IMAGE;
+  const detail = !available
+    ? 'Available when this practice is included with your account.'
+    : item.description;
 
   return (
-    <Link to={item.to} className="rounded-3xl border border-brand-stone-200/70 bg-white/85 p-5 transition hover:-translate-y-0.5 hover:border-brand-gold-200 hover:shadow-lg dark:border-slate-800 dark:bg-brand-cardDark/90 dark:hover:border-brand-gold-900/50">
-      {content}
-    </Link>
+    <PhotoTile
+      to={available ? item.to : undefined}
+      disabled={!available}
+      aria-disabled={!available}
+      tabIndex={available ? undefined : -1}
+      image={image}
+      icon={available ? Icon : Lock}
+      title={item.label}
+      detail={detail}
+      tone={tone}
+      className={available ? '' : 'grayscale opacity-60 pointer-events-none'}
+    />
   );
 }
 
@@ -210,7 +267,9 @@ export default function ToolsDirectory({ currentClient }) {
               <p className="mt-1 text-sm text-brand-stone-600 dark:text-slate-400">{section.description}</p>
             </div>
             <div className={`grid gap-4 sm:grid-cols-2 ${section.title === 'Admin / Advisor Tools' ? 'lg:grid-cols-4' : 'lg:grid-cols-3'}`}>
-              {section.items.map((item) => <ToolCard key={`${section.title}-${item.label}-${item.to}`} item={item} />)}
+              {section.items.map((item) => (
+                <ToolCard key={`${section.title}-${item.label}-${item.to}`} item={item} tone={SECTION_TONES[section.title]} />
+              ))}
             </div>
           </section>
         ))}
