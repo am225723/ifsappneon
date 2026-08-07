@@ -582,9 +582,11 @@ const Home = ({ clientId, client, mode = 'home', selfProfile = null, selfProfile
         </section>
       )}
 
-      <section className="relative mb-12 overflow-hidden rounded-[2.25rem] p-7 shadow-premium md:p-10">
-        <img src={HERO_IMAGE} alt="" className="absolute inset-0 h-full w-full object-cover" />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/45 to-black/10" />
+      <section className="relative mb-12 rounded-[2.25rem] p-7 shadow-premium md:p-10">
+        <div className="absolute inset-0 overflow-hidden rounded-[2.25rem]">
+          <img src={HERO_IMAGE} alt="" className="absolute inset-0 h-full w-full object-cover" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/45 to-black/10" />
+        </div>
         <div className="relative z-10 flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between">
           <div className="max-w-3xl">
             <p className="mb-4 text-xs font-bold uppercase tracking-[0.32em] text-white/80">The Luminous Self</p>
