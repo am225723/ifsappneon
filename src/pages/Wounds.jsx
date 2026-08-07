@@ -2,8 +2,22 @@ import { useState } from 'react';
 import { commonWounds } from '../data/ifsData';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import PageHero from '../components/PageHero';
+import PhotoTile from '../components/PhotoTile';
 
 const WOUNDS_HERO_IMAGE = '/images/dashboard/deep-wound-assessment.jpg';
+
+const WOUND_IMAGES = {
+  ABANDONMENT: '/images/wounds/abandonment.jpg',
+  NEGLECT: '/images/wounds/neglect.jpg',
+  REJECTION: '/images/wounds/rejection.jpg',
+  'CRITICISM/SHAME': '/images/wounds/criticism-shame.jpg',
+  BETRAYAL: '/images/wounds/betrayal.jpg',
+  HUMILIATION: '/images/wounds/humiliation.jpg',
+  INJUSTICE: '/images/wounds/injustice.jpg',
+  'LOSS/GRIEF': '/images/wounds/loss-grief.jpg',
+  'EMOTIONAL INVALIDATION': '/images/wounds/emotional-invalidation.jpg',
+  TRAUMA: '/images/wounds/trauma.jpg'
+};
 
 const Wounds = () => {
   const [expandedWound, setExpandedWound] = useState(null);
@@ -11,12 +25,6 @@ const Wounds = () => {
   const toggleWound = (id) => {
     setExpandedWound(expandedWound === id ? null : id);
   };
-
-  const woundColors = [
-    'bg-brand-gold-50 text-brand-gold-700 dark:bg-brand-gold-950/40 dark:text-brand-gold-500',
-    'bg-brand-emerald-50 text-brand-emerald-700 dark:bg-brand-emerald-950/40 dark:text-brand-emerald-100',
-    'bg-brand-stone-100 text-brand-stone-600 dark:bg-slate-800/60 dark:text-slate-200'
-  ];
 
   return (
     <div className="min-h-screen">
@@ -44,34 +52,30 @@ const Wounds = () => {
         </div>
 
         {/* Wounds Grid */}
-        <div className="space-y-6">
-          {commonWounds.map((wound, index) => (
-            <div
-              key={wound.id}
-              className="soft-card-interactive cursor-pointer"
-              onClick={() => toggleWound(wound.id)}
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-4 flex-1">
-                  <div className={`w-16 h-16 ${woundColors[index % woundColors.length]} rounded-2xl flex items-center justify-center font-bold text-2xl`}>
-                    {wound.id}
-                  </div>
-                  <div>
-                    <h3 className="text-2xl font-serif font-normal text-brand-stone-900 dark:text-slate-100">{wound.title}</h3>
-                    <p className="text-brand-stone-600 dark:text-slate-400">{wound.rootCause}</p>
-                  </div>
-                </div>
-                <button className="p-2 hover:bg-brand-stone-100 dark:hover:bg-slate-800 rounded-full transition-colors">
+        <div className="space-y-4">
+          {commonWounds.map((wound) => (
+            <div key={wound.id}>
+              <PhotoTile
+                onClick={() => toggleWound(wound.id)}
+                image={WOUND_IMAGES[wound.title] || WOUNDS_HERO_IMAGE}
+                title={`${wound.id}. ${wound.title}`}
+                detail={wound.rootCause}
+                tone="deep"
+                wide
+                full
+                aria-expanded={expandedWound === wound.id}
+              >
+                <span className="ml-2 shrink-0 rounded-full bg-white/15 p-2 backdrop-blur">
                   {expandedWound === wound.id ? (
-                    <ChevronUp className="w-6 h-6 text-brand-stone-600 dark:text-slate-400" />
+                    <ChevronUp className="h-5 w-5 text-white" />
                   ) : (
-                    <ChevronDown className="w-6 h-6 text-brand-stone-600 dark:text-slate-400" />
+                    <ChevronDown className="h-5 w-5 text-white" />
                   )}
-                </button>
-              </div>
+                </span>
+              </PhotoTile>
 
               {expandedWound === wound.id && (
-                <div className="mt-6 pt-6 border-t border-brand-stone-200/60 dark:border-slate-800/60 space-y-4 animate-fadeIn">
+                <div className="mt-3 space-y-4 rounded-[22px] border border-brand-stone-200/60 bg-white/70 p-6 dark:border-slate-800/60 dark:bg-slate-900/50 animate-fadeIn">
                   <div className="bg-brand-gold-50/80 dark:bg-brand-gold-950/20 p-4 rounded-2xl">
                     <h4 className="text-lg font-semibold text-brand-gold-700 dark:text-brand-gold-500 mb-2">Child Manifestations</h4>
                     <p className="text-brand-stone-600 dark:text-slate-400">{wound.childManifestations}</p>
