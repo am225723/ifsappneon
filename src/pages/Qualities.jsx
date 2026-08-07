@@ -1,12 +1,58 @@
 import { useState } from 'react';
 import { eightCs, fivePs } from '../data/ifsData';
-import { Sparkles, Star } from 'lucide-react';
 import PageHero from '../components/PageHero';
+import PhotoTile from '../components/PhotoTile';
+import { ChevronDown, ChevronUp } from 'lucide-react';
 
 const QUALITIES_HERO_IMAGE = '/images/dashboard/tools-affirmations.jpg';
 
+const QUALITY_IMAGES = {
+  Calmness: '/images/qualities/calmness.jpg',
+  Curiosity: '/images/qualities/curiosity.jpg',
+  Clarity: '/images/qualities/clarity.jpg',
+  Compassion: '/images/qualities/compassion.jpg',
+  Confidence: '/images/qualities/confidence.jpg',
+  Courage: '/images/qualities/courage.jpg',
+  Creativity: '/images/qualities/creativity.jpg',
+  Connectedness: '/images/qualities/connectedness.jpg',
+  Patience: '/images/qualities/patience.jpg',
+  Persistence: '/images/qualities/persistence.jpg',
+  Presence: '/images/qualities/presence.jpg',
+  Playfulness: '/images/qualities/playfulness.jpg',
+  Peace: '/images/qualities/peace.jpg'
+};
+
+const QualityTile = ({ quality, tone, expanded, onToggle }) => (
+  <div>
+    <PhotoTile
+      onClick={onToggle}
+      aria-expanded={expanded}
+      image={QUALITY_IMAGES[quality.title] || QUALITIES_HERO_IMAGE}
+      title={quality.title}
+      detail={quality.description}
+      tone={tone}
+      wide
+      full
+    >
+      <span className="ml-2 shrink-0 rounded-full bg-white/15 p-2 backdrop-blur">
+        {expanded ? <ChevronUp className="h-5 w-5 text-white" /> : <ChevronDown className="h-5 w-5 text-white" />}
+      </span>
+    </PhotoTile>
+    {expanded && (
+      <div className="mt-3 rounded-[22px] border border-brand-stone-200/60 bg-white/70 p-6 dark:border-slate-800/60 dark:bg-slate-900/50 animate-fadeIn">
+        <p className="leading-relaxed text-brand-stone-600 dark:text-slate-400">{quality.description}</p>
+      </div>
+    )}
+  </div>
+);
+
 const Qualities = () => {
   const [activeTab, setActiveTab] = useState('8cs');
+  const [expandedQuality, setExpandedQuality] = useState(null);
+
+  const toggleQuality = (title) => {
+    setExpandedQuality((current) => (current === title ? null : title));
+  };
 
   return (
     <div className="min-h-screen py-12">
@@ -58,22 +104,15 @@ const Qualities = () => {
               </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {eightCs.map((quality, index) => (
-                <div
-                  key={index}
-                  className={`part-card bg-gradient-to-br ${quality.color} text-white`}
-                >
-                  <div className="flex items-center mb-4">
-                    <div className="w-12 h-12 bg-white bg-opacity-30 backdrop-blur-lg rounded-full flex items-center justify-center mr-4">
-                      <Star className="w-6 h-6" />
-                    </div>
-                    <h3 className="text-2xl font-bold">{quality.title}</h3>
-                  </div>
-                  <p className="text-white text-opacity-95 leading-relaxed">
-                    {quality.description}
-                  </p>
-                </div>
+            <div className="space-y-4">
+              {eightCs.map((quality) => (
+                <QualityTile
+                  key={quality.title}
+                  quality={quality}
+                  tone="tools"
+                  expanded={expandedQuality === quality.title}
+                  onToggle={() => toggleQuality(quality.title)}
+                />
               ))}
             </div>
 
@@ -100,32 +139,16 @@ const Qualities = () => {
               </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {fivePs.map((quality, index) => {
-                const colors = [
-                  'from-amber-400 to-amber-600',
-                  'from-emerald-400 to-emerald-600',
-                  'from-rose-400 to-rose-600',
-                  'from-fuchsia-400 to-fuchsia-600',
-                  'from-violet-400 to-violet-600'
-                ];
-                return (
-                  <div
-                    key={index}
-                    className={`part-card bg-gradient-to-br ${colors[index]} text-white`}
-                  >
-                    <div className="flex items-center mb-4">
-                      <div className="w-12 h-12 bg-white bg-opacity-30 backdrop-blur-lg rounded-full flex items-center justify-center mr-4">
-                        <Sparkles className="w-6 h-6" />
-                      </div>
-                      <h3 className="text-2xl font-bold">{quality.title}</h3>
-                    </div>
-                    <p className="text-white text-opacity-95 leading-relaxed">
-                      {quality.description}
-                    </p>
-                  </div>
-                );
-              })}
+            <div className="space-y-4">
+              {fivePs.map((quality) => (
+                <QualityTile
+                  key={quality.title}
+                  quality={quality}
+                  tone="daily"
+                  expanded={expandedQuality === quality.title}
+                  onToggle={() => toggleQuality(quality.title)}
+                />
+              ))}
             </div>
 
             <div className="card bg-gradient-to-br from-amber-600 to-emerald-600 text-white">
