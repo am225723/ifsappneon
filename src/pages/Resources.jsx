@@ -1,8 +1,15 @@
 import { useState } from 'react';
 import { Book, Video, Headphones, ExternalLink, Download, Search } from 'lucide-react';
 import PageHero from '../components/PageHero';
+import PhotoTile from '../components/PhotoTile';
 
 const RESOURCES_HERO_IMAGE = '/images/dashboard/tools-resource-library.jpg';
+
+const RESOURCE_TYPE_IMAGES = {
+  book: '/images/resources/book.jpg',
+  video: '/images/resources/video.jpg',
+  audio: '/images/resources/audio.jpg'
+};
 
 const Resources = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -130,19 +137,6 @@ const Resources = () => {
     }
   };
 
-  const getTypeColor = (type) => {
-    switch (type) {
-      case 'book':
-        return 'bg-brand-gold-50 text-brand-gold-700 dark:bg-brand-gold-950/40 dark:text-brand-gold-500';
-      case 'video':
-        return 'bg-brand-emerald-50 text-brand-emerald-700 dark:bg-brand-emerald-950/40 dark:text-brand-emerald-100';
-      case 'audio':
-        return 'bg-brand-stone-100 text-brand-stone-600 dark:bg-slate-800/60 dark:text-slate-200';
-      default:
-        return 'bg-brand-stone-100 text-brand-stone-600 dark:bg-slate-800/60 dark:text-slate-200';
-    }
-  };
-
   return (
     <div className="min-h-screen">
       <div className="max-w-6xl mx-auto px-6 py-12 lg:py-20">
@@ -192,32 +186,24 @@ const Resources = () => {
             <p className="text-xl text-brand-stone-600 dark:text-slate-400">No resources found matching your search.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredResources.map((resource) => {
               const Icon = getTypeIcon(resource.type);
               return (
-                <div key={resource.id} className="soft-card-interactive">
-                  <div className="flex items-start justify-between mb-4">
-                    <div className={`w-14 h-14 ${getTypeColor(resource.type)} rounded-2xl flex items-center justify-center`}>
-                      <Icon className="w-7 h-7" />
-                    </div>
-                    <span className="px-3 py-1 bg-brand-stone-100 text-brand-stone-600 dark:bg-slate-800/60 dark:text-slate-200 rounded-full text-sm font-semibold capitalize">
-                      {resource.category}
-                    </span>
-                  </div>
-                  <h3 className="text-xl font-serif font-semibold text-brand-stone-900 dark:text-slate-100 mb-2">{resource.title}</h3>
-                  <p className="text-sm text-brand-stone-500 dark:text-slate-500 mb-3">by {resource.author}</p>
-                  <p className="text-brand-stone-600 dark:text-slate-400 mb-4">{resource.description}</p>
-                  <a
-                    href={resource.link}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center space-x-2 text-brand-gold-700 dark:text-brand-gold-500 font-semibold hover:underline transition-colors"
-                  >
-                    <span>Learn More</span>
-                    <ExternalLink className="w-4 h-4" />
-                  </a>
-                </div>
+                <PhotoTile
+                  key={resource.id}
+                  href={resource.link}
+                  image={RESOURCE_TYPE_IMAGES[resource.type] || RESOURCES_HERO_IMAGE}
+                  icon={Icon}
+                  title={resource.title}
+                  detail={`${resource.author} — ${resource.description}`}
+                  tone="tools"
+                >
+                  <span className="absolute right-3.5 top-3.5 z-10 flex items-center gap-1 rounded-full bg-white/15 px-2.5 py-1 text-[11px] font-semibold capitalize text-white backdrop-blur">
+                    {resource.category}
+                    <ExternalLink className="h-3 w-3" />
+                  </span>
+                </PhotoTile>
               );
             })}
           </div>
