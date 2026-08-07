@@ -7,6 +7,9 @@ import PreSessionCheckin from '../components/PreSessionCheckin';
 import GuidedBreathing from '../components/GuidedBreathing';
 import { clientAuth } from '../lib/supabasePersonalization';
 import { getClerkBearerToken } from '../lib/apiAuth';
+import PageHero, { heroPrimaryButtonClass, heroSecondaryButtonClass } from '../components/PageHero';
+
+const THERAPY_INTEGRATION_HERO_IMAGE = '/images/dashboard/continue-path.jpg';
 
 const therapistClientActivities = [
   {
@@ -829,42 +832,36 @@ ${s.therapistNotes || 'N/A'}
       </div>
       {showGuidedBreathing && <GuidedBreathing onClose={() => setShowGuidedBreathing(false)} />}
       <div className="max-w-5xl mx-auto px-4 py-8">
-        <Link
-          to="/"
-          className={`inline-flex items-center gap-2 ${theme.isDark ? 'text-slate-300 hover:text-white' : 'text-gray-600 hover:text-gray-900'} mb-6 ${getAnimationClass('transition')}`}
-        >
-          <ArrowLeft className="w-5 h-5" />
-          Back to Home
-        </Link>
-
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className={`text-3xl font-bold ${theme.isDark ? 'text-white' : 'text-gray-900'} mb-2`}>
-              Therapy Integration
-            </h1>
-            <p className={theme.isDark ? 'text-slate-300' : 'text-gray-600'}>
-              Bridge your in-person therapy with your self-guided healing work.
-            </p>
-          </div>
-          <div className="flex gap-2">
-            <button
-              onClick={() => setShowPreSessionCheckin(true)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl ${theme.isDark ? 'bg-slate-700 text-white' : 'bg-amber-100 text-amber-700'} ${getAnimationClass('transition')}`}
-            >
-              <Calendar className="w-4 h-4" />
-              Pre-session Check-in
-            </button>
-          {sessions.length > 0 && (
-            <button
-              onClick={exportSessionNotes}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl ${theme.isDark ? 'bg-slate-700 text-white' : 'bg-gray-100 text-gray-700'} ${getAnimationClass('transition')}`}
-            >
-              <Download className="w-4 h-4" />
-              Export All
-            </button>
+        <PageHero
+          image={THERAPY_INTEGRATION_HERO_IMAGE}
+          eyebrow="Therapy Integration"
+          title="Bridge Sessions With Your Self-Guided Work"
+          subtitle="Bridge your in-person therapy with your self-guided healing work."
+          actions={(
+            <>
+              <button
+                onClick={() => setShowPreSessionCheckin(true)}
+                className={heroPrimaryButtonClass}
+              >
+                <Calendar className="w-4 h-4" />
+                Pre-session Check-in
+              </button>
+              {sessions.length > 0 && (
+                <button
+                  onClick={exportSessionNotes}
+                  className={heroSecondaryButtonClass}
+                >
+                  <Download className="w-4 h-4" />
+                  Export All
+                </button>
+              )}
+              <Link to="/" className={heroSecondaryButtonClass}>
+                <ArrowLeft className="w-4 h-4" />
+                Back to Home
+              </Link>
+            </>
           )}
-          </div>
-        </div>
+        />
 
         <div className={`grid grid-cols-3 gap-3 mb-8 p-1 rounded-xl ${theme.isDark ? 'bg-slate-800/50' : 'bg-gray-100'}`}>
           {[

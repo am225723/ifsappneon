@@ -1,8 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
-import { CalendarCheck, X, Loader2, AlertTriangle, CheckCircle2, Archive } from 'lucide-react';
+import { X, Loader2, AlertTriangle, CheckCircle2, Archive } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { clientAuth } from '../lib/supabasePersonalization';
 import { archiveSessionAgenda, loadClientAgendaTherapist, loadClientSessionAgendas, saveDraftSessionAgenda, submitSessionAgenda } from '../lib/sessionAgendas';
+import PageHero from './PageHero';
+
+const PRE_SESSION_HERO_IMAGE = '/images/dashboard/advisor-pre-session.jpg';
 
 const emptyForm = {
   sessionDate: new Date().toISOString().slice(0, 10),
@@ -131,16 +134,22 @@ export default function PreSessionCheckin({ open, onClose, therapistId }) {
 
   const content = (
     <div className="w-full max-w-5xl rounded-2xl bg-white p-6 shadow-xl space-y-6 dark:bg-slate-900">
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex items-start gap-3">
-          <CalendarCheck className="w-7 h-7 text-amber-600 mt-1" />
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Pre-Session Check-In</h1>
-            <p className="text-sm text-gray-600 dark:text-slate-300">Use this to share what feels important before your next Advisor session.</p>
-          </div>
-        </div>
-        {onClose && <button type="button" onClick={onClose} aria-label="Close"><X className="w-5 h-5" /></button>}
-      </div>
+      <PageHero
+        image={PRE_SESSION_HERO_IMAGE}
+        eyebrow="Advisor Session Prep"
+        title="Pre-Session Check-In"
+        subtitle="Use this to share what feels important before your next Advisor session."
+        side={onClose ? (
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close"
+            className="rounded-full bg-white/15 p-2 text-white backdrop-blur transition hover:bg-white/25"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        ) : null}
+      />
 
       {loading ? (
         <div className="flex items-center gap-2 text-sm text-gray-600"><Loader2 className="w-4 h-4 animate-spin" /> Loading check-in details...</div>

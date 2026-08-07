@@ -8,6 +8,9 @@ import {
 import { useTheme } from '../contexts/ThemeContext';
 import { supabase, supabaseHelpers } from '../lib/supabase';
 import { clientAuth } from '../lib/supabasePersonalization';
+import PageHero, { heroSecondaryButtonClass, heroChipClass } from '../components/PageHero';
+
+const MILESTONES_HERO_IMAGE = '/images/dashboard/tools-healing-timeline.jpg';
 
 const MILESTONES = [
   {
@@ -291,19 +294,18 @@ const Milestones = () => {
         </div>
       )}
 
-      <div className="flex items-center gap-4 mb-8">
-        <Link to="/" className={`p-2 rounded-lg ${theme.isDark ? 'hover:bg-slate-800 text-slate-400' : 'hover:bg-gray-100 text-gray-500'}`}>
-          <ArrowLeft className="w-5 h-5" />
-        </Link>
-        <div>
-          <h1 className={`text-3xl font-bold ${theme.isDark ? 'text-slate-100' : 'text-gray-900'}`}>
-            Milestones
-          </h1>
-          <p className={theme.isDark ? 'text-slate-400' : 'text-gray-500'}>
-            Track your healing achievements
-          </p>
-        </div>
-      </div>
+      <PageHero
+        image={MILESTONES_HERO_IMAGE}
+        eyebrow="Milestones"
+        title="Milestones"
+        subtitle="Track your healing achievements"
+        actions={(
+          <Link to="/" className={heroSecondaryButtonClass}>
+            <ArrowLeft className="h-4 w-4" /> Back
+          </Link>
+        )}
+        chips={<span className={heroChipClass}>{earnedCount}/{totalCount} earned</span>}
+      />
 
       <div className={`${theme.isDark ? 'bg-slate-800 border-slate-700' : 'bg-gradient-to-r from-amber-50 to-emerald-50 border-amber-100'} rounded-2xl border p-6 mb-8`}>
         <div className="flex items-center justify-between mb-3">

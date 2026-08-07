@@ -4,6 +4,7 @@ import { ArrowLeft, CheckCircle2, Edit3, Loader2, Plus, Save, Sparkles, Trash2 }
 import InnerSystemMapCanvas, { pointerToSvgPoint } from '../components/parts/InnerSystemMapCanvas';
 import PartDetailPanel from '../components/parts/PartDetailPanel';
 import PartSuggestionPanel from '../components/parts/PartSuggestionPanel';
+import PageHero from '../components/PageHero';
 import { normalizeMapPart, relationshipLabel, RELATIONSHIP_OPTIONS } from '../components/parts/mapConstants';
 import { clientAuth } from '../lib/supabasePersonalization';
 import { supabase } from '../lib/supabase';
@@ -471,16 +472,16 @@ export default function PartsRelationshipMap() {
           <ArrowLeft className="w-4 h-4" /> Back to resources
         </Link>
 
-        <section className="rounded-3xl border border-brand-emerald-100 dark:border-slate-700 bg-white/85 dark:bg-slate-950/80 p-6 shadow-sm">
-          <p className="text-xs font-bold uppercase tracking-[0.22em] text-brand-emerald-700 dark:text-brand-emerald-100">Inner System Map</p>
-          <h1 className="mt-2 text-3xl lg:text-4xl font-serif text-brand-stone-900 dark:text-slate-100">My Inner System Map</h1>
-          <p className="mt-3 max-w-3xl text-brand-stone-700 dark:text-slate-300">
-            Your personal map of your parts, their relationships, and their connection to Self-energy. Your Advisor can review this map to support your work together.
-          </p>
-          <p className="mt-3 rounded-2xl bg-brand-emerald-50 dark:bg-emerald-950/40 px-4 py-3 text-sm text-brand-emerald-900 dark:text-emerald-100">
-            This map belongs to you. Keep only what feels true for your inner system. Suggestions come from your assessments, curriculum reflections, and daily-life practice responses. You choose which suggestions become part of your map.
-          </p>
-        </section>
+        <PageHero
+          image="/images/dashboard/deep-inner-system-map.jpg"
+          eyebrow="Inner System Map"
+          title="My Inner System Map"
+          subtitle="Your personal map of your parts, their relationships, and their connection to Self-energy. Your Advisor can review this map to support your work together."
+          className="mb-6"
+        />
+        <p className="rounded-2xl bg-brand-emerald-50 dark:bg-emerald-950/40 px-4 py-3 text-sm text-brand-emerald-900 dark:text-emerald-100">
+          This map belongs to you. Keep only what feels true for your inner system. Suggestions come from your assessments, curriculum reflections, and daily-life practice responses. You choose which suggestions become part of your map.
+        </p>
 
         {error && <div className="rounded-2xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</div>}
         {suggestionWarning && <div className="rounded-2xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">{suggestionWarning}</div>}

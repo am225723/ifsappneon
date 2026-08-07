@@ -1,12 +1,15 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { 
-  MessageSquare, Send, Heart, Shield, Brain, Sparkles, 
+  Send, Heart, Shield, Brain, Sparkles,
   User, Bot, RefreshCw, ChevronDown, Settings,
   Volume2, Loader, Mic, MicOff, VolumeX, AlertCircle
 } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import { supabaseHelpers } from '../lib/supabase';
 import { clientAuth } from '../lib/supabasePersonalization';
+import PageHero from '../components/PageHero';
+
+const PARTS_DIALOGUE_HERO_IMAGE = '/images/dashboard/deep-parts-dialogue.jpg';
 
 
 async function getAuthToken() {
@@ -316,15 +319,13 @@ export default function PartsDialogue() {
 
   return (
     <div className={`max-w-2xl mx-auto px-4 py-6 flex flex-col h-[calc(100vh-8rem)] ${isDark ? 'text-slate-100' : 'text-gray-900'}`}>
-      <div className="mb-4">
-        <h1 className="text-xl font-bold bg-gradient-to-r from-amber-600 to-emerald-600 bg-clip-text text-transparent flex items-center gap-2">
-          <MessageSquare className="w-5 h-5 text-amber-500" />
-          Parts Dialogue
-        </h1>
-        <p className={`text-xs mt-0.5 ${isDark ? 'text-slate-400' : 'text-gray-500'}`}>
-          Have a compassionate conversation with your inner parts
-        </p>
-      </div>
+      <PageHero
+        image={PARTS_DIALOGUE_HERO_IMAGE}
+        eyebrow="Parts Dialogue"
+        title="Parts Dialogue"
+        subtitle="Have a compassionate conversation with your inner parts"
+        className="mb-4 shrink-0"
+      />
 
       <div className="flex gap-2 mb-4 overflow-x-auto pb-1">
         {PART_TYPES.map(part => {

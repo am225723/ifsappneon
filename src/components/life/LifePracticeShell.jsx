@@ -4,6 +4,17 @@ import { ArrowLeft, ArrowRight, Check, Heart, PenLine, ShieldCheck } from 'lucid
 import { supabase } from '../../lib/supabase';
 import { saveLifeIntegrationReflection } from '../../lib/lifeIntegration';
 import { clientAuth } from '../../lib/supabasePersonalization';
+import PageHero from '../PageHero';
+
+const PRACTICE_HERO_IMAGES = {
+  notice_part: '/images/dashboard/daily-notice-part.jpg',
+  return_to_self: '/images/dashboard/daily-return-to-self.jpg',
+  trigger_reflection: '/images/dashboard/daily-trigger-reflection.jpg',
+  repair_after_conflict: '/images/dashboard/daily-repair-after-conflict.jpg',
+  protector_check_in: '/images/dashboard/daily-protector-checkin.jpg',
+  needs_boundaries: '/images/dashboard/deep-unburdening.jpg'
+};
+const DEFAULT_PRACTICE_HERO_IMAGE = '/images/dashboard/hero-sunrise.jpg';
 
 const emptyForm = {
   situation: '',
@@ -61,6 +72,7 @@ export default function LifePracticeShell({ type, config }) {
   const [error, setError] = useState('');
 
   const progress = useMemo(() => Math.round(((stepIndex + 1) / config.steps.length) * 100), [config.steps.length, stepIndex]);
+  const heroImage = PRACTICE_HERO_IMAGES[type] || DEFAULT_PRACTICE_HERO_IMAGE;
 
   useEffect(() => {
     const loadParts = async () => {
@@ -113,17 +125,19 @@ export default function LifePracticeShell({ type, config }) {
           <ArrowLeft className="h-4 w-4" /> Back to IFS in Daily Life
         </Link>
 
+        <PageHero
+          image={heroImage}
+          eyebrow={config.eyebrow}
+          title={config.title}
+          subtitle={config.description}
+          side={(
+            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-3xl bg-white/15 text-3xl backdrop-blur">{config.icon}</div>
+          )}
+        />
+
         <section className="overflow-hidden rounded-[2rem] border border-brand-gold-100 bg-white/85 shadow-xl shadow-brand-gold-500/10 dark:border-slate-800 dark:bg-brand-cardDark/90">
-          <div className="bg-gradient-to-br from-brand-gold-50 via-white to-brand-emerald-50 px-6 py-8 dark:from-brand-gold-950/20 dark:via-brand-cardDark dark:to-brand-emerald-950/20 sm:px-8">
-            <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
-              <div>
-                <p className="text-xs font-bold uppercase tracking-[0.26em] text-brand-gold-700 dark:text-brand-gold-500">{config.eyebrow}</p>
-                <h1 className="mt-3 text-4xl font-serif font-normal text-brand-stone-900 dark:text-slate-100">{config.title}</h1>
-                <p className="mt-3 max-w-2xl text-base leading-relaxed text-brand-stone-600 dark:text-slate-400">{config.description}</p>
-              </div>
-              <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-3xl bg-white text-3xl shadow-sm dark:bg-slate-900/70">{config.icon}</div>
-            </div>
-            <div className="mt-8 h-2 rounded-full bg-white/80 dark:bg-slate-900/60">
+          <div className="px-6 pt-6 sm:px-8">
+            <div className="h-2 rounded-full bg-brand-stone-100 dark:bg-slate-900/60">
               <div className="h-full rounded-full bg-brand-gold-600 transition-all" style={{ width: `${progress}%` }} />
             </div>
           </div>

@@ -20,6 +20,9 @@ import {
 import { supabase, supabaseHelpers } from '../lib/supabase';
 import { clientAuth } from '../lib/supabasePersonalization';
 import { useTheme } from '../contexts/ThemeContext';
+import PageHero, { heroSecondaryButtonClass } from '../components/PageHero';
+
+const HEALING_TRACKER_HERO_IMAGE = '/images/dashboard/tools-healing-timeline.jpg';
 
 const healingStages = [
   {
@@ -295,17 +298,17 @@ const HealingTracker = () => {
   return (
     <div className={`min-h-screen pb-24 ${theme.isDark ? 'bg-slate-900' : 'bg-gradient-to-br from-amber-50 via-white to-emerald-50'}`}>
       <div className="max-w-2xl mx-auto px-4 py-6">
-        <div className="flex items-center gap-3 mb-6">
-          <button onClick={() => navigate(-1)} className={`p-2 rounded-xl ${theme.isDark ? 'hover:bg-slate-800' : 'hover:bg-white'} transition-colors`}>
-            <ArrowLeft className={`w-5 h-5 ${theme.isDark ? 'text-slate-300' : 'text-gray-600'}`} />
-          </button>
-          <div>
-            <h1 className={`text-2xl font-bold ${theme.isDark ? 'text-white' : 'text-gray-900'}`}>Healing Journey</h1>
-            <p className={`text-sm ${theme.isDark ? 'text-slate-400' : 'text-gray-500'}`}>
-              {assessment?.primary_wound ? `${woundLabels[assessment.primary_wound] || assessment.primary_wound} Healing Path` : 'Your path to wholeness'}
-            </p>
-          </div>
-        </div>
+        <PageHero
+          image={HEALING_TRACKER_HERO_IMAGE}
+          eyebrow="Healing Tracker"
+          title="Healing Journey"
+          subtitle={assessment?.primary_wound ? `${woundLabels[assessment.primary_wound] || assessment.primary_wound} Healing Path` : 'Your path to wholeness'}
+          actions={(
+            <button onClick={() => navigate(-1)} className={heroSecondaryButtonClass}>
+              <ArrowLeft className="h-4 w-4" /> Back
+            </button>
+          )}
+        />
 
         <div className={`rounded-2xl p-5 mb-6 ${theme.isDark ? 'bg-slate-800/80 border border-slate-700' : 'bg-white border border-gray-100 shadow-sm'}`}>
           <div className="flex items-center justify-between mb-3">

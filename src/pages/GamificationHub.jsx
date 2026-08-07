@@ -8,6 +8,9 @@ import {
 import { useTheme } from '../contexts/ThemeContext';
 import { supabaseHelpers } from '../lib/supabase';
 import { clientAuth } from '../lib/supabasePersonalization';
+import PageHero, { heroChipClass } from '../components/PageHero';
+
+const GAMIFICATION_HERO_IMAGE = '/images/dashboard/tools-healing-timeline.jpg';
 
 const LEVEL_NAMES = [
   'Curious Explorer',
@@ -170,14 +173,18 @@ export default function GamificationHub() {
 
   return (
     <div className={`max-w-4xl mx-auto px-4 py-6 space-y-6 ${isDark ? 'text-slate-100' : 'text-gray-900'}`}>
-      <div className="text-center mb-2">
-        <h1 className="text-2xl font-bold bg-gradient-to-r from-amber-600 to-emerald-600 bg-clip-text text-transparent">
-          Your Healing Journey
-        </h1>
-        <p className={`text-sm mt-1 ${isDark ? 'text-slate-400' : 'text-gray-500'}`}>
-          Track your growth and celebrate your progress
-        </p>
-      </div>
+      <PageHero
+        image={GAMIFICATION_HERO_IMAGE}
+        eyebrow="Gamification"
+        title="Your Healing Journey"
+        subtitle="Track your growth and celebrate your progress"
+        chips={(
+          <>
+            <span className={heroChipClass}>🔥 {streakData.currentStreak}-day streak</span>
+            <span className={heroChipClass}>Level {currentLevel} · {gamificationData.xp} XP</span>
+          </>
+        )}
+      />
 
       <div className={`rounded-2xl p-6 text-center ${isDark ? 'bg-gradient-to-br from-orange-900/40 to-red-900/40 border border-orange-700/30' : 'bg-gradient-to-br from-orange-50 to-red-50 border border-orange-200'}`}>
         <div className="flex items-center justify-center gap-3 mb-2">

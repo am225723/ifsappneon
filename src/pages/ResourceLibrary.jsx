@@ -5,6 +5,9 @@ import { useTheme } from '../contexts/ThemeContext';
 import { supabase } from '../lib/supabase';
 import { clientAuth } from '../lib/supabasePersonalization';
 import { resources } from '../data/resourceLibraryData.js';
+import PageHero, { heroSecondaryButtonClass } from '../components/PageHero';
+
+const RESOURCE_LIBRARY_HERO_IMAGE = '/images/dashboard/tools-resource-library.jpg';
 
 const woundTypes = ['abandonment', 'shame', 'neglect', 'betrayal', 'helplessness'];
 
@@ -159,15 +162,15 @@ const ResourceLibrary = () => {
   return (
     <div className="min-h-screen pb-8">
       <div className="max-w-4xl mx-auto px-4 pt-6">
-        <div className="flex items-center gap-3 mb-6">
-          <Link to="/" className={`p-2 rounded-xl ${theme.isDark ? 'hover:bg-slate-800' : 'hover:bg-gray-100'}`}>
-            <ArrowLeft className={`w-5 h-5 ${theme.isDark ? 'text-slate-400' : 'text-gray-500'}`} />
-          </Link>
-          <div>
-            <h1 className={`text-2xl font-bold ${theme.isDark ? 'text-slate-100' : 'text-gray-900'}`}>Healing Library</h1>
-            <p className={`text-sm ${theme.isDark ? 'text-slate-400' : 'text-gray-500'}`}>Curated IFS resources for your healing journey</p>
-          </div>
-        </div>
+        <PageHero
+          image={RESOURCE_LIBRARY_HERO_IMAGE}
+          eyebrow="Tools"
+          title="Healing Library"
+          subtitle="Curated IFS resources for your healing journey"
+          actions={(
+            <Link to="/" className={heroSecondaryButtonClass}><ArrowLeft className="h-4 w-4" /> Back Home</Link>
+          )}
+        />
 
         <div className="relative mb-4">
           <Search className={`absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 ${theme.isDark ? 'text-slate-500' : 'text-gray-400'}`} />

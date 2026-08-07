@@ -38,6 +38,9 @@ import { useParts } from '../contexts/PartsContext';
 import { loadLifeIntegrationReflections } from '../lib/lifeIntegration';
 import { normalizeLifeReflection } from '../lib/lifeIntegrationDisplay';
 import { loadCurriculumReflections, summarizeCurriculumReflection } from '../lib/curriculumReflections';
+import PageHero from '../components/PageHero';
+
+const JOURNAL_HERO_IMAGE = '/images/dashboard/deep-healing-journal.jpg';
 
 
 const calculateStreak = (entries) => {
@@ -893,23 +896,12 @@ const Journal = () => {
   return (
     <div className="min-h-screen">
       <div className="max-w-7xl mx-auto px-6 pt-12 lg:pt-20">
-        <div className="soft-card bg-gradient-to-br from-brand-emerald-600 to-brand-emerald-700 text-white p-8 lg:p-12">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-4xl md:text-5xl font-serif font-normal mb-4">
-                Healing Journal
-              </h1>
-              <p className="text-xl text-brand-emerald-50/90">
-                A sacred space to document your inner journey and insights
-              </p>
-            </div>
-            <div className="hidden md:block">
-              <div className="w-32 h-32 bg-white/15 backdrop-blur rounded-[28px] flex items-center justify-center">
-                <BookOpen className="w-16 h-16 text-white" />
-              </div>
-            </div>
-          </div>
-        </div>
+        <PageHero
+          image={JOURNAL_HERO_IMAGE}
+          eyebrow="Your Journal"
+          title="Healing Journal"
+          subtitle="A sacred space to document your inner journey and insights"
+        />
       </div>
 
       <div className="max-w-7xl mx-auto px-6 py-12">

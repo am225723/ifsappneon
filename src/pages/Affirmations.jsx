@@ -4,6 +4,9 @@ import { ArrowLeft, RefreshCw, Heart, Copy, Check, Sparkles, Volume2, Star, Book
 import { useTheme } from '../contexts/ThemeContext';
 import { supabaseHelpers, supabase } from '../lib/supabase';
 import { clientAuth } from '../lib/supabasePersonalization';
+import PageHero from '../components/PageHero';
+
+const AFFIRMATIONS_HERO_IMAGE = '/images/dashboard/tools-affirmations.jpg';
 
 const woundAffirmations = {
   abandonment: {
@@ -201,16 +204,14 @@ export default function Affirmations() {
           Back to Home
         </Link>
 
-        <div className="mb-8">
-          <h1 className={`text-3xl font-bold ${theme.isDark ? 'text-white' : 'text-gray-900'} mb-2`}>
-            Custom Affirmations
-          </h1>
-          <p className={theme.isDark ? 'text-slate-300' : 'text-gray-600'}>
-            {primaryWound 
-              ? `Personalized affirmations for your ${primaryWound} wound healing journey.`
-              : 'Healing affirmations to support your IFS journey.'}
-          </p>
-        </div>
+        <PageHero
+          image={AFFIRMATIONS_HERO_IMAGE}
+          eyebrow="Affirmations"
+          title="Custom Affirmations"
+          subtitle={primaryWound
+            ? `Personalized affirmations for your ${primaryWound} wound healing journey.`
+            : 'Healing affirmations to support your IFS journey.'}
+        />
 
         <div className={`${theme.cardBg} backdrop-blur-sm rounded-3xl shadow-xl border ${theme.isDark ? 'border-slate-700' : 'border-gray-100'} p-8 mb-8 text-center`}>
           <Sparkles className="w-10 h-10 mx-auto mb-4" style={{ color: theme.accentColor }} />

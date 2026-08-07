@@ -21,6 +21,9 @@ import {
 } from 'lucide-react';
 import { supabase, supabaseHelpers } from '../lib/supabase';
 import { clientAuth } from '../lib/supabasePersonalization';
+import PageHero, { heroSecondaryButtonClass } from '../components/PageHero';
+
+const PROFILE_HERO_IMAGE = '/images/dashboard/tools-assessment-insights.jpg';
 
 const protectivePartsDefinitions = {
   manager: [
@@ -456,28 +459,26 @@ const Profile = ({ client }) => {
       `}</style>
 
       <div className="max-w-4xl mx-auto px-4 py-8">
-        <button
-          onClick={() => navigate('/')}
-          className="no-print flex items-center gap-2 text-amber-600 hover:text-amber-800 mb-6 transition-colors"
-        >
-          <ArrowLeft className="w-5 h-5" />
-          Back to Home
-        </button>
-
         <div ref={printRef} className="print-area">
-          <div className="soft-card overflow-hidden mb-8">
-            <div className="bg-gradient-to-r from-brand-gold-600 to-brand-emerald-700 px-4 sm:px-8 py-6 text-white">
-              <div className="flex items-center gap-4">
-                <div className="w-14 h-14 sm:w-16 sm:h-16 bg-white/20 rounded-full flex items-center justify-center flex-shrink-0">
-                  <User className="w-7 h-7 sm:w-8 sm:h-8" />
-                </div>
-                <div>
-                  <h1 className="text-xl sm:text-2xl font-bold">{client?.name || 'Your Profile'}</h1>
-                  <p className="text-amber-100">Assessments & Progress</p>
-                </div>
+          <PageHero
+            image={PROFILE_HERO_IMAGE}
+            eyebrow="Assessments & Progress"
+            title={client?.name || 'Your Profile'}
+            subtitle="A private space to review your wound patterns, protective parts, and progress across your IFS path."
+            actions={(
+              <button onClick={() => navigate('/')} className={`no-print ${heroSecondaryButtonClass}`}>
+                <ArrowLeft className="h-4 w-4" />
+                Back to Home
+              </button>
+            )}
+            side={(
+              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-white/20 backdrop-blur sm:h-16 sm:w-16">
+                <User className="h-7 w-7 text-white sm:h-8 sm:w-8" />
               </div>
-            </div>
+            )}
+          />
 
+          <div className="soft-card overflow-hidden mb-8">
             <div className="p-4 sm:p-8">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
                 <h2 className="text-xl font-semibold text-brand-stone-900 dark:text-slate-100 flex items-center gap-2">

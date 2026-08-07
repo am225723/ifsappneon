@@ -1,5 +1,8 @@
 import { useState } from 'react';
 import { Book, Video, Headphones, ExternalLink, Download, Search } from 'lucide-react';
+import PageHero from '../components/PageHero';
+
+const RESOURCES_HERO_IMAGE = '/images/dashboard/tools-resource-library.jpg';
 
 const Resources = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -144,19 +147,12 @@ const Resources = () => {
     <div className="min-h-screen">
       <div className="max-w-6xl mx-auto px-6 py-12 lg:py-20">
         {/* Header */}
-        <div className="text-center mb-16">
-          <div className="flex justify-center mb-6">
-            <div className="w-16 h-16 bg-gradient-to-br from-brand-gold-500 to-brand-emerald-600 rounded-2xl flex items-center justify-center shadow-lg shadow-brand-gold-500/20">
-              <Book className="w-8 h-8 text-white" />
-            </div>
-          </div>
-          <h1 className="text-4xl lg:text-6xl font-serif font-normal mb-5 text-brand-stone-900 dark:text-slate-100">
-            Resource Library
-          </h1>
-          <p className="text-lg text-brand-stone-600 dark:text-slate-400 max-w-3xl mx-auto">
-            Curated books, videos, and audio resources to deepen your IFS practice
-          </p>
-        </div>
+        <PageHero
+          image={RESOURCES_HERO_IMAGE}
+          eyebrow="Resources"
+          title="Resource Library"
+          subtitle="Curated books, videos, and audio resources to deepen your IFS practice"
+        />
 
         {/* Search Bar */}
         <div className="soft-card mb-8">

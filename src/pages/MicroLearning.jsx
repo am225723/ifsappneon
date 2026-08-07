@@ -9,6 +9,9 @@ import TranscriptPanel from '../components/TranscriptPanel';
 import AudioPracticePlayer from '../components/AudioPracticePlayer';
 import { guidedPracticeMediaByPracticeId } from '../lib/guidedPracticeMediaMap';
 import { loadActiveMeditationMedia, mergeMeditationMediaWithLibrary } from '../lib/meditationMedia';
+import PageHero from '../components/PageHero';
+
+const MICRO_LEARNING_HERO_IMAGE = '/images/dashboard/daily-return-to-self.jpg';
 
 const baseMicroExercises = [
   {
@@ -216,14 +219,12 @@ export default function MicroLearning() {
           Back to Home
         </Link>
 
-        <div className="mb-8">
-          <h1 className={`text-3xl font-bold ${theme.isDark ? 'text-white' : 'text-gray-900'} mb-2`}>
-            Micro-Learning
-          </h1>
-          <p className={theme.isDark ? 'text-slate-300' : 'text-gray-600'}>
-            2-minute healing exercises for your busy life. Complete one daily for consistent growth.
-          </p>
-        </div>
+        <PageHero
+          image={MICRO_LEARNING_HERO_IMAGE}
+          eyebrow="Daily Practice"
+          title="Micro-Learning"
+          subtitle="2-minute healing exercises for your busy life. Complete one daily for consistent growth."
+        />
 
         <div className={`${theme.cardBg} backdrop-blur-sm rounded-2xl shadow-lg border ${theme.isDark ? 'border-slate-700' : 'border-gray-100'} p-6 mb-8`}>
           <div className="flex items-center justify-between">

@@ -1,18 +1,18 @@
 import { BookOpen, Users, Heart, Target, Lightbulb, Map } from 'lucide-react';
+import PageHero from '../components/PageHero';
+
+const CHEAT_SHEET_HERO_IMAGE = '/images/dashboard/tools-cheat-sheet.jpg';
 
 const CheatSheet = () => {
   return (
     <div className="min-h-screen py-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
-        <div className="text-center mb-12">
-          <h1 className="text-5xl font-bold mb-4 bg-gradient-to-r from-amber-600 to-emerald-600 bg-clip-text text-transparent">
-            IFS Cheat Sheet
-          </h1>
-          <p className="text-xl text-gray-600">
-            Quick reference guide to Internal Family Systems principles and techniques
-          </p>
-        </div>
+        <PageHero
+          image={CHEAT_SHEET_HERO_IMAGE}
+          eyebrow="Tools"
+          title="IFS Cheat Sheet"
+          subtitle="Quick reference guide to Internal Family Systems principles and techniques"
+        />
 
         {/* Internal Family Systems Overview */}
         <div className="card mb-8 bg-gradient-to-br from-emerald-50 to-red-50">

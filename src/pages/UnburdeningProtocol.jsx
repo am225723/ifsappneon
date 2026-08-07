@@ -9,6 +9,9 @@ import { useParts } from '../contexts/PartsContext';
 import { supabase } from '../lib/supabase';
 import { clientAuth } from '../lib/supabasePersonalization';
 import { useData } from '../contexts/DataContext';
+import PageHero, { heroSecondaryButtonClass, heroChipClass } from '../components/PageHero';
+
+const UNBURDENING_HERO_IMAGE = '/images/dashboard/deep-unburdening.jpg';
 
 const STEPS = [
   {
@@ -673,16 +676,27 @@ export default function UnburdeningProtocol() {
   return (
     <div className="min-h-screen py-6 px-4">
       <div className="max-w-2xl mx-auto">
-        <div className="flex items-center justify-between mb-6">
-          <Link to="/exercises" className={`flex items-center gap-2 ${textSecondary} hover:text-emerald-500 transition-colors`}>
-            <ArrowLeft className="w-5 h-5" />
-            <span className="text-sm font-medium">Exercises</span>
-          </Link>
-          <div className="flex items-center gap-2">
-            {saving && <Clock className="w-4 h-4 text-emerald-500 animate-spin" />}
-            <span className={`text-sm ${textMuted}`}>Step {currentStep} of 8</span>
-          </div>
-        </div>
+        <PageHero
+          image={UNBURDENING_HERO_IMAGE}
+          eyebrow="Sacred Ceremony"
+          title="Unburdening Protocol"
+          subtitle="Witness, honor, and release the burdens your parts have carried — at whatever pace feels safe."
+          actions={(
+            <Link to="/exercises" className={heroSecondaryButtonClass}>
+              <ArrowLeft className="h-4 w-4" /> Exercises
+            </Link>
+          )}
+          chips={(
+            <>
+              <span className={heroChipClass}>Step {currentStep} of 8</span>
+              {saving && (
+                <span className={heroChipClass}>
+                  <Clock className="mr-1 inline h-3 w-3 animate-spin" /> Saving
+                </span>
+              )}
+            </>
+          )}
+        />
 
         <div className="mb-8">
           <div className={`h-2 rounded-full ${isDark ? 'bg-slate-700' : 'bg-gray-200'}`}>

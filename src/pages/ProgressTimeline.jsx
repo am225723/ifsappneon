@@ -12,6 +12,9 @@ import { clientAuth } from '../lib/supabasePersonalization';
 import { loadLifeIntegrationReflections } from '../lib/lifeIntegration';
 import { formatLifeReflectionType, normalizeLifeReflection, summarizeLifeReflection } from '../lib/lifeIntegrationDisplay';
 import { loadCurriculumReflections } from '../lib/curriculumReflections';
+import PageHero from '../components/PageHero';
+
+const PROGRESS_TIMELINE_HERO_IMAGE = '/images/dashboard/tools-healing-timeline.jpg';
 
 const milestoneTypes = {
   module: { label: 'Module', color: 'amber', icon: BookOpen, bg: 'bg-amber-100', text: 'text-amber-700', border: 'border-amber-300', dot: 'bg-amber-500', darkBg: 'bg-amber-900/30', darkText: 'text-amber-300', darkBorder: 'border-amber-700' },
@@ -155,17 +158,13 @@ export default function ProgressTimeline() {
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-6">
-      <div className="mb-6">
-        <div className="flex items-center gap-3 mb-2">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-emerald-500 flex items-center justify-center">
-            <TrendingUp className="w-5 h-5 text-white" />
-          </div>
-          <div>
-            <h1 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Your Healing Journey</h1>
-            <p className={`text-sm ${isDark ? 'text-slate-400' : 'text-gray-500'}`}>Notice curriculum, assessments, parts work, and reflections over time</p>
-          </div>
-        </div>
-      </div>
+      <PageHero
+        image={PROGRESS_TIMELINE_HERO_IMAGE}
+        eyebrow="Progress Timeline"
+        title="Your Healing Journey"
+        subtitle="Notice curriculum, assessments, parts work, and reflections over time"
+        className="mb-6"
+      />
 
       <div className={`mb-6 rounded-2xl border p-4 ${isDark ? 'border-slate-700 bg-slate-800/60' : 'border-amber-100 bg-amber-50/70'}`}>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

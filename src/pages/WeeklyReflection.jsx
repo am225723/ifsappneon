@@ -19,6 +19,9 @@ import {
 import { supabase, supabaseHelpers } from '../lib/supabase';
 import { useTheme } from '../contexts/ThemeContext';
 import { clientAuth } from '../lib/supabasePersonalization';
+import PageHero, { heroSecondaryButtonClass, heroChipClass } from '../components/PageHero';
+
+const WEEKLY_REFLECTION_HERO_IMAGE = '/images/dashboard/deep-weekly-reflection.jpg';
 
 function getWeekId() {
   const now = new Date();
@@ -305,20 +308,22 @@ export default function WeeklyReflection() {
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-8">
-      <div className="flex items-center gap-3 mb-6">
-        <Link to="/" className={`p-2 rounded-lg ${theme.isDark ? 'hover:bg-slate-800' : 'hover:bg-gray-100'}`}>
-          <ArrowLeft className="w-5 h-5" />
-        </Link>
-        <div>
-          <h1 className={`text-2xl font-bold ${theme.isDark ? 'text-slate-100' : 'text-gray-900'}`}>
-            Weekly Reflection
-          </h1>
-          <p className={`text-sm ${theme.isDark ? 'text-slate-400' : 'text-gray-500'}`}>
-            <Calendar className="w-3.5 h-3.5 inline mr-1" />
-            {formatDate(weekStart)} – {formatDate(weekEnd)}
-          </p>
-        </div>
-      </div>
+      <PageHero
+        image={WEEKLY_REFLECTION_HERO_IMAGE}
+        eyebrow="This Week's Summary"
+        title="Weekly Reflection"
+        subtitle="A summary of your week — mood, energy, and the work your parts showed up for."
+        actions={(
+          <Link to="/" className={heroSecondaryButtonClass}>
+            <ArrowLeft className="h-4 w-4" /> Home
+          </Link>
+        )}
+        chips={(
+          <span className={heroChipClass}>
+            <Calendar className="mr-1 inline h-3 w-3" /> {formatDate(weekStart)} – {formatDate(weekEnd)}
+          </span>
+        )}
+      />
 
       {!weekData ? (
         <div className={cardClass}>

@@ -19,6 +19,9 @@ import {
 import { supabase, supabaseHelpers } from '../lib/supabase';
 import { useTheme } from '../contexts/ThemeContext';
 import { clientAuth } from '../lib/supabasePersonalization';
+import PageHero, { heroSecondaryButtonClass } from '../components/PageHero';
+
+const LETTER_WRITING_HERO_IMAGE = '/images/dashboard/deep-healing-journal.jpg';
 
 const WOUND_PROMPTS = {
   abandonment: {
@@ -294,16 +297,17 @@ const LetterWriting = () => {
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-6 space-y-6">
-      <div className="flex items-center gap-3">
-        <button onClick={() => navigate(-1)} className={`p-2 rounded-lg ${theme.isDark ? 'hover:bg-slate-800' : 'hover:bg-gray-100'}`}>
-          <ArrowLeft className="w-5 h-5" />
-        </button>
-        <div>
-          <h1 className={`text-2xl font-bold ${textClass}`}>Inner Child Letters</h1>
-          <p className={`text-sm ${mutedClass}`}>Write healing letters to and from your inner child</p>
-        </div>
-        <Baby className="w-8 h-8 text-amber-500 ml-auto" />
-      </div>
+      <PageHero
+        image={LETTER_WRITING_HERO_IMAGE}
+        eyebrow="Inner Child Work"
+        title="Inner Child Letters"
+        subtitle="Write healing letters to and from your inner child"
+        actions={(
+          <button onClick={() => navigate(-1)} className={heroSecondaryButtonClass}>
+            <ArrowLeft className="h-4 w-4" /> Back
+          </button>
+        )}
+      />
 
       {saveSuccess && (
         <div className="flex items-center gap-2 p-3 rounded-xl bg-emerald-500/20 border border-emerald-500/30 text-emerald-400">

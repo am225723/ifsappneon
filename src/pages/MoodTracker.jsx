@@ -8,6 +8,9 @@ import { useTheme } from '../contexts/ThemeContext';
 import { supabaseHelpers } from '../lib/supabase';
 import { clientAuth } from '../lib/supabasePersonalization';
 import SOSSupportModal from '../components/SOSSupportModal';
+import PageHero from '../components/PageHero';
+
+const MOOD_TRACKER_HERO_IMAGE = '/images/dashboard/daily-mood.jpg';
 
 const moodOptions = [
   { value: 5, label: 'Great', icon: Sun, color: 'text-brand-gold-700', bg: 'bg-brand-gold-50', darkBg: 'bg-brand-gold-950/30', ring: 'ring-brand-gold-500' },
@@ -154,15 +157,13 @@ export default function MoodTracker() {
   return (
     <div className="max-w-4xl mx-auto px-6 py-12 lg:py-16 space-y-8">
       <SOSSupportModal open={showSOSModal} onClose={() => setShowSOSModal(false)} />
-      <div className="flex items-center gap-3 mb-2">
-        <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-brand-gold-500 to-brand-emerald-600 flex items-center justify-center shadow-lg shadow-brand-gold-500/20">
-          <Heart className="w-5 h-5 text-white" />
-        </div>
-        <div>
-          <h1 className="text-3xl lg:text-4xl font-serif font-normal text-brand-stone-900 dark:text-slate-100">Mood Tracker</h1>
-          <p className="text-sm text-brand-stone-600 dark:text-slate-400">Check in with yourself daily</p>
-        </div>
-      </div>
+      <PageHero
+        image={MOOD_TRACKER_HERO_IMAGE}
+        eyebrow="Mood Tracker"
+        title="Mood Tracker"
+        subtitle="Check in with yourself daily"
+        className="mb-6"
+      />
 
       <div className="soft-card">
         <h2 className="text-xl font-serif font-normal mb-5 flex items-center gap-2 text-brand-stone-900 dark:text-slate-100">
