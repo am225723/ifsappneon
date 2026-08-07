@@ -350,7 +350,8 @@ export function buildAssessmentInsights({ wounds, parts, selfEnergy, attachment,
   });
 
   const recentMood = sortMoodEntriesDesc(moodEntries).slice(0, 14);
-  const hasTracking = recentMood.length > 0 || streakData?.currentStreak || timeline.length > 0;
+  const hasCurrentStreak = streakData?.currentStreak !== undefined && streakData?.currentStreak !== null;
+  const hasTracking = recentMood.length > 0 || hasCurrentStreak || timeline.length > 0;
   if (hasTracking) {
     const bullets = [];
     let body = 'Your mood check-ins, practice streak, and milestones can show whether these patterns are showing up day to day, not just in an assessment.';
@@ -388,7 +389,7 @@ export function buildAssessmentInsights({ wounds, parts, selfEnergy, attachment,
       }
     }
 
-    if (streakData?.currentStreak) {
+    if (hasCurrentStreak) {
       bullets.push(`You're on a ${streakData.currentStreak}-day practice streak${streakData.longestStreak ? ` (longest: ${streakData.longestStreak} days)` : ''} — that kind of consistency is exactly what helps Self-energy stay accessible over time.`);
     }
 

@@ -100,6 +100,7 @@ const woundDescriptions = {
 const Profile = ({ client }) => {
   const navigate = useNavigate();
   const printRef = useRef();
+  const trackingRequestRef = useRef(0);
   const [assessment, setAssessment] = useState(null);
   const [allAssessments, setAllAssessments] = useState([]);
   const [partsAssessment, setPartsAssessment] = useState(null);
@@ -212,6 +213,12 @@ const Profile = ({ client }) => {
   };
 
   const loadSupabaseData = async () => {
+    const requestId = ++trackingRequestRef.current;
+    setMoodEntries([]);
+    setGamificationData({});
+    setStreakData({});
+    setTimeline([]);
+
     const currentClient = clientAuth.getCurrentClient();
     const clientId = currentClient?.id || client?.id;
     if (!clientId) return;
@@ -221,6 +228,7 @@ const Profile = ({ client }) => {
         supabaseHelpers.getGamification(clientId),
         supabaseHelpers.getMilestones(clientId),
       ]);
+      if (requestId !== trackingRequestRef.current) return;
       if (moodResult.status === 'fulfilled') setMoodEntries(moodResult.value || []);
       if (gamResult.status === 'fulfilled' && gamResult.value) {
         const gam = gamResult.value;

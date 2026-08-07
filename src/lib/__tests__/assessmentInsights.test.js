@@ -151,5 +151,14 @@ describe('buildAssessmentInsights', () => {
       const sections = buildAssessmentInsights({ wounds: { primary_wound: 'shame', scores: { shame: 20 } } })
       expect(sections.find((s) => s.id === 'daily-tracking')).toBeUndefined()
     })
+
+    it('keeps a recorded zero-day streak instead of treating it as missing', () => {
+      const sections = buildAssessmentInsights({
+        streakData: { currentStreak: 0, longestStreak: 5 }
+      })
+      const tracking = sections.find((s) => s.id === 'daily-tracking')
+      expect(tracking).toBeDefined()
+      expect(tracking.bullets.some((b) => b.includes('0-day practice streak'))).toBe(true)
+    })
   })
 })
