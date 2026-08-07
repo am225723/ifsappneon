@@ -114,12 +114,48 @@ export function getAttachmentPrimarySecondary(assessment) {
   return { primary, secondary };
 }
 
+// Mood Tracker emotion tags (see MoodTracker.jsx emotionTags) that plausibly echo a
+// wound pattern or a Self quality when a client logs them on a daily check-in. This
+// lets Assessment Insights notice when an assessment pattern is also showing up in
+// day-to-day tracking, not just in the assessment itself.
+const EMOTION_WOUND_LINKS = {
+  abandonment: ['anxious'],
+  shame: ['shame'],
+  neglect: [],
+  betrayal: ['angry', 'sad'],
+  helplessness: ['overwhelmed', 'helplessness']
+};
+
+const EMOTION_SELF_QUALITY_LINKS = {
+  calmness: ['calm', 'peaceful'],
+  confidence: ['hopeful'],
+  connectedness: ['grateful']
+};
+
+function normalizeEmotionTag(tag) {
+  return String(tag || '').trim().toLowerCase();
+}
+
+function sortMoodEntriesDesc(moodEntries) {
+  return [...moodEntries]
+    .filter((entry) => entry?.date)
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+}
+
+function average(numbers) {
+  const valid = numbers.filter((n) => typeof n === 'number' && !Number.isNaN(n));
+  if (!valid.length) return null;
+  return valid.reduce((sum, n) => sum + n, 0) / valid.length;
+}
+
+const MOOD_SCALE_LABELS = { 5: 'Great', 4: 'Good', 3: 'Okay', 2: 'Low', 1: 'Struggling' };
+
 /**
  * Builds the Assessment Insights cards. Unlike a per-assessment summary, every
  * section here tries to connect at least two assessments together, and calls out
  * whether a predicted connection is actually confirmed by the client's own data.
  */
-export function buildAssessmentInsights({ wounds, parts, selfEnergy, attachment, identifiedParts = [] } = {}) {
+export function buildAssessmentInsights({ wounds, parts, selfEnergy, attachment, identifiedParts = [], moodEntries = [], streakData = {}, timeline = [] } = {}) {
   const completedCount = [wounds, parts, selfEnergy, attachment].filter(Boolean).length;
   const sections = [];
 
@@ -157,6 +193,41 @@ export function buildAssessmentInsights({ wounds, parts, selfEnergy, attachment,
       ? `Your Wound Patterns Assessment points to ${woundLabel} (${woundIntensity(woundScore)} intensity, ${woundScore}/25)${secondaryWoundLabel ? `, with ${secondaryWoundLabel} also present` : ''}. This is a compassionate clue for parts work, not a label or diagnosis.`
       : 'A Wound Patterns Assessment has not been completed yet, so this area can stay open and curious.'
   });
+
+  if (wounds?.scores) {
+    const allWoundEntries = Object.entries(wounds.scores)
+      .filter(([key]) => WOUND_LABELS[key])
+      .sort((a, b) => (b[1] || 0) - (a[1] || 0));
+    const secondaryMeta = secondaryWoundKey ? WOUND_META[secondaryWoundKey] : null;
+    const elevatedOthers = allWoundEntries.filter(([key, score], idx) => idx >= 2 && (score || 0) >= 12 && key !== woundKey && key !== secondaryWoundKey);
+
+    const bullets = allWoundEntries.map(([key, score]) => `${pickLabel(WOUND_LABELS, key)}: ${score}/25 (${woundIntensity(score)})`);
+
+    let overlapNote = null;
+    if (woundMeta && secondaryMeta) {
+      const sharedProtector = woundMeta.protectors.find((p) => secondaryMeta.protectors.some((sp) => sp.name === p.name));
+      if (woundMeta.exile.name === secondaryMeta.exile.name) {
+        overlapNote = `${secondaryWoundLabel} and ${woundLabel} both point toward ${woundMeta.exile.name}, which strengthens that as a likely focus for exile work.`;
+      } else if (sharedProtector) {
+        overlapNote = `${secondaryWoundLabel} and ${woundLabel} both tend to activate ${sharedProtector.name}, so that part may be working overtime for two reasons at once.`;
+      } else {
+        overlapNote = `${secondaryWoundLabel} brings its own protectors and exile, different from ${woundLabel}'s, which can make the system feel like it's responding to more than one thing at once.`;
+      }
+      bullets.push(overlapNote);
+    }
+    if (elevatedOthers.length) {
+      bullets.push(`Also worth noting: ${joinWithAnd(elevatedOthers.map(([key, score]) => `${pickLabel(WOUND_LABELS, key)} (${woundIntensity(score)}, ${score}/25)`))} ${elevatedOthers.length === 1 ? 'is' : 'are'} still elevated even though it isn't your primary or secondary pattern.`);
+    }
+
+    sections.push({
+      id: 'wound-breakdown',
+      title: 'Full wound pattern breakdown',
+      body: woundLabel
+        ? `${woundLabel} stands out most, but looking at all five scores together shows the fuller picture of where your system is working hardest.`
+        : 'Once the Wound Patterns Assessment is complete, this section will rank all five wound categories together.',
+      bullets
+    });
+  }
 
   sections.push({
     id: 'parts-summary',
@@ -277,6 +348,62 @@ export function buildAssessmentInsights({ wounds, parts, selfEnergy, attachment,
     title: 'Suggested Life Integration practice',
     body: identifiedParts.length ? lifeIntegrationSuggestion[dominantType] : 'Use Return to Self-Energy after activation, or Reflect on a Trigger when a part reacts strongly in daily life.'
   });
+
+  const recentMood = sortMoodEntriesDesc(moodEntries).slice(0, 14);
+  const hasTracking = recentMood.length > 0 || streakData?.currentStreak || timeline.length > 0;
+  if (hasTracking) {
+    const bullets = [];
+    let body = 'Your mood check-ins, practice streak, and milestones can show whether these patterns are showing up day to day, not just in an assessment.';
+
+    if (recentMood.length) {
+      const avgMoodValue = average(recentMood.map((e) => e.mood));
+      const avgEnergyValue = average(recentMood.map((e) => e.energy));
+      const moodLabel = avgMoodValue != null ? MOOD_SCALE_LABELS[Math.round(avgMoodValue)] || avgMoodValue.toFixed(1) : null;
+      if (avgMoodValue != null || avgEnergyValue != null) {
+        body = `Over your last ${recentMood.length} mood check-in${recentMood.length === 1 ? '' : 's'}, your mood has averaged ${moodLabel ? `"${moodLabel}"` : 'no clear pattern'}${avgEnergyValue != null ? ` with energy around ${avgEnergyValue.toFixed(1)}/10` : ''}.`;
+      }
+
+      const tagCounts = {};
+      recentMood.forEach((entry) => (Array.isArray(entry.emotions) ? entry.emotions : []).forEach((tag) => {
+        const normalized = normalizeEmotionTag(tag);
+        if (normalized) tagCounts[normalized] = (tagCounts[normalized] || 0) + 1;
+      }));
+
+      if (woundKey) {
+        const linkedTags = EMOTION_WOUND_LINKS[woundKey] || [];
+        const matchedCount = linkedTags.reduce((sum, tag) => sum + (tagCounts[tag] || 0), 0);
+        if (linkedTags.length) {
+          bullets.push(matchedCount > 0
+            ? `Confirmed: emotions linked to ${woundLabel} (${joinWithAnd(linkedTags)}) showed up ${matchedCount} time${matchedCount === 1 ? '' : 's'} across your last ${recentMood.length} check-ins.`
+            : `Not yet visible in tracking: none of your last ${recentMood.length} mood check-ins tagged emotions typically linked to ${woundLabel} — worth noticing if that changes.`);
+        }
+      }
+
+      if (selfStrengthKey) {
+        const selfTags = EMOTION_SELF_QUALITY_LINKS[selfStrengthKey] || [];
+        const selfMatchedCount = selfTags.reduce((sum, tag) => sum + (tagCounts[tag] || 0), 0);
+        if (selfTags.length && selfMatchedCount > 0) {
+          bullets.push(`Confirmed: ${joinWithAnd(selfTags)} appeared ${selfMatchedCount} time${selfMatchedCount === 1 ? '' : 's'} in your mood log, which lines up with ${pickLabel(SELF_QUALITY_LABELS, selfStrengthKey)} being your strongest Self quality.`);
+        }
+      }
+    }
+
+    if (streakData?.currentStreak) {
+      bullets.push(`You're on a ${streakData.currentStreak}-day practice streak${streakData.longestStreak ? ` (longest: ${streakData.longestStreak} days)` : ''} — that kind of consistency is exactly what helps Self-energy stay accessible over time.`);
+    }
+
+    if (timeline.length) {
+      const latest = timeline[0];
+      if (latest?.title) bullets.push(`Most recent milestone: "${latest.title}"${latest.date ? ` on ${latest.date}` : ''}.`);
+    }
+
+    sections.push({
+      id: 'daily-tracking',
+      title: 'How this shows up in daily tracking',
+      body,
+      bullets: bullets.length ? bullets : undefined
+    });
+  }
 
   sections.push({
     id: 'inner-system-map',

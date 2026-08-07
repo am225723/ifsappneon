@@ -248,7 +248,10 @@ const Profile = ({ client }) => {
     parts: partsAssessment,
     selfEnergy: selfEnergyAssessment,
     attachment: attachmentAssessment,
-    identifiedParts
+    identifiedParts,
+    moodEntries,
+    streakData,
+    timeline
   });
 
   const handlePrint = () => {
@@ -748,7 +751,7 @@ const Profile = ({ client }) => {
                 Assessment Insights
               </h2>
               <p className="mb-5 text-sm leading-relaxed text-brand-stone-600 dark:text-slate-400">
-                This synthesis cross-references your Wound Patterns, Parts System, Self-Energy, and Attachment results to show how they may connect — which protectors commonly show up with which wound, what that can do to your Self-energy and relationships, and what to try next. Where your own data confirms a pattern, it says so; where it doesn't, it says that too. It uses cautious, non-diagnostic language.
+                This synthesis cross-references your Wound Patterns, Parts System, Self-Energy, and Attachment results — including your full wound score breakdown and how a secondary wound may add to the picture — to show how they may connect, and checks whether those patterns are also showing up in your mood check-ins and practice streak. Where your own data confirms a pattern, it says so; where it doesn't, it says that too. It uses cautious, non-diagnostic language.
               </p>
               <div className="grid gap-4 md:grid-cols-2">
                 {assessmentInsights.map((insight) => (
