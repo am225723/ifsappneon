@@ -153,7 +153,7 @@ async function handleList(appUser, body) {
       SELECT r.*, p.part_name AS linked_part_name, p.name AS linked_part_alias, p.part_type AS linked_part_type
       FROM ifs_life_integration_reflections r
       LEFT JOIN ifs_parts p ON p.id = r.part_id
-      WHERE r.client_id = $1
+      WHERE r.client_id = $1::uuid
         AND ($2::text IS NULL OR r.reflection_type = $2)
         AND ($3::boolean IS TRUE OR r.archived_at IS NULL)
       ORDER BY r.created_at DESC
@@ -169,7 +169,7 @@ async function handleList(appUser, body) {
       SELECT r.*, p.part_name AS linked_part_name, p.name AS linked_part_alias, p.part_type AS linked_part_type
       FROM ifs_life_integration_reflections r
       LEFT JOIN ifs_parts p ON p.id = r.part_id
-      WHERE r.client_id = $1
+      WHERE r.client_id = $1::uuid
         AND r.archived_at IS NULL
         AND ($2::text IS NULL OR r.reflection_type = $2)
       ORDER BY r.created_at DESC
@@ -290,7 +290,7 @@ async function handleListSharedForAdvisor(appUser, body) {
     SELECT r.*, p.part_name AS linked_part_name, p.name AS linked_part_alias, p.part_type AS linked_part_type
     FROM ifs_life_integration_reflections r
     LEFT JOIN ifs_parts p ON p.id = r.part_id
-    WHERE r.client_id = $1
+    WHERE r.client_id = $1::uuid
       AND r.archived_at IS NULL
     ORDER BY r.created_at DESC
     LIMIT 50
