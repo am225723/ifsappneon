@@ -8,8 +8,8 @@ const TONE_GRADIENTS = {
   advisor: 'bg-gradient-to-br from-[#3b82f6] to-[#6366f1]'
 };
 
-const PhotoTile = ({ to, image, icon, title, detail, tone = 'daily', wide = false, full = false }) => {
-  const badge = (
+const PhotoTile = ({ to, onClick, image, icon, title, detail, tone = 'daily', wide = false, full = false, className = '', children }) => {
+  const badge = icon && (
     <span
       className={`z-10 flex shrink-0 items-center justify-center rounded-2xl border border-white/55 shadow-lg ${TONE_GRADIENTS[tone] || TONE_GRADIENTS.daily} ${
         wide ? 'h-12 w-12' : 'absolute left-3.5 top-3.5 h-[60px] w-[60px]'
@@ -19,13 +19,12 @@ const PhotoTile = ({ to, image, icon, title, detail, tone = 'daily', wide = fals
     </span>
   );
 
-  return (
-    <Link
-      to={to}
-      className={`group relative isolate block overflow-hidden rounded-[22px] shadow-lg transition-transform duration-200 hover:-translate-y-1 hover:shadow-xl ${
-        wide ? 'min-h-[108px]' : 'aspect-square'
-      } ${full ? 'col-span-2' : ''}`}
-    >
+  const sharedClassName = `group relative isolate block w-full text-left overflow-hidden rounded-[22px] shadow-lg transition-transform duration-200 hover:-translate-y-1 hover:shadow-xl ${
+    wide ? 'min-h-[108px]' : 'aspect-square'
+  } ${full ? 'col-span-2' : ''} ${className}`;
+
+  const content = (
+    <>
       <img
         src={image}
         alt=""
@@ -37,21 +36,33 @@ const PhotoTile = ({ to, image, icon, title, detail, tone = 'daily', wide = fals
       {wide ? (
         <div className="relative z-10 flex h-full items-center gap-3.5 p-4">
           {badge}
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <p className="text-base font-extrabold leading-tight text-white drop-shadow">{title}</p>
-            <p className="mt-1 line-clamp-1 text-[13px] text-white/90 drop-shadow">{detail}</p>
+            {detail && <p className="mt-1 line-clamp-1 text-[13px] text-white/90 drop-shadow">{detail}</p>}
           </div>
+          {children}
         </div>
       ) : (
         <>
           {badge}
           <div className="absolute inset-x-0 bottom-0 z-10 p-4">
             <p className="text-xl font-extrabold leading-tight text-white drop-shadow">{title}</p>
-            <p className="mt-1 line-clamp-2 text-sm text-white/90 drop-shadow">{detail}</p>
+            {detail && <p className="mt-1 line-clamp-2 text-sm text-white/90 drop-shadow">{detail}</p>}
           </div>
+          {children}
         </>
       )}
-    </Link>
+    </>
+  );
+
+  if (to) {
+    return <Link to={to} className={sharedClassName}>{content}</Link>;
+  }
+
+  return (
+    <button type="button" onClick={onClick} className={sharedClassName}>
+      {content}
+    </button>
   );
 };
 
