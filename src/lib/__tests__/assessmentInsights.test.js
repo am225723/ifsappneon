@@ -85,4 +85,80 @@ describe('buildAssessmentInsights', () => {
     expect(curriculum.body).toMatch(/Neglect/)
     expect(curriculum.bullets?.length).toBeGreaterThan(0)
   })
+
+  describe('full wound breakdown', () => {
+    it('ranks all five wound scores and flags elevated categories beyond primary/secondary', () => {
+      const sections = buildAssessmentInsights({
+        wounds: {
+          primary_wound: 'shame',
+          secondary_wound: 'abandonment',
+          scores: { shame: 21, abandonment: 16, neglect: 14, betrayal: 8, helplessness: 5 }
+        }
+      })
+      const breakdown = sections.find((s) => s.id === 'wound-breakdown')
+      expect(breakdown.bullets).toContain('Shame: 21/25 (High)')
+      expect(breakdown.bullets).toContain('Neglect: 14/25 (Moderate)')
+      expect(breakdown.bullets.some((b) => b.includes('Neglect') && b.includes('elevated'))).toBe(true)
+    })
+
+    it('notes when the primary and secondary wound share the same exile', () => {
+      const sections = buildAssessmentInsights({
+        wounds: { primary_wound: 'abandonment', secondary_wound: 'neglect', scores: { abandonment: 20, neglect: 18, shame: 5, betrayal: 5, helplessness: 5 } }
+      })
+      const breakdown = sections.find((s) => s.id === 'wound-breakdown')
+      expect(breakdown.bullets.some((b) => b.includes('The Lonely Child'))).toBe(true)
+    })
+
+    it('omits the breakdown card when no wound scores are available', () => {
+      const sections = buildAssessmentInsights({})
+      expect(sections.find((s) => s.id === 'wound-breakdown')).toBeUndefined()
+    })
+  })
+
+  describe('daily tracking cross-reference', () => {
+    it('confirms wound-linked emotions logged in recent mood check-ins', () => {
+      const sections = buildAssessmentInsights({
+        wounds: { primary_wound: 'shame', scores: { shame: 20 } },
+        moodEntries: [
+          { date: '2026-08-05', mood: 2, energy: 4, emotions: ['Shame', 'Anxious'] },
+          { date: '2026-08-06', mood: 2, energy: 3, emotions: ['Shame'] }
+        ]
+      })
+      const tracking = sections.find((s) => s.id === 'daily-tracking')
+      expect(tracking.bullets.some((b) => b.startsWith('Confirmed') && b.includes('Shame'))).toBe(true)
+    })
+
+    it('notes when the wound pattern has not shown up in recent mood tags', () => {
+      const sections = buildAssessmentInsights({
+        wounds: { primary_wound: 'shame', scores: { shame: 20 } },
+        moodEntries: [{ date: '2026-08-06', mood: 4, energy: 7, emotions: ['Calm'] }]
+      })
+      const tracking = sections.find((s) => s.id === 'daily-tracking')
+      expect(tracking.bullets.some((b) => b.startsWith('Not yet visible'))).toBe(true)
+    })
+
+    it('surfaces streak and milestone data when present', () => {
+      const sections = buildAssessmentInsights({
+        streakData: { currentStreak: 12, longestStreak: 20 },
+        timeline: [{ title: 'Completed Module 3', date: '2026-08-01' }]
+      })
+      const tracking = sections.find((s) => s.id === 'daily-tracking')
+      expect(tracking.bullets.some((b) => b.includes('12-day practice streak'))).toBe(true)
+      expect(tracking.bullets.some((b) => b.includes('Completed Module 3'))).toBe(true)
+    })
+
+    it('omits the daily-tracking card when there is no tracking data at all', () => {
+      const sections = buildAssessmentInsights({ wounds: { primary_wound: 'shame', scores: { shame: 20 } } })
+      expect(sections.find((s) => s.id === 'daily-tracking')).toBeUndefined()
+    })
+
+    it('keeps a recorded zero-day streak instead of treating it as missing', () => {
+      const sections = buildAssessmentInsights({
+        streakData: { currentStreak: 0, longestStreak: 5 }
+      })
+      const tracking = sections.find((s) => s.id === 'daily-tracking')
+      expect(tracking).toBeDefined()
+      expect(tracking.bullets.some((b) => b.includes('0-day practice streak'))).toBe(true)
+    })
+  })
 })
