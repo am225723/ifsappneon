@@ -5,8 +5,18 @@ import { loadLifeIntegrationReflections } from '../lib/lifeIntegration';
 import { normalizeLifeReflection } from '../lib/lifeIntegrationDisplay';
 import { practiceCards } from '../components/life/practiceConfig';
 import PageHero, { heroChipClass } from '../components/PageHero';
+import PhotoTile from '../components/PhotoTile';
 
 const LIFE_INTEGRATION_HERO_IMAGE = '/images/dashboard/daily-notice-part.jpg';
+
+const LIFE_PRACTICE_IMAGES = {
+  notice_part: '/images/tools/notice-part.jpg',
+  return_to_self: '/images/tools/return-to-self.jpg',
+  trigger_reflection: '/images/tools/trigger-reflection.jpg',
+  repair_after_conflict: '/images/tools/repair-after-conflict.jpg',
+  protector_check_in: '/images/tools/protector-check-in.jpg',
+  needs_boundaries: '/images/tools/needs-boundaries.jpg',
+};
 
 function ReflectionCard({ reflection }) {
   const normalized = normalizeLifeReflection(reflection);
@@ -72,17 +82,21 @@ export default function LifeIntegration() {
           </div>
           <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
             {practiceCards.map((practice) => (
-              <Link key={practice.type} to={practice.route} className="soft-card-interactive group flex h-full flex-col justify-between p-6">
-                <div>
-                  <div className="mb-5 flex items-start justify-between gap-3">
-                    <div className="flex h-14 w-14 items-center justify-center rounded-3xl bg-brand-gold-50 text-3xl shadow-sm dark:bg-brand-gold-950/30">{practice.icon}</div>
-                    <span className="rounded-full bg-brand-stone-100 px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-brand-stone-600 dark:bg-slate-800 dark:text-slate-300">{practice.eyebrow.replace('A ', '')}</span>
-                  </div>
-                  <h3 className="text-xl font-semibold text-brand-stone-900 dark:text-slate-100">{practice.title}</h3>
-                  <p className="mt-3 text-sm leading-relaxed text-brand-stone-600 dark:text-slate-400">{practice.description}</p>
-                </div>
-                <span className="mt-6 inline-flex items-center gap-2 text-sm font-bold text-brand-gold-700 dark:text-brand-gold-500">Begin gently <ArrowRight className="h-4 w-4 transition group-hover:translate-x-1" /></span>
-              </Link>
+              <PhotoTile
+                key={practice.type}
+                to={practice.route}
+                image={LIFE_PRACTICE_IMAGES[practice.type]}
+                title={practice.title}
+                detail={practice.description}
+                tone="daily"
+              >
+                <span className="absolute left-3.5 top-3.5 z-10 flex h-11 w-11 items-center justify-center rounded-2xl border border-white/55 bg-white/15 text-xl shadow-lg backdrop-blur">
+                  {practice.icon}
+                </span>
+                <span className="absolute right-3.5 top-3.5 z-10 rounded-full bg-white/15 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-white backdrop-blur">
+                  {practice.eyebrow.replace('A ', '')}
+                </span>
+              </PhotoTile>
             ))}
           </div>
         </section>
