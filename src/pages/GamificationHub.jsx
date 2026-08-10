@@ -12,6 +12,32 @@ import PageHero, { heroChipClass } from '../components/PageHero';
 
 const GAMIFICATION_HERO_IMAGE = '/images/dashboard/tools-healing-timeline.jpg';
 
+const BADGE_IMAGES = {
+  first_login: '/images/dashboard/hero-sunrise.jpg',
+  streak_7: '/images/achievements/streak.jpg',
+  streak_30: '/images/achievements/crown.jpg',
+  streak_3: '/images/achievements/calendar.jpg',
+  module_1: '/images/tools/curriculum.jpg',
+  all_modules: '/images/achievements/trophy.jpg',
+  quiz_master: '/images/achievements/energy.jpg',
+  knowledge_seeker: '/images/tools/progress-timeline.jpg',
+  first_assessment: '/images/tools/assessments.jpg',
+  parts_explorer: '/images/tools/parts-relationships.jpg',
+  self_energy: '/images/meditation/cultivating-self-energy-practice.jpg',
+  wound_healer: '/images/assessments/wounds.jpg',
+  exercises_10: '/images/achievements/star-medal.jpg',
+  daily_practice: '/images/meditation/morning-intention.jpg',
+  meditation_master: '/images/meditation/evening-release.jpg',
+  journal_keeper: '/images/tools/journal.jpg',
+  gift_giver: '/images/achievements/gift.jpg',
+};
+
+const WEEKLY_CHALLENGE_IMAGES = {
+  journal_3: '/images/tools/journal.jpg',
+  new_exercise: '/images/tools/self-energy-practice.jpg',
+  meditation_10: '/images/tools/meditation-library.jpg',
+};
+
 const LEVEL_NAMES = [
   'Curious Explorer',
   'Brave Beginner',
@@ -297,16 +323,19 @@ export default function GamificationHub() {
                       : 'bg-gray-50 border border-gray-200 opacity-60'
                 }`}
               >
-                <div className="relative inline-block mb-2">
-                  <Icon className={`w-8 h-8 ${
-                    state.unlocked
-                      ? 'text-yellow-500'
-                      : isDark ? 'text-slate-500' : 'text-gray-400'
-                  }`} />
+                <div className="relative w-full aspect-square rounded-lg overflow-hidden mb-2">
+                  <img
+                    src={BADGE_IMAGES[badge.id]}
+                    alt=""
+                    loading="lazy"
+                    className={`absolute inset-0 h-full w-full object-cover ${state.unlocked ? '' : 'grayscale opacity-70'}`}
+                  />
+                  <div className="absolute inset-0 bg-black/15" />
+                  <Icon className="absolute inset-0 m-auto w-6 h-6 text-white drop-shadow" />
                   {state.unlocked ? (
-                    <CheckCircle className="w-4 h-4 text-green-500 absolute -top-1 -right-1" />
+                    <CheckCircle className="w-4 h-4 text-green-400 absolute top-1 right-1 drop-shadow" />
                   ) : (
-                    <Lock className="w-3 h-3 text-gray-400 absolute -bottom-0.5 -right-0.5" />
+                    <Lock className="w-3.5 h-3.5 text-white/90 absolute bottom-1 right-1 drop-shadow" />
                   )}
                 </div>
                 <p className={`text-xs font-bold ${isDark ? 'text-slate-200' : 'text-gray-800'}`}>{badge.name}</p>
@@ -356,17 +385,26 @@ export default function GamificationHub() {
                 }`}
               >
                 <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    {isComplete ? (
-                      <CheckCircle className="w-5 h-5 text-green-500" />
-                    ) : (
-                      <Target className={`w-5 h-5 ${isDark ? 'text-blue-400' : 'text-blue-500'}`} />
-                    )}
-                    <span className={`text-sm font-medium ${isComplete ? (isDark ? 'text-green-300 line-through' : 'text-green-700 line-through') : isDark ? 'text-slate-200' : 'text-gray-700'}`}>
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="relative w-10 h-10 flex-shrink-0 rounded-lg overflow-hidden">
+                      <img
+                        src={WEEKLY_CHALLENGE_IMAGES[challenge.id] || '/images/tools/self-energy-practice.jpg'}
+                        alt=""
+                        loading="lazy"
+                        className={`absolute inset-0 h-full w-full object-cover ${isComplete ? '' : 'opacity-90'}`}
+                      />
+                      <div className="absolute inset-0 bg-black/15" />
+                      {isComplete ? (
+                        <CheckCircle className="absolute inset-0 m-auto w-4 h-4 text-white drop-shadow" />
+                      ) : (
+                        <Target className="absolute inset-0 m-auto w-4 h-4 text-white drop-shadow" />
+                      )}
+                    </div>
+                    <span className={`text-sm font-medium truncate ${isComplete ? (isDark ? 'text-green-300 line-through' : 'text-green-700 line-through') : isDark ? 'text-slate-200' : 'text-gray-700'}`}>
                       {challenge.title}
                     </span>
                   </div>
-                  <span className={`text-xs font-semibold ${isDark ? 'text-amber-400' : 'text-amber-600'}`}>
+                  <span className={`text-xs font-semibold flex-shrink-0 ${isDark ? 'text-amber-400' : 'text-amber-600'}`}>
                     +{challenge.xpReward} XP
                   </span>
                 </div>
