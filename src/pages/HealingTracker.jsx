@@ -24,6 +24,15 @@ import PageHero, { heroSecondaryButtonClass } from '../components/PageHero';
 
 const HEALING_TRACKER_HERO_IMAGE = '/images/dashboard/tools-healing-timeline.jpg';
 
+const STAGE_IMAGES = {
+  1: '/images/assessments/wounds.jpg',
+  2: '/images/curriculum/module-1-intro-ifs.jpg',
+  3: '/images/curriculum/module-3-protectors-unlocked.jpg',
+  4: '/images/meditation/six-fs-protocol-mastery-practice.jpg',
+  5: '/images/meditation/unburdening-ceremony.jpg',
+  6: '/images/meditation/self-leadership-mastery-practice.jpg',
+};
+
 const healingStages = [
   {
     id: 1,
@@ -372,8 +381,16 @@ const HealingTracker = () => {
                   >
                     <div className="flex items-start justify-between">
                       <div className="flex items-start gap-3">
-                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center bg-gradient-to-br ${stage.color}`}>
-                          <Icon className="w-5 h-5 text-white" />
+                        <div className="relative w-14 h-14 flex-shrink-0 rounded-xl overflow-hidden">
+                          <img
+                            src={STAGE_IMAGES[stage.id]}
+                            alt=""
+                            loading="lazy"
+                            className={`absolute inset-0 h-full w-full object-cover ${status === 'not-started' ? 'grayscale opacity-70' : ''}`}
+                          />
+                          <div className="absolute inset-0 bg-gradient-to-br from-black/10 to-black/40" />
+                          <div className={`absolute inset-0 flex items-center justify-center bg-gradient-to-br ${stage.color} opacity-40`} />
+                          <Icon className="absolute inset-0 m-auto w-5 h-5 text-white drop-shadow" />
                         </div>
                         <div>
                           <div className="flex items-center gap-2">
