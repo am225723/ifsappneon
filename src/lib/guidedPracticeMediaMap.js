@@ -1,5 +1,38 @@
 export const guidedPracticeMediaMap = [
   {
+    section: 'Q',
+    itemNumber: 'Q1',
+    practiceId: 'quick-self-connection',
+    title: 'Quick Self-Connection',
+    mp3Filename: 'quick-self-connection.mp3',
+    audioUrl: 'https://0yrs6ceohq.ufs.sh/f/TQXmWDkNFrzPHfRQByRTEMuS6oK8TlsLq9YemgGCtvHOj4Rp',
+    uploadThingFileKey: 'TQXmWDkNFrzPHfRQByRTEMuS6oK8TlsLq9YemgGCtvHOj4Rp',
+    expectedDuration: '5 min',
+    appArea: 'meditation'
+  },
+  {
+    section: 'Q',
+    itemNumber: 'Q2',
+    practiceId: 'box-breathing-quick',
+    title: 'Box Breathing',
+    mp3Filename: 'box-breathing-quick.mp3',
+    audioUrl: 'https://0yrs6ceohq.ufs.sh/f/TQXmWDkNFrzPWMhaGj3oPR4oig2prsFVNS6WjtubOl8U9xdI',
+    uploadThingFileKey: 'TQXmWDkNFrzPWMhaGj3oPR4oig2prsFVNS6WjtubOl8U9xdI',
+    expectedDuration: '4 min',
+    appArea: 'meditation'
+  },
+  {
+    section: 'Q',
+    itemNumber: 'Q3',
+    practiceId: 'inner-child-check-in',
+    title: 'Inner Child Check-in',
+    mp3Filename: 'inner-child-check-in.mp3',
+    audioUrl: 'https://0yrs6ceohq.ufs.sh/f/TQXmWDkNFrzPnYYHUxILBIHyFQVN7CDaEARXes6T5m9qZ1GY',
+    uploadThingFileKey: 'TQXmWDkNFrzPnYYHUxILBIHyFQVN7CDaEARXes6T5m9qZ1GY',
+    expectedDuration: '5 min',
+    appArea: 'meditation'
+  },
+  {
     section: 'A',
     itemNumber: 'A1',
     practiceId: 'meeting-your-self',
