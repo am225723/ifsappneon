@@ -16,6 +16,16 @@ import PageHero from '../components/PageHero';
 
 const PROGRESS_TIMELINE_HERO_IMAGE = '/images/dashboard/tools-healing-timeline.jpg';
 
+const MILESTONE_TYPE_IMAGES = {
+  module: '/images/tools/curriculum.jpg',
+  assessment: '/images/tools/assessments.jpg',
+  journal: '/images/tools/journal.jpg',
+  exercise: '/images/tools/self-energy-practice.jpg',
+  badge: '/images/achievements/trophy.jpg',
+  curriculum_practice: '/images/curriculum/module-1-intro-ifs.jpg',
+  daily_life: '/images/tools/life-integration.jpg',
+};
+
 const milestoneTypes = {
   module: { label: 'Module', color: 'amber', icon: BookOpen, bg: 'bg-amber-100', text: 'text-amber-700', border: 'border-amber-300', dot: 'bg-amber-500', darkBg: 'bg-amber-900/30', darkText: 'text-amber-300', darkBorder: 'border-amber-700' },
   assessment: { label: 'Assessment', color: 'emerald', icon: Target, bg: 'bg-emerald-100', text: 'text-emerald-700', border: 'border-emerald-300', dot: 'bg-emerald-500', darkBg: 'bg-emerald-900/30', darkText: 'text-emerald-300', darkBorder: 'border-emerald-700' },
@@ -276,8 +286,15 @@ export default function ProgressTimeline() {
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex items-start gap-3 flex-1 min-w-0">
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${isDark ? mt.darkBg : mt.bg}`}>
-                        <Icon className={`w-4 h-4 ${isDark ? mt.darkText : mt.text}`} />
+                      <div className="relative w-10 h-10 rounded-lg overflow-hidden flex-shrink-0">
+                        <img
+                          src={MILESTONE_TYPE_IMAGES[milestone.type]}
+                          alt=""
+                          loading="lazy"
+                          className="absolute inset-0 h-full w-full object-cover"
+                        />
+                        <div className={`absolute inset-0 flex items-center justify-center ${isDark ? mt.darkBg : mt.bg} opacity-60`} />
+                        <Icon className={`absolute inset-0 m-auto w-4 h-4 ${isDark ? mt.darkText : mt.text} drop-shadow`} />
                       </div>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2 mb-0.5">
