@@ -11,6 +11,20 @@ import PageHero, { heroSecondaryButtonClass } from '../components/PageHero';
 
 const PARTS_CARDS_HERO_IMAGE = '/images/dashboard/deep-parts-dialogue.jpg';
 
+const PART_IMAGES = {
+  'inner-critic': '/images/parts/inner-critic.jpg',
+  'people-pleaser': '/images/parts/people-pleaser.jpg',
+  caretaker: '/images/parts/caretaker.jpg',
+  perfectionist: '/images/parts/perfectionist.jpg',
+  controller: '/images/parts/controller.jpg',
+  'inner-child': '/images/curriculum/module-2-inner-child-wounds.jpg',
+  'wounded-one': '/images/parts/wounded-one.jpg',
+  'lonely-one': '/images/parts/lonely-one.jpg',
+  'angry-part': '/images/parts/angry-part.jpg',
+  'numbing-part': '/images/parts/numbing-part.jpg',
+  distractor: '/images/parts/distractor.jpg',
+};
+
 const DEFAULT_PARTS = [
   { id: 'inner-critic', name: 'Inner Critic', type: 'manager', emoji: '⚖️', role: 'Keeps you in line to avoid criticism' },
   { id: 'people-pleaser', name: 'People Pleaser', type: 'manager', emoji: '🤝', role: 'Ensures others approve of you' },
@@ -107,6 +121,18 @@ const TYPE_CONFIG = {
     borderDark: 'border-emerald-700',
     ringColor: 'ring-emerald-400',
   },
+};
+
+const TYPE_FALLBACK_IMAGES = {
+  manager: '/images/parts/perfectionist.jpg',
+  firefighter: '/images/parts/angry-part.jpg',
+  exile: '/images/parts/wounded-one.jpg',
+  self: '/images/meditation/cultivating-self-energy-practice.jpg',
+};
+
+const getPartImage = (partName, partType) => {
+  const slug = (partName || '').toLowerCase().trim().replace(/\s+/g, '-');
+  return PART_IMAGES[slug] || TYPE_FALLBACK_IMAGES[partType] || PARTS_CARDS_HERO_IMAGE;
 };
 
 const PartsCards = () => {
@@ -296,7 +322,14 @@ const PartsCards = () => {
             {currentCard && (
               <div className={`transition-all duration-500 ${flipAnimation ? 'opacity-0 scale-95 rotate-y-90' : 'opacity-100 scale-100'}`}>
                 <div className={`rounded-3xl overflow-hidden shadow-2xl border-2 ${theme.isDark ? typeConfig.borderDark : typeConfig.borderLight} mb-6`}>
-                  <div className={`bg-gradient-to-br ${typeConfig.gradient} p-6 text-center relative overflow-hidden`}>
+                  <div className="p-6 text-center relative overflow-hidden">
+                    <img
+                      src={PART_IMAGES[currentCard.id] || getPartImage(currentCard.name, currentCard.type)}
+                      alt=""
+                      className="absolute inset-0 h-full w-full object-cover"
+                    />
+                    <div className={`absolute inset-0 bg-gradient-to-br ${typeConfig.gradient} opacity-60`} />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/10 to-black/20" />
                     <div className="absolute inset-0 opacity-10">
                       <div className="absolute top-4 left-4 w-20 h-20 border border-white/30 rounded-full" />
                       <div className="absolute bottom-4 right-4 w-32 h-32 border border-white/20 rounded-full" />
@@ -424,11 +457,19 @@ const PartsCards = () => {
                     key={i}
                     className={`rounded-xl overflow-hidden border ${theme.isDark ? `bg-slate-800 ${rConfig.borderDark}` : `bg-white ${rConfig.borderLight}`}`}
                   >
-                    <div className={`px-4 py-2 flex items-center justify-between ${theme.isDark ? rConfig.bgDark : rConfig.bgLight}`}>
-                      <span className={`text-sm font-medium ${theme.isDark ? rConfig.textDark : rConfig.textLight}`}>
+                    <div className={`px-4 py-2 flex items-center gap-3 ${theme.isDark ? rConfig.bgDark : rConfig.bgLight}`}>
+                      <div className="relative w-8 h-8 flex-shrink-0 rounded-lg overflow-hidden">
+                        <img
+                          src={getPartImage(r.partName, r.partType)}
+                          alt=""
+                          loading="lazy"
+                          className="absolute inset-0 h-full w-full object-cover"
+                        />
+                      </div>
+                      <span className={`flex-1 text-sm font-medium ${theme.isDark ? rConfig.textDark : rConfig.textLight}`}>
                         {r.partName} · {rConfig.label}
                       </span>
-                      <span className={`text-xs ${theme.isDark ? 'text-slate-400' : 'text-gray-500'}`}>
+                      <span className={`text-xs flex-shrink-0 ${theme.isDark ? 'text-slate-400' : 'text-gray-500'}`}>
                         {new Date(r.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                       </span>
                     </div>
