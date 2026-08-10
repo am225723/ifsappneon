@@ -6,8 +6,18 @@ import { supabase } from '../lib/supabase';
 import { clientAuth } from '../lib/supabasePersonalization';
 import { resources } from '../data/resourceLibraryData.js';
 import PageHero, { heroSecondaryButtonClass } from '../components/PageHero';
+import PhotoTile from '../components/PhotoTile';
 
 const RESOURCE_LIBRARY_HERO_IMAGE = '/images/dashboard/tools-resource-library.jpg';
+
+const RESOURCE_TYPE_IMAGES = {
+  book: '/images/resource-library/book.jpg',
+  article: '/images/resource-library/article.jpg',
+  exercise: '/images/resource-library/exercise.jpg',
+  meditation: '/images/resource-library/meditation.jpg',
+  video: '/images/resource-library/video.jpg',
+  audio: '/images/resource-library/audio.jpg',
+};
 
 const woundTypes = ['abandonment', 'shame', 'neglect', 'betrayal', 'helplessness'];
 
@@ -43,15 +53,6 @@ const woundColors = {
   neglect: { bg: 'from-teal-500 to-teal-700', light: 'bg-teal-100 text-teal-700', border: 'border-teal-200' },
   betrayal: { bg: 'from-red-500 to-red-700', light: 'bg-red-100 text-red-700', border: 'border-red-200' },
   helplessness: { bg: 'from-amber-500 to-amber-700', light: 'bg-amber-100 text-amber-700', border: 'border-amber-200' },
-};
-
-const typeColors = {
-  book: 'from-blue-400 to-blue-600',
-  article: 'from-emerald-400 to-emerald-600',
-  exercise: 'from-amber-400 to-amber-600',
-  meditation: 'from-indigo-400 to-indigo-600',
-  video: 'from-red-400 to-red-600',
-  audio: 'from-green-400 to-green-600',
 };
 
 const ResourceLibrary = () => {
@@ -108,54 +109,30 @@ const ResourceLibrary = () => {
     const Icon = getTypeIcon(resource.type);
     const isAppLink = !!resource.appLink;
 
-    const cardContent = (
-      <div className={`rounded-2xl border p-5 transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5 ${
-        theme.isDark ? 'bg-slate-800 border-slate-700 hover:border-slate-600' : 'bg-white border-gray-200 hover:border-gray-300'
-      }`}>
-        <div className="flex items-start justify-between mb-3">
-          <div className={`w-11 h-11 rounded-xl bg-gradient-to-br ${typeColors[resource.type] || 'from-gray-400 to-gray-600'} flex items-center justify-center flex-shrink-0`}>
-            <Icon className="w-5 h-5 text-white" />
-          </div>
-          <div className="flex gap-1.5 flex-wrap justify-end">
-            {resource.wounds.slice(0, 2).map(w => (
-              <span key={w} className={`px-2 py-0.5 rounded-full text-[10px] font-semibold capitalize ${woundColors[w]?.light || 'bg-gray-100 text-gray-600'}`}>
-                {w}
-              </span>
-            ))}
-            {resource.wounds.length > 2 && (
-              <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${theme.isDark ? 'bg-slate-700 text-slate-300' : 'bg-gray-100 text-gray-500'}`}>
-                +{resource.wounds.length - 2}
-              </span>
-            )}
-          </div>
-        </div>
-        <h3 className={`text-base font-bold mb-1 ${theme.isDark ? 'text-slate-100' : 'text-gray-900'}`}>{resource.title}</h3>
-        <p className={`text-xs mb-2 ${theme.isDark ? 'text-slate-400' : 'text-gray-500'}`}>by {resource.author}</p>
-        <p className={`text-sm mb-3 line-clamp-2 ${theme.isDark ? 'text-slate-300' : 'text-gray-600'}`}>{resource.description}</p>
-        <div className="flex items-center justify-between">
-          <span className={`px-2.5 py-1 rounded-lg text-[11px] font-medium capitalize ${theme.isDark ? 'bg-slate-700 text-slate-300' : 'bg-gray-100 text-gray-600'}`}>
-            {resource.stage.replace('_', ' ')}
-          </span>
-          <span className={`text-sm font-medium flex items-center gap-1 ${isAppLink ? 'text-amber-600' : 'text-teal-600'}`}>
-            {isAppLink ? 'Open in App' : 'Learn More'}
-            <ExternalLink className="w-3.5 h-3.5" />
-          </span>
-        </div>
-      </div>
-    );
-
-    if (isAppLink) {
-      return (
-        <Link key={resource.id} to={resource.appLink} className="block">
-          {cardContent}
-        </Link>
-      );
-    }
-
     return (
-      <a key={resource.id} href={resource.link} target="_blank" rel="noopener noreferrer" className="block">
-        {cardContent}
-      </a>
+      <PhotoTile
+        key={resource.id}
+        to={isAppLink ? resource.appLink : undefined}
+        href={isAppLink ? undefined : resource.link}
+        image={RESOURCE_TYPE_IMAGES[resource.type] || RESOURCE_LIBRARY_HERO_IMAGE}
+        icon={Icon}
+        title={resource.title}
+        detail={`${resource.author} — ${resource.description}`}
+        tone="tools"
+      >
+        <div className="absolute right-3.5 top-3.5 z-10 flex max-w-[65%] flex-wrap justify-end gap-1.5">
+          {resource.wounds.slice(0, 2).map(w => (
+            <span key={w} className="rounded-full bg-white/15 px-2 py-0.5 text-[10px] font-semibold capitalize text-white backdrop-blur">
+              {w}
+            </span>
+          ))}
+          {resource.wounds.length > 2 && (
+            <span className="rounded-full bg-white/15 px-2 py-0.5 text-[10px] font-semibold text-white backdrop-blur">
+              +{resource.wounds.length - 2}
+            </span>
+          )}
+        </div>
+      </PhotoTile>
     );
   };
 
