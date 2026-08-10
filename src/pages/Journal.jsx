@@ -42,6 +42,17 @@ import PageHero from '../components/PageHero';
 
 const JOURNAL_HERO_IMAGE = '/images/dashboard/deep-healing-journal.jpg';
 
+const MOOD_IMAGES = {
+  amazing: '/images/qualities/playfulness.jpg',
+  good: '/images/qualities/calmness.jpg',
+  neutral: '/images/qualities/presence.jpg',
+  challenged: '/images/qualities/patience.jpg',
+  difficult: '/images/wounds/loss-grief.jpg',
+};
+
+const CURRICULUM_REFLECTION_IMAGE = '/images/tools/curriculum.jpg';
+const LIFE_REFLECTION_IMAGE = '/images/tools/life-integration.jpg';
+
 
 const calculateStreak = (entries) => {
   if (!entries || entries.length === 0) return 0;
@@ -1038,7 +1049,12 @@ const Journal = () => {
           ) : (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {curriculumReflections.map((reflection) => (
-                <Link key={reflection.id} to={reflection.moduleId ? `/curriculum/module/${reflection.moduleId}` : '/curriculum'} className="rounded-2xl border border-brand-stone-100 bg-white/70 p-4 transition hover:-translate-y-0.5 hover:shadow-sm dark:border-slate-800 dark:bg-slate-900/45">
+                <Link key={reflection.id} to={reflection.moduleId ? `/curriculum/module/${reflection.moduleId}` : '/curriculum'} className="overflow-hidden rounded-2xl border border-brand-stone-100 bg-white/70 transition hover:-translate-y-0.5 hover:shadow-sm dark:border-slate-800 dark:bg-slate-900/45">
+                  <div className="relative h-20 w-full overflow-hidden">
+                    <img src={CURRICULUM_REFLECTION_IMAGE} alt="" loading="lazy" className="absolute inset-0 h-full w-full object-cover" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
+                  </div>
+                  <div className="p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <p className="text-xs font-bold uppercase tracking-[0.18em] text-brand-gold-700 dark:text-brand-gold-500">{reflection.moduleTitle}</p>
@@ -1049,6 +1065,7 @@ const Journal = () => {
                   <div className={`mt-3 flex flex-wrap gap-2 text-xs ${textTertiary}`}>
                     <span>{new Date(reflection.createdAt).toLocaleDateString()}</span>
                     {reflection.partNoticed && <span>Part noticed: {reflection.partNoticed}</span>}
+                  </div>
                   </div>
                 </Link>
               ))}
@@ -1074,7 +1091,12 @@ const Journal = () => {
           ) : (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {lifeReflections.map((reflection) => (
-                <Link key={reflection.id} to={reflection.detailRoute} className="rounded-2xl border border-brand-stone-100 bg-white/70 p-4 transition hover:-translate-y-0.5 hover:shadow-sm dark:border-slate-800 dark:bg-slate-900/45">
+                <Link key={reflection.id} to={reflection.detailRoute} className="overflow-hidden rounded-2xl border border-brand-stone-100 bg-white/70 transition hover:-translate-y-0.5 hover:shadow-sm dark:border-slate-800 dark:bg-slate-900/45">
+                  <div className="relative h-20 w-full overflow-hidden">
+                    <img src={LIFE_REFLECTION_IMAGE} alt="" loading="lazy" className="absolute inset-0 h-full w-full object-cover" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
+                  </div>
+                  <div className="p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <p className="text-xs font-bold uppercase tracking-[0.18em] text-brand-gold-700 dark:text-brand-gold-500">{reflection.label}</p>
@@ -1085,6 +1107,7 @@ const Journal = () => {
                   <div className={`mt-3 flex flex-wrap gap-2 text-xs ${textTertiary}`}>
                     <span>{new Date(reflection.created_at).toLocaleDateString()}</span>
                     {reflection.linkedPartName && <span>Linked part: {reflection.linkedPartName}</span>}
+                  </div>
                   </div>
                 </Link>
               ))}
@@ -1126,7 +1149,16 @@ const Journal = () => {
                 >
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex items-center gap-2">
-                      <span className="text-2xl">{getMoodEmoji(entry.mood)}</span>
+                      <div className="relative w-10 h-10 rounded-lg overflow-hidden flex-shrink-0">
+                        <img
+                          src={MOOD_IMAGES[entry.mood] || MOOD_IMAGES.neutral}
+                          alt=""
+                          loading="lazy"
+                          className="absolute inset-0 h-full w-full object-cover"
+                        />
+                        <div className="absolute inset-0 bg-black/10" />
+                        <span className="absolute inset-0 flex items-center justify-center text-lg drop-shadow">{getMoodEmoji(entry.mood)}</span>
+                      </div>
                       {entry.partName && (
                         <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full ${
                           PART_TYPE_CONFIG[entry.partType]?.bgClass || 'bg-brand-emerald-50 dark:bg-brand-emerald-950/40'
