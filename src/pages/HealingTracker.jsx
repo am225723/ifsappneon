@@ -381,12 +381,12 @@ const HealingTracker = () => {
                   >
                     <div className="flex items-start justify-between">
                       <div className="flex items-start gap-3">
-                        <div className="relative w-14 h-14 flex-shrink-0 rounded-xl overflow-hidden">
+                        <div className={`relative w-14 h-14 flex-shrink-0 rounded-xl overflow-hidden ${status === 'not-started' ? 'grayscale opacity-70' : ''}`}>
                           <img
                             src={STAGE_IMAGES[stage.id]}
                             alt=""
                             loading="lazy"
-                            className={`absolute inset-0 h-full w-full object-cover ${status === 'not-started' ? 'grayscale opacity-70' : ''}`}
+                            className="absolute inset-0 h-full w-full object-cover"
                           />
                           <div className="absolute inset-0 bg-gradient-to-br from-black/10 to-black/40" />
                           <div className={`absolute inset-0 flex items-center justify-center bg-gradient-to-br ${stage.color} opacity-40`} />
