@@ -20,9 +20,18 @@ import PageHero, { heroPrimaryButtonClass } from './PageHero';
 
 const CURRICULUM_HERO_IMAGE = '/images/dashboard/continue-path.jpg';
 
+const MODULE_IMAGES = {
+  'module-1-intro-ifs': '/images/curriculum/module-1-intro-ifs.jpg',
+  'module-2-inner-child-wounds': '/images/curriculum/module-2-inner-child-wounds.jpg',
+  'module-3-protectors-unlocked': '/images/curriculum/module-3-protectors-unlocked.jpg',
+  'module-4-self-leadership': '/images/meditation/self-leadership-mastery-practice.jpg',
+  'module-5-six-fs-protocol': '/images/meditation/six-fs-protocol-mastery-practice.jpg',
+  'module-6-inner-child-healing': '/images/meditation/unburdening-ceremony.jpg',
+  'module-5-bonus-exercises': '/images/curriculum/module-5-bonus-exercises.jpg',
+};
+
 const CurriculumSystem = ({ onModuleSelect, userProgress = {}, clientId }) => {
   const [completedModules, setCompletedModules] = useState([]);
-  const [expandedCategories, setExpandedCategories] = useState(new Set(['introduction', 'parts_system']));
   const [clientWound, setClientWound] = useState(null);
   const [woundFocus, setWoundFocus] = useState('primary');
   const [restartingModule, setRestartingModule] = useState(null);
@@ -201,12 +210,6 @@ const CurriculumSystem = ({ onModuleSelect, userProgress = {}, clientId }) => {
   });
   const currentPathModule = pathSummary.currentModule || nextModule;
   const latestCompletedModule = pathSummary.lastCompletedModule;
-
-  const toggleCategory = (id) => {
-    const next = new Set(expandedCategories);
-    if (next.has(id)) next.delete(id); else next.add(id);
-    setExpandedCategories(next);
-  };
 
   const handleModuleSelect = (module) => {
     const status = getModuleStatus(module);
@@ -528,19 +531,15 @@ const CurriculumSystem = ({ onModuleSelect, userProgress = {}, clientId }) => {
 
         {/* Curriculum Modules by Category */}
         <div className="space-y-4">
-          {modulesByCategory.map(category => {
+          {modulesByCategory.filter(category => category.modules.length > 0).map(category => {
             const Icon = category.icon;
-            const isExpanded = expandedCategories.has(category.id);
             const categoryCompleted = category.modules.filter(m => completedModules.includes(m.id)).length;
             const categoryTotal = category.modules.length;
             const hasCoreModules = woundConfig && category.modules.some(m => m._priority?.level === 'core');
 
             return (
               <div key={category.id} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                <button
-                  onClick={() => toggleCategory(category.id)}
-                  className="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
-                >
+                <div className="w-full px-6 py-4 flex items-center justify-between">
                   <div className="flex items-center space-x-3">
                     <div className={`w-10 h-10 bg-gradient-to-r ${category.color} rounded-lg flex items-center justify-center`}>
                       <Icon className="w-5 h-5 text-white" />
@@ -557,205 +556,204 @@ const CurriculumSystem = ({ onModuleSelect, userProgress = {}, clientId }) => {
                       <p className="text-sm text-gray-600">{categoryCompleted} of {categoryTotal} modules completed · {category.modules.filter(m => ['available', 'assigned'].includes(getModuleStatus(m))).length} available</p>
                     </div>
                   </div>
-                  <div className="flex items-center space-x-3">
-                    <div className="text-sm font-medium text-gray-600">
-                      {categoryCompleted > 0 && `${Math.round((categoryCompleted / categoryTotal) * 100)}%`}
-                    </div>
-                    <ChevronRight className={`w-5 h-5 text-gray-400 transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
+                  <div className="text-sm font-medium text-gray-600">
+                    {categoryCompleted > 0 && `${Math.round((categoryCompleted / categoryTotal) * 100)}%`}
                   </div>
-                </button>
+                </div>
 
-                <div className="px-6 pb-2">
+                <div className="px-6 pb-4">
                   <div className="bg-gray-200 rounded-full h-1.5">
                     <div className={`bg-gradient-to-r ${category.color} h-1.5 rounded-full transition-all duration-500`} style={{ width: `${categoryTotal > 0 ? (categoryCompleted / categoryTotal) * 100 : 0}%` }} />
                   </div>
                 </div>
 
-                {isExpanded && (
-                  <div className="border-t border-gray-100">
-                    {category.modules.map(module => {
-                      const status = getModuleStatus(module);
-                      const priority = module._priority;
-                      const isCore = priority?.level === 'core';
-                      const isHigh = priority?.level === 'high';
-                      const supportLinks = getModuleSupportLinks(module);
-                      const moduleAvailable = status !== 'locked' && status !== 'restricted';
-                      const reflectionCount = curriculumReflectionCounts[module.id] || 0;
+                <div className="grid gap-4 border-t border-gray-100 p-4 sm:p-6 lg:grid-cols-2">
+                  {category.modules.map(module => {
+                    const status = getModuleStatus(module);
+                    const priority = module._priority;
+                    const isCore = priority?.level === 'core';
+                    const isHigh = priority?.level === 'high';
+                    const supportLinks = getModuleSupportLinks(module);
+                    const moduleAvailable = status !== 'locked' && status !== 'restricted';
+                    const reflectionCount = curriculumReflectionCounts[module.id] || 0;
 
-                      return (
-                        <div
-                          key={module.id}
-                          className={`px-4 py-5 border-b border-gray-50 last:border-b-0 transition-colors sm:px-6
-                            ${status === 'locked' || status === 'restricted' ? 'bg-amber-50/30' : 'hover:bg-gray-50'}
-                            ${isCore && woundConfig ? 'bg-gradient-to-r from-white to-amber-50/50' : ''}
-                          `}
-                        >
-                          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                            <div className="flex items-start space-x-3 flex-1 min-w-0">
-                              {getStatusIcon(status)}
-                              <div className="flex-1 min-w-0">
-                                <div
-                                  className={`block ${moduleAvailable ? 'transition-colors' : 'cursor-not-allowed'}`}
-                                  title={status === 'restricted' ? 'This module will open as you continue your IFS path.' : undefined}
-                                >
-                                  <div className="flex items-center gap-2 flex-wrap mb-0.5">
-                                    <h4 className="font-semibold text-gray-900">{module.title}</h4>
-                                    <span className={`text-xs font-bold px-2 py-0.5 rounded-full flex-shrink-0 ${
-                                      status === 'completed' ? 'bg-green-100 text-green-700' :
-                                      status === 'assigned' ? 'bg-blue-100 text-blue-700' :
-                                      status === 'available' ? 'bg-emerald-100 text-emerald-700' :
-                                      'bg-brand-stone-100 text-brand-stone-600'
-                                    }`}>
-                                      {getModuleStatusLabel(status)}
-                                    </span>
-                                    {priority?.badge && woundConfig && (
-                                      <span className={`text-xs font-bold px-2 py-0.5 rounded-full flex-shrink-0 ${
-                                        isCore ? `${woundConfig.darkBg} ${woundConfig.textColor}` :
-                                        isHigh ? 'bg-amber-100 text-amber-700' :
-                                        'bg-gray-100 text-gray-600'
-                                      }`}>
-                                        {priority.badge}
-                                      </span>
-                                    )}
-                                    {module._secondaryPriority && secondaryWoundConfig && (module._secondaryPriority.level === 'core' || module._secondaryPriority.level === 'high') && (
-                                      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full flex-shrink-0 ${secondaryWoundConfig.darkBg} ${secondaryWoundConfig.textColor}`}>
-                                        {module._secondaryPriority.level === 'core' ? `Also core for ${secondaryWoundConfig.childName}` : secondaryWoundConfig.childName}
-                                      </span>
-                                    )}
-                                  </div>
-                                  <p className="text-sm text-gray-600">{module.description}</p>
+                    return (
+                      <div
+                        key={module.id}
+                        className={`overflow-hidden rounded-2xl border transition-colors ${
+                          status === 'locked' || status === 'restricted' ? 'border-amber-100 bg-amber-50/30' : 'border-gray-100 bg-white hover:shadow-md'
+                        } ${isCore && woundConfig ? 'ring-2 ring-amber-200' : ''}`}
+                        title={status === 'restricted' ? 'This module will open as you continue your IFS path.' : undefined}
+                      >
+                        <div className="relative h-36 overflow-hidden sm:h-40">
+                          <img
+                            src={MODULE_IMAGES[module.id] || CURRICULUM_HERO_IMAGE}
+                            alt=""
+                            loading="lazy"
+                            className={`absolute inset-0 h-full w-full object-cover ${moduleAvailable ? '' : 'grayscale'}`}
+                          />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-transparent" />
+                          <div className="absolute left-3.5 top-3.5 z-10">{getStatusIcon(status)}</div>
+                          <div className="absolute right-3.5 top-3.5 z-10 flex flex-wrap justify-end gap-1.5">
+                            <span className={`text-xs font-bold px-2 py-0.5 rounded-full flex-shrink-0 ${
+                              status === 'completed' ? 'bg-green-100 text-green-700' :
+                              status === 'assigned' ? 'bg-blue-100 text-blue-700' :
+                              status === 'available' ? 'bg-emerald-100 text-emerald-700' :
+                              'bg-white/90 text-brand-stone-600'
+                            }`}>
+                              {getModuleStatusLabel(status)}
+                            </span>
+                            {priority?.badge && woundConfig && (
+                              <span className={`text-xs font-bold px-2 py-0.5 rounded-full flex-shrink-0 ${
+                                isCore ? `${woundConfig.darkBg} ${woundConfig.textColor}` :
+                                isHigh ? 'bg-amber-100 text-amber-700' :
+                                'bg-white/90 text-gray-600'
+                              }`}>
+                                {priority.badge}
+                              </span>
+                            )}
+                          </div>
+                          <div className="absolute inset-x-0 bottom-0 z-10 p-4">
+                            <h4 className="font-semibold text-white drop-shadow">{module.title}</h4>
+                            {module._secondaryPriority && secondaryWoundConfig && (module._secondaryPriority.level === 'core' || module._secondaryPriority.level === 'high') && (
+                              <span className="mt-1 inline-block text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-white/20 text-white backdrop-blur">
+                                {module._secondaryPriority.level === 'core' ? `Also core for ${secondaryWoundConfig.childName}` : secondaryWoundConfig.childName}
+                              </span>
+                            )}
+                          </div>
+                        </div>
 
-                                  {(status === 'restricted' || status === 'locked') && (
-                                    <p className="text-xs text-amber-700 mt-1 flex items-center gap-1">
-                                      <Clock className="w-3 h-3" /> {getModuleUnavailableCopy()}
-                                    </p>
-                                  )}
+                        <div className="p-4 sm:p-5">
+                          <p className="text-sm text-gray-600">{module.description}</p>
 
-                                  {priority?.message && woundConfig && (
-                                    <div className={`mt-2 p-2.5 rounded-lg border text-xs ${
-                                      isCore ? `${woundConfig.lightBg} ${woundConfig.textColor}` : 'bg-amber-50 border-amber-200 text-amber-700'
-                                    }`}>
-                                      <span className="flex items-center gap-1 font-semibold mb-0.5">
-                                        <Sparkles className="w-3 h-3" /> Personalized for your {woundConfig.childName}:
-                                      </span>
-                                      {priority.message}
-                                    </div>
-                                  )}
+                          {(status === 'restricted' || status === 'locked') && (
+                            <p className="text-xs text-amber-700 mt-1 flex items-center gap-1">
+                              <Clock className="w-3 h-3" /> {getModuleUnavailableCopy()}
+                            </p>
+                          )}
 
-                                  <div className="flex items-center space-x-3 mt-2 text-xs text-gray-500 flex-wrap gap-1">
-                                    <span className="flex items-center space-x-1">
-                                      <Clock className="w-3 h-3" />
-                                      <span>{module.estimatedMinutes} min</span>
-                                    </span>
-                                    {module.innerChildFocus && (
-                                      <span className="flex items-center space-x-1">
-                                        <Heart className="w-3 h-3" />
-                                        <span>Inner Child</span>
-                                      </span>
-                                    )}
-                                    {woundConfig && priority?.level !== 'standard' && (
-                                      <span className="flex items-center space-x-1">
-                                        <Brain className="w-3 h-3" />
-                                        <span>Personalized</span>
-                                      </span>
-                                    )}
-                                    {module.prerequisites?.length > 0 && (
-                                      <span className="flex items-center space-x-1">
-                                        <Clock className="w-3 h-3" />
-                                        <span>Builds on earlier modules</span>
-                                      </span>
-                                    )}
-                                    {status === 'completed' && reflectionCount > 0 && (
-                                      <span className="flex items-center space-x-1 text-emerald-600">
-                                        <Sparkles className="w-3 h-3" />
-                                        <span>{reflectionCount} Module Reflection{reflectionCount === 1 ? '' : 's'}</span>
-                                      </span>
-                                    )}
-                                    {status !== 'completed' && moduleAvailable && (
-                                      <span className="flex items-center space-x-1 text-amber-600">
-                                        <Sparkles className="w-3 h-3" />
-                                        <span>You can save a reflection when you complete this module.</span>
-                                      </span>
-                                    )}
-                                  </div>
-
-                                  {moduleAvailable && supportLinks.length > 0 && (
-                                    <div className="mt-3 flex flex-wrap gap-2">
-                                      {supportLinks.slice(0, 2).map((link) => (
-                                        <Link
-                                          key={`${module.id}-${link.to}`}
-                                          to={link.to}
-                                          onClick={(e) => e.stopPropagation()}
-                                          className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-amber-700 ring-1 ring-amber-200 transition hover:bg-amber-50"
-                                          title="Use this tool to support what you are learning in this module."
-                                        >
-                                          {link.label}
-                                        </Link>
-                                      ))}
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
+                          {priority?.message && woundConfig && (
+                            <div className={`mt-2 p-2.5 rounded-lg border text-xs ${
+                              isCore ? `${woundConfig.lightBg} ${woundConfig.textColor}` : 'bg-amber-50 border-amber-200 text-amber-700'
+                            }`}>
+                              <span className="flex items-center gap-1 font-semibold mb-0.5">
+                                <Sparkles className="w-3 h-3" /> Personalized for your {woundConfig.childName}:
+                              </span>
+                              {priority.message}
                             </div>
-                            <div className="flex w-full flex-shrink-0 flex-col gap-2 sm:ml-4 sm:w-auto sm:items-end">
-                              {moduleAvailable && status !== 'completed' && (
+                          )}
+
+                          <div className="flex items-center space-x-3 mt-2 text-xs text-gray-500 flex-wrap gap-1">
+                            <span className="flex items-center space-x-1">
+                              <Clock className="w-3 h-3" />
+                              <span>{module.estimatedMinutes} min</span>
+                            </span>
+                            {module.innerChildFocus && (
+                              <span className="flex items-center space-x-1">
+                                <Heart className="w-3 h-3" />
+                                <span>Inner Child</span>
+                              </span>
+                            )}
+                            {woundConfig && priority?.level !== 'standard' && (
+                              <span className="flex items-center space-x-1">
+                                <Brain className="w-3 h-3" />
+                                <span>Personalized</span>
+                              </span>
+                            )}
+                            {module.prerequisites?.length > 0 && (
+                              <span className="flex items-center space-x-1">
+                                <Clock className="w-3 h-3" />
+                                <span>Builds on earlier modules</span>
+                              </span>
+                            )}
+                            {status === 'completed' && reflectionCount > 0 && (
+                              <span className="flex items-center space-x-1 text-emerald-600">
+                                <Sparkles className="w-3 h-3" />
+                                <span>{reflectionCount} Module Reflection{reflectionCount === 1 ? '' : 's'}</span>
+                              </span>
+                            )}
+                            {status !== 'completed' && moduleAvailable && (
+                              <span className="flex items-center space-x-1 text-amber-600">
+                                <Sparkles className="w-3 h-3" />
+                                <span>You can save a reflection when you complete this module.</span>
+                              </span>
+                            )}
+                          </div>
+
+                          {moduleAvailable && supportLinks.length > 0 && (
+                            <div className="mt-3 flex flex-wrap gap-2">
+                              {supportLinks.slice(0, 2).map((link) => (
+                                <Link
+                                  key={`${module.id}-${link.to}`}
+                                  to={link.to}
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-amber-700 ring-1 ring-amber-200 transition hover:bg-amber-50"
+                                  title="Use this tool to support what you are learning in this module."
+                                >
+                                  {link.label}
+                                </Link>
+                              ))}
+                            </div>
+                          )}
+
+                          <div className="mt-4 flex flex-wrap gap-2">
+                            {moduleAvailable && status !== 'completed' && (
+                              <Link
+                                to={`/curriculum/module/${module.id}`}
+                                onClick={() => handleModuleSelect(module)}
+                                className={`inline-flex justify-center px-4 py-2 rounded-lg text-sm font-medium text-white transition-colors ${
+                                  isCore && woundConfig
+                                    ? `bg-gradient-to-r ${woundConfig.gradient} hover:opacity-90`
+                                    : 'bg-amber-600 hover:bg-amber-700'
+                                }`}
+                              >
+                                {getModuleActionLabel(status, module.order)}
+                              </Link>
+                            )}
+                            {status === 'completed' && (
+                              <>
                                 <Link
                                   to={`/curriculum/module/${module.id}`}
                                   onClick={() => handleModuleSelect(module)}
-                                  className={`inline-flex justify-center px-4 py-2 rounded-lg text-sm font-medium text-white transition-colors ${
-                                    isCore && woundConfig
-                                      ? `bg-gradient-to-r ${woundConfig.gradient} hover:opacity-90`
-                                      : 'bg-amber-600 hover:bg-amber-700'
-                                  }`}
+                                  className="inline-flex justify-center rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-emerald-700"
                                 >
-                                  {getModuleActionLabel(status, module.order)}
+                                  Review Module
                                 </Link>
-                              )}
-                              {status === 'completed' && (
-                                <div className="flex flex-col gap-2 sm:items-end">
+                                {reflectionCount > 0 && (
                                   <Link
-                                    to={`/curriculum/module/${module.id}`}
-                                    onClick={() => handleModuleSelect(module)}
-                                    className="inline-flex justify-center rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-emerald-700"
+                                    to="/journal"
+                                    onClick={(event) => event.stopPropagation()}
+                                    className="inline-flex justify-center rounded-lg border border-amber-200 px-4 py-2 text-sm font-medium text-amber-700 transition hover:bg-amber-50"
                                   >
-                                    Review Module
+                                    View Reflection
                                   </Link>
-                                  {reflectionCount > 0 && (
-                                    <Link
-                                      to="/journal"
-                                      onClick={(event) => event.stopPropagation()}
-                                      className="inline-flex justify-center rounded-lg border border-amber-200 px-4 py-2 text-sm font-medium text-amber-700 transition hover:bg-amber-50"
-                                    >
-                                      View Reflection
-                                    </Link>
-                                  )}
-                                  <Link
-                                    to={`/curriculum/module/${module.id}`}
-                                    onClick={() => handleModuleSelect(module)}
-                                    className="inline-flex justify-center rounded-lg border border-emerald-200 px-4 py-2 text-sm font-medium text-emerald-700 transition hover:bg-emerald-50"
-                                  >
-                                    {reflectionCount > 0 ? 'Reflect Again' : 'Add Reflection'}
-                                  </Link>
-                                  <button
-                                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleRestartModule(module); }}
-                                    disabled={restartingModule === module.id}
-                                    className="flex items-center gap-1 text-xs text-gray-400 hover:text-amber-600 transition-colors disabled:opacity-50"
-                                  >
-                                    <RotateCcw className={`w-3.5 h-3.5 ${restartingModule === module.id ? 'animate-spin' : ''}`} />
-                                    <span>{restartingModule === module.id ? 'Restarting...' : 'Restart'}</span>
-                                  </button>
-                                </div>
-                              )}
-                              {!moduleAvailable && (
-                                <span className="rounded-lg bg-amber-50 px-4 py-2 text-center text-sm font-semibold text-amber-700">Coming up</span>
-                              )}
-                            </div>
+                                )}
+                                <Link
+                                  to={`/curriculum/module/${module.id}`}
+                                  onClick={() => handleModuleSelect(module)}
+                                  className="inline-flex justify-center rounded-lg border border-emerald-200 px-4 py-2 text-sm font-medium text-emerald-700 transition hover:bg-emerald-50"
+                                >
+                                  {reflectionCount > 0 ? 'Reflect Again' : 'Add Reflection'}
+                                </Link>
+                                <button
+                                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleRestartModule(module); }}
+                                  disabled={restartingModule === module.id}
+                                  className="flex items-center gap-1 text-xs text-gray-400 hover:text-amber-600 transition-colors disabled:opacity-50"
+                                >
+                                  <RotateCcw className={`w-3.5 h-3.5 ${restartingModule === module.id ? 'animate-spin' : ''}`} />
+                                  <span>{restartingModule === module.id ? 'Restarting...' : 'Restart'}</span>
+                                </button>
+                              </>
+                            )}
+                            {!moduleAvailable && (
+                              <span className="rounded-lg bg-amber-50 px-4 py-2 text-center text-sm font-semibold text-amber-700">Coming up</span>
+                            )}
                           </div>
                         </div>
-                      );
-                    })}
-                  </div>
-                )}
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             );
           })}
