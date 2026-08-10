@@ -18,6 +18,13 @@ import PageHero, { heroSecondaryButtonClass } from '../components/PageHero';
 
 const ASSESSMENTS_HERO_IMAGE = '/images/dashboard/deep-wound-assessment.jpg';
 
+const ASSESSMENT_IMAGES = {
+  wounds: '/images/assessments/wounds.jpg',
+  parts: '/images/assessments/parts.jpg',
+  'self-energy': '/images/assessments/self-energy.jpg',
+  attachment: '/images/assessments/attachment.jpg',
+};
+
 const protectivePartsDefinitions = {
   manager: [
     { name: 'The Inner Critic', trigger: [3], threshold: 4, description: 'Criticizes you harshly to motivate improvement and prevent failure', role: 'Drives perfectionism through self-criticism', strategy: 'Harsh inner voice that points out flaws before others can' },
@@ -1178,10 +1185,20 @@ export default function Assessments() {
                 key={assessment.id}
                 className={`soft-card overflow-hidden ${getAnimationClass('transition')} ${isRestricted ? 'opacity-60' : 'hover:shadow-xl'}`}
               >
-                <div className={`bg-gradient-to-br ${assessment.gradient} p-6`}>
-                  <Icon className="w-10 h-10 text-white mb-3" />
-                  <h2 className="text-xl font-serif font-semibold text-white">{assessment.title}</h2>
-                  <p className="text-white/80 text-sm mt-1">{assessment.subtitle}</p>
+                <div className="relative h-40 overflow-hidden">
+                  <img
+                    src={ASSESSMENT_IMAGES[assessment.id] || ASSESSMENTS_HERO_IMAGE}
+                    alt=""
+                    loading="lazy"
+                    className="absolute inset-0 h-full w-full object-cover"
+                  />
+                  <div className={`absolute inset-0 bg-gradient-to-br ${assessment.gradient} opacity-35`} />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                  <div className="relative z-10 flex h-full flex-col justify-end p-6">
+                    <Icon className="w-8 h-8 text-white mb-2 drop-shadow" />
+                    <h2 className="text-xl font-serif font-semibold text-white drop-shadow">{assessment.title}</h2>
+                    <p className="text-white/90 text-sm mt-1 drop-shadow">{assessment.subtitle}</p>
+                  </div>
                 </div>
                 <div className="p-6">
                   {isRestricted ? (
