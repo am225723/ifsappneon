@@ -130,9 +130,9 @@ const TYPE_FALLBACK_IMAGES = {
   self: '/images/meditation/cultivating-self-energy-practice.jpg',
 };
 
-const getPartImage = (partName, partType) => {
+const getPartImage = (partName, partType, partId) => {
   const slug = (partName || '').toLowerCase().trim().replace(/\s+/g, '-');
-  return PART_IMAGES[slug] || TYPE_FALLBACK_IMAGES[partType] || PARTS_CARDS_HERO_IMAGE;
+  return PART_IMAGES[partId] || PART_IMAGES[slug] || TYPE_FALLBACK_IMAGES[partType] || PARTS_CARDS_HERO_IMAGE;
 };
 
 const PartsCards = () => {
@@ -207,6 +207,7 @@ const PartsCards = () => {
       if (data) {
         setPastReflections(data.map(d => ({
           date: d.module_id.replace('parts_card_', ''),
+          partId: d.data?.partId || null,
           partName: d.data?.partName || 'Unknown',
           partType: d.data?.partType || 'manager',
           prompt: d.data?.prompt || '',
@@ -324,7 +325,7 @@ const PartsCards = () => {
                 <div className={`rounded-3xl overflow-hidden shadow-2xl border-2 ${theme.isDark ? typeConfig.borderDark : typeConfig.borderLight} mb-6`}>
                   <div className="p-6 text-center relative overflow-hidden">
                     <img
-                      src={PART_IMAGES[currentCard.id] || getPartImage(currentCard.name, currentCard.type)}
+                      src={getPartImage(currentCard.name, currentCard.type, currentCard.id)}
                       alt=""
                       className="absolute inset-0 h-full w-full object-cover"
                     />
@@ -460,7 +461,7 @@ const PartsCards = () => {
                     <div className={`px-4 py-2 flex items-center gap-3 ${theme.isDark ? rConfig.bgDark : rConfig.bgLight}`}>
                       <div className="relative w-8 h-8 flex-shrink-0 rounded-lg overflow-hidden">
                         <img
-                          src={getPartImage(r.partName, r.partType)}
+                          src={getPartImage(r.partName, r.partType, r.partId)}
                           alt=""
                           loading="lazy"
                           className="absolute inset-0 h-full w-full object-cover"
