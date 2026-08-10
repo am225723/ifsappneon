@@ -12,6 +12,19 @@ import PageHero, { heroSecondaryButtonClass, heroChipClass } from '../components
 
 const MILESTONES_HERO_IMAGE = '/images/dashboard/tools-healing-timeline.jpg';
 
+const MILESTONE_IMAGES = {
+  first_module: '/images/tools/curriculum.jpg',
+  first_assessment: '/images/tools/assessments.jpg',
+  streak_7: '/images/achievements/streak.jpg',
+  streak_30: '/images/achievements/crown.jpg',
+  all_assessments: '/images/assessments/wounds.jpg',
+  first_journal: '/images/tools/journal.jpg',
+  journal_10: '/images/dashboard/deep-healing-journal.jpg',
+  first_parts_map: '/images/tools/parts-relationships.jpg',
+  module_5: '/images/meditation/six-fs-protocol-mastery-practice.jpg',
+  all_modules: '/images/achievements/trophy.jpg',
+};
+
 const MILESTONES = [
   {
     id: 'first_module',
@@ -352,15 +365,18 @@ const Milestones = () => {
               )}
 
               <div className="flex items-start gap-4">
-                <div className={`w-14 h-14 rounded-xl flex items-center justify-center flex-shrink-0 ${
-                  earned
-                    ? `bg-gradient-to-r ${milestone.color}`
-                    : theme.isDark ? 'bg-slate-700' : 'bg-gray-200'
-                }`}>
+                <div className={`relative w-14 h-14 rounded-xl overflow-hidden flex-shrink-0 ${earned ? '' : 'grayscale opacity-70'}`}>
+                  <img
+                    src={MILESTONE_IMAGES[milestone.id]}
+                    alt=""
+                    loading="lazy"
+                    className="absolute inset-0 h-full w-full object-cover"
+                  />
+                  <div className={`absolute inset-0 flex items-center justify-center ${earned ? `bg-gradient-to-r ${milestone.color} opacity-45` : 'bg-black/35'}`} />
                   {earned ? (
-                    <Icon className="w-7 h-7 text-white" />
+                    <Icon className="absolute inset-0 m-auto w-6 h-6 text-white drop-shadow" />
                   ) : (
-                    <Lock className={`w-6 h-6 ${theme.isDark ? 'text-slate-500' : 'text-gray-400'}`} />
+                    <Lock className="absolute inset-0 m-auto w-5 h-5 text-white/90 drop-shadow" />
                   )}
                 </div>
 
