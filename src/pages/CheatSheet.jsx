@@ -3,6 +3,19 @@ import PageHero from '../components/PageHero';
 
 const CHEAT_SHEET_HERO_IMAGE = '/images/dashboard/tools-cheat-sheet.jpg';
 
+const TECHNIQUE_IMAGES = {
+  'Parts Mapping': '/images/tools/parts-relationships.jpg',
+  'Dialogue with Parts': '/images/tools/parts-dialogue.jpg',
+  'Self-Compassion': '/images/meditation/self-compassion-pause.jpg',
+  'Creative Imagery': '/images/qualities/creativity.jpg',
+};
+
+const APPROACH_IMAGES = {
+  'Direct Access': '/images/meditation/quick-parts-check-in.jpg',
+  Witnessing: '/images/qualities/presence.jpg',
+  Unburdening: '/images/meditation/unburdening-ceremony.jpg',
+};
+
 const CheatSheet = () => {
   return (
     <div className="min-h-screen py-12">
@@ -74,30 +87,21 @@ const CheatSheet = () => {
             <h2 className="text-3xl font-bold text-gray-800">Therapeutic Techniques</h2>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="bg-white p-6 rounded-lg shadow-md">
-              <h3 className="text-xl font-bold text-amber-700 mb-2">Parts Mapping</h3>
-              <p className="text-gray-700">
-                Clarify the internal system, identifying Part roles and dynamics.
-              </p>
-            </div>
-            <div className="bg-white p-6 rounded-lg shadow-md">
-              <h3 className="text-xl font-bold text-amber-700 mb-2">Dialogue with Parts</h3>
-              <p className="text-gray-700">
-                Communicate with Parts to explore their intentions and histories.
-              </p>
-            </div>
-            <div className="bg-white p-6 rounded-lg shadow-md">
-              <h3 className="text-xl font-bold text-amber-700 mb-2">Self-Compassion</h3>
-              <p className="text-gray-700">
-                Foster the Self's compassionate approach toward all Parts.
-              </p>
-            </div>
-            <div className="bg-white p-6 rounded-lg shadow-md">
-              <h3 className="text-xl font-bold text-amber-700 mb-2">Creative Imagery</h3>
-              <p className="text-gray-700">
-                Utilize visualization to promote healing among Parts.
-              </p>
-            </div>
+            {[
+              { title: 'Parts Mapping', body: 'Clarify the internal system, identifying Part roles and dynamics.' },
+              { title: 'Dialogue with Parts', body: 'Communicate with Parts to explore their intentions and histories.' },
+              { title: 'Self-Compassion', body: "Foster the Self's compassionate approach toward all Parts." },
+              { title: 'Creative Imagery', body: 'Utilize visualization to promote healing among Parts.' },
+            ].map((item) => (
+              <div key={item.title} className="overflow-hidden rounded-lg bg-white shadow-md">
+                <div className="relative h-28 w-full overflow-hidden">
+                  <img src={TECHNIQUE_IMAGES[item.title]} alt="" loading="lazy" className="absolute inset-0 h-full w-full object-cover" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
+                  <h3 className="absolute bottom-3 left-4 text-xl font-bold text-white drop-shadow">{item.title}</h3>
+                </div>
+                <p className="p-6 text-gray-700">{item.body}</p>
+              </div>
+            ))}
           </div>
         </div>
 
@@ -142,24 +146,21 @@ const CheatSheet = () => {
             <h2 className="text-3xl font-bold text-gray-800">Treatment Approaches</h2>
           </div>
           <div className="space-y-4">
-            <div className="bg-white p-6 rounded-lg shadow-md">
-              <h3 className="text-xl font-bold text-orange-700 mb-2">Direct Access</h3>
-              <p className="text-gray-700">
-                Engage with Parts directly to gain insight into their roles.
-              </p>
-            </div>
-            <div className="bg-white p-6 rounded-lg shadow-md">
-              <h3 className="text-xl font-bold text-orange-700 mb-2">Witnessing</h3>
-              <p className="text-gray-700">
-                Observe Part interactions without judgment or merging.
-              </p>
-            </div>
-            <div className="bg-white p-6 rounded-lg shadow-md">
-              <h3 className="text-xl font-bold text-orange-700 mb-2">Unburdening</h3>
-              <p className="text-gray-700">
-                Release Parts from their painful emotions and limiting beliefs.
-              </p>
-            </div>
+            {[
+              { title: 'Direct Access', body: 'Engage with Parts directly to gain insight into their roles.' },
+              { title: 'Witnessing', body: 'Observe Part interactions without judgment or merging.' },
+              { title: 'Unburdening', body: 'Release Parts from their painful emotions and limiting beliefs.' },
+            ].map((item) => (
+              <div key={item.title} className="flex items-center gap-5 overflow-hidden rounded-lg bg-white shadow-md">
+                <div className="relative h-24 w-32 flex-shrink-0 overflow-hidden">
+                  <img src={APPROACH_IMAGES[item.title]} alt="" loading="lazy" className="absolute inset-0 h-full w-full object-cover" />
+                </div>
+                <div className="py-4 pr-6">
+                  <h3 className="text-xl font-bold text-orange-700 mb-2">{item.title}</h3>
+                  <p className="text-gray-700">{item.body}</p>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
 
