@@ -100,6 +100,27 @@ const woundAffirmations = {
       "My past betrayals are teaching me, not defining me.",
       "I am reclaiming my ability to trust wisely."
     ]
+  },
+  helplessness: {
+    core: [
+      "I am more capable than I once believed.",
+      "I have survived every hard moment so far.",
+      "I am allowed to ask for help when I need it.",
+      "My strength grows every time I face a challenge.",
+      "I trust myself to handle what comes next.",
+      "I am not powerless; I am learning to take charge.",
+      "Small steps forward still count as progress.",
+      "I can influence my life, one choice at a time.",
+      "I release the belief that I have no control.",
+      "I am building confidence in my own ability to cope."
+    ],
+    healing: [
+      "I am healing the parts of me that feel stuck and small.",
+      "Each day, I reclaim a little more of my personal power.",
+      "I no longer have to carry everything alone.",
+      "My past helplessness does not predict my future strength.",
+      "I am becoming someone who can take charge of my own life."
+    ]
   }
 };
 
