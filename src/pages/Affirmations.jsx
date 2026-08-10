@@ -8,6 +8,14 @@ import PageHero from '../components/PageHero';
 
 const AFFIRMATIONS_HERO_IMAGE = '/images/dashboard/tools-affirmations.jpg';
 
+const WOUND_BANNER_IMAGES = {
+  abandonment: '/images/wounds/abandonment.jpg',
+  shame: '/images/wounds/criticism-shame.jpg',
+  neglect: '/images/wounds/neglect.jpg',
+  betrayal: '/images/wounds/betrayal.jpg',
+  helplessness: '/images/wounds/trauma.jpg',
+};
+
 const woundAffirmations = {
   abandonment: {
     core: [
@@ -91,6 +99,27 @@ const woundAffirmations = {
       "I am not naive for wanting to trust again.",
       "My past betrayals are teaching me, not defining me.",
       "I am reclaiming my ability to trust wisely."
+    ]
+  },
+  helplessness: {
+    core: [
+      "I am more capable than I once believed.",
+      "I have survived every hard moment so far.",
+      "I am allowed to ask for help when I need it.",
+      "My strength grows every time I face a challenge.",
+      "I trust myself to handle what comes next.",
+      "I am not powerless; I am learning to take charge.",
+      "Small steps forward still count as progress.",
+      "I can influence my life, one choice at a time.",
+      "I release the belief that I have no control.",
+      "I am building confidence in my own ability to cope."
+    ],
+    healing: [
+      "I am healing the parts of me that feel stuck and small.",
+      "Each day, I reclaim a little more of my personal power.",
+      "I no longer have to carry everything alone.",
+      "My past helplessness does not predict my future strength.",
+      "I am becoming someone who can take charge of my own life."
     ]
   }
 };
@@ -213,9 +242,19 @@ export default function Affirmations() {
             : 'Healing affirmations to support your IFS journey.'}
         />
 
-        <div className={`${theme.cardBg} backdrop-blur-sm rounded-3xl shadow-xl border ${theme.isDark ? 'border-slate-700' : 'border-gray-100'} p-8 mb-8 text-center`}>
+        <div className={`${theme.cardBg} backdrop-blur-sm rounded-3xl shadow-xl border ${theme.isDark ? 'border-slate-700' : 'border-gray-100'} mb-8 overflow-hidden`}>
+          <div className="relative h-28 w-full overflow-hidden">
+            <img
+              src={WOUND_BANNER_IMAGES[primaryWound] || AFFIRMATIONS_HERO_IMAGE}
+              alt=""
+              loading="lazy"
+              className="absolute inset-0 h-full w-full object-cover"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/10 to-black/30" />
+          </div>
+          <div className="p-8 text-center">
           <Sparkles className="w-10 h-10 mx-auto mb-4" style={{ color: theme.accentColor }} />
-          
+
           <p className={`text-2xl md:text-3xl font-medium leading-relaxed mb-8 ${theme.isDark ? 'text-white' : 'text-gray-800'}`}>
             "{currentAffirmation}"
           </p>
@@ -242,6 +281,7 @@ export default function Affirmations() {
             >
               <Star className={`w-5 h-5 ${favorites.includes(currentAffirmation) ? 'fill-yellow-400 text-yellow-400' : theme.isDark ? 'text-slate-400' : 'text-gray-400'}`} />
             </button>
+          </div>
           </div>
         </div>
 

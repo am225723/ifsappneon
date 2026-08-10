@@ -23,6 +23,19 @@ import PageHero, { heroSecondaryButtonClass } from '../components/PageHero';
 
 const LETTER_WRITING_HERO_IMAGE = '/images/dashboard/deep-healing-journal.jpg';
 
+const MODE_IMAGES = {
+  toChild: '/images/meditation/reparenting-your-inner-child.jpg',
+  fromChild: '/images/meditation/inner-child-play.jpg',
+};
+
+const WOUND_THUMB_IMAGES = {
+  abandonment: '/images/wounds/abandonment.jpg',
+  shame: '/images/wounds/criticism-shame.jpg',
+  neglect: '/images/wounds/neglect.jpg',
+  betrayal: '/images/wounds/betrayal.jpg',
+  helplessness: '/images/wounds/trauma.jpg',
+};
+
 const WOUND_PROMPTS = {
   abandonment: {
     label: 'Abandonment',
@@ -332,31 +345,39 @@ const LetterWriting = () => {
             <div className="grid grid-cols-1 gap-3">
               <button
                 onClick={() => setMode('toChild')}
-                className={`p-4 rounded-xl border text-left transition-all hover:scale-[1.01] ${theme.isDark ? 'border-slate-600 hover:border-amber-500/50 hover:bg-slate-700/50' : 'border-gray-200 hover:border-amber-400/50 hover:bg-amber-50/50'}`}
+                className={`overflow-hidden rounded-xl border text-left transition-all hover:scale-[1.01] ${theme.isDark ? 'border-slate-600 hover:border-amber-500/50' : 'border-gray-200 hover:border-amber-400/50'}`}
               >
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center">
-                    <Heart className="w-5 h-5 text-white" />
+                <div className="relative h-24 w-full overflow-hidden">
+                  <img src={MODE_IMAGES.toChild} alt="" loading="lazy" className="absolute inset-0 h-full w-full object-cover" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/15 to-transparent" />
+                  <div className="absolute left-4 bottom-3 flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center">
+                      <Heart className="w-4 h-4 text-white" />
+                    </div>
+                    <h3 className="font-semibold text-white drop-shadow">Write TO Your Inner Child</h3>
                   </div>
-                  <div>
-                    <h3 className={`font-semibold ${textClass}`}>Write TO Your Inner Child</h3>
-                    <p className={`text-sm ${mutedClass}`}>Offer comfort, love, and reassurance from your adult Self</p>
-                  </div>
+                </div>
+                <div className={`p-4 ${theme.isDark ? 'bg-slate-800/80' : 'bg-white'}`}>
+                  <p className={`text-sm ${mutedClass}`}>Offer comfort, love, and reassurance from your adult Self</p>
                 </div>
               </button>
 
               <button
                 onClick={() => setMode('fromChild')}
-                className={`p-4 rounded-xl border text-left transition-all hover:scale-[1.01] ${theme.isDark ? 'border-slate-600 hover:border-purple-500/50 hover:bg-slate-700/50' : 'border-gray-200 hover:border-purple-400/50 hover:bg-purple-50/50'}`}
+                className={`overflow-hidden rounded-xl border text-left transition-all hover:scale-[1.01] ${theme.isDark ? 'border-slate-600 hover:border-purple-500/50' : 'border-gray-200 hover:border-purple-400/50'}`}
               >
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-400 to-purple-600 flex items-center justify-center">
-                    <Baby className="w-5 h-5 text-white" />
+                <div className="relative h-24 w-full overflow-hidden">
+                  <img src={MODE_IMAGES.fromChild} alt="" loading="lazy" className="absolute inset-0 h-full w-full object-cover" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/15 to-transparent" />
+                  <div className="absolute left-4 bottom-3 flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-400 to-purple-600 flex items-center justify-center">
+                      <Baby className="w-4 h-4 text-white" />
+                    </div>
+                    <h3 className="font-semibold text-white drop-shadow">Write FROM Your Inner Child</h3>
                   </div>
-                  <div>
-                    <h3 className={`font-semibold ${textClass}`}>Write FROM Your Inner Child</h3>
-                    <p className={`text-sm ${mutedClass}`}>Give voice to your inner child's feelings and needs</p>
-                  </div>
+                </div>
+                <div className={`p-4 ${theme.isDark ? 'bg-slate-800/80' : 'bg-white'}`}>
+                  <p className={`text-sm ${mutedClass}`}>Give voice to your inner child's feelings and needs</p>
                 </div>
               </button>
             </div>
@@ -381,6 +402,14 @@ const LetterWriting = () => {
                     <div key={letter.id} className={`rounded-xl border p-4 ${theme.isDark ? 'border-slate-600/50 bg-slate-700/30' : 'border-gray-200 bg-gray-50/50'}`}>
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2">
+                          <div className="relative w-8 h-8 flex-shrink-0 rounded-lg overflow-hidden">
+                            <img
+                              src={WOUND_THUMB_IMAGES[letter.woundType] || MODE_IMAGES[letter.mode] || LETTER_WRITING_HERO_IMAGE}
+                              alt=""
+                              loading="lazy"
+                              className="absolute inset-0 h-full w-full object-cover"
+                            />
+                          </div>
                           <span className={`text-xs px-2 py-0.5 rounded-full ${letter.mode === 'toChild' ? 'bg-amber-500/20 text-amber-400' : 'bg-purple-500/20 text-purple-400'}`}>
                             {letter.mode === 'toChild' ? 'To Inner Child' : 'From Inner Child'}
                           </span>
