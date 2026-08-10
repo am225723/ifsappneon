@@ -361,8 +361,42 @@ const mediaOnlyPractices = guidedPracticeMediaMap
     steps: mediaOnlySteps(item),
   }));
 
+const GUIDED_PRACTICE_IMAGES = {
+  'quick-self-connection': '/images/meditation/quick-self-connection.jpg',
+  'box-breathing-quick': '/images/meditation/box-breathing-quick.jpg',
+  'inner-child-check-in': '/images/meditation/inner-child-check-in.jpg',
+  'meeting-your-self': '/images/meditation/meeting-your-self.jpg',
+  'cultivating-self-qualities': '/images/meditation/cultivating-self-qualities.jpg',
+  'meeting-your-inner-child': '/images/meditation/meeting-your-inner-child.jpg',
+  'reparenting-meditation': '/images/meditation/reparenting-meditation.jpg',
+  'inner-child-play': '/images/meditation/inner-child-play.jpg',
+  'unblending-practice': '/images/meditation/unblending-practice.jpg',
+  'parts-council-meditation': '/images/meditation/parts-council-meditation.jpg',
+  'working-with-firefighters': '/images/meditation/working-with-firefighters.jpg',
+  'box-breathing': '/images/meditation/box-breathing.jpg',
+  '4-7-8-breathing': '/images/meditation/4-7-8-breathing.jpg',
+  'cultivating-self-energy-practice': '/images/meditation/cultivating-self-energy-practice.jpg',
+  'self-leadership-mastery-practice': '/images/meditation/self-leadership-mastery-practice.jpg',
+  'safe-place-visualization-inner-child': '/images/meditation/safe-place-visualization-inner-child.jpg',
+  'body-based-inner-child-connection': '/images/meditation/body-based-inner-child-connection.jpg',
+  'unburdening-ceremony': '/images/meditation/unburdening-ceremony.jpg',
+  'six-fs-protocol-mastery-practice': '/images/meditation/six-fs-protocol-mastery-practice.jpg',
+  'personalized-wound-healing-action-plan': '/images/meditation/personalized-wound-healing-action-plan.jpg',
+  'reparenting-your-inner-child': '/images/meditation/reparenting-your-inner-child.jpg',
+  'somatic-healing-body-scan': '/images/meditation/somatic-healing-body-scan.jpg',
+  'attachment-pattern-reflection': '/images/meditation/attachment-pattern-reflection.jpg',
+  'befriending-your-inner-critic': '/images/meditation/befriending-your-inner-critic.jpg',
+  'breath-anchor': '/images/meditation/breath-anchor.jpg',
+  'self-compassion-pause': '/images/meditation/self-compassion-pause.jpg',
+  'quick-parts-check-in': '/images/meditation/quick-parts-check-in.jpg',
+  'morning-intention': '/images/meditation/morning-intention.jpg',
+  'evening-release': '/images/meditation/evening-release.jpg',
+  'mini-body-scan': '/images/meditation/mini-body-scan.jpg',
+};
+
 export const guidedPracticeLibrary = [...baseGuidedPracticeLibrary, ...mediaOnlyPractices].map((practice) => ({
   ...practice,
+  coverImageUrl: GUIDED_PRACTICE_IMAGES[practice.id] || practice.coverImageUrl,
   ...(guidedPracticeMediaByPracticeId[practice.id] || {})
 }));
 
