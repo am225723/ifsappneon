@@ -20,6 +20,27 @@ import {
   Hand
 } from 'lucide-react';
 import { getExerciseAssessmentAudioUrl } from '../lib/exerciseAssessmentAudioMap';
+import PhotoTile from '../components/PhotoTile';
+
+const EXERCISE_IMAGES = {
+  'meeting-self': '/images/meditation/meeting-your-self.jpg',
+  'self-qualities': '/images/meditation/cultivating-self-qualities.jpg',
+  'meeting-inner-child': '/images/meditation/meeting-your-inner-child.jpg',
+  reparenting: '/images/meditation/reparenting-meditation.jpg',
+  'child-play': '/images/meditation/inner-child-play.jpg',
+  unblending: '/images/meditation/unblending-practice.jpg',
+  'parts-council': '/images/meditation/parts-council-meditation.jpg',
+  'firefighter-work': '/images/meditation/working-with-firefighters.jpg',
+  'box-breathing': '/images/meditation/box-breathing.jpg',
+  '4-7-8-breathing': '/images/meditation/4-7-8-breathing.jpg',
+};
+
+const CATEGORY_TONES = {
+  connection: 'daily',
+  'inner-child': 'deep',
+  'parts-work': 'deep',
+  breathing: 'tools',
+};
 
 const Exercises = () => {
   const [selectedExercise, setSelectedExercise] = useState(null);
@@ -955,48 +976,25 @@ When you're ready, open your eyes. Carry this deep relaxation with you.`,
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {category.exercises.map((exercise) => (
-                  <div
+                  <PhotoTile
                     key={exercise.id}
                     onClick={() => handleExerciseSelect(exercise)}
-                    className="soft-card p-6 hover:shadow-xl transition-all duration-300 cursor-pointer group"
+                    image={EXERCISE_IMAGES[exercise.id]}
+                    title={exercise.title}
+                    detail={exercise.description}
+                    tone={CATEGORY_TONES[category.id]}
                   >
-                    <div className="flex items-center justify-between mb-4">
-                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                        exercise.difficulty === 'Beginner' ? 'bg-brand-emerald-50 text-brand-emerald-700' :
-                        exercise.difficulty === 'Intermediate' ? 'bg-yellow-100 text-yellow-700' :
-                        'bg-red-100 text-red-700'
-                      }`}>
-                        {exercise.difficulty}
-                      </span>
-                      <div className="flex items-center text-brand-stone-500 dark:text-slate-500">
-                        <Clock className="w-4 h-4 mr-1" />
-                        <span className="text-sm">{exercise.duration}</span>
-                      </div>
-                    </div>
-
-                    <h3 className="text-xl font-serif font-semibold text-brand-stone-900 dark:text-slate-100 mb-2 group-hover:text-brand-gold-700 dark:group-hover:text-brand-gold-500 transition-colors">
-                      {exercise.title}
-                    </h3>
-                    
-                    <p className="text-brand-stone-600 dark:text-slate-400 mb-4 leading-relaxed">
-                      {exercise.description}
-                    </p>
-
-                    <div className="flex items-center justify-between">
-                      <span className={`text-xs font-medium px-2 py-1 rounded ${
-                        exercise.type === 'meditation' ? 'bg-amber-100 text-amber-700' :
-                        exercise.type === 'practice' ? 'bg-brand-stone-100 text-brand-stone-600' :
-                        exercise.type === 'technique' ? 'bg-brand-emerald-50 text-brand-emerald-700' :
-                        'bg-orange-100 text-orange-700'
-                      }`}>
-                        {exercise.type}
-                      </span>
-                      <div className="flex items-center text-amber-600 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <span className="text-sm font-medium">Start</span>
-                        <Play className="w-4 h-4 ml-1" />
-                      </div>
-                    </div>
-                  </div>
+                    <span className="absolute right-3.5 top-3.5 z-10 flex items-center gap-2 rounded-full bg-white/15 px-2.5 py-1 text-[11px] font-semibold text-white backdrop-blur">
+                      <Clock className="h-3 w-3" /> {exercise.duration}
+                    </span>
+                    <span className={`absolute left-3.5 top-3.5 z-10 rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+                      exercise.difficulty === 'Beginner' ? 'bg-brand-emerald-50 text-brand-emerald-700' :
+                      exercise.difficulty === 'Intermediate' ? 'bg-yellow-100 text-yellow-700' :
+                      'bg-red-100 text-red-700'
+                    }`}>
+                      {exercise.difficulty}
+                    </span>
+                  </PhotoTile>
                 ))}
               </div>
             </div>
