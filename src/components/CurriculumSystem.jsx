@@ -738,7 +738,7 @@ const CurriculumSystem = ({ onModuleSelect, userProgress = {}, clientId }) => {
                                 <button
                                   onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleRestartModule(module); }}
                                   disabled={restartingModule === module.id}
-                                  className="flex items-center gap-1 text-xs text-gray-400 dark:text-slate-500 hover:text-amber-600 dark:hover:text-amber-400 transition-colors disabled:opacity-50"
+                                  className="flex items-center gap-1 text-xs text-gray-400 dark:text-slate-300 hover:text-amber-600 dark:hover:text-amber-400 transition-colors disabled:opacity-50"
                                 >
                                   <RotateCcw className={`w-3.5 h-3.5 ${restartingModule === module.id ? 'animate-spin' : ''}`} />
                                   <span>{restartingModule === module.id ? 'Restarting...' : 'Restart'}</span>
