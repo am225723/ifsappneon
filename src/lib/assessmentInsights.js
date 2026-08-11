@@ -187,12 +187,21 @@ const CONCEPT_KEYWORDS = [
   }).map(([key, keywords]) => ({ type: 'partsType', key, label: PARTS_TYPE_LABELS[key], keywords }))
 ];
 
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+// A word-boundary match, not a plain substring match: keywords only match at the
+// start of a word (e.g. "confiden" matches "confidence"/"confidently"), so a
+// keyword like "secure" cannot falsely match inside "insecure" the way a naive
+// .includes() check would -- that would have produced a "Confirmed: Secure
+// attachment" claim for a category that actually means the opposite.
 function findConceptMatches(categoryLabel) {
   const normalized = String(categoryLabel || '').toLowerCase();
   if (!normalized) return [];
   const matches = [];
   for (const concept of CONCEPT_KEYWORDS) {
-    if (concept.keywords.some((kw) => normalized.includes(kw))) matches.push(concept);
+    if (concept.keywords.some((kw) => new RegExp(`\\b${escapeRegExp(kw)}`).test(normalized))) matches.push(concept);
   }
   return matches.slice(0, 2);
 }

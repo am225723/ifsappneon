@@ -196,6 +196,29 @@ describe('buildAssessmentInsights', () => {
       expect(custom.bullets[0]).toMatch(/doesn't map onto a specific wound/)
     })
 
+    it('does not let "Insecure Attachment" falsely match the Secure attachment keyword', () => {
+      const sections = buildAssessmentInsights({
+        attachment: { primary: 'anxious', ranked: [['anxious', { average: 4 }]] },
+        customAssessments: [
+          { assessmentTitle: 'Relationship Check', ranked: [['Insecure Attachment', { average: 4 }]] }
+        ]
+      })
+      const custom = sections.find((s) => s.id === 'custom-assessment-connections')
+      expect(custom.bullets[0]).not.toMatch(/Secure/)
+      expect(custom.bullets[0]).toMatch(/doesn't map onto a specific wound/)
+    })
+
+    it('still matches "Secure Attachment" as a genuine whole-word match', () => {
+      const sections = buildAssessmentInsights({
+        attachment: { primary: 'secure', ranked: [['secure', { average: 4 }]] },
+        customAssessments: [
+          { assessmentTitle: 'Relationship Check', ranked: [['Secure Attachment', { average: 4 }]] }
+        ]
+      })
+      const custom = sections.find((s) => s.id === 'custom-assessment-connections')
+      expect(custom.bullets[0]).toMatch(/^Confirmed:.*Secure/)
+    })
+
     it('prefixes bullets with the assessment title when there are multiple custom assessments', () => {
       const sections = buildAssessmentInsights({
         customAssessments: [
