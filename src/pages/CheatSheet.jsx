@@ -28,40 +28,40 @@ const CheatSheet = () => {
         />
 
         {/* Internal Family Systems Overview */}
-        <div className="card mb-8 bg-gradient-to-br from-emerald-50 to-red-50">
+        <div className="card mb-8 bg-gradient-to-br from-emerald-50 to-red-50 dark:from-emerald-950/40 dark:to-red-950/30">
           <div className="flex items-center mb-4">
-            <Users className="w-8 h-8 text-emerald-600 mr-3" />
-            <h2 className="text-3xl font-bold text-gray-800">Internal Family Systems (IFS)</h2>
+            <Users className="w-8 h-8 text-emerald-600 dark:text-emerald-400 mr-3" />
+            <h2 className="text-3xl font-bold text-gray-800 dark:text-white">Internal Family Systems (IFS)</h2>
           </div>
-          <p className="text-lg text-gray-700 leading-relaxed">
-            IFS is a psychotherapy model that sees the mind as made up of a core Self and various "Parts," 
+          <p className="text-lg text-gray-700 dark:text-slate-300 leading-relaxed">
+            IFS is a psychotherapy model that sees the mind as made up of a core Self and various "Parts,"
             each with its own role, working toward internal harmony under the Self's leadership.
           </p>
         </div>
 
         {/* IFS Parts */}
         <div className="card mb-8">
-          <h2 className="text-3xl font-bold text-gray-800 mb-6">IFS Parts</h2>
+          <h2 className="text-3xl font-bold text-gray-800 dark:text-white mb-6">IFS Parts</h2>
           <div className="space-y-6">
             <div className="border-l-4 border-yellow-500 pl-6">
-              <h3 className="text-2xl font-bold text-yellow-700 mb-2">Self</h3>
-              <p className="text-gray-700">
+              <h3 className="text-2xl font-bold text-yellow-700 dark:text-yellow-400 mb-2">Self</h3>
+              <p className="text-gray-700 dark:text-slate-300">
                 The core of identity, encompassing essential attributes and capabilities.
               </p>
             </div>
-            
+
             <div className="border-l-4 border-blue-500 pl-6">
-              <h3 className="text-2xl font-bold text-blue-700 mb-2">Protective Parts</h3>
+              <h3 className="text-2xl font-bold text-blue-700 dark:text-blue-400 mb-2">Protective Parts</h3>
               <div className="space-y-3 mt-3">
                 <div>
-                  <h4 className="text-xl font-semibold text-blue-600">Managers</h4>
-                  <p className="text-gray-700">
+                  <h4 className="text-xl font-semibold text-blue-600 dark:text-blue-300">Managers</h4>
+                  <p className="text-gray-700 dark:text-slate-300">
                     Maintain safety, stability, and emotional balance by regulating daily life.
                   </p>
                 </div>
                 <div>
-                  <h4 className="text-xl font-semibold text-blue-600">Firefighters</h4>
-                  <p className="text-gray-700">
+                  <h4 className="text-xl font-semibold text-blue-600 dark:text-blue-300">Firefighters</h4>
+                  <p className="text-gray-700 dark:text-slate-300">
                     React to protect the self from intense emotions and threats.
                   </p>
                 </div>
@@ -69,10 +69,10 @@ const CheatSheet = () => {
             </div>
 
             <div className="border-l-4 border-amber-500 pl-6">
-              <h3 className="text-2xl font-bold text-amber-700 mb-2">Vulnerable Parts</h3>
+              <h3 className="text-2xl font-bold text-amber-700 dark:text-amber-400 mb-2">Vulnerable Parts</h3>
               <div className="mt-3">
-                <h4 className="text-xl font-semibold text-amber-600">Exiles</h4>
-                <p className="text-gray-700">
+                <h4 className="text-xl font-semibold text-amber-600 dark:text-amber-300">Exiles</h4>
+                <p className="text-gray-700 dark:text-slate-300">
                   Carry pain, trauma, and vulnerability, shielded by protective parts.
                 </p>
               </div>
@@ -81,10 +81,10 @@ const CheatSheet = () => {
         </div>
 
         {/* Therapeutic Techniques */}
-        <div className="card mb-8 bg-gradient-to-br from-blue-50 to-amber-50">
+        <div className="card mb-8 bg-gradient-to-br from-blue-50 to-amber-50 dark:from-blue-950/40 dark:to-amber-950/30">
           <div className="flex items-center mb-4">
-            <Lightbulb className="w-8 h-8 text-amber-600 mr-3" />
-            <h2 className="text-3xl font-bold text-gray-800">Therapeutic Techniques</h2>
+            <Lightbulb className="w-8 h-8 text-amber-600 dark:text-amber-400 mr-3" />
+            <h2 className="text-3xl font-bold text-gray-800 dark:text-white">Therapeutic Techniques</h2>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {[
@@ -93,13 +93,13 @@ const CheatSheet = () => {
               { title: 'Self-Compassion', body: "Foster the Self's compassionate approach toward all Parts." },
               { title: 'Creative Imagery', body: 'Utilize visualization to promote healing among Parts.' },
             ].map((item) => (
-              <div key={item.title} className="overflow-hidden rounded-lg bg-white shadow-md">
+              <div key={item.title} className="overflow-hidden rounded-lg bg-white dark:bg-slate-800/80 shadow-md">
                 <div className="relative h-28 w-full overflow-hidden">
                   <img src={TECHNIQUE_IMAGES[item.title]} alt="" loading="lazy" className="absolute inset-0 h-full w-full object-cover" />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
                   <h3 className="absolute bottom-3 left-4 text-xl font-bold text-white drop-shadow">{item.title}</h3>
                 </div>
-                <p className="p-6 text-gray-700">{item.body}</p>
+                <p className="p-6 text-gray-700 dark:text-slate-300">{item.body}</p>
               </div>
             ))}
           </div>
@@ -108,31 +108,31 @@ const CheatSheet = () => {
         {/* Therapy Goals */}
         <div className="card mb-8">
           <div className="flex items-center mb-4">
-            <Target className="w-8 h-8 text-green-600 mr-3" />
-            <h2 className="text-3xl font-bold text-gray-800">Therapy Goals</h2>
+            <Target className="w-8 h-8 text-green-600 dark:text-green-400 mr-3" />
+            <h2 className="text-3xl font-bold text-gray-800 dark:text-white">Therapy Goals</h2>
           </div>
           <ul className="space-y-3">
             <li className="flex items-start">
-              <span className="text-green-600 mr-3 text-xl">•</span>
-              <span className="text-gray-700">
+              <span className="text-green-600 dark:text-green-400 mr-3 text-xl">•</span>
+              <span className="text-gray-700 dark:text-slate-300">
                 Empower the Self to lead with understanding and compassion.
               </span>
             </li>
             <li className="flex items-start">
-              <span className="text-green-600 mr-3 text-xl">•</span>
-              <span className="text-gray-700">
+              <span className="text-green-600 dark:text-green-400 mr-3 text-xl">•</span>
+              <span className="text-gray-700 dark:text-slate-300">
                 Rebalance internal relationships, allowing Parts to release their burdens.
               </span>
             </li>
             <li className="flex items-start">
-              <span className="text-green-600 mr-3 text-xl">•</span>
-              <span className="text-gray-700">
+              <span className="text-green-600 dark:text-green-400 mr-3 text-xl">•</span>
+              <span className="text-gray-700 dark:text-slate-300">
                 Transform Parts' roles from dysfunctional to healthy, cooperative functions.
               </span>
             </li>
             <li className="flex items-start">
-              <span className="text-green-600 mr-3 text-xl">•</span>
-              <span className="text-gray-700">
+              <span className="text-green-600 dark:text-green-400 mr-3 text-xl">•</span>
+              <span className="text-gray-700 dark:text-slate-300">
                 Facilitate internal peace through the integration of all Parts.
               </span>
             </li>
@@ -140,10 +140,10 @@ const CheatSheet = () => {
         </div>
 
         {/* Treatment Approaches */}
-        <div className="card mb-8 bg-gradient-to-br from-yellow-50 to-orange-50">
+        <div className="card mb-8 bg-gradient-to-br from-yellow-50 to-orange-50 dark:from-yellow-950/30 dark:to-orange-950/30">
           <div className="flex items-center mb-4">
-            <Heart className="w-8 h-8 text-orange-600 mr-3" />
-            <h2 className="text-3xl font-bold text-gray-800">Treatment Approaches</h2>
+            <Heart className="w-8 h-8 text-orange-600 dark:text-orange-400 mr-3" />
+            <h2 className="text-3xl font-bold text-gray-800 dark:text-white">Treatment Approaches</h2>
           </div>
           <div className="space-y-4">
             {[
@@ -151,13 +151,13 @@ const CheatSheet = () => {
               { title: 'Witnessing', body: 'Observe Part interactions without judgment or merging.' },
               { title: 'Unburdening', body: 'Release Parts from their painful emotions and limiting beliefs.' },
             ].map((item) => (
-              <div key={item.title} className="flex items-center gap-5 overflow-hidden rounded-lg bg-white shadow-md">
+              <div key={item.title} className="flex items-center gap-5 overflow-hidden rounded-lg bg-white dark:bg-slate-800/80 shadow-md">
                 <div className="relative h-24 w-32 flex-shrink-0 overflow-hidden">
                   <img src={APPROACH_IMAGES[item.title]} alt="" loading="lazy" className="absolute inset-0 h-full w-full object-cover" />
                 </div>
                 <div className="py-4 pr-6">
-                  <h3 className="text-xl font-bold text-orange-700 mb-2">{item.title}</h3>
-                  <p className="text-gray-700">{item.body}</p>
+                  <h3 className="text-xl font-bold text-orange-700 dark:text-orange-400 mb-2">{item.title}</h3>
+                  <p className="text-gray-700 dark:text-slate-300">{item.body}</p>
                 </div>
               </div>
             ))}
