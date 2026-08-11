@@ -161,4 +161,56 @@ describe('buildAssessmentInsights', () => {
       expect(tracking.bullets.some((b) => b.includes('0-day practice streak'))).toBe(true)
     })
   })
+
+  describe('custom assessment connections', () => {
+    it('confirms a custom category that matches the primary wound', () => {
+      const sections = buildAssessmentInsights({
+        wounds: { primary_wound: 'betrayal', scores: { betrayal: 20 } },
+        customAssessments: [
+          { assessmentTitle: 'Relationship Check', ranked: [['Trust Issues', { average: 4.5 }], ['Boundaries', { average: 3 }]] }
+        ]
+      })
+      const custom = sections.find((s) => s.id === 'custom-assessment-connections')
+      expect(custom).toBeDefined()
+      expect(custom.bullets[0]).toMatch(/^Confirmed:.*Betrayal/)
+    })
+
+    it('flags a related-but-different pattern when the wound does not match', () => {
+      const sections = buildAssessmentInsights({
+        wounds: { primary_wound: 'abandonment', scores: { abandonment: 20 } },
+        customAssessments: [
+          { assessmentTitle: 'Relationship Check', ranked: [['Trust Issues', { average: 4.5 }]] }
+        ]
+      })
+      const custom = sections.find((s) => s.id === 'custom-assessment-connections')
+      expect(custom.bullets[0]).toMatch(/^Related pattern:.*Betrayal.*Abandonment/)
+    })
+
+    it('surfaces a category with no keyword overlap as an independent data point', () => {
+      const sections = buildAssessmentInsights({
+        customAssessments: [
+          { assessmentTitle: 'Sleep Habits', ranked: [['Nighttime Routine', { average: 4 }]] }
+        ]
+      })
+      const custom = sections.find((s) => s.id === 'custom-assessment-connections')
+      expect(custom.bullets[0]).toMatch(/doesn't map onto a specific wound/)
+    })
+
+    it('prefixes bullets with the assessment title when there are multiple custom assessments', () => {
+      const sections = buildAssessmentInsights({
+        customAssessments: [
+          { assessmentTitle: 'Sleep Habits', ranked: [['Nighttime Routine', { average: 4 }]] },
+          { assessmentTitle: 'Relationship Check', ranked: [['Trust Issues', { average: 4.5 }]] }
+        ]
+      })
+      const custom = sections.find((s) => s.id === 'custom-assessment-connections')
+      expect(custom.bullets.some((b) => b.startsWith('Sleep Habits:'))).toBe(true)
+      expect(custom.bullets.some((b) => b.startsWith('Relationship Check:'))).toBe(true)
+    })
+
+    it('omits the card entirely when there are no custom assessments with ranked results', () => {
+      const sections = buildAssessmentInsights({ customAssessments: [{ assessmentTitle: 'Empty', ranked: [] }] })
+      expect(sections.find((s) => s.id === 'custom-assessment-connections')).toBeUndefined()
+    })
+  })
 })

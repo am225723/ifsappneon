@@ -150,12 +150,59 @@ function average(numbers) {
 
 const MOOD_SCALE_LABELS = { 5: 'Great', 4: 'Good', 3: 'Okay', 2: 'Low', 1: 'Struggling' };
 
+// Custom assessments are advisor-authored, so their category names are freeform
+// text we've never seen before -- there's no fixed knowledge base like WOUND_META
+// to draw on. This keyword vocabulary lets a custom category still connect to a
+// core concept (e.g. a category called "Trust Issues" surfacing as related to the
+// Betrayal wound) without ever forcing a false link: categories with no keyword
+// overlap are still surfaced, just honestly framed as independent data points.
+const CONCEPT_KEYWORDS = [
+  ...Object.entries({
+    abandonment: ['abandon', 'reject', 'alone', 'leaving', 'left behind'],
+    shame: ['shame', 'worth', 'flaw', 'inadequa', 'not enough'],
+    neglect: ['neglect', 'invisible', 'unseen', 'ignored', 'unmet need'],
+    betrayal: ['betray', 'trust', 'broken promise', 'deceiv'],
+    helplessness: ['helpless', 'powerless', 'control', 'stuck', 'trapped']
+  }).map(([key, keywords]) => ({ type: 'wound', key, label: WOUND_LABELS[key], keywords })),
+  ...Object.entries({
+    calmness: ['calm'],
+    curiosity: ['curio'],
+    compassion: ['compassion', 'self-kindness', 'kindness'],
+    confidence: ['confiden'],
+    courage: ['courage', 'brave'],
+    clarity: ['clarity', 'clear-headed'],
+    creativity: ['creativ'],
+    connectedness: ['connect', 'belong']
+  }).map(([key, keywords]) => ({ type: 'selfQuality', key, label: SELF_QUALITY_LABELS[key], keywords })),
+  ...Object.entries({
+    secure: ['secure'],
+    anxious: ['anxious', 'anxiety', 'clingy'],
+    avoidant: ['avoid', 'distant', 'withdraw'],
+    disorganized: ['disorganiz', 'fearful']
+  }).map(([key, keywords]) => ({ type: 'attachment', key, label: ATTACHMENT_LABELS[key], keywords })),
+  ...Object.entries({
+    manager: ['manager', 'perfection', 'planning', 'over-control'],
+    firefighter: ['firefighter', 'impulsiv', 'numbing', 'escape'],
+    exile: ['exile', 'inner child', 'vulnerab', 'younger part']
+  }).map(([key, keywords]) => ({ type: 'partsType', key, label: PARTS_TYPE_LABELS[key], keywords }))
+];
+
+function findConceptMatches(categoryLabel) {
+  const normalized = String(categoryLabel || '').toLowerCase();
+  if (!normalized) return [];
+  const matches = [];
+  for (const concept of CONCEPT_KEYWORDS) {
+    if (concept.keywords.some((kw) => normalized.includes(kw))) matches.push(concept);
+  }
+  return matches.slice(0, 2);
+}
+
 /**
  * Builds the Assessment Insights cards. Unlike a per-assessment summary, every
  * section here tries to connect at least two assessments together, and calls out
  * whether a predicted connection is actually confirmed by the client's own data.
  */
-export function buildAssessmentInsights({ wounds, parts, selfEnergy, attachment, identifiedParts = [], moodEntries = [], streakData = {}, timeline = [] } = {}) {
+export function buildAssessmentInsights({ wounds, parts, selfEnergy, attachment, identifiedParts = [], moodEntries = [], streakData = {}, timeline = [], customAssessments = [] } = {}) {
   const completedCount = [wounds, parts, selfEnergy, attachment].filter(Boolean).length;
   const sections = [];
 
@@ -404,6 +451,72 @@ export function buildAssessmentInsights({ wounds, parts, selfEnergy, attachment,
       body,
       bullets: bullets.length ? bullets : undefined
     });
+  }
+
+  const validCustomAssessments = customAssessments.filter((ca) => Array.isArray(ca?.ranked) && ca.ranked.length > 0);
+  if (validCustomAssessments.length) {
+    const multiple = validCustomAssessments.length > 1;
+    const bullets = [];
+    validCustomAssessments.forEach((ca) => {
+      const title = ca.assessmentTitle || 'Custom Assessment';
+      const topCategory = ca.ranked[0]?.[0];
+      if (!topCategory) return;
+      const prefix = multiple ? `${title}: ` : '';
+      const matches = findConceptMatches(topCategory);
+      if (!matches.length) {
+        bullets.push(`${prefix}Top theme is "${topCategory}" — it doesn't map onto a specific wound, part, Self quality, or attachment pattern, but it's still worth bringing into the same conversation as an independent data point.`);
+        return;
+      }
+      matches.forEach((concept) => {
+        if (concept.type === 'wound') {
+          if (woundKey === concept.key) {
+            bullets.push(`${prefix}Confirmed: "${topCategory}" echoes ${concept.label}, matching your primary Wound Patterns result.`);
+          } else if (secondaryWoundKey === concept.key) {
+            bullets.push(`${prefix}Confirmed: "${topCategory}" echoes ${concept.label}, matching your secondary Wound Patterns result.`);
+          } else if (woundKey) {
+            bullets.push(`${prefix}Related pattern: "${topCategory}" echoes ${concept.label}, but your Wound Patterns Assessment currently points to ${woundLabel} instead — worth discussing which feels more accurate.`);
+          } else {
+            bullets.push(`${prefix}"${topCategory}" echoes ${concept.label}; complete the Wound Patterns Assessment to see if that pattern shows up there too.`);
+          }
+        } else if (concept.type === 'selfQuality') {
+          if (selfStrengthKey === concept.key) {
+            bullets.push(`${prefix}Confirmed: "${topCategory}" echoes ${concept.label}, which is already your strongest Self quality.`);
+          } else if (selfGrowthEdgeKey === concept.key) {
+            bullets.push(`${prefix}Confirmed: "${topCategory}" echoes ${concept.label}, which is currently your Self-Energy growth edge.`);
+          } else if (selfEnergy) {
+            bullets.push(`${prefix}Related pattern: "${topCategory}" echoes ${concept.label} from the 8 C's of Self — worth noticing whether it feels available or blocked right now.`);
+          } else {
+            bullets.push(`${prefix}"${topCategory}" echoes ${concept.label}; complete the Self-Energy Assessment to see how it compares.`);
+          }
+        } else if (concept.type === 'attachment') {
+          if (attachmentPrimaryKey === concept.key) {
+            bullets.push(`${prefix}Confirmed: "${topCategory}" echoes ${concept.label} attachment, matching your Attachment assessment.`);
+          } else if (attachmentPrimaryKey) {
+            bullets.push(`${prefix}Related pattern: "${topCategory}" echoes ${concept.label} attachment, but your Attachment assessment shows ${pickLabel(ATTACHMENT_LABELS, attachmentPrimaryKey)} as primary instead.`);
+          } else {
+            bullets.push(`${prefix}"${topCategory}" echoes ${concept.label} attachment; complete the Attachment Pattern Assessment to see how it compares.`);
+          }
+        } else if (concept.type === 'partsType') {
+          if (partsPrimaryKey === concept.key) {
+            bullets.push(`${prefix}Confirmed: "${topCategory}" echoes ${concept.label} parts activity, matching your Parts System result.`);
+          } else if (partsPrimaryKey) {
+            bullets.push(`${prefix}Related pattern: "${topCategory}" echoes ${concept.label} parts activity, though your Parts System Assessment leans ${pickLabel(PARTS_TYPE_LABELS, partsPrimaryKey)} instead.`);
+          } else {
+            bullets.push(`${prefix}"${topCategory}" echoes ${concept.label} parts activity; complete the Parts System Assessment to see how it compares.`);
+          }
+        }
+      });
+    });
+    if (bullets.length) {
+      sections.push({
+        id: 'custom-assessment-connections',
+        title: 'How your custom assessments connect',
+        body: validCustomAssessments.length === 1
+          ? `${validCustomAssessments[0].assessmentTitle || 'Your custom assessment'} adds another angle on the same system.`
+          : `Your ${validCustomAssessments.length} custom assessments add more angles on the same system.`,
+        bullets
+      });
+    }
   }
 
   sections.push({
